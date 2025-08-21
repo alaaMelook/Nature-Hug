@@ -42,8 +42,25 @@ const HomePage = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [language, setLanguage] = useState("en");
 
   useEffect(() => {
+    // Sync with language switcher
+    const handleLanguageChange = () => {
+      const currentLang = document.documentElement.lang;
+      setLanguage(currentLang);
+    };
+
+    // Initial sync
+    handleLanguageChange();
+
+    // Listen for changes (you might want to use a context or state management instead)
+    const observer = new MutationObserver(handleLanguageChange);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["lang"],
+    });
+
     const fetchProducts = async () => {
       try {
         setLoading(true);
@@ -73,7 +90,80 @@ const HomePage = () => {
     };
 
     fetchProducts();
+    return () => observer.disconnect();
   }, []);
+  const content = {
+    en: {
+      error: "Error loading products",
+      noProd: "No products available",
+      noImg: "No Image",
+      outOfStock: "Out Of Stock",
+      addToCart: "Add to Cart",
+      featuredProducts: "Featured Products",
+      shopNow: "Shop Now",
+      learnMore: "Learn More",
+      allRightsReserved: "All rights reserved.",
+      heroTitle: (
+        <>
+          Where every ingredient
+          <br className="hidden md:inline" />
+          is a promise.
+        </>
+      ),
+      heroDescription: "A gentle hug for your skin from nature itself.",
+      features: [
+        {
+          title: "Curated Selection",
+          description: "Hand-picked items for quality and style.",
+        },
+        {
+          title: "Fast Shipping",
+          description: "Your order ships within 24 hours.",
+        },
+        {
+          title: "Secure Packaging",
+          description: "Items are securely packed and protected.",
+        },
+        {
+          title: "Exclusive Deals",
+          description: "Access to special promotions and discounts.",
+        },
+      ],
+    },
+    ar: {
+      error: "خطأ في تحميل المنتجات",
+      noProd: "لا توجد منتجات متاحة",
+      noImg: "لا توجد صورة",
+      outOfStock: "غير متوفر",
+      addToCart: "أضف إلى السلة",
+      featuredProducts: "المنتجات المميزة",
+      shopNow: "تسوق الآن",
+      learnMore: "اعرف المزيد",
+      allRightsReserved: "جميع الحقوق محفوظة.",
+      heroTitle: (
+        <>
+          حيث كل مكون
+          <br className="hidden md:inline" />
+          هو وعد.
+        </>
+      ),
+      heroDescription: "عناق لطيف لبشرتك من الطبيعة نفسها.",
+      features: [
+        {
+          title: "اختيار منسق",
+          description: "منتجات مختارة بعناية للجودة والأناقة.",
+        },
+        { title: "شحن سريع", description: "يتم شحن طلبك خلال 24 ساعة." },
+        { title: "تغليف آمن", description: "المنتجات مغلفة بشكل آمن ومحمي." },
+        {
+          title: "عروض حصرية",
+          description: "الوصول إلى العروض الترويجية والخصومات الخاصة.",
+        },
+      ],
+    },
+  };
+  const currentContent =
+    content[language as keyof typeof content] || content.en;
 
   const renderProductContent = () => {
     if (loading) {
@@ -86,7 +176,7 @@ const HomePage = () => {
     if (error) {
       return (
         <div className="bg-red-100 border border-red-400 text-red-700 px-6 py-4 rounded-lg max-w-2xl mx-auto">
-          <p className="font-semibold">Error loading products:</p>
+          <p className="font-semibold">{currentContent.error}:</p>
           <p>{error}</p>
         </div>
       );
@@ -94,7 +184,7 @@ const HomePage = () => {
     if (products.length === 0) {
       return (
         <div className="flex justify-center items-center h-64">
-          <p className="text-gray-500 text-lg">No products available</p>
+          <p className="text-gray-500 text-lg">{currentContent.noProd}</p>
         </div>
       );
     }
@@ -119,7 +209,7 @@ const HomePage = () => {
                 />
               ) : (
                 <div className="w-full h-64 bg-gray-200 flex items-center justify-center">
-                  <span className="text-gray-500">No Image</span>
+                  <span className="text-gray-500">{currentContent.noImg}</span>
                 </div>
               )}
               {product.discount && (
@@ -132,11 +222,7 @@ const HomePage = () => {
               <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
                 {product.name}
               </h3>
-              {/* {product.description && (
-                <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-                  {product.description}
-                </p>
-              )} */}
+
               <div className="flex items-center mb-3">
                 {Array.from({ length: 5 }, (_, i) => (
                   <Star
@@ -151,12 +237,14 @@ const HomePage = () => {
                   {product.price.toFixed(2)} EGP
                 </p>
                 {(product.quantity == null || product.quantity == 0) && (
-                  <span className="text-sm text-gray-500">Out Of Stock</span>
+                  <span className="text-sm text-gray-500">
+                    {currentContent.outOfStock}
+                  </span>
                 )}
               </div>
               <button className="mt-4 w-full bg-primary text-white py-2.5 rounded-lg shadow-md hover:bg-primary transition-colors duration-300 flex items-center justify-center">
                 <ShoppingCart className="w-4 h-4 mr-2" />
-                Add to Cart
+                {currentContent.addToCart}
               </button>
             </div>
           </div>
@@ -172,19 +260,17 @@ const HomePage = () => {
         <section className="bg-white py-12 md:py-20 lg:py-24">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-900 leading-tight mb-4">
-              Where every ingredient
-              <br className="hidden md:inline" />
-              is a promise.
+              {currentContent.heroTitle}
             </h1>
             <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto mb-8">
-              A gentle hug for your skin from nature itself.
+              {currentContent.heroDescription}
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
               <button className="bg-primary text-white font-semibold px-6 py-3 rounded-lg shadow-md hover:bg-primary transition-colors duration-300">
-                Shop Now
+                {currentContent.shopNow}
               </button>
               <button className="bg-white text-gray-800 font-semibold px-6 py-3 rounded-lg border-2 border-gray-200 hover:bg-gray-50 transition-colors duration-300">
-                Learn More
+                {currentContent.learnMore}
               </button>
             </div>
           </div>
@@ -194,7 +280,7 @@ const HomePage = () => {
         <section className="py-12 md:py-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2 className="text-2xl md:text-3xl font-bold text-center mb-8 md:mb-12 text-gray-900">
-              Featured Products
+              {currentContent.featuredProducts}
             </h2>
             {renderProductContent()}
           </div>
@@ -227,7 +313,8 @@ const HomePage = () => {
       <footer className="bg-light font-semibold text-default py-8 md:py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <p className="text-sm md:text-base">
-            &copy; 2025 Hug Nature. All rights reserved.
+            &copy; {new Date().getFullYear()} Hug Nature.{" "}
+            {currentContent.allRightsReserved}
           </p>
         </div>
       </footer>

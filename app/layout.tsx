@@ -1,14 +1,9 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { muslimah, gerlachSans } from "@/lib/fonts";
 import "./globals.css";
 import { CartProvider } from "@/lib/CartContext";
 import { ShoppingCart } from "lucide-react";
-
-const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import LanguageSwitcher from "@/app/components/LanguageSwitcher";
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -19,10 +14,8 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+    <html lang="en" className={`${muslimah.variable} ${gerlachSans.variable}`}>
+      <body>
         <CartProvider>
           <nav className="bg-white p-4 shadow-sm sticky top-0 z-50">
             <div className="max-w-7xl mx-auto flex justify-between items-center">
@@ -61,10 +54,13 @@ export default function RootLayout({
                   Contact
                 </a>
               </div>
-              <button className="bg-primary text-white px-4 py-2 rounded-lg shadow-md hover:bg-primary transition-colors duration-300 flex items-center text-sm md:text-base">
-                <ShoppingCart className="w-4 h-4 md:w-5 md:h-5 mr-2" />
-                Cart
-              </button>
+              <div className="flex items-center space-x-4">
+                <LanguageSwitcher />
+                <button className="bg-primary text-white px-4 py-2 rounded-lg shadow-md hover:bg-primary-hover transition-colors duration-300 flex items-center text-sm md:text-base">
+                  <ShoppingCart className="w-4 h-4 md:w-5 md:h-5 mr-2" />
+                  Cart
+                </button>
+              </div>
             </div>
           </nav>
           <main>{children}</main>
