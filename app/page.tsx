@@ -3,6 +3,8 @@ import React, { useEffect, useState } from "react";
 import { ShoppingCart, Star, Box, Rocket, Heart, Zap } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import "./globals.css";
+import Link from "next/link";
+
 
 interface Product {
   id: string | number;
@@ -242,10 +244,13 @@ const HomePage = () => {
                   </span>
                 )}
               </div>
-              <button className="mt-4 w-full bg-primary text-white py-2.5 rounded-lg shadow-md hover:bg-primary transition-colors duration-300 flex items-center justify-center">
+              <Link
+                href="/cart"
+                className="mt-4 w-full bg-[#8B4513] text-white py-2.5 rounded-lg shadow-md hover:bg-[#A0522D] transition-colors duration-300 flex items-center justify-center"
+              >
                 <ShoppingCart className="w-4 h-4 mr-2" />
                 {currentContent.addToCart}
-              </button>
+              </Link>
             </div>
           </div>
         ))}
@@ -266,15 +271,22 @@ const HomePage = () => {
               {currentContent.heroDescription}
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
-              <button className="bg-primary text-white font-semibold px-6 py-3 rounded-lg shadow-md hover:bg-primary transition-colors duration-300">
+              <Link
+                href="/cart"
+                className="bg-amber-800 text-white font-semibold px-6 py-3 rounded-lg shadow-md hover:bg-amber-900 transition-colors duration-300 text-center"
+              >
                 {currentContent.shopNow}
-              </button>
-              <button className="bg-white text-gray-800 font-semibold px-6 py-3 rounded-lg border-2 border-gray-200 hover:bg-gray-50 transition-colors duration-300">
+              </Link>
+              <Link
+                href="/checkout"
+                className="bg-white text-gray-800 font-semibold px-6 py-3 rounded-lg border-2 border-gray-200 hover:bg-gray-50 transition-colors duration-300 text-center"
+              >
                 {currentContent.learnMore}
-              </button>
+              </Link>
             </div>
           </div>
         </section>
+
 
         {/* Product Grid Section */}
         <section className="py-12 md:py-16">

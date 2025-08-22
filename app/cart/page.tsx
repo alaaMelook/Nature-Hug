@@ -40,16 +40,6 @@ export default function CartPage() {
               </div>
             </div>
           ))}
-
-          <div className="flex items-center justify-between pt-4 border-t">
-            <h2 className="text-lg font-semibold">Total: 💲{total}</h2>
-            <div className="flex gap-3">
-              <Link href="/checkout">
-                <button className="px-4 py-2 bg-green-600 text-white rounded">✅ Checkout</button>
-              </Link>
-              <button onClick={clearCart} className="px-4 py-2 bg-gray-600 text-white rounded">🗑️ Clear</button>
-            </div>
-          </div>
         </div>
       )}
     </div>
