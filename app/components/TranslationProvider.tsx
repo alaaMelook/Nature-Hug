@@ -42,15 +42,6 @@ export function TranslationProvider({
   const updateHtml = (lang: LangKey) => {
     document.documentElement.lang = lang;
     document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
-
-    // Switch body font
-    document.body.classList.remove(
-      `${muslimah.variable}`,
-      `${gerlachSans.variable}`
-    );
-    document.body.classList.add(
-      lang === "ar" ? `${muslimah.className}` : `${gerlachSans.className}`
-    );
   };
 
   const switchLanguage = (lang: LangKey) => {
