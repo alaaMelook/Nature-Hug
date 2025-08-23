@@ -1,6 +1,5 @@
 "use client";
 
-import { gerlachSans, muslimah } from "@/lib/fonts";
 import { translations } from "@/lib/translations";
 import {
   createContext,
