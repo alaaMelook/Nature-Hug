@@ -1,6 +1,5 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { Star } from "lucide-react";
 
 import Link from "next/link";
 import {
@@ -8,19 +7,6 @@ import {
   useTranslation,
 } from "@/app/components/TranslationProvider";
 import AddToCartButton from "./components/CartButton";
-
-interface Product {
-  id: number;
-  created_at: string;
-  name_english: string | null;
-  name_arabic: string | null;
-  description_english: string | null;
-  description_arabic: string | null;
-  price: number;
-  discount: number | null;
-  quantity: number | null;
-  image_url: string | null;
-}
 
 const HomePage = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -49,6 +35,7 @@ const HomePage = () => {
   }, [language]);
 
   const renderProductContent = () => {
+    // Renders a loading spinner while data is being fetched.
     if (loading) {
       return (
         <div className="flex justify-center items-center h-64">
@@ -56,6 +43,7 @@ const HomePage = () => {
         </div>
       );
     }
+    // Renders an error message if the API call fails.
     if (error) {
       return (
         <div className="bg-red-100 border border-red-400 text-red-700 px-6 py-4 rounded-lg max-w-2xl mx-auto">
@@ -64,6 +52,7 @@ const HomePage = () => {
         </div>
       );
     }
+    // Renders a message when there are no products to display.
     if (products.length === 0) {
       return (
         <div className="flex justify-center items-center h-64">
@@ -75,64 +64,84 @@ const HomePage = () => {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {products.map((product) => {
+          // Determines the product name based on the current language.
           const displayName =
             language === "ar" ? product.name_arabic : product.name_english;
+
           return (
+            // The main product card container with refined styling.
             <div
               key={product.id}
-              className="bg-white rounded-xl shadow-md overflow-hidden transform transition-transform duration-300 hover:scale-105 hover:shadow-xl"
+              className="bg-white rounded-xl shadow-lg overflow-hidden flex flex-col transform transition-transform duration-300 hover:scale-105"
             >
-              <div className="relative">
-                {product.image_url ? (
-                  <img
-                    src={product.image_url}
-                    alt={displayName || ""}
-                    className="w-full h-64 object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src =
-                        "https://placehold.co/400x400/D1D5DB/4B5563?text=Image+Not+Found";
-                    }}
-                  />
-                ) : (
-                  <div className="w-full h-64 bg-gray-200 flex items-center justify-center">
-                    <span className="text-gray-500">{t("noImg")}</span>
-                  </div>
-                )}
-                {product.discount ? (
-                  <div className="absolute top-3 left-3 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
-                    -{product.discount}%
+              {/* Image container with an aspect ratio for consistent sizing */}
+              <div className="relative aspect-w-4 aspect-h-3">
+                <img
+                  src={product.image_url || ""}
+                  alt={displayName || "Product image"}
+                  className="w-full h-80 object-cover"
+                  // Fallback for broken images
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src =
+                      "https://placehold.co/400x400/D1D5DB/4B5563?text=Image+Not+Found";
+                  }}
+                />
+
+                {/* Discount badge, positioned in the top-left */}
+                {!product.discount ? (
+                  <div className="absolute top-3 left-3 bg-red-600 text-white px-3 py-1 rounded-full text-sm font-semibold shadow-md">
+                    -20%
                   </div>
                 ) : null}
+                {(product.quantity == null || product.quantity == 0) && (
+                  <div className="absolute top-3 right-3 bg-neutral-600 text-white px-3 py-1 rounded-full text-sm font-medium shadow-md">
+                    {t("outOfStock")}
+                  </div>
+                )}
               </div>
-              <div className="p-5">
-                <h3
-                  className={`text-lg text-default mb-2 ${
-                    language === "ar" ? "font-weight-800" : "font-weight-500"
-                  }`}
-                >
-                  {displayName}
-                </h3>
 
-                <div className="flex items-center mb-3">
-                  {Array.from({ length: 5 }, (_, i) => (
-                    <Star
-                      key={i}
-                      className="w-4 h-4 fill-yellow-400 text-yellow-400"
-                    />
-                  ))}
-                  <span className="ml-2 text-sm text-gray-500">(4.5)</span>
+              {/* Product details and button container */}
+              <div className="p-5 flex flex-col justify-between flex-grow">
+                <div>
+                  {/* Product name with improved typography */}
+                  <h3
+                    className={`text-xl font-semibold text-gray-800 mb-5 flex`}
+                  >
+                    {displayName}
+                  </h3>
+
+                  {/* Star rating component with consistent sizing */}
+                  {/* <div className="flex items-center mb-3">
+                    {Array.from({ length: 5 }, (_, i) => (
+                      <Star
+                        key={i}
+                        className="w-5 h-5 fill-yellow-400 text-yellow-400"
+                      />
+                    ))}
+                    <span className="ml-2 text-sm text-gray-500">(4.5)</span>
+                  </div> */}
+
+                  {/* Price and stock status container */}
+                  <div className="flex items-center content-center mb-2 ">
+                    {product.discount ? (
+                      <p className="text-lg font-normal text-primary-900">
+                        {product.price.toFixed(2)} EGP
+                      </p>
+                    ) : (
+                      <div className="flex flex-col items-baseline space-x-2">
+                        <p className="text-md font-medium text-primary-900">
+                          {(product.price * (1 - 20 / 100)).toFixed(2)} EGP
+                        </p>
+                        <p className="text-lg text-gray-500 line-through">
+                          {product.price.toFixed(2)} EGP
+                        </p>
+                      </div>
+                    )}
+                    {/* Out of stock message with a distinct color */}
+                  </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <p className="text-xl font-semibold text-gray-900">
-                    {product.price.toFixed(2)} EGP
-                  </p>
-                  {(product.quantity == null || product.quantity == 0) && (
-                    <span className="text-sm text-gray-500">
-                      {t("outOfStock")}
-                    </span>
-                  )}
-                </div>
-                <AddToCartButton productId={product.id} />
+                {/* Add to Cart button */}
+                <AddToCartButton product={product} />
               </div>
             </div>
           );
@@ -145,24 +154,24 @@ const HomePage = () => {
     <div className="min-h-screen bg-gray-50 antialiased text-gray-800">
       <main>
         {/* Hero Section */}
-        <section className="bg-white py-12 md:py-20 lg:py-24">
+        <section className="bg-primary-100 py-12 md:py-20 lg:py-24">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl text-default leading-tight font-weight-400">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl text-default leading-tight ">
               {t("heroTitle")}
             </h1>
-            <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto mb-8">
+            <p className="sm:text-lg text-primary-800 max-w-2xl mx-auto mb-8">
               {t("heroDescription")}
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
               <Link
                 href="/cart"
-                className="bg-[#8B4513] text-white font-semibold px-6 py-3 rounded-lg shadow-md hover:bg-[#A0522D] transition-colors duration-300 text-center"
+                className="bg-primary-800 text-white font-semibold px-6 py-3 rounded-lg shadow-md hover:bg-primary-50 hover:text-primary-700 transition-colors duration-300 text-center"
               >
                 {t("shopNow")}
               </Link>
               <Link
                 href="/checkout"
-                className="bg-[#8B4513] text-white font-semibold px-6 py-3 rounded-lg shadow-md hover:bg-[#A0522D] transition-colors duration-300 text-center"
+                className="bg-primary-800 text-white font-semibold px-6 py-3 rounded-lg shadow-md hover:bg-primary-50 hover:text-primary-700  transition-colors duration-300 text-center"
               >
                 {t("learnMore")}
               </Link>
@@ -171,9 +180,9 @@ const HomePage = () => {
         </section>
 
         {/* Product Grid Section */}
-        <section className="py-12 md:py-16">
+        <section className="bg-primary-50 py-12 md:py-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 className="text-2xl md:text-3xl font-bold text-center mb-8 md:mb-12 text-default font-weight-600">
+            <h2 className="text-2xl md:text-3xl font-bold text-center mb-8 md:mb-12 text-default ">
               {t("featuredProducts")}
             </h2>
             {renderProductContent()}
@@ -181,7 +190,7 @@ const HomePage = () => {
         </section>
 
         {/* Features Section */}
-        <section className="bg-gray-100 py-12 md:py-16">
+        <section className="bg-primary-100 py-12 md:py-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
               {features.map(
@@ -192,27 +201,13 @@ const HomePage = () => {
                 }) => (
                   <div
                     key={feature.title}
-                    className="bg-white p-6 rounded-xl transform transition-transform duration-300 hover:scale-105 text-primary font-weight-400 text-center shadow-md"
+                    className="bg-white p-6 rounded-xl transform transition-transform duration-300 hover:scale-105 text-primary  text-center shadow-md"
                   >
                     <div className="flex justify-center mb-4">
                       <feature.icon className="w-10 h-10 text-[#8B4513]" />
                     </div>
-                    <h3
-                      className={`text-lg ${
-                        language === "ar"
-                          ? "font-weight-900"
-                          : "font-weight-500"
-                      } text-default `}
-                    >
-                      {feature.title}
-                    </h3>
-                    <p
-                      className={`text-gray-800 text-sm ${
-                        language === "ar"
-                          ? "font-weight-600"
-                          : "font-weight-400"
-                      }`}
-                    >
+                    <h3 className={`text-lg text-default `}>{feature.title}</h3>
+                    <p className={`text-gray-800 text-sm`}>
                       {feature.description}
                     </p>
                   </div>
@@ -224,7 +219,7 @@ const HomePage = () => {
       </main>
 
       {/* Footer */}
-      <footer className="bg-white font-semibold text-gray-700 py-8 md:py-12">
+      <footer className=" bg-primary-50 font-semibold text-gray-700 py-8 md:py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <p className="text-sm md:text-base">
             &copy; {new Date().getFullYear()} Hug Nature.{" "}

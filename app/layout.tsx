@@ -1,6 +1,5 @@
 import "./globals.css";
 import type { Metadata } from "next";
-import { muslimah, gerlachSans } from "@/lib/fonts";
 import { CartProvider } from "@/lib/CartContext";
 import Navbar from "@/app/components/Navbar";
 import { TranslationProvider } from "@/app/components/TranslationProvider";
@@ -17,7 +16,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="bg-gray-50 min-h-screen">
+      <body className="bg-gray-50 min-h-screen color-text">
         <TranslationProvider>
           <FontWrapper>
             <CartProvider>

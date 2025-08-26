@@ -26,31 +26,17 @@ export const gerlachSans = localFont({
       weight: "600",
       style: "bold",
     },
-    {
-      path: "../public/fonts/Gerlach Sans 601 Bold Italic.woff2",
-      weight: "600",
-      style: "bold-italic",
-    },
 
     {
       path: "../public/fonts/Gerlach Sans 400 Regular.woff2",
       weight: "400",
       style: "regular",
     },
-    {
-      path: "../public/fonts/Gerlach Sans 401 Italic.woff2",
-      weight: "400",
-      style: "italic",
-    },
+
     {
       path: "../public/fonts/Gerlach Sans 100 Hairline.woff2",
       weight: "100",
       style: "thin",
-    },
-    {
-      path: "../public/fonts/Gerlach Sans 101 Hairline Italic.woff2",
-      weight: "100",
-      style: "thin-italic",
     },
     {
       path: "../public/fonts/Gerlach Sans 200 Thin.woff2",
@@ -76,31 +62,6 @@ export const gerlachSans = localFont({
       path: "../public/fonts/Gerlach Sans 800 Black.woff2",
       weight: "800",
       style: "extra-bold",
-    },
-    {
-      path: "../public/fonts/Gerlach Sans 201 Thin Italic.woff2",
-      weight: "200",
-      style: "extra-light-italic",
-    },
-    {
-      path: "../public/fonts/Gerlach Sans 301 Light Italic.woff2",
-      weight: "300",
-      style: "light-italic",
-    },
-    {
-      path: "../public/fonts/Gerlach Sans 501 Medium Italic.woff2",
-      weight: "500",
-      style: "medium-italic",
-    },
-    {
-      path: "../public/fonts/Gerlach Sans 701 Heavy Italic.woff2",
-      weight: "700",
-      style: "bold-italic",
-    },
-    {
-      path: "../public/fonts/Gerlach Sans 801 Black Italic.woff2",
-      weight: "800",
-      style: "extra-bold-italic",
     },
   ],
   variable: "--font-gerlach-sans",
