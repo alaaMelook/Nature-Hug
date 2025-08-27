@@ -3,11 +3,11 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ShoppingCart, Menu, X } from "lucide-react";
+import { ShoppingCart, Menu, X, User } from "lucide-react";
 import LanguageSwitcher from "@/app/components/LanguageSwitcher";
 import { useTranslation } from "./TranslationProvider";
 import { useCart } from "@/lib/CartContext";
-import { supabase } from "@/lib/supabaseClient";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -16,6 +16,7 @@ const Navbar = () => {
   const count = cart.reduce((s, i) => s + i.quantity, 0);
 
   const [user, setUser] = useState<any>(null);
+  const supabase = createSupabaseBrowserClient();
 
   // ✅ متابعة حالة المستخدم
   useEffect(() => {
@@ -38,7 +39,7 @@ const Navbar = () => {
     return () => {
       listener.subscription.unsubscribe();
     };
-  }, []);
+  }, [supabase]);
 
   const handleLogin = async () => {
     await supabase.auth.signInWithOAuth({
@@ -113,18 +114,29 @@ const Navbar = () => {
           )}
         </Link>
 
+        {/* ✅ Profile Button */}
+        {user && (
+          <Link
+            href="/profile"
+            className="relative text-primary-950 bg-primary-50 px-4 py-2 rounded-lg shadow-md transition-colors duration-300 border border-transparent hover:border-primary-300 hover:bg-primary-100 flex items-center text-sm md:text-base"
+          >
+            <User className="w-4 h-4 md:w-5 md:h-5 mr-2" />
+            Profile
+          </Link>
+        )}
+
         {/* ✅ Auth Buttons */}
         {!user ? (
           <button
             onClick={handleLogin}
-            className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600"
+            className="px-4 py-2 bg-amber-800 text-white rounded-md hover:bg-amber-700"
           >
             Login with Google
           </button>
         ) : (
           <button
             onClick={handleLogout}
-            className="px-4 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-600"
+            className="px-4 py-2 bg-amber-800 text-white rounded-md hover:bg-amber-700"
           >
             Logout
           </button>
@@ -183,31 +195,31 @@ const Navbar = () => {
           </Link>
           <LanguageSwitcher />
 
-         {/* Profile / Auth */}
-        {!user ? (
-          <Link
-            href="/auth/login"
-            className="bg-primary-600 text-white px-4 py-2 rounded"
-          >
-            Login / Signup
-          </Link>
-        ) : (
-          <div className="relative group">
-            <button className="bg-gray-100 px-3 py-2 rounded">
-              {user.email}
+          {/* ✅ Profile in mobile */}
+          {user && (
+            <Link
+              href="/profile"
+              className="bg-primary-50 px-4 py-2 rounded shadow-md border hover:bg-primary-100"
+            >
+              My Profile
+            </Link>
+          )}
+
+          {/* Auth */}
+          {!user ? (
+            <button
+              onClick={handleLogin}
+              className="bg-amber-800 text-white px-4 py-2 rounded hover:bg-amber-700"
+            >
+              Login / Signup
             </button>
-            <div className="absolute hidden group-hover:block right-0 mt-2 bg-white border shadow-md rounded">
-              <Link href="/profile" className="block px-4 py-2 hover:bg-gray-100">
-                My Profile
-              </Link>
-              <button
-                onClick={handleLogout}
-                className="block w-full text-left px-4 py-2 hover:bg-gray-100"
-              >
-                Logout
-              </button>
-            </div>
-          </div>
+          ) : (
+            <button
+              onClick={handleLogout}
+              className="bg-amber-800 text-white px-4 py-2 rounded hover:bg-amber-700"
+            >
+              Logout
+            </button>
           )}
         </div>
       )}
