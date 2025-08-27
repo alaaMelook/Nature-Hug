@@ -4,6 +4,8 @@ import { CartProvider } from "@/lib/CartContext";
 import Navbar from "@/app/components/Navbar";
 import { TranslationProvider } from "@/app/components/TranslationProvider";
 import FontWrapper from "./components/FontWrapper";
+import CartSyncer from "./components/CartSyncer"; // 👈 اضفنا الاستيراد هنا
+
 export const metadata: Metadata = {
   title: "Hug Nature",
   description: "Natural Skincare Store",
@@ -21,6 +23,7 @@ export default function RootLayout({
           <FontWrapper>
             <CartProvider>
               <Navbar />
+              <CartSyncer /> {/* 👈 اضفناه هنا جوا الـ body */}
               <main>{children}</main>
             </CartProvider>
           </FontWrapper>
