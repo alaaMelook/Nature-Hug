@@ -8,7 +8,7 @@ const supabase = createClient(
 
 export async function POST(req: Request) {
   try {
-    const { name, address, phone, email, governorate } = await req.json();
+    const { name, address, phone, email } = await req.json();
 
     // إضافة عميل جديد
     const { data: customer, error } = await supabase
