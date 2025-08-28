@@ -11,13 +11,13 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  // 🔹 Login with Email + Password
+  // Login with Email + Password
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setErrorMsg("");
 
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -25,13 +25,13 @@ export default function LoginPage() {
     if (error) {
       setErrorMsg(error.message);
     } else {
-      router.push("/"); // ✅ بعد ما يدخل يروح للهوم
+      router.push("/profile");
     }
 
     setLoading(false);
   };
 
-  // 🔹 Login with Google OAuth
+  // Login with Google OAuth
   const handleGoogleLogin = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -47,14 +47,14 @@ export default function LoginPage() {
     }
   };
 
-  // ✅ لو هو مسجل دخول قبل كده يترمي على الهوم مباشرة
+  // redirect if already logged in
   useEffect(() => {
     const checkUser = async () => {
       const {
         data: { session },
       } = await supabase.auth.getSession();
       if (session) {
-        router.push("/");
+        router.push("/profile");
       }
     };
     checkUser();
@@ -64,7 +64,6 @@ export default function LoginPage() {
     <div className="flex flex-col items-center justify-center h-screen space-y-6">
       <h1 className="text-2xl font-bold">Login</h1>
 
-      {/* Email + Password Form */}
       <form
         onSubmit={handleEmailLogin}
         className="flex flex-col space-y-4 w-72"
@@ -94,22 +93,19 @@ export default function LoginPage() {
         </button>
       </form>
 
-      {/* Divider */}
       <div className="flex items-center w-72">
         <div className="flex-1 h-px bg-gray-300"></div>
         <span className="px-2 text-gray-500">OR</span>
         <div className="flex-1 h-px bg-gray-300"></div>
       </div>
 
-      {/* Google Login */}
       <button
         onClick={handleGoogleLogin}
         className="px-6 py-3 bg-red-500 text-white rounded-md hover:bg-red-600 transition w-72"
       >
-        Login with Google
+        Continue with Google
       </button>
 
-      {/* Error Message */}
       {errorMsg && <p className="text-red-600">{errorMsg}</p>}
     </div>
   );

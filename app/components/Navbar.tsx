@@ -8,6 +8,7 @@ import LanguageSwitcher from "@/app/components/LanguageSwitcher";
 import { useTranslation } from "./TranslationProvider";
 import { useCart } from "@/lib/CartContext";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -17,6 +18,7 @@ const Navbar = () => {
 
   const [user, setUser] = useState<any>(null);
   const supabase = createSupabaseBrowserClient();
+  const router = useRouter();
 
   // ✅ متابعة حالة المستخدم
   useEffect(() => {
@@ -29,7 +31,6 @@ const Navbar = () => {
 
     getUser();
 
-    // ✅ استماع لأي تغيير في حالة auth
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setUser(session?.user ?? null);
@@ -41,15 +42,6 @@ const Navbar = () => {
     };
   }, [supabase]);
 
-  const handleLogin = async () => {
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: "http://localhost:3000/callback",
-      },
-    });
-  };
-
   const handleLogout = async () => {
     await supabase.auth.signOut();
   };
@@ -60,7 +52,7 @@ const Navbar = () => {
       <div className="text-xl font-bold">
         <Link href="/" className="flex items-center">
           <Image
-            src="https://reqrsmboabgxshacmkst.supabase.co/storage/v1/object/sign/product-images/logo.jpg?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV85ZGU3NTY3OC0zMDRhLTQ3OTUtYjdhZC04M2IwMzM3ZDY2ZTUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9kdWN0LWltYWdlcy9sb2dvLmpwZyIsImlhdCI6MTc1NjMyNDM0NSwiZXhwIjo0OTA5OTI0MzQ1fQ.yOVRgbf3jGMSV667elmHCsCDa71Go79ibtdyw0wYi6U"
+            src="https://reqrsmboabgxshacmkst.supabase.co/storage/v1/object/sign/product-images/logo.jpg?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV85ZGU3NTY3OC0zMDRhLTQ3OTUtYjdhZC04M2IwMzM3ZDY2ZTUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9kdWN0LWltYWdlcy9sb2dvLmpwZyIsImlhdCI6MTc1NjM4MDIxNSwiZXhwIjo0OTA5OTgwMjE1fQ.D5eFaioyALpbvbK7LWj6Di0kI1-I3kAQKI0H-DVtiao"
             width={100}
             height={100}
             priority={true}
@@ -71,28 +63,16 @@ const Navbar = () => {
 
       {/* Desktop Menu */}
       <div className="hidden md:flex space-x-24 justify-between items-center">
-        <Link
-          href="/"
-          className="text-primary-950 hover:text-primary-300 transition-colors duration-300 text-xl"
-        >
+        <Link href="/" className="text-primary-950 hover:text-primary-300 transition-colors duration-300 text-xl">
           {t("Home")}
         </Link>
-        <Link
-          href="/products"
-          className="text-primary-950 hover:text-primary-300 transition-colors duration-300 text-xl"
-        >
+        <Link href="/products" className="text-primary-950 hover:text-primary-300 transition-colors duration-300 text-xl">
           {t("Shop")}
         </Link>
-        <Link
-          href="/about"
-          className="text-primary-950 hover:text-primary-300 transition-colors duration-300 text-xl"
-        >
+        <Link href="/about" className="text-primary-950 hover:text-primary-300 transition-colors duration-300 text-xl">
           {t("About")}
         </Link>
-        <Link
-          href="/contact"
-          className="text-primary-950 hover:text-primary-300 transition-colors duration-300 text-xl"
-        >
+        <Link href="/contact" className="text-primary-950 hover:text-primary-300 transition-colors duration-300 text-xl">
           {t("Contact")}
         </Link>
       </div>
@@ -128,10 +108,10 @@ const Navbar = () => {
         {/* ✅ Auth Buttons */}
         {!user ? (
           <button
-            onClick={handleLogin}
+            onClick={() => router.push("/login")}
             className="px-4 py-2 bg-amber-800 text-white rounded-md hover:bg-amber-700"
           >
-            Login with Google
+            Login / Signup
           </button>
         ) : (
           <button
@@ -157,34 +137,19 @@ const Navbar = () => {
       {/* Mobile Menu */}
       {isOpen && (
         <div className="md:hidden absolute top-20 left-0 w-full bg-white shadow-md flex flex-col items-center py-4 space-y-2">
-          <Link
-            href="/"
-            className="text-primary-950 hover:text-primary-300 transition-colors duration-300 text-xl"
-          >
+          <Link href="/" className="text-primary-950 hover:text-primary-300 transition-colors duration-300 text-xl">
             {t("Home")}
           </Link>
-          <Link
-            href="/products"
-            className="text-primary-950 hover:text-primary-300 transition-colors duration-300 text-xl"
-          >
+          <Link href="/products" className="text-primary-950 hover:text-primary-300 transition-colors duration-300 text-xl">
             {t("Shop")}
           </Link>
-          <Link
-            href="/about"
-            className="text-primary-950 hover:text-primary-300 transition-colors duration-300 text-xl"
-          >
+          <Link href="/about" className="text-primary-950 hover:text-primary-300 transition-colors duration-300 text-xl">
             {t("About")}
           </Link>
-          <Link
-            href="/contact"
-            className="text-primary-950 hover:text-primary-300 transition-colors duration-300 text-xl"
-          >
+          <Link href="/contact" className="text-primary-950 hover:text-primary-300 transition-colors duration-300 text-xl">
             {t("Contact")}
           </Link>
-          <Link
-            href="/cart"
-            className="flex flex-row text-primary-950 hover:text-primary-300 transition-colors duration-300 text-xl"
-          >
+          <Link href="/cart" className="flex flex-row text-primary-950 hover:text-primary-300 transition-colors duration-300 text-xl">
             <ShoppingCart className="w-5 h-5 mr-2" />
             {t("Cart")}
             {count > 0 && (
@@ -208,7 +173,7 @@ const Navbar = () => {
           {/* Auth */}
           {!user ? (
             <button
-              onClick={handleLogin}
+              onClick={() => router.push("/login")}
               className="bg-amber-800 text-white px-4 py-2 rounded hover:bg-amber-700"
             >
               Login / Signup

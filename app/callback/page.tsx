@@ -10,72 +10,91 @@ export default function Callback() {
 
   useEffect(() => {
     const handleSession = async () => {
-      const { data: { user }, error } = await supabase.auth.getUser();
+      try {
+        const {
+          data: { user },
+          error,
+        } = await supabase.auth.getUser();
 
-      if (!user) {
-        console.error(error);
-        router.push("/login");
-        return;
-      }
-
-      console.log("✅ User logged in:", user);
-
-      // 1️⃣ تأكد إن عنده customer موجود
-      const { data: existingCustomer } = await supabase
-        .from("customers")
-        .select("id")
-        .eq("auth_user_id", user.id)
-        .maybeSingle();
-
-      let customerId: number | null = existingCustomer?.id ?? null;
-
-      if (!customerId) {
-        // لو مفيش، اعمله جديد
-        const { data: newCustomer, error: customerError } = await supabase
-          .from("customers")
-          .insert({
-            auth_user_id: user.id,
-            name: user.user_metadata.full_name || "",
-            email: user.email,
-            phone: "",
-          })
-          .select("id")
-          .single();
-
-        if (customerError) {
-          console.error("❌ Error creating customer:", customerError.message);
+        if (!user) {
+          console.error("❌ No user found:", error?.message);
+          router.push("/login");
           return;
         }
 
-        customerId = newCustomer.id;
-      }
+        console.log("✅ User logged in:", user);
 
-      // 2️⃣ تأكد إن عنده profile مربوط
-      const { data: existingProfile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("id", user.id)
-        .maybeSingle();
+        // --------- 1️⃣ تأكد إن عنده customer ---------
+        const { data: existingCustomer, error: customerFetchError } =
+          await supabase
+            .from("customers")
+            .select("id")
+            .eq("auth_user_id", user.id)
+            .maybeSingle();
 
-      if (!existingProfile && customerId) {
-        const { error: profileError } = await supabase
-          .from("profiles")
-          .insert({
-            id: user.id,
-            customer_id: customerId,
-          });
-
-        if (profileError) {
-          console.error("❌ Error creating profile:", profileError.message);
+        if (customerFetchError) {
+          console.error("❌ Error fetching customer:", customerFetchError.message);
         }
-      }
 
-      // 3️⃣ روح للـ profile page
-      router.push("/profile");
+        let customerId: number | null = existingCustomer?.id ?? null;
+
+        if (!customerId) {
+          const { data: newCustomer, error: customerInsertError } =
+            await supabase
+              .from("customers")
+              .insert({
+                auth_user_id: user.id,
+                name: user.user_metadata.full_name || user.email?.split("@")[0] || "",
+                email: user.email,
+                phone: user.user_metadata.phone || "",
+              })
+              .select("id")
+              .single();
+
+          if (customerInsertError) {
+            console.error("❌ Error creating customer:", customerInsertError.message);
+            return;
+          }
+
+          customerId = newCustomer.id;
+        }
+
+        // --------- 2️⃣ تأكد إن عنده profile مربوط ---------
+        const { data: existingProfile, error: profileFetchError } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (profileFetchError) {
+          console.error("❌ Error fetching profile:", profileFetchError.message);
+        }
+
+        if (!existingProfile && customerId) {
+          const { error: profileInsertError } = await supabase
+            .from("profiles")
+            .insert({
+              id: user.id,
+              customer_id: customerId,
+              full_name: user.user_metadata.full_name || "",
+              phone: user.user_metadata.phone || "",
+            });
+
+          if (profileInsertError) {
+            console.error("❌ Error creating profile:", profileInsertError.message);
+          }
+        }
+
+        // --------- 3️⃣ روح للـ Home page ---------
+        router.push("/");
+      } catch (err: any) {
+        console.error("❌ Unexpected error:", err.message);
+        router.push("/login");
+      }
     };
 
     handleSession();
   }, [router, supabase]);
 
-  return <p className="p-10 text-center">Signing in...</p>;
+  return <p className="p-10 text-center">Signing you in, please wait...</p>;
 }

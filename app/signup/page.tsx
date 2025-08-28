@@ -1,9 +1,11 @@
 "use client";
 import { useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
 
 export default function SignupPage() {
   const supabase = createSupabaseBrowserClient();
+  const router = useRouter();
   const [form, setForm] = useState({
     email: "",
     password: "",
@@ -18,6 +20,8 @@ export default function SignupPage() {
 
   const handleSignup = async (e: any) => {
     e.preventDefault();
+    setMessage("");
+
     const { data, error } = await supabase.auth.signUp({
       email: form.email,
       password: form.password,
@@ -31,8 +35,21 @@ export default function SignupPage() {
         full_name: form.fullName,
         phone: form.phone,
       });
-      setMessage("Signup successful! Please check your email.");
+      router.push("/profile");
     }
+  };
+
+  const handleGoogleSignup = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${
+          process.env.NEXT_PUBLIC_VERCEL_URL || "http://localhost:3000"
+        }/auth/callback`,
+      },
+    });
+
+    if (error) setMessage(error.message);
   };
 
   return (
@@ -45,6 +62,7 @@ export default function SignupPage() {
           placeholder="Full Name"
           onChange={handleChange}
           className="w-full border px-3 py-2 rounded"
+          required
         />
         <input
           type="text"
@@ -52,6 +70,7 @@ export default function SignupPage() {
           placeholder="Phone Number"
           onChange={handleChange}
           className="w-full border px-3 py-2 rounded"
+          required
         />
         <input
           type="email"
@@ -59,6 +78,7 @@ export default function SignupPage() {
           placeholder="Email"
           onChange={handleChange}
           className="w-full border px-3 py-2 rounded"
+          required
         />
         <input
           type="password"
@@ -66,6 +86,7 @@ export default function SignupPage() {
           placeholder="Password"
           onChange={handleChange}
           className="w-full border px-3 py-2 rounded"
+          required
         />
         <button
           type="submit"
@@ -74,6 +95,20 @@ export default function SignupPage() {
           Sign Up
         </button>
       </form>
+
+      <div className="flex items-center w-full mt-4">
+        <div className="flex-1 h-px bg-gray-300"></div>
+        <span className="px-2 text-gray-500">OR</span>
+        <div className="flex-1 h-px bg-gray-300"></div>
+      </div>
+
+      <button
+        onClick={handleGoogleSignup}
+        className="w-full mt-4 bg-red-500 text-white py-2 rounded"
+      >
+        Continue with Google
+      </button>
+
       {message && <p className="mt-4 text-red-500">{message}</p>}
     </div>
   );
