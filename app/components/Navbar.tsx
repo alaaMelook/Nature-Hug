@@ -55,7 +55,7 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="bg-white pl-10 pr-10 md:pl-50 md:pr-50 shadow-sm sticky top-0 z-10 flex items-center justify-between bg-white shadow-md">
+    <nav className="bg-white pl-10 pr-10 md:pl-50 md:pr-50 sticky top-0 z-10 flex items-center justify-between shadow-md">
       {/* Logo */}
       <div className="text-xl font-bold">
         <Link href="/" className="flex items-center">

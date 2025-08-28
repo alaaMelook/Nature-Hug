@@ -46,6 +46,59 @@ export default function ProfilePage() {
   const [addingAddress, setAddingAddress] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  const getOrCreateCustomer = async (authUser: any) => {
+    // Try get customer by auth_user_id
+    const { data: exists, error: selErr } = await supabase
+      .from("customers")
+      .select("id, name, email, phone")
+      .eq("auth_user_id", authUser.id)
+      .maybeSingle();
+
+    if (selErr) {
+      setErrorMsg(selErr.message);
+      return null;
+    }
+
+    if (exists) {
+      return exists as Customer;
+    } else {
+      // If not exists → create
+      const { data: created, error: upsertErr } = await supabase
+        .from("customers")
+        .insert({
+          auth_user_id: authUser.id,
+          name: authUser.user_metadata?.full_name || "",
+          email: authUser.email,
+          phone: null,
+        })
+        .select("id, name, email, phone")
+        .single();
+
+      if (upsertErr) {
+        if (upsertErr.message?.toLowerCase().includes("duplicate")) {
+          const { data: byEmail } = await supabase
+            .from("customers")
+            .select("id, name, email, phone")
+            .eq("email", authUser.email)
+            .maybeSingle();
+          if (byEmail) {
+            await supabase
+              .from("customers")
+              .update({ auth_user_id: authUser.id })
+              .eq("id", byEmail.id);
+            return byEmail as Customer;
+          }
+        }
+        setErrorMsg(
+          upsertErr.message || "Could not create or retrieve your profile."
+        );
+        return null;
+      } else {
+        return created as Customer;
+      }
+    }
+  };
+
   // Load user + ensure customer + load addresses + load orders
   useEffect(() => {
     const run = async () => {
@@ -62,56 +115,8 @@ export default function ProfilePage() {
       }
       setUser(authUser);
 
-      // 2) Try get customer by auth_user_id
-      let cust: Customer | null = null;
-      const { data: exists, error: selErr } = await supabase
-        .from("customers")
-        .select("id, name, email, phone")
-        .eq("auth_user_id", authUser.id)
-        .maybeSingle();
-
-      if (selErr) setErrorMsg(selErr.message);
-
-      if (exists) {
-        cust = exists as Customer;
-      } else {
-        // If not exists → create
-        const { data: created, error: upsertErr } = await supabase
-          .from("customers")
-          .insert({
-            auth_user_id: authUser.id,
-            name: authUser.user_metadata?.full_name || "",
-            email: authUser.email,
-            phone: null,
-          })
-          .select("id, name, email, phone")
-          .single();
-
-        if (upsertErr) {
-          if (upsertErr.message?.toLowerCase().includes("duplicate")) {
-            const { data: byEmail } = await supabase
-              .from("customers")
-              .select("id, name, email, phone")
-              .eq("email", authUser.email)
-              .maybeSingle();
-
-            if (byEmail) {
-              await supabase
-                .from("customers")
-                .update({ auth_user_id: authUser.id })
-                .eq("id", byEmail.id);
-              cust = byEmail as Customer;
-            } else {
-              setErrorMsg("Could not create or retrieve your profile.");
-            }
-          } else {
-            setErrorMsg(upsertErr.message);
-          }
-        } else {
-          cust = created as Customer;
-        }
-      }
-
+      // 2) Get or create customer profile
+      const cust = await getOrCreateCustomer(authUser);
       setCustomer(cust);
 
       if (cust?.id) {
@@ -128,7 +133,8 @@ export default function ProfilePage() {
         // 4) Load orders + items + products
         const { data: orderData, error: orderErr } = await supabase
           .from("orders")
-          .select(`
+          .select(
+            `
             id,
             created_at,
             status,
@@ -142,7 +148,8 @@ export default function ProfilePage() {
                 name_arabic
               )
             )
-          `)
+          `
+          )
           .eq("customer_id", cust.id)
           .order("created_at", { ascending: false });
 
@@ -208,7 +215,10 @@ export default function ProfilePage() {
 
   const handleDeleteAddress = async (id: number) => {
     setErrorMsg(null);
-    const { error } = await supabase.from("customer_addresses").delete().eq("id", id);
+    const { error } = await supabase
+      .from("customer_addresses")
+      .delete()
+      .eq("id", id);
     if (error) {
       setErrorMsg(error.message);
       return;
@@ -245,68 +255,79 @@ export default function ProfilePage() {
 
       {/* Name (read-only) */}
       <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700">Name</label>
-        <input
-          type="text"
-          value={customer.name ?? user.user_metadata?.full_name ?? ""}
-          disabled
-          className="mt-1 block w-full rounded border-gray-300 bg-gray-100"
-        />
+        <label className="block text-sm font-medium text-gray-700">
+          <input
+            type="text"
+            value={customer.name ?? user.user_metadata?.full_name ?? ""}
+            disabled
+            className="mt-1 block w-full rounded border-gray-300 bg-gray-100"
+          />
+          {""}
+          Name
+        </label>
       </div>
 
       {/* Email (read-only) */}
       <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700">Email</label>
-        <input
-          type="email"
-          value={customer.email ?? user.email ?? ""}
-          disabled
-          className="mt-1 block w-full rounded border-gray-300 bg-gray-100"
-        />
+        <label className="block text-sm font-medium text-gray-700">
+          <input
+            type="email"
+            value={customer.email ?? user.email ?? ""}
+            disabled
+            className="mt-1 block w-full rounded border-gray-300 bg-gray-100"
+          />
+          {""}
+          Email
+        </label>
       </div>
 
       {/* Phone (editable) */}
       <div className="mb-8">
-        <label className="block text-sm font-medium text-gray-700">Phone</label>
-        <div className="flex gap-2 mt-1">
-          <input
-            type="tel"
-            value={customer.phone ?? ""}
-            onChange={(e) => setCustomer({ ...customer, phone: e.target.value })}
-            className="flex-1 rounded border-gray-300"
-            placeholder="Enter your phone"
-          />
-          <button
-            onClick={handleSavePhone}
-            disabled={savingPhone}
-            className="px-4 py-2 rounded bg-amber-700 text-white hover:bg-amber-800 disabled:opacity-60"
-          >
-            {savingPhone ? "Saving…" : "Save"}
-          </button>
-        </div>
+        <label className="block text-sm font-medium text-gray-700">
+          <div className="flex gap-2 mt-1">
+            <input
+              type="tel"
+              value={customer.phone ?? ""}
+              onChange={(e) =>
+                setCustomer({ ...customer, phone: e.target.value })
+              }
+              className="flex-1 rounded border-gray-300"
+              placeholder="Enter your phone"
+            />
+            <button
+              onClick={handleSavePhone}
+              disabled={savingPhone}
+              className="px-4 py-2 rounded bg-amber-700 text-white hover:bg-amber-800 disabled:opacity-60"
+            >
+              {savingPhone ? "Saving…" : "Save"}
+            </button>
+          </div>
+          Phone
+        </label>
       </div>
 
       {/* Addresses */}
       <div className="mb-10">
-        <label className="block text-sm font-medium text-gray-700">Addresses</label>
-
-        {/* Add new address */}
-        <div className="flex gap-2 mt-2">
-          <input
-            type="text"
-            placeholder="Add a new address"
-            value={newAddress}
-            onChange={(e) => setNewAddress(e.target.value)}
-            className="flex-1 rounded border-gray-300"
-          />
-          <button
-            onClick={handleAddAddress}
-            disabled={addingAddress}
-            className="px-4 py-2 rounded bg-amber-700 text-white hover:bg-amber-800 disabled:opacity-60"
-          >
-            {addingAddress ? "Adding…" : "➕ Add"}
-          </button>
-        </div>
+        <label className="block text-sm font-medium text-gray-700">
+          {/* Add new address */}
+          <div className="flex gap-2 mt-2">
+            <input
+              type="text"
+              placeholder="Add a new address"
+              value={newAddress}
+              onChange={(e) => setNewAddress(e.target.value)}
+              className="flex-1 rounded border-gray-300"
+            />
+            <button
+              onClick={handleAddAddress}
+              disabled={addingAddress}
+              className="px-4 py-2 rounded bg-amber-700 text-white hover:bg-amber-800 disabled:opacity-60"
+            >
+              {addingAddress ? "Adding…" : "➕ Add"}
+            </button>
+          </div>
+          Addresses
+        </label>
 
         {/* Addresses list */}
         <ul className="mt-4 space-y-2">
@@ -332,7 +353,9 @@ export default function ProfilePage() {
 
       {/* --- Order History Section --- */}
       <div className="mt-10">
-        <h2 className="text-xl font-semibold mb-4 text-amber-700">Order History</h2>
+        <h2 className="text-xl font-semibold mb-4 text-amber-700">
+          Order History
+        </h2>
         {orders.length === 0 ? (
           <p className="text-gray-500">You have no orders yet.</p>
         ) : (
@@ -350,8 +373,8 @@ export default function ProfilePage() {
                 <ul className="mt-2 space-y-1">
                   {order.items.map((item) => (
                     <li key={item.id} className="text-sm">
-                      {item.product?.name_english || item.product?.name_arabic} ×{" "}
-                      {item.quantity} — ${item.price}
+                      {item.product?.name_english || item.product?.name_arabic}{" "}
+                      × {item.quantity} — ${item.price}
                     </li>
                   ))}
                 </ul>

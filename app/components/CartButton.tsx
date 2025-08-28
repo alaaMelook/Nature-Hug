@@ -14,7 +14,7 @@ export default function AddToCartButton({
   const handleClick = async () => {
     setLoading(true);
     try {
-      await addToCart(product);
+      addToCart(product);
     } catch (err) {
       console.error("Error adding to cart:", err);
     } finally {

@@ -27,7 +27,7 @@ export default function CartPage() {
           {t("startAdding")}
         </p>
         <button
-          className="flex items-center space-x-2 px-8 py-4 hover:bg-primary-50 hover:text-primary-700 transition-colors cursor-pointer py-4 bg-primary-800 text-primary-50 font-semibold rounded-full shadow-lg transition duration-300"
+          className="flex items-center space-x-2 px-8 py-4 hover:bg-primary-50 hover:text-primary-700 transition-colors cursor-pointer bg-primary-800 text-primary-50 font-semibold rounded-full shadow-lg duration-300"
           onClick={() => {}}
         >
           <ArrowRightIcon className="h-5 w-5" />

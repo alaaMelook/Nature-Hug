@@ -36,7 +36,9 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: "http://localhost:3000/callback", // نفس الـ redirect اللي ضفتيه في Google
+        redirectTo: `${
+          process.env.NEXT_PUBLIC_VERCEL_URL || "http://localhost:3000"
+        }/auth/callback`,
       },
     });
 
@@ -63,7 +65,10 @@ export default function LoginPage() {
       <h1 className="text-2xl font-bold">Login</h1>
 
       {/* Email + Password Form */}
-      <form onSubmit={handleEmailLogin} className="flex flex-col space-y-4 w-72">
+      <form
+        onSubmit={handleEmailLogin}
+        className="flex flex-col space-y-4 w-72"
+      >
         <input
           type="email"
           placeholder="Email"
