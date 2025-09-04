@@ -1,4 +1,3 @@
-// app/hooks/useCart.ts (client-side hook)
 export async function addToCart(productId: number, customer_uuid: string) {
   const res = await fetch("/api/cart", {
     method: "POST",

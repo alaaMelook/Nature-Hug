@@ -35,7 +35,6 @@ const HomePage = () => {
   }, [language]);
 
   const renderProductContent = () => {
-    // Renders a loading spinner while data is being fetched.
     if (loading) {
       return (
         <div className="flex justify-center items-center h-64">
@@ -43,7 +42,7 @@ const HomePage = () => {
         </div>
       );
     }
-    // Renders an error message if the API call fails.
+
     if (error) {
       return (
         <div className="bg-red-100 border border-red-400 text-red-700 px-6 py-4 rounded-lg max-w-2xl mx-auto">
@@ -52,7 +51,7 @@ const HomePage = () => {
         </div>
       );
     }
-    // Renders a message when there are no products to display.
+
     if (products.length === 0) {
       return (
         <div className="flex justify-center items-center h-64">
@@ -64,12 +63,10 @@ const HomePage = () => {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {products.map((product) => {
-          // Determines the product name based on the current language.
           const displayName =
             language === "ar" ? product.name_arabic : product.name_english;
 
           return (
-            // The main product card container with refined styling.
             <div
               key={product.id}
               className="bg-white rounded-xl shadow-lg overflow-hidden flex flex-col transform transition-transform duration-300 hover:scale-105"
@@ -80,7 +77,6 @@ const HomePage = () => {
                   src={product.image_url || ""}
                   alt={displayName || "Product image"}
                   className="w-full h-80 object-cover"
-                  // Fallback for broken images
                   onError={(e) => {
                     (e.target as HTMLImageElement).src =
                       "https://placehold.co/400x400/D1D5DB/4B5563?text=Image+Not+Found";

@@ -1,4 +1,3 @@
-// app/products/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -29,7 +28,6 @@ export default function ProductsPage() {
           return;
         }
 
-        // Format products with proper types
         const formattedProducts: Product[] = (data || []).map((product) => ({
           ...product,
           price: Number(product.price) || 0,

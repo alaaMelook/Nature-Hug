@@ -47,7 +47,6 @@ export default function ProfilePage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const getOrCreateCustomer = async (authUser: any) => {
-    // Try get customer by auth_user_id
     const { data: exists, error: selErr } = await supabase
       .from("customers")
       .select("id, name, email, phone")
@@ -62,7 +61,6 @@ export default function ProfilePage() {
     if (exists) {
       return exists as Customer;
     } else {
-      // If not exists → create
       const { data: created, error: upsertErr } = await supabase
         .from("customers")
         .insert({
@@ -99,13 +97,11 @@ export default function ProfilePage() {
     }
   };
 
-  // Load user + ensure customer + load addresses + load orders
   useEffect(() => {
     const run = async () => {
       setLoading(true);
       setErrorMsg(null);
 
-      // 1) Get auth user
       const { data: authData, error: authErr } = await supabase.auth.getUser();
       const authUser = authData?.user;
       if (authErr || !authUser) {
@@ -115,12 +111,10 @@ export default function ProfilePage() {
       }
       setUser(authUser);
 
-      // 2) Get or create customer profile
       const cust = await getOrCreateCustomer(authUser);
       setCustomer(cust);
 
       if (cust?.id) {
-        // 3) Load addresses
         const { data: addrData, error: addrErr } = await supabase
           .from("customer_addresses")
           .select("id, customer_id, address, created_at")
@@ -130,7 +124,6 @@ export default function ProfilePage() {
         if (addrErr) setErrorMsg(addrErr.message);
         setAddresses(addrData || []);
 
-        // 4) Load orders + items + products
         const { data: orderData, error: orderErr } = await supabase
           .from("orders")
           .select(
@@ -175,7 +168,6 @@ export default function ProfilePage() {
     };
 
     run();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSavePhone = async () => {

@@ -21,7 +21,6 @@ export async function POST(req: Request) {
 
   const productIds = items.map((i) => i.productId);
 
-  // هات الموجود عشان نعمل merge بالجمع
   const { data: existing, error: selErr } = await supabase
     .from("cart_items")
     .select("product_id, quantity")

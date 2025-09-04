@@ -1,4 +1,3 @@
-// components/LanguageSwitcher.tsx
 "use client";
 
 import { Globe } from "lucide-react";

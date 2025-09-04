@@ -5,7 +5,7 @@ type LangKey = "en" | "ar";
 export const translations: Record<
   LangKey,
   {
-    [key: string]: any; // allow strings, arrays, objects
+    [key: string]: any;
   }
 > = {
   en: {

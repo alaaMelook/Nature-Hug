@@ -1,19 +1,16 @@
-// app/api/products/route.ts
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY! // server key only, never expose to client
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
 export async function GET(req: Request) {
   try {
-    // detect language from query params (fallback = en)
     const { searchParams } = new URL(req.url);
     const language = searchParams.get("lang") || "en";
 
-    // fetch products
     const { data, error } = await supabase
       .from("products")
       .select("*")

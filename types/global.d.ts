@@ -1,8 +1,6 @@
-// types/global.d.ts
-export {}; // Make this a module
+export {};
 
 declare global {
-  // Product type
   interface Product {
     id: number;
     created_at: string;
@@ -16,19 +14,16 @@ declare global {
     image_url: string | null;
   }
 
-  // Cart item extends Product with quantity
   interface CartItem extends Product {
     quantity: number;
   }
 
-  // User type
   interface User {
     id: string;
     email: string;
     name?: string;
   }
 
-  // API response types
   interface ApiResponse<T = any> {
     data?: T;
     error?: string;
@@ -45,7 +40,6 @@ declare global {
     getCartCount: () => number;
   }
 
-  // Form event types
   type FormEvent = React.FormEvent<HTMLFormElement>;
   type InputChangeEvent = React.ChangeEvent<HTMLInputElement>;
   type SelectChangeEvent = React.ChangeEvent<HTMLSelectElement>;

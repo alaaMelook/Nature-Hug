@@ -9,7 +9,7 @@ export default function AddToCartButton({
 }: Readonly<{ product: Product }>) {
   const [loading, setLoading] = useState(false);
   const { t } = useTranslation();
-  const { addToCart } = useCart(); // 👈 use context
+  const { addToCart } = useCart();
 
   const handleClick = async () => {
     setLoading(true);

@@ -25,7 +25,9 @@ export default function CheckoutPage() {
     governorate: "",
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
@@ -41,7 +43,6 @@ export default function CheckoutPage() {
     const data = await res.json();
     if (data.success) {
       alert("تم الحفظ والانتقال للدفع ✅");
-      // تقدر تعملي redirect لـ payment page بعدين
     } else {
       alert("حصل خطأ ❌");
     }

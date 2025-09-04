@@ -1,10 +1,8 @@
-// app/api/cart/route.ts
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { v4 as uuidv4 } from "uuid";
 import { createClient } from "@supabase/supabase-js";
 
-// ✅ Supabase client with service role (server-only)
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -66,13 +64,13 @@ export async function GET(req: Request) {
   const formatted = items.map((item) => {
     const product = products.find((p) => p.id === item.product_id);
     return {
-      id: item.id, // cart_item id
-      quantity: item.quantity, // cart_item quantity
+      id: item.id,
+      quantity: item.quantity,
       products: {
         id: product?.id,
         price: product?.price,
         image_url: product?.image_url,
-        name: language === "en" ? product?.name_english : product?.name_arabic, // 👈 Always map into `name`
+        name: language === "en" ? product?.name_english : product?.name_arabic,
       },
     };
   });
@@ -88,7 +86,6 @@ export async function POST(req: Request) {
 
     const res = NextResponse.json({ success: true });
 
-    // If not logged in, create guest UUID
     let customer_uuid = user_uuid;
     if (!customer_uuid) {
       if (!guest_uuid) {
@@ -98,7 +95,7 @@ export async function POST(req: Request) {
           secure: true,
           sameSite: "lax",
           path: "/",
-          maxAge: 60 * 60 * 24 * 7, // 7 days
+          maxAge: 60 * 60 * 24 * 7,
         });
       }
       customer_uuid = guest_uuid!;

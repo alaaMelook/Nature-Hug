@@ -1,17 +1,17 @@
 "use client";
 
-import { supabase } from "@/lib/supabaseClient";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 export default function LoginPage() {
   const router = useRouter();
+  const supabase = createSupabaseBrowserClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  // Login with Email + Password
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -31,23 +31,23 @@ export default function LoginPage() {
     setLoading(false);
   };
 
-  // Login with Google OAuth
   const handleGoogleLogin = async () => {
+    setLoading(true);
+    setErrorMsg("");
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${
-          process.env.NEXT_PUBLIC_VERCEL_URL || "http://localhost:3000"
-        }/auth/callback`,
+        redirectTo: `${window.location.origin}/callback`,
       },
     });
 
     if (error) {
       setErrorMsg(error.message);
+      setLoading(false);
     }
   };
 
-  // redirect if already logged in
   useEffect(() => {
     const checkUser = async () => {
       const {
@@ -101,9 +101,10 @@ export default function LoginPage() {
 
       <button
         onClick={handleGoogleLogin}
-        className="px-6 py-3 bg-red-500 text-white rounded-md hover:bg-red-600 transition w-72"
+        disabled={loading}
+        className="px-6 py-3 bg-red-500 text-white rounded-md hover:bg-red-600 transition w-72 disabled:opacity-50"
       >
-        Continue with Google
+        {loading ? "Signing in..." : "Continue with Google"}
       </button>
 
       {errorMsg && <p className="text-red-600">{errorMsg}</p>}

@@ -1,16 +1,38 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { v4 as uuidv4 } from "uuid";
+import { createServerClient } from "@supabase/ssr";
 
-export function middleware(req: NextRequest) {
-  const res = NextResponse.next();
+export async function middleware(req: NextRequest) {
+  let res = NextResponse.next({
+    request: {
+      headers: req.headers,
+    },
+  });
 
-  // ✅ Skip API routes that shouldn't set cookies
   if (req.nextUrl.pathname.startsWith("/_next")) return res;
 
-  // ✅ Check if guest UUID already exists
-  const guestUuid = req.cookies.get("guest_uuid")?.value;
+  // Create Supabase client
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return req.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            req.cookies.set(name, value);
+            res.cookies.set(name, value, options);
+          });
+        },
+      },
+    }
+  );
 
+  // Handle guest UUID
+  const guestUuid = req.cookies.get("guest_uuid")?.value;
   if (!guestUuid) {
     const newUuid = uuidv4();
     res.cookies.set("guest_uuid", newUuid, {
@@ -20,6 +42,9 @@ export function middleware(req: NextRequest) {
       path: "/",
     });
   }
+
+  // Refresh session if expired - required for Server Components
+  await supabase.auth.getSession();
 
   return res;
 }

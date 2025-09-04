@@ -1,4 +1,3 @@
-// context/CartContext.js
 "use client";
 import React, {
   createContext,
@@ -24,8 +23,6 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [loading, setLoading] = useState(true);
   const Cookies = require("js-cookie");
   useEffect(() => {
-    // Load cart from cookies on initial load
-
     const savedCart = Cookies.get("cart");
     if (savedCart) {
       try {
@@ -39,9 +36,8 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
   }, []);
 
   useEffect(() => {
-    // Save cart to cookies whenever it changes
     if (!loading) {
-      Cookies.set("cart", JSON.stringify(cart), { expires: 1 }); // Expires in 1 day
+      Cookies.set("cart", JSON.stringify(cart), { expires: 1 });
     }
   }, [cart, loading]);
 

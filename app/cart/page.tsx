@@ -8,7 +8,7 @@ import Counter from "../components/Counter";
 
 export default function CartPage() {
   const { t, language } = useTranslation();
-  const cart = useCart(); // 👈 pull items from context
+  const cart = useCart();
   const { cart: items, removeFromCart } = cart;
 
   const subtotal = cart.cart.reduce(

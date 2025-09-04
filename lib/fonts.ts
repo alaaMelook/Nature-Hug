@@ -1,7 +1,5 @@
-// lib/fonts.ts
 import localFont from "next/font/local";
 
-// Arabic font - Muslimah (OTF format)
 export const muslimah = localFont({
   src: [
     {
@@ -18,7 +16,6 @@ export const muslimah = localFont({
   variable: "--font-muslimah",
 });
 
-// English font - Fontspring Gerlach Sans (OTF format)
 export const gerlachSans = localFont({
   src: [
     {

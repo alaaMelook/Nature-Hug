@@ -4,7 +4,7 @@ import { CartProvider } from "@/lib/CartContext";
 import Navbar from "@/app/components/Navbar";
 import { TranslationProvider } from "@/app/components/TranslationProvider";
 import FontWrapper from "./components/FontWrapper";
-import CartSyncer from "./components/CartSyncer"; // 👈 اضفنا الاستيراد هنا
+import CartSyncer from "./components/CartSyncer";
 
 export const metadata: Metadata = {
   title: "Hug Nature",

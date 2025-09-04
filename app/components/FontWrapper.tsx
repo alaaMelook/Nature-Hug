@@ -1,4 +1,3 @@
-// components/FontWrapper.tsx
 "use client";
 import {
   muslimah as arabicFont,

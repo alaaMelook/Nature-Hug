@@ -11,20 +11,24 @@ export default function Callback() {
   useEffect(() => {
     const handleSession = async () => {
       try {
-        const {
-          data: { user },
-          error,
-        } = await supabase.auth.getUser();
-
-        if (!user) {
-          console.error("❌ No user found:", error?.message);
+        // First, handle the OAuth callback
+        const { data, error: authError } = await supabase.auth.getSession();
+        
+        if (authError) {
+          console.error("❌ Auth error:", authError.message);
           router.push("/login");
           return;
         }
 
+        if (!data.session) {
+          console.error("❌ No session found");
+          router.push("/login");
+          return;
+        }
+
+        const user = data.session.user;
         console.log("✅ User logged in:", user);
 
-        // --------- 1️⃣ تأكد إن عنده customer ---------
         const { data: existingCustomer, error: customerFetchError } =
           await supabase
             .from("customers")
@@ -33,7 +37,10 @@ export default function Callback() {
             .maybeSingle();
 
         if (customerFetchError) {
-          console.error("❌ Error fetching customer:", customerFetchError.message);
+          console.error(
+            "❌ Error fetching customer:",
+            customerFetchError.message
+          );
         }
 
         let customerId: number | null = existingCustomer?.id ?? null;
@@ -44,7 +51,10 @@ export default function Callback() {
               .from("customers")
               .insert({
                 auth_user_id: user.id,
-                name: user.user_metadata.full_name || user.email?.split("@")[0] || "",
+                name:
+                  user.user_metadata.full_name ||
+                  user.email?.split("@")[0] ||
+                  "",
                 email: user.email,
                 phone: user.user_metadata.phone || "",
               })
@@ -52,22 +62,28 @@ export default function Callback() {
               .single();
 
           if (customerInsertError) {
-            console.error("❌ Error creating customer:", customerInsertError.message);
+            console.error(
+              "❌ Error creating customer:",
+              customerInsertError.message
+            );
             return;
           }
 
           customerId = newCustomer.id;
         }
 
-        // --------- 2️⃣ تأكد إن عنده profile مربوط ---------
-        const { data: existingProfile, error: profileFetchError } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("id", user.id)
-          .maybeSingle();
+        const { data: existingProfile, error: profileFetchError } =
+          await supabase
+            .from("profiles")
+            .select("id")
+            .eq("id", user.id)
+            .maybeSingle();
 
         if (profileFetchError) {
-          console.error("❌ Error fetching profile:", profileFetchError.message);
+          console.error(
+            "❌ Error fetching profile:",
+            profileFetchError.message
+          );
         }
 
         if (!existingProfile && customerId) {
@@ -81,11 +97,13 @@ export default function Callback() {
             });
 
           if (profileInsertError) {
-            console.error("❌ Error creating profile:", profileInsertError.message);
+            console.error(
+              "❌ Error creating profile:",
+              profileInsertError.message
+            );
           }
         }
 
-        // --------- 3️⃣ روح للـ Home page ---------
         router.push("/");
       } catch (err: any) {
         console.error("❌ Unexpected error:", err.message);
