@@ -1,10 +1,9 @@
-import "./globals.css";
 import type { Metadata } from "next";
 import { CartProvider } from "@/lib/CartContext";
-import Navbar from "@/app/components/Navbar";
+import ConditionalComponents from "@/app/components/ConditionalComponents";
 import { TranslationProvider } from "@/app/components/TranslationProvider";
 import FontWrapper from "./components/FontWrapper";
-import CartSyncer from "./components/CartSyncer";
+import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Hug Nature",
@@ -22,8 +21,7 @@ export default function RootLayout({
         <TranslationProvider>
           <FontWrapper>
             <CartProvider>
-              <Navbar />
-              <CartSyncer /> {/* 👈 اضفناه هنا جوا الـ body */}
+              <ConditionalComponents />
               <main>{children}</main>
             </CartProvider>
           </FontWrapper>

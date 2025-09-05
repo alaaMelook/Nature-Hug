@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ShoppingCart, Menu, X, User } from "lucide-react";
@@ -9,41 +9,93 @@ import { useTranslation } from "./TranslationProvider";
 import { useCart } from "@/lib/CartContext";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import { checkAdminAccess, clearAdminCache, AdminUser } from "@/lib/adminAuthClient";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { t } = useTranslation();
   const { cart } = useCart();
-  const count = cart.reduce((s, i) => s + i.quantity, 0);
+  const count = useMemo(() => cart.reduce((s, i) => s + i.quantity, 0), [cart]);
 
   const [user, setUser] = useState<any>(null);
+  const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
+  const [isClient, setIsClient] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const supabase = createSupabaseBrowserClient();
   const router = useRouter();
 
+  // Memoized admin check to prevent unnecessary calls
+  const checkAdmin = useCallback(async (userId: string) => {
+    try {
+      const admin = await checkAdminAccess();
+      setAdminUser(admin);
+    } catch (error) {
+      console.error("Admin check failed:", error);
+      setAdminUser(null);
+    }
+  }, []);
+
+  // Optimized auth state handler
+  const handleAuthStateChange = useCallback(async (session: any) => {
+    setUser(session?.user ?? null);
+    
+    if (session?.user) {
+      await checkAdmin(session.user.id);
+    } else {
+      setAdminUser(null);
+      clearAdminCache();
+    }
+    setIsLoading(false);
+  }, [checkAdmin]);
+
   useEffect(() => {
-    const getUser = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      setUser(session?.user ?? null);
+    setIsClient(true);
+    
+    // Initial auth check
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        await handleAuthStateChange(session);
+      } catch (error) {
+        console.error("Auth initialization failed:", error);
+        setIsLoading(false);
+      }
     };
 
-    getUser();
+    initializeAuth();
 
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setUser(session?.user ?? null);
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        await handleAuthStateChange(session);
       }
     );
 
     return () => {
-      listener.subscription.unsubscribe();
+      subscription.unsubscribe();
     };
+  }, [supabase, handleAuthStateChange]);
+
+  const handleLogout = useCallback(async () => {
+    try {
+      await supabase.auth.signOut();
+      clearAdminCache();
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
   }, [supabase]);
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-  };
+  const toggleMobileMenu = useCallback(() => {
+    setIsOpen(prev => !prev);
+  }, []);
+
+  // Memoized navigation items to prevent re-renders
+  const navigationItems = useMemo(() => [
+    { href: "/", label: t("Home") },
+    { href: "/products", label: t("Shop") },
+    { href: "/about", label: t("About") },
+    { href: "/contact", label: t("Contact") },
+  ], [t]);
 
   return (
     <nav className="bg-white pl-10 pr-10 md:pl-50 md:pr-50 sticky top-0 z-10 flex items-center justify-between shadow-md">
@@ -62,33 +114,18 @@ const Navbar = () => {
 
       {/* Desktop Menu */}
       <div className="hidden md:flex space-x-24 justify-between items-center">
-        <Link
-          href="/"
-          className="text-primary-950 hover:text-primary-300 transition-colors duration-300 text-xl"
-        >
-          {t("Home")}
-        </Link>
-        <Link
-          href="/products"
-          className="text-primary-950 hover:text-primary-300 transition-colors duration-300 text-xl"
-        >
-          {t("Shop")}
-        </Link>
-        <Link
-          href="/about"
-          className="text-primary-950 hover:text-primary-300 transition-colors duration-300 text-xl"
-        >
-          {t("About")}
-        </Link>
-        <Link
-          href="/contact"
-          className="text-primary-950 hover:text-primary-300 transition-colors duration-300 text-xl"
-        >
-          {t("Contact")}
-        </Link>
+        {navigationItems.map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            className="text-primary-950 hover:text-primary-300 transition-colors duration-300 text-xl"
+          >
+            {item.label}
+          </Link>
+        ))}
       </div>
 
-      <div className="hidden md:flex items-center space-x-6">
+      <div className="hidden md:flex items-center space-x-6" suppressHydrationWarning>
         <LanguageSwitcher />
 
         {/* Cart */}
@@ -105,38 +142,58 @@ const Navbar = () => {
           )}
         </Link>
 
-        {/* ✅ Profile Button */}
-        {user && (
-          <Link
-            href="/profile"
-            className="relative text-primary-950 bg-primary-50 px-4 py-2 rounded-lg shadow-md transition-colors duration-300 border border-transparent hover:border-primary-300 hover:bg-primary-100 flex items-center text-sm md:text-base"
-          >
-            <User className="w-4 h-4 md:w-5 md:h-5 mr-2" />
-            Profile
-          </Link>
-        )}
-
-        {/* ✅ Auth Buttons */}
-        {!user ? (
-          <button
-            onClick={() => router.push("/login")}
-            className="px-4 py-2 bg-amber-800 text-white rounded-md hover:bg-amber-700"
-          >
-            Login / Signup
-          </button>
+        {/* Auth Section */}
+        {isLoading ? (
+          <div className="px-4 py-2 bg-gray-200 text-gray-500 rounded-md">
+            Loading...
+          </div>
         ) : (
-          <button
-            onClick={handleLogout}
-            className="px-4 py-2 bg-amber-800 text-white rounded-md hover:bg-amber-700"
-          >
-            Logout
-          </button>
+          <>
+            {/* Profile Button */}
+            {user && (
+              <Link
+                href="/profile"
+                className="relative text-primary-950 bg-primary-50 px-4 py-2 rounded-lg shadow-md transition-colors duration-300 border border-transparent hover:border-primary-300 hover:bg-primary-100 flex items-center text-sm md:text-base"
+              >
+                <User className="w-4 h-4 md:w-5 md:h-5 mr-2" />
+                Profile
+              </Link>
+            )}
+
+            {/* Admin Button */}
+            {adminUser && (
+              <Link
+                href="/admin"
+                className="relative text-white bg-red-600 px-4 py-2 rounded-lg shadow-md transition-colors duration-300 border border-transparent hover:bg-red-700 flex items-center text-sm md:text-base"
+              >
+                <User className="w-4 h-4 md:w-5 md:h-5 mr-2" />
+                Admin
+              </Link>
+            )}
+
+            {/* Auth Buttons */}
+            {!user ? (
+              <button
+                onClick={() => router.push("/login")}
+                className="px-4 py-2 bg-amber-800 text-white rounded-md hover:bg-amber-700"
+              >
+                Login / Signup
+              </button>
+            ) : (
+              <button
+                onClick={handleLogout}
+                className="px-4 py-2 bg-amber-800 text-white rounded-md hover:bg-amber-700"
+              >
+                Logout
+              </button>
+            )}
+          </>
         )}
       </div>
 
       {/* Mobile Menu Toggle */}
       <div className="md:hidden">
-        <button onClick={() => setIsOpen(!isOpen)}>
+        <button onClick={toggleMobileMenu}>
           {isOpen ? (
             <X className="w-6 h-6 text-primary-900" />
           ) : (
@@ -147,34 +204,22 @@ const Navbar = () => {
 
       {/* Mobile Menu */}
       {isOpen && (
-        <div className="md:hidden absolute top-20 left-0 w-full bg-white shadow-md flex flex-col items-center py-4 space-y-2">
-          <Link
-            href="/"
-            className="text-primary-950 hover:text-primary-300 transition-colors duration-300 text-xl"
-          >
-            {t("Home")}
-          </Link>
-          <Link
-            href="/products"
-            className="text-primary-950 hover:text-primary-300 transition-colors duration-300 text-xl"
-          >
-            {t("Shop")}
-          </Link>
-          <Link
-            href="/about"
-            className="text-primary-950 hover:text-primary-300 transition-colors duration-300 text-xl"
-          >
-            {t("About")}
-          </Link>
-          <Link
-            href="/contact"
-            className="text-primary-950 hover:text-primary-300 transition-colors duration-300 text-xl"
-          >
-            {t("Contact")}
-          </Link>
+        <div className="md:hidden absolute top-20 left-0 w-full bg-white shadow-md flex flex-col items-center py-4 space-y-2" suppressHydrationWarning>
+          {navigationItems.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="text-primary-950 hover:text-primary-300 transition-colors duration-300 text-xl"
+              onClick={() => setIsOpen(false)}
+            >
+              {item.label}
+            </Link>
+          ))}
+          
           <Link
             href="/cart"
             className="flex flex-row text-primary-950 hover:text-primary-300 transition-colors duration-300 text-xl"
+            onClick={() => setIsOpen(false)}
           >
             <ShoppingCart className="w-5 h-5 mr-2" />
             {t("Cart")}
@@ -184,33 +229,58 @@ const Navbar = () => {
               </span>
             )}
           </Link>
+          
           <LanguageSwitcher />
 
-          {/* ✅ Profile in mobile */}
-          {user && (
-            <Link
-              href="/profile"
-              className="bg-primary-50 px-4 py-2 rounded shadow-md border hover:bg-primary-100"
-            >
-              My Profile
-            </Link>
-          )}
-
-          {/* Auth */}
-          {!user ? (
-            <button
-              onClick={() => router.push("/login")}
-              className="bg-amber-800 text-white px-4 py-2 rounded hover:bg-amber-700"
-            >
-              Login / Signup
-            </button>
+          {/* Mobile Auth Section */}
+          {isLoading ? (
+            <div className="bg-gray-200 text-gray-500 px-4 py-2 rounded">
+              Loading...
+            </div>
           ) : (
-            <button
-              onClick={handleLogout}
-              className="bg-amber-800 text-white px-4 py-2 rounded hover:bg-amber-700"
-            >
-              Logout
-            </button>
+            <>
+              {user && (
+                <Link
+                  href="/profile"
+                  className="bg-primary-50 px-4 py-2 rounded shadow-md border hover:bg-primary-100"
+                  onClick={() => setIsOpen(false)}
+                >
+                  My Profile
+                </Link>
+              )}
+
+              {adminUser && (
+                <Link
+                  href="/admin"
+                  className="bg-red-600 text-white px-4 py-2 rounded shadow-md border hover:bg-red-700"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Admin Panel
+                </Link>
+              )}
+
+              {!user ? (
+                <button
+                  onClick={() => {
+                    router.push("/login");
+                    setIsOpen(false);
+                  }}
+                  className="bg-amber-800 text-white px-4 py-2 rounded hover:bg-amber-700"
+                >
+                  Login / Signup
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    handleLogout();
+                    setIsOpen(false);
+                  }}
+                  className="bg-amber-800 text-white px-4 py-2 rounded hover:bg-amber-700"
+                >
+                  Logout
+                </button>
+              )}
+            </>
           )}
         </div>
       )}

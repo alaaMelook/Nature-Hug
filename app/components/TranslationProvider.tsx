@@ -8,6 +8,7 @@ import {
   useEffect,
   ReactNode,
   useMemo,
+  useCallback,
 } from "react";
 
 type LangKey = "en" | "ar";
@@ -27,8 +28,17 @@ export function TranslationProvider({
   children,
 }: Readonly<{ children: ReactNode }>) {
   const [language, setLanguage] = useState<LangKey>("en");
+  const [isClient, setIsClient] = useState(false);
+
+  const updateHtml = useCallback((lang: LangKey) => {
+    if (typeof document !== "undefined") {
+      document.documentElement.lang = lang;
+      document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
+    }
+  }, []);
 
   useEffect(() => {
+    setIsClient(true);
     const saved =
       (localStorage.getItem("language") as LangKey) ||
       (navigator.language.split("-")[0] as LangKey) ||
@@ -36,26 +46,23 @@ export function TranslationProvider({
 
     setLanguage(saved);
     updateHtml(saved);
-  }, []);
+  }, [updateHtml]);
 
-  const updateHtml = (lang: LangKey) => {
-    document.documentElement.lang = lang;
-    document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
-  };
-
-  const switchLanguage = (lang: LangKey) => {
+  const switchLanguage = useCallback((lang: LangKey) => {
     setLanguage(lang);
-    localStorage.setItem("language", lang);
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem("language", lang);
+    }
     updateHtml(lang);
-  };
+  }, [updateHtml]);
 
-  const t = (key: string): any => {
+  const t = useCallback((key: string): string => {
     return (
       translations[language][key] ||
       translations[language][key.toLowerCase()] ||
       key
     );
-  };
+  }, [language]);
 
   const value = useMemo(
     () => ({
@@ -64,14 +71,16 @@ export function TranslationProvider({
       isRTL: language === "ar",
       t,
     }),
-    [language]
+    [language, switchLanguage, t]
   );
+
   return (
     <TranslationContext.Provider value={value}>
       {children}
     </TranslationContext.Provider>
   );
 }
+
 export function useFeatures() {
   const { language } = useTranslation();
   return translations[language].features;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type LocalCartItem = { productId: string; quantity: number };
@@ -8,45 +8,64 @@ type LocalCartItem = { productId: string; quantity: number };
 export default function CartSyncer() {
   const supabase = createSupabaseBrowserClient();
   const hasSynced = useRef(false);
+  const isSyncing = useRef(false);
 
-  useEffect(() => {
-    const sync = async () => {
-      if (hasSynced.current) return;
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+  const sync = useCallback(async () => {
+    if (hasSynced.current || isSyncing.current) return;
+    
+    isSyncing.current = true;
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      const raw =
-        typeof window !== "undefined" ? localStorage.getItem("cart") : null;
+      const raw = localStorage.getItem("cart");
       if (!raw) return;
 
       let items: LocalCartItem[] = [];
       try {
         items = JSON.parse(raw);
       } catch {
-        /* ignore */
+        return;
       }
 
       if (!Array.isArray(items) || items.length === 0) return;
+
+      // Use AbortController for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
 
       await fetch("/api/cart/sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ items }),
+        signal: controller.signal,
       });
 
+      clearTimeout(timeoutId);
       localStorage.removeItem("cart");
       hasSynced.current = true;
-    };
+    } catch (error) {
+      console.error("Cart sync failed:", error);
+    } finally {
+      isSyncing.current = false;
+    }
+  }, [supabase]);
 
-    const { data: sub } = supabase.auth.onAuthStateChange(() => {
-      sync();
-    });
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (event === "SIGNED_IN" && session) {
+          sync();
+        }
+      }
+    );
+
+    // Initial sync
     sync();
 
-    return () => sub.subscription.unsubscribe();
-  }, []);
+    return () => subscription.unsubscribe();
+  }, [supabase, sync]);
 
   return null;
 }
