@@ -1,7 +1,19 @@
 "use client";
 import { useEffect, useState, useRef, useCallback } from "react";
-import { Plus, Edit, Trash2, Search, X, Upload, Calculator, Beaker, AlertTriangle, TrendingUp, DollarSign } from "lucide-react";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Search,
+  X,
+  Upload,
+  Calculator,
+  Beaker,
+  AlertTriangle,
+  TrendingUp,
+  DollarSign,
+} from "lucide-react";
+import { supabase } from "@/lib/supabaseClient";
 
 type Category = {
   id: number;
@@ -9,10 +21,13 @@ type Category = {
   name_arabic: string | null;
 };
 
-export default function ProductsTable({ categories }: { categories: Category[] }) {
+export default function ProductsTable({
+  categories,
+}: {
+  categories: Category[];
+}) {
   const [products, setProducts] = useState<Product[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
-  const [materialsLoading, setMaterialsLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [materialSearch, setMaterialSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
@@ -39,7 +54,9 @@ export default function ProductsTable({ categories }: { categories: Category[] }
     meta_description: "",
   });
 
-  const [productMaterials, setProductMaterials] = useState<{material_id: number, grams_used: number}[]>([]);
+  const [productMaterials, setProductMaterials] = useState<
+    { material_id: number; grams_used: number }[]
+  >([]);
   const [totalCost, setTotalCost] = useState(0);
   const [profit, setProfit] = useState(0);
   const [profitMargin, setProfitMargin] = useState(0);
@@ -50,39 +67,19 @@ export default function ProductsTable({ categories }: { categories: Category[] }
   // Fetch materials
   const fetchMaterials = useCallback(async () => {
     try {
-      setMaterialsLoading(true);
-      console.log("🔄 Fetching materials...");
-      const supabase = createSupabaseBrowserClient();
-      
-      // Test authentication first
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        console.error("❌ Authentication error:", authError);
-        alert("You must be logged in to fetch materials");
-        return;
-      }
-      console.log("✅ User authenticated:", user.email);
-      
       const { data, error } = await supabase
         .from("materials")
         .select("*")
         .order("name", { ascending: true });
-      
+
       if (error) {
-        console.error("❌ Error fetching materials:", error);
-        console.error("Error details:", error.message, error.details, error.hint);
-        alert(`Error fetching materials: ${error.message}`);
+        console.error("Error fetching materials:", error);
         return;
       }
-      
-      console.log("✅ Materials fetched successfully:", data?.length || 0, "materials");
-      console.log("Materials data:", data);
-      setMaterials(data as Material[] || []);
+
+      setMaterials((data as Material[]) || []);
     } catch (error) {
-      console.error("❌ Error fetching materials:", error);
-      alert(`Error fetching materials: ${error}`);
-    } finally {
-      setMaterialsLoading(false);
+      console.error("Error fetching materials:", error);
     }
   }, []);
 
@@ -91,27 +88,32 @@ export default function ProductsTable({ categories }: { categories: Category[] }
     try {
       setLoading(true);
       console.log("🔄 Fetching products...");
-      const supabase = createSupabaseBrowserClient();
       const { data, error } = await supabase
         .from("products")
-        .select(`
+        .select(
+          `
           *,
           materials:product_materials(
             id,
             grams_used,
             material:materials(*)
           )
-        `)
+        `
+        )
         .order("created_at", { ascending: false });
-      
+
       if (error) {
         console.error("❌ Error fetching products:", error);
         alert(`Error fetching products: ${error.message}`);
         return;
       }
-      
-      console.log("✅ Products fetched successfully:", data?.length || 0, "products");
-      setProducts(data as Product[] || []);
+
+      console.log(
+        "✅ Products fetched successfully:",
+        data?.length || 0,
+        "products"
+      );
+      setProducts((data as Product[]) || []);
     } catch (error) {
       console.error("❌ Error fetching products:", error);
       alert(`Error fetching products: ${error}`);
@@ -120,41 +122,45 @@ export default function ProductsTable({ categories }: { categories: Category[] }
     }
   }, []);
 
-  useEffect(() => { 
+  useEffect(() => {
     fetchMaterials();
-    fetchProducts(); 
+    fetchProducts();
   }, [fetchMaterials, fetchProducts]);
 
   // Calculate total cost, profit, and yield when materials or price change
   useEffect(() => {
     const cost = productMaterials.reduce((total, pm) => {
-      const material = materials.find(m => m.id === pm.material_id);
+      const material = materials.find((m) => m.id === pm.material_id);
       return total + (material ? material.price_per_gram * pm.grams_used : 0);
     }, 0);
-    
+
     setTotalCost(cost);
-    
+
     const price = Number(formData.price) || 0;
     const profit = price - cost;
     setProfit(profit);
-    
+
     // Calculate profit margin percentage
     const margin = price > 0 ? (profit / price) * 100 : 0;
     setProfitMargin(margin);
-    
+
     // Calculate product yield (how many products can be made with current stock)
     if (productMaterials.length > 0) {
-      const minYield = Math.min(...productMaterials.map(pm => {
-        const material = materials.find(m => m.id === pm.material_id);
-        return material ? Math.floor(material.stock_grams / pm.grams_used) : 0;
-      }));
+      const minYield = Math.min(
+        ...productMaterials.map((pm) => {
+          const material = materials.find((m) => m.id === pm.material_id);
+          return material
+            ? Math.floor(material.stock_grams / pm.grams_used)
+            : 0;
+        })
+      );
       setProductYield(minYield);
     } else {
       setProductYield(0);
     }
   }, [productMaterials, materials, formData.price]);
 
-  const openAddModal = async () => {
+  const openAddModal = () => {
     setEditingProduct(null);
     setFormData({
       name_english: "",
@@ -174,13 +180,10 @@ export default function ProductsTable({ categories }: { categories: Category[] }
     });
     setProductMaterials([]);
     setImageFile(null);
-    setMaterialSearch("");
-    // Fetch materials when opening modal
-    await fetchMaterials();
     setShowModal(true);
   };
 
-  const openEditModal = async (product: Product) => {
+  const openEditModal = (product: Product) => {
     console.log("📝 Opening edit modal for product:", product);
     setEditingProduct(product);
     setFormData({
@@ -199,33 +202,39 @@ export default function ProductsTable({ categories }: { categories: Category[] }
       slug: product.slug || "",
       meta_description: product.meta_description || "",
     });
-    
+
     // Set product materials
     if (product.materials) {
-      setProductMaterials(product.materials.map(pm => ({
-        material_id: pm.material.id,
-        grams_used: pm.grams_used
-      })));
+      setProductMaterials(
+        product.materials.map((pm) => ({
+          material_id: pm.material.id,
+          grams_used: pm.grams_used,
+        }))
+      );
     } else {
       setProductMaterials([]);
     }
-    
+
     setImageFile(null);
-    setMaterialSearch("");
-    // Fetch materials when opening modal
-    await fetchMaterials();
     setShowModal(true);
   };
 
   const addMaterial = () => {
-    setProductMaterials([...productMaterials, { material_id: 0, grams_used: 0 }]);
+    setProductMaterials([
+      ...productMaterials,
+      { material_id: 0, grams_used: 0 },
+    ]);
   };
 
   const removeMaterial = (index: number) => {
     setProductMaterials(productMaterials.filter((_, i) => i !== index));
   };
 
-  const updateMaterial = (index: number, field: 'material_id' | 'grams_used', value: number) => {
+  const updateMaterial = (
+    index: number,
+    field: "material_id" | "grams_used",
+    value: number
+  ) => {
     const updated = [...productMaterials];
     updated[index] = { ...updated[index], [field]: value };
     setProductMaterials(updated);
@@ -234,17 +243,18 @@ export default function ProductsTable({ categories }: { categories: Category[] }
   const uploadImageAndGetUrl = async (file: File) => {
     setUploading(true);
     try {
-      const supabase = createSupabaseBrowserClient();
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${Date.now()}-${Math.random()
+        .toString(36)
+        .substr(2, 9)}.${fileExt}`;
       const { error } = await supabase.storage
         .from("product-images")
         .upload(fileName, file, { cacheControl: "3600", upsert: false });
-      
+
       if (error) {
         throw new Error("Image upload failed: " + error.message);
       }
-      
+
       const { data: urlData } = supabase.storage
         .from("product-images")
         .getPublicUrl(fileName);
@@ -255,13 +265,22 @@ export default function ProductsTable({ categories }: { categories: Category[] }
   };
 
   const handleSave = async () => {
-    if (!formData.name_english || !formData.price || !formData.stock || !formData.category_id) {
+    if (
+      !formData.name_english ||
+      !formData.price ||
+      !formData.stock ||
+      !formData.category_id
+    ) {
       alert("Please fill all required fields (name, price, stock, category)");
       return;
     }
 
     if (Number(formData.price) < totalCost) {
-      alert(`Price cannot be less than the total material cost (${totalCost.toFixed(2)} EGP)`);
+      alert(
+        `Price cannot be less than the total material cost (${totalCost.toFixed(
+          2
+        )} EGP)`
+      );
       return;
     }
 
@@ -271,8 +290,6 @@ export default function ProductsTable({ categories }: { categories: Category[] }
       console.log("📝 Editing product:", editingProduct?.id);
       console.log("�� Form data:", formData);
 
-      const supabase = createSupabaseBrowserClient();
-      
       let imageUrl = formData.image_url;
       if (imageFile) {
         console.log("📤 Uploading new image...");
@@ -307,7 +324,7 @@ export default function ProductsTable({ categories }: { categories: Category[] }
           .update(productData)
           .eq("id", editingProduct.id)
           .select("*");
-          
+
         // Update product materials
         if (result.data && result.data.length > 0) {
           // Delete existing materials
@@ -315,21 +332,19 @@ export default function ProductsTable({ categories }: { categories: Category[] }
             .from("product_materials")
             .delete()
             .eq("product_id", editingProduct.id);
-          
+
           // Insert new materials
           if (productMaterials.length > 0) {
             const materialsData = productMaterials
-              .filter(pm => pm.material_id > 0 && pm.grams_used > 0)
-              .map(pm => ({
+              .filter((pm) => pm.material_id > 0 && pm.grams_used > 0)
+              .map((pm) => ({
                 product_id: editingProduct.id,
                 material_id: pm.material_id,
-                grams_used: pm.grams_used
+                grams_used: pm.grams_used,
               }));
-            
+
             if (materialsData.length > 0) {
-              await supabase
-                .from("product_materials")
-                .insert(materialsData);
+              await supabase.from("product_materials").insert(materialsData);
             }
           }
         }
@@ -339,22 +354,20 @@ export default function ProductsTable({ categories }: { categories: Category[] }
           .from("products")
           .insert([productData])
           .select("*");
-          
+
         // Add product materials
         if (result.data && result.data.length > 0) {
           const newProductId = result.data[0].id;
           const materialsData = productMaterials
-            .filter(pm => pm.material_id > 0 && pm.grams_used > 0)
-            .map(pm => ({
+            .filter((pm) => pm.material_id > 0 && pm.grams_used > 0)
+            .map((pm) => ({
               product_id: newProductId,
               material_id: pm.material_id,
-              grams_used: pm.grams_used
+              grams_used: pm.grams_used,
             }));
-          
+
           if (materialsData.length > 0) {
-            await supabase
-              .from("product_materials")
-              .insert(materialsData);
+            await supabase.from("product_materials").insert(materialsData);
           }
         }
       }
@@ -376,10 +389,13 @@ export default function ProductsTable({ categories }: { categories: Category[] }
       setShowModal(false);
       console.log("�� Refreshing products list...");
       await fetchProducts();
-      
+
       // Show success message
-      alert(editingProduct ? "Product updated successfully!" : "Product created successfully!");
-      
+      alert(
+        editingProduct
+          ? "Product updated successfully!"
+          : "Product created successfully!"
+      );
     } catch (error: any) {
       console.error("❌ Error saving product:", error);
       alert(`Error saving product: ${error.message}`);
@@ -390,17 +406,13 @@ export default function ProductsTable({ categories }: { categories: Category[] }
 
   const handleDelete = async (id: number) => {
     if (!window.confirm("هل أنت متأكد من حذف المنتج؟")) return;
-    
+
     try {
       console.log("🗑️ Deleting product with ID:", id);
-      const supabase = createSupabaseBrowserClient();
-      
+
       // Delete product materials first
-      await supabase
-        .from("product_materials")
-        .delete()
-        .eq("product_id", id);
-      
+      await supabase.from("product_materials").delete().eq("product_id", id);
+
       // Delete product
       const { error } = await supabase.from("products").delete().eq("id", id);
       if (error) {
@@ -421,11 +433,10 @@ export default function ProductsTable({ categories }: { categories: Category[] }
     }
   };
 
-  const filtered = products.filter(
-    (p) =>
-      ((p.name_english || "") + " " + (p.name_arabic || ""))
-        .toLowerCase()
-        .includes(search.toLowerCase())
+  const filtered = products.filter((p) =>
+    ((p.name_english || "") + " " + (p.name_arabic || ""))
+      .toLowerCase()
+      .includes(search.toLowerCase())
   );
 
   if (loading) {
@@ -447,7 +458,7 @@ export default function ProductsTable({ categories }: { categories: Category[] }
           <Plus className="h-4 w-4 mr-2" /> Add Product
         </button>
       </div>
-      
+
       {/* Search */}
       <div className="flex items-center mb-4">
         <div className="relative w-full max-w-sm">
@@ -461,7 +472,7 @@ export default function ProductsTable({ categories }: { categories: Category[] }
           />
         </div>
       </div>
-      
+
       {/* Products Table */}
       <div className="overflow-x-auto border rounded-md">
         <table className="min-w-full text-sm">
@@ -486,10 +497,14 @@ export default function ProductsTable({ categories }: { categories: Category[] }
             {filtered.length > 0 ? (
               filtered.map((p) => {
                 const category = categories.find((c) => c.id === p.category_id);
-                const productCost = p.materials?.reduce((total, pm) => 
-                  total + (pm.material.price_per_gram * pm.grams_used), 0) || 0;
+                const productCost =
+                  p.materials?.reduce(
+                    (total, pm) =>
+                      total + pm.material.price_per_gram * pm.grams_used,
+                    0
+                  ) || 0;
                 const productProfit = p.price - productCost;
-                
+
                 return (
                   <tr key={p.id} className="border-t">
                     <td className="px-4 py-2">
@@ -499,19 +514,32 @@ export default function ProductsTable({ categories }: { categories: Category[] }
                           alt={p.name_english}
                           className="h-10 w-10 object-cover rounded"
                           onError={(e) => {
-                            (e.target as HTMLImageElement).style.display = "none";
+                            (e.target as HTMLImageElement).style.display =
+                              "none";
                           }}
                         />
                       ) : (
                         <span className="text-gray-400">No image</span>
                       )}
                     </td>
-                    <td className="px-4 py-2">{p.name_english} / {p.name_arabic}</td>
-                    <td className="px-4 py-2">{p.description_english} / {p.description_arabic}</td>
-                    <td className="px-4 py-2">{category?.name_english || "—"}</td>
+                    <td className="px-4 py-2">
+                      {p.name_english} / {p.name_arabic}
+                    </td>
+                    <td className="px-4 py-2">
+                      {p.description_english} / {p.description_arabic}
+                    </td>
+                    <td className="px-4 py-2">
+                      {category?.name_english || "—"}
+                    </td>
                     <td className="px-4 py-2 font-semibold">{p.price} EGP</td>
-                    <td className="px-4 py-2 text-red-600">{productCost.toFixed(2)} EGP</td>
-                    <td className={`px-4 py-2 font-semibold ${productProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    <td className="px-4 py-2 text-red-600">
+                      {productCost.toFixed(2)} EGP
+                    </td>
+                    <td
+                      className={`px-4 py-2 font-semibold ${
+                        productProfit >= 0 ? "text-green-600" : "text-red-600"
+                      }`}
+                    >
                       {productProfit.toFixed(2)} EGP
                     </td>
                     <td className="px-4 py-2">{p.discount ?? "-"}</td>
@@ -550,7 +578,10 @@ export default function ProductsTable({ categories }: { categories: Category[] }
               })
             ) : (
               <tr>
-                <td colSpan={13} className="px-4 py-6 text-center text-gray-500">
+                <td
+                  colSpan={13}
+                  className="px-4 py-6 text-center text-gray-500"
+                >
                   No products found.
                 </td>
               </tr>
@@ -558,7 +589,7 @@ export default function ProductsTable({ categories }: { categories: Category[] }
           </tbody>
         </table>
       </div>
-      
+
       {/* Enhanced Modal with Detailed Material Analysis */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
@@ -572,12 +603,14 @@ export default function ProductsTable({ categories }: { categories: Category[] }
             <h2 className="text-xl font-bold mb-4">
               {editingProduct ? "Edit Product" : "Add Product"}
             </h2>
-            
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Left Column - Basic Info */}
               <div className="space-y-3">
-                <h3 className="text-lg font-semibold mb-3">Basic Information</h3>
-                
+                <h3 className="text-lg font-semibold mb-3">
+                  Basic Information
+                </h3>
+
                 <input
                   type="text"
                   placeholder="Product name (English)"
@@ -601,7 +634,10 @@ export default function ProductsTable({ categories }: { categories: Category[] }
                   placeholder="Description (English)"
                   value={formData.description_english}
                   onChange={(e) =>
-                    setFormData({ ...formData, description_english: e.target.value })
+                    setFormData({
+                      ...formData,
+                      description_english: e.target.value,
+                    })
                   }
                   className="w-full border px-3 py-2 rounded-md text-sm h-16"
                 />
@@ -609,7 +645,10 @@ export default function ProductsTable({ categories }: { categories: Category[] }
                   placeholder="Description (Arabic)"
                   value={formData.description_arabic}
                   onChange={(e) =>
-                    setFormData({ ...formData, description_arabic: e.target.value })
+                    setFormData({
+                      ...formData,
+                      description_arabic: e.target.value,
+                    })
                   }
                   className="w-full border px-3 py-2 rounded-md text-sm h-16"
                 />
@@ -636,7 +675,7 @@ export default function ProductsTable({ categories }: { categories: Category[] }
                     required
                   />
                 </div>
-                
+
                 <input
                   type="number"
                   placeholder="Discount"
@@ -646,7 +685,7 @@ export default function ProductsTable({ categories }: { categories: Category[] }
                   }
                   className="w-full border px-3 py-2 rounded-md text-sm"
                 />
-                
+
                 <select
                   value={formData.category_id}
                   onChange={(e) =>
@@ -695,7 +734,9 @@ export default function ProductsTable({ categories }: { categories: Category[] }
                     >
                       <Upload className="h-4 w-4 mr-2" /> Upload
                     </button>
-                    {uploading && <span className="text-xs ml-2">Uploading...</span>}
+                    {uploading && (
+                      <span className="text-xs ml-2">Uploading...</span>
+                    )}
                   </div>
                 </div>
 
@@ -730,14 +771,20 @@ export default function ProductsTable({ categories }: { categories: Category[] }
                   placeholder="Meta description (SEO)"
                   value={formData.meta_description}
                   onChange={(e) =>
-                    setFormData({ ...formData, meta_description: e.target.value })
+                    setFormData({
+                      ...formData,
+                      meta_description: e.target.value,
+                    })
                   }
                   className="w-full border px-3 py-2 rounded-md text-sm h-16"
                 />
                 <select
                   value={formData.status}
                   onChange={(e) =>
-                    setFormData({ ...formData, status: e.target.value as "active" | "inactive" })
+                    setFormData({
+                      ...formData,
+                      status: e.target.value as "active" | "inactive",
+                    })
                   }
                   className="w-full border px-3 py-2 rounded-md text-sm"
                 >
@@ -756,44 +803,20 @@ export default function ProductsTable({ categories }: { categories: Category[] }
                 {/* Materials List */}
                 <div>
                   <div className="flex justify-between items-center mb-3">
-                    <label className="block text-sm font-medium">Materials Used</label>
-                    <div className="flex space-x-2">
-                      <button
-                        type="button"
-                        onClick={fetchMaterials}
-                        disabled={materialsLoading}
-                        className="flex items-center px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
-                        title="Refresh materials list"
-                      >
-                        <Search className="h-4 w-4 mr-1" />
-                        {materialsLoading ? "Loading..." : "Refresh"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={addMaterial}
-                        className="flex items-center px-3 py-1.5 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
-                      >
-                        <Plus className="h-4 w-4 mr-1" /> Add Material
-                      </button>
-                    </div>
+                    <label className="block text-sm font-medium">
+                      Materials Used
+                    </label>
+                    <button
+                      type="button"
+                      onClick={addMaterial}
+                      className="flex items-center px-3 py-1.5 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                    >
+                      <Plus className="h-4 w-4 mr-1" /> Add Material
+                    </button>
                   </div>
-                  
+
                   {/* Material Search */}
                   <div className="mb-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs text-gray-600">
-                        {materialsLoading ? "Loading materials..." : `${materials.length} materials available`}
-                      </span>
-                      {materialSearch && (
-                        <button
-                          type="button"
-                          onClick={() => setMaterialSearch("")}
-                          className="text-xs text-blue-600 hover:text-blue-800"
-                        >
-                          Clear search
-                        </button>
-                      )}
-                    </div>
                     <div className="relative">
                       <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
                       <input
@@ -805,75 +828,99 @@ export default function ProductsTable({ categories }: { categories: Category[] }
                       />
                     </div>
                   </div>
-                  
+
                   {productMaterials.length === 0 && (
                     <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed">
                       <Beaker className="h-8 w-8 mx-auto mb-2 text-gray-400" />
                       <p className="text-sm">No materials added yet</p>
-                      <p className="text-xs text-gray-400">Click "Add Material" to get started</p>
+                      <p className="text-xs text-gray-400">
+                        Click "Add Material" to get started
+                      </p>
                     </div>
                   )}
-                  
+
                   <div className="space-y-3 max-h-80 overflow-y-auto">
                     {productMaterials.map((pm, index) => {
-                      const material = materials.find(m => m.id === pm.material_id);
-                      const materialCost = material ? material.price_per_gram * pm.grams_used : 0;
-                      const availableStock = material ? material.stock_grams : 0;
-                      const canMake = material && pm.grams_used > 0 ? Math.floor(availableStock / pm.grams_used) : 0;
-                      const stockPercentage = material && availableStock > 0 ? (pm.grams_used / availableStock) * 100 : 0;
-                      
+                      const material = materials.find(
+                        (m) => m.id === pm.material_id
+                      );
+                      const materialCost = material
+                        ? material.price_per_gram * pm.grams_used
+                        : 0;
+                      const availableStock = material
+                        ? material.stock_grams
+                        : 0;
+                      const canMake =
+                        material && pm.grams_used > 0
+                          ? Math.floor(availableStock / pm.grams_used)
+                          : 0;
+                      const stockPercentage =
+                        material && availableStock > 0
+                          ? (pm.grams_used / availableStock) * 100
+                          : 0;
+
                       return (
-                        <div key={index} className="p-4 border rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow">
+                        <div
+                          key={pm.material_id}
+                          className="p-4 border rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow"
+                        >
                           {/* Material Selection */}
                           <div className="flex items-center space-x-2 mb-3">
                             <div className="flex-1">
-                              <label className="block text-xs font-medium text-gray-600 mb-1">Material</label>
-                              <select
-                                value={pm.material_id}
-                                onChange={(e) => updateMaterial(index, 'material_id', Number(e.target.value))}
-                                className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                disabled={materialsLoading}
-                              >
-                                <option value={0}>
-                                  {materialsLoading ? "Loading materials..." : "Select Material"}
-                                </option>
-                                {(() => {
-                                  if (materialsLoading) {
-                                    return (
-                                      <option value={0} disabled>
-                                        Loading materials...
-                                      </option>
-                                    );
+                              <label className="block text-xs font-medium text-gray-600 mb-1">
+                                Material {""}
+                                <select
+                                  value={pm.material_id}
+                                  onChange={(e) =>
+                                    updateMaterial(
+                                      index,
+                                      "material_id",
+                                      Number(e.target.value)
+                                    )
                                   }
-                                  
-                                  const filteredMaterials = materials.filter(m => 
-                                    !productMaterials.some((pm2, i) => i !== index && pm2.material_id === m.id) &&
-                                    m.name.toLowerCase().includes(materialSearch.toLowerCase())
-                                  );
-                                  
-                                  if (filteredMaterials.length === 0 && materialSearch) {
-                                    return (
-                                      <option value={0} disabled>
-                                        No materials found for "{materialSearch}"
-                                      </option>
+                                  className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                >
+                                  <option value={0}>Select Material</option>
+                                  {(() => {
+                                    const filteredMaterials = materials.filter(
+                                      (m) =>
+                                        !productMaterials.some(
+                                          (pm2, i) =>
+                                            i !== index &&
+                                            pm2.material_id === m.id
+                                        ) &&
+                                        m.name
+                                          .toLowerCase()
+                                          .includes(
+                                            materialSearch.toLowerCase()
+                                          )
                                     );
-                                  }
-                                  
-                                  if (filteredMaterials.length === 0 && !materialSearch) {
-                                    return (
-                                      <option value={0} disabled>
-                                        No materials available
+
+                                    if (
+                                      filteredMaterials.length === 0 &&
+                                      materialSearch
+                                    ) {
+                                      return (
+                                        <option value={0} disabled>
+                                          No materials found for "
+                                          {materialSearch}"
+                                        </option>
+                                      );
+                                    }
+
+                                    return filteredMaterials.map((material) => (
+                                      <option
+                                        key={material.id}
+                                        value={material.id}
+                                      >
+                                        {material.name} -{" "}
+                                        {material.price_per_gram.toFixed(4)}{" "}
+                                        EGP/g
                                       </option>
-                                    );
-                                  }
-                                  
-                                  return filteredMaterials.map((material) => (
-                                    <option key={material.id} value={material.id}>
-                                      {material.name} - {material.price_per_gram.toFixed(4)} EGP/g
-                                    </option>
-                                  ));
-                                })()}
-                              </select>
+                                    ));
+                                  })()}
+                                </select>
+                              </label>
                             </div>
                             <button
                               type="button"
@@ -884,50 +931,84 @@ export default function ProductsTable({ categories }: { categories: Category[] }
                               <X className="h-4 w-4" />
                             </button>
                           </div>
-                          
+
                           {/* Grams Input */}
                           <div className="flex items-center space-x-2 mb-3">
                             <div className="flex-1">
-                              <label className="block text-xs font-medium text-gray-600 mb-1">Grams Used</label>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">
+                                Grams Used
+                              </label>
                               <input
                                 type="number"
                                 step="0.01"
                                 min="0"
                                 placeholder="0.00"
                                 value={pm.grams_used}
-                                onChange={(e) => updateMaterial(index, 'grams_used', Number(e.target.value))}
+                                onChange={(e) =>
+                                  updateMaterial(
+                                    index,
+                                    "grams_used",
+                                    Number(e.target.value)
+                                  )
+                                }
                                 className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                               />
                             </div>
-                            <div className="text-xs text-gray-500 pt-6">grams</div>
+                            <div className="text-xs text-gray-500 pt-6">
+                              grams
+                            </div>
                           </div>
-                          
+
                           {/* Material Details */}
                           {material && pm.grams_used > 0 && (
                             <div className="bg-gray-50 p-3 rounded-md space-y-2">
                               <div className="grid grid-cols-2 gap-3 text-sm">
                                 <div className="flex justify-between">
-                                  <span className="text-gray-600">Cost per product:</span>
-                                  <span className="font-semibold text-red-600">{materialCost.toFixed(2)} EGP</span>
+                                  <span className="text-gray-600">
+                                    Cost per product:
+                                  </span>
+                                  <span className="font-semibold text-red-600">
+                                    {materialCost.toFixed(2)} EGP
+                                  </span>
                                 </div>
                                 <div className="flex justify-between">
-                                  <span className="text-gray-600">Available stock:</span>
-                                  <span className="font-medium">{availableStock.toFixed(2)}g</span>
+                                  <span className="text-gray-600">
+                                    Available stock:
+                                  </span>
+                                  <span className="font-medium">
+                                    {availableStock.toFixed(2)}g
+                                  </span>
                                 </div>
                                 <div className="flex justify-between">
-                                  <span className="text-gray-600">Can make:</span>
-                                  <span className={`font-semibold ${canMake > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                  <span className="text-gray-600">
+                                    Can make:
+                                  </span>
+                                  <span
+                                    className={`font-semibold ${
+                                      canMake > 0
+                                        ? "text-green-600"
+                                        : "text-red-600"
+                                    }`}
+                                  >
                                     {canMake} products
                                   </span>
                                 </div>
                                 <div className="flex justify-between">
-                                  <span className="text-gray-600">Stock usage:</span>
-                                  <span className={`font-medium ${stockPercentage > 10 ? 'text-orange-600' : 'text-green-600'}`}>
+                                  <span className="text-gray-600">
+                                    Stock usage:
+                                  </span>
+                                  <span
+                                    className={`font-medium ${
+                                      stockPercentage > 10
+                                        ? "text-orange-600"
+                                        : "text-green-600"
+                                    }`}
+                                  >
                                     {stockPercentage.toFixed(1)}%
                                   </span>
                                 </div>
                               </div>
-                              
+
                               {/* Stock Warning */}
                               {stockPercentage > 10 && (
                                 <div className="bg-orange-100 border border-orange-300 text-orange-700 px-2 py-1 rounded text-xs flex items-center">
@@ -935,7 +1016,7 @@ export default function ProductsTable({ categories }: { categories: Category[] }
                                   High stock usage - consider reducing amount
                                 </div>
                               )}
-                              
+
                               {canMake === 0 && pm.grams_used > 0 && (
                                 <div className="bg-red-100 border border-red-300 text-red-700 px-2 py-1 rounded text-xs flex items-center">
                                   <AlertTriangle className="h-3 w-3 mr-1" />
@@ -961,70 +1042,101 @@ export default function ProductsTable({ categories }: { categories: Category[] }
                 {/* Cost Summary */}
                 <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-5 rounded-lg space-y-4 border">
                   <div className="text-center mb-4">
-                    <h4 className="text-lg font-semibold text-gray-800">Cost Analysis</h4>
+                    <h4 className="text-lg font-semibold text-gray-800">
+                      Cost Analysis
+                    </h4>
                     <p className="text-sm text-gray-600">Per product unit</p>
                   </div>
-                  
+
                   <div className="space-y-3">
                     <div className="flex justify-between items-center p-3 bg-white rounded-md shadow-sm">
                       <span className="font-medium flex items-center text-gray-700">
                         <DollarSign className="h-4 w-4 mr-2 text-red-500" />
                         Material Cost:
                       </span>
-                      <span className="text-red-600 font-bold text-xl">{totalCost.toFixed(2)} EGP</span>
+                      <span className="text-red-600 font-bold text-xl">
+                        {totalCost.toFixed(2)} EGP
+                      </span>
                     </div>
-                    
+
                     <div className="flex justify-between items-center p-3 bg-white rounded-md shadow-sm">
-                      <span className="font-medium text-gray-700">Selling Price:</span>
-                      <span className="text-blue-600 font-bold text-xl">{Number(formData.price || 0).toFixed(2)} EGP</span>
+                      <span className="font-medium text-gray-700">
+                        Selling Price:
+                      </span>
+                      <span className="text-blue-600 font-bold text-xl">
+                        {Number(formData.price || 0).toFixed(2)} EGP
+                      </span>
                     </div>
-                    
+
                     <div className="border-t-2 border-gray-200 pt-3">
                       <div className="flex justify-between items-center p-3 bg-white rounded-md shadow-sm mb-2">
                         <span className="font-semibold flex items-center text-gray-800">
                           <TrendingUp className="h-5 w-5 mr-2" />
                           Net Profit:
                         </span>
-                        <span className={`font-bold text-2xl ${profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        <span
+                          className={`font-bold text-2xl ${
+                            profit >= 0 ? "text-green-600" : "text-red-600"
+                          }`}
+                        >
                           {profit.toFixed(2)} EGP
                         </span>
                       </div>
-                      
+
                       <div className="flex justify-between items-center p-2 bg-gray-100 rounded-md">
-                        <span className="text-sm font-medium text-gray-600">Profit Margin:</span>
-                        <span className={`text-sm font-bold ${profitMargin >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        <span className="text-sm font-medium text-gray-600">
+                          Profit Margin:
+                        </span>
+                        <span
+                          className={`text-sm font-bold ${
+                            profitMargin >= 0
+                              ? "text-green-600"
+                              : "text-red-600"
+                          }`}
+                        >
                           {profitMargin.toFixed(1)}%
                         </span>
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Profit Status Indicator */}
-                  <div className={`p-3 rounded-md text-center ${
-                    profit >= 0 
-                      ? 'bg-green-100 border border-green-300 text-green-800' 
-                      : 'bg-red-100 border border-red-300 text-red-800'
-                  }`}>
+                  <div
+                    className={`p-3 rounded-md text-center ${
+                      profit >= 0
+                        ? "bg-green-100 border border-green-300 text-green-800"
+                        : "bg-red-100 border border-red-300 text-red-800"
+                    }`}
+                  >
                     {profit >= 0 ? (
                       <div className="flex items-center justify-center">
                         <TrendingUp className="h-4 w-4 mr-2" />
-                        <span className="font-semibold">Profitable Product</span>
+                        <span className="font-semibold">
+                          Profitable Product
+                        </span>
                       </div>
                     ) : (
                       <div className="flex items-center justify-center">
                         <AlertTriangle className="h-4 w-4 mr-2" />
-                        <span className="font-semibold">Loss-Making Product</span>
+                        <span className="font-semibold">
+                          Loss-Making Product
+                        </span>
                       </div>
                     )}
                   </div>
-                  
+
                   {profit < 0 && (
                     <div className="bg-red-50 border-l-4 border-red-400 p-3 rounded-r-md">
                       <div className="flex items-center">
                         <AlertTriangle className="h-5 w-5 text-red-400 mr-2" />
                         <div>
-                          <p className="text-sm font-medium text-red-800">Price Below Cost</p>
-                          <p className="text-xs text-red-600">Increase price by {Math.abs(profit).toFixed(2)} EGP to break even</p>
+                          <p className="text-sm font-medium text-red-800">
+                            Price Below Cost
+                          </p>
+                          <p className="text-xs text-red-600">
+                            Increase price by {Math.abs(profit).toFixed(2)} EGP
+                            to break even
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -1040,41 +1152,65 @@ export default function ProductsTable({ categories }: { categories: Category[] }
                   <div className="space-y-3">
                     <div className="bg-white p-3 rounded-md shadow-sm">
                       <div className="flex justify-between items-center">
-                        <span className="text-gray-700 font-medium">Max Products from Stock:</span>
-                        <span className={`font-bold text-lg ${productYield > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        <span className="text-gray-700 font-medium">
+                          Max Products from Stock:
+                        </span>
+                        <span
+                          className={`font-bold text-lg ${
+                            productYield > 0 ? "text-green-600" : "text-red-600"
+                          }`}
+                        >
                           {productYield} units
                         </span>
                       </div>
                       {productYield === 0 && productMaterials.length > 0 && (
-                        <p className="text-xs text-red-600 mt-1">Insufficient material stock</p>
+                        <p className="text-xs text-red-600 mt-1">
+                          Insufficient material stock
+                        </p>
                       )}
                     </div>
-                    
+
                     <div className="grid grid-cols-2 gap-3">
                       <div className="bg-white p-3 rounded-md shadow-sm">
-                        <div className="text-xs text-gray-600 mb-1">Total Production Value</div>
+                        <div className="text-xs text-gray-600 mb-1">
+                          Total Production Value
+                        </div>
                         <div className="font-bold text-blue-600 text-lg">
-                          {(productYield * Number(formData.price || 0)).toFixed(2)} EGP
+                          {(productYield * Number(formData.price || 0)).toFixed(
+                            2
+                          )}{" "}
+                          EGP
                         </div>
                       </div>
                       <div className="bg-white p-3 rounded-md shadow-sm">
-                        <div className="text-xs text-gray-600 mb-1">Total Production Cost</div>
+                        <div className="text-xs text-gray-600 mb-1">
+                          Total Production Cost
+                        </div>
                         <div className="font-bold text-red-600 text-lg">
                           {(productYield * totalCost).toFixed(2)} EGP
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="bg-white p-4 rounded-md shadow-sm border-l-4 border-green-400">
                       <div className="flex justify-between items-center">
-                        <span className="font-semibold text-gray-800">Total Profit Potential:</span>
-                        <span className={`font-bold text-2xl ${(productYield * profit) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        <span className="font-semibold text-gray-800">
+                          Total Profit Potential:
+                        </span>
+                        <span
+                          className={`font-bold text-2xl ${
+                            productYield * profit >= 0
+                              ? "text-green-600"
+                              : "text-red-600"
+                          }`}
+                        >
                           {(productYield * profit).toFixed(2)} EGP
                         </span>
                       </div>
                       {productYield > 0 && (
                         <div className="text-sm text-gray-600 mt-1">
-                          {productYield} units × {profit.toFixed(2)} EGP profit per unit
+                          {productYield} units × {profit.toFixed(2)} EGP profit
+                          per unit
                         </div>
                       )}
                     </div>
@@ -1090,32 +1226,59 @@ export default function ProductsTable({ categories }: { categories: Category[] }
                     </h4>
                     <div className="space-y-2">
                       {productMaterials
-                        .filter(pm => pm.material_id > 0 && pm.grams_used > 0)
+                        .filter((pm) => pm.material_id > 0 && pm.grams_used > 0)
                         .map((pm, index) => {
-                          const material = materials.find(m => m.id === pm.material_id);
+                          const material = materials.find(
+                            (m) => m.id === pm.material_id
+                          );
                           if (!material) return null;
-                          
-                          const materialCost = material.price_per_gram * pm.grams_used;
-                          const stockPercentage = (pm.grams_used / material.stock_grams) * 100;
-                          
+
+                          const materialCost =
+                            material.price_per_gram * pm.grams_used;
+                          const stockPercentage =
+                            (pm.grams_used / material.stock_grams) * 100;
+
                           return (
-                            <div key={index} className="bg-white p-3 rounded-md shadow-sm border-l-4 border-yellow-400">
+                            <div
+                              key={index}
+                              className="bg-white p-3 rounded-md shadow-sm border-l-4 border-yellow-400"
+                            >
                               <div className="flex justify-between items-center mb-2">
-                                <span className="font-medium text-gray-800">{material.name}</span>
-                                <span className="text-sm text-gray-500">{material.price_per_gram.toFixed(4)} EGP/g</span>
+                                <span className="font-medium text-gray-800">
+                                  {material.name}
+                                </span>
+                                <span className="text-sm text-gray-500">
+                                  {material.price_per_gram.toFixed(4)} EGP/g
+                                </span>
                               </div>
                               <div className="grid grid-cols-3 gap-3 text-sm">
                                 <div>
-                                  <div className="text-gray-600 text-xs">Grams Used</div>
-                                  <div className="font-semibold text-lg">{pm.grams_used}g</div>
+                                  <div className="text-gray-600 text-xs">
+                                    Grams Used
+                                  </div>
+                                  <div className="font-semibold text-lg">
+                                    {pm.grams_used}g
+                                  </div>
                                 </div>
                                 <div>
-                                  <div className="text-gray-600 text-xs">Cost</div>
-                                  <div className="font-semibold text-red-600">{materialCost.toFixed(2)} EGP</div>
+                                  <div className="text-gray-600 text-xs">
+                                    Cost
+                                  </div>
+                                  <div className="font-semibold text-red-600">
+                                    {materialCost.toFixed(2)} EGP
+                                  </div>
                                 </div>
                                 <div>
-                                  <div className="text-gray-600 text-xs">Stock Usage</div>
-                                  <div className={`font-semibold ${stockPercentage > 10 ? 'text-orange-600' : 'text-green-600'}`}>
+                                  <div className="text-gray-600 text-xs">
+                                    Stock Usage
+                                  </div>
+                                  <div
+                                    className={`font-semibold ${
+                                      stockPercentage > 10
+                                        ? "text-orange-600"
+                                        : "text-green-600"
+                                    }`}
+                                  >
                                     {stockPercentage.toFixed(1)}%
                                   </div>
                                 </div>
@@ -1128,7 +1291,7 @@ export default function ProductsTable({ categories }: { categories: Category[] }
                 )}
               </div>
             </div>
-            
+
             <div className="mt-6 flex justify-end space-x-2">
               <button
                 onClick={() => setShowModal(false)}
@@ -1142,7 +1305,11 @@ export default function ProductsTable({ categories }: { categories: Category[] }
                 className="px-4 py-2 bg-primary-600 text-white rounded-md text-sm hover:bg-primary-700 disabled:opacity-50"
                 disabled={uploading || saving || profit < 0}
               >
-                {saving ? "Saving..." : editingProduct ? "Update Product" : "Create Product"}
+                {saving
+                  ? "Saving..."
+                  : editingProduct
+                  ? "Update Product"
+                  : "Create Product"}
               </button>
             </div>
           </div>
