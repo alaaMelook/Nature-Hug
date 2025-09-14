@@ -1,34 +1,58 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { AdminUser, checkAdminAccess } from "@/lib/adminAuthClient";
+import { useState, useEffect, useCallback } from "react";
+import { AdminUser, checkAdminAccess, clearAdminCache } from "@/lib/adminAuthClient";
 
 export function useAdminAuth() {
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const checkAccess = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const user = await checkAdminAccess();
-        setAdminUser(user);
-        
-        if (!user) {
-          setError("Access denied. Admin privileges required.");
-        }
-      } catch (err) {
-        setError("Failed to verify admin access");
-        console.error("Admin auth error:", err);
-      } finally {
-        setLoading(false);
+  const checkAccess = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const user = await checkAdminAccess();
+      setAdminUser(user);
+      
+      if (!user) {
+        setError("Access denied. Admin privileges required.");
       }
+    } catch (err) {
+      setError("Failed to verify admin access");
+      console.error("Admin auth error:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    checkAccess();
+  }, [checkAccess]);
+
+  // Listen for auth state changes
+  useEffect(() => {
+    const handleAuthChange = () => {
+      checkAccess();
     };
 
-    checkAccess();
+    // Listen for storage events (auth state changes in other tabs)
+    window.addEventListener('storage', handleAuthChange);
+    
+    // Listen for focus events (user returns to tab)
+    window.addEventListener('focus', handleAuthChange);
+
+    return () => {
+      window.removeEventListener('storage', handleAuthChange);
+      window.removeEventListener('focus', handleAuthChange);
+    };
+  }, [checkAccess]);
+
+  const logout = useCallback(() => {
+    clearAdminCache();
+    setAdminUser(null);
+    setError(null);
   }, []);
 
   return {
@@ -36,5 +60,7 @@ export function useAdminAuth() {
     loading,
     error,
     isAdmin: !!adminUser,
+    logout,
+    refresh: checkAccess,
   };
 }

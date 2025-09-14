@@ -1,33 +1,39 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export default function Callback() {
   const router = useRouter();
   const supabase = createSupabaseBrowserClient();
+  const [status, setStatus] = useState("Processing authentication...");
 
   useEffect(() => {
     const handleSession = async () => {
       try {
+        setStatus("Verifying session...");
+        
         // First, handle the OAuth callback
         const { data, error: authError } = await supabase.auth.getSession();
         
         if (authError) {
           console.error("❌ Auth error:", authError.message);
-          router.push("/login");
+          setStatus("Authentication failed. Redirecting to login...");
+          setTimeout(() => router.push("/login"), 2000);
           return;
         }
 
         if (!data.session) {
           console.error("❌ No session found");
-          router.push("/login");
+          setStatus("No session found. Redirecting to login...");
+          setTimeout(() => router.push("/login"), 2000);
           return;
         }
 
         const user = data.session.user;
         console.log("✅ User logged in:", user);
+        setStatus("Setting up user profile...");
 
         const { data: existingCustomer, error: customerFetchError } =
           await supabase
@@ -46,6 +52,7 @@ export default function Callback() {
         let customerId: number | null = existingCustomer?.id ?? null;
 
         if (!customerId) {
+          setStatus("Creating customer profile...");
           const { data: newCustomer, error: customerInsertError } =
             await supabase
               .from("customers")
@@ -66,12 +73,15 @@ export default function Callback() {
               "❌ Error creating customer:",
               customerInsertError.message
             );
+            setStatus("Failed to create profile. Redirecting to login...");
+            setTimeout(() => router.push("/login"), 2000);
             return;
           }
 
           customerId = newCustomer.id;
         }
 
+        setStatus("Setting up user preferences...");
         const { data: existingProfile, error: profileFetchError } =
           await supabase
             .from("profiles")
@@ -104,15 +114,22 @@ export default function Callback() {
           }
         }
 
-        router.push("/");
+        setStatus("Redirecting to home page...");
+        setTimeout(() => router.push("/"), 1000);
       } catch (err: any) {
         console.error("❌ Unexpected error:", err.message);
-        router.push("/login");
+        setStatus("An error occurred. Redirecting to login...");
+        setTimeout(() => router.push("/login"), 2000);
       }
     };
 
     handleSession();
   }, [router, supabase]);
 
-  return <p className="p-10 text-center">Signing you in, please wait...</p>;
+  return (
+    <div className="flex flex-col items-center justify-center h-screen space-y-4">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <p className="text-center text-gray-600">{status}</p>
+    </div>
+  );
 }

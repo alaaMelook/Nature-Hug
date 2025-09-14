@@ -4,14 +4,38 @@ declare global {
   interface Product {
     id: number;
     created_at: string;
-    name_english: string | null;
-    name_arabic: string | null;
-    description_english: string | null;
-    description_arabic: string | null;
+    name_english: string;
+    name_arabic: string;
+    description_english: string;
+    description_arabic: string;
     price: number;
     discount: number | null;
-    quantity: number | null;
+    stock: number;
     image_url: string | null;
+    category_id: number;
+    skin_type?: string | null;
+    sizes?: string | null;
+    status: "active" | "inactive";
+    slug?: string | null;
+    meta_description?: string | null;
+    materials?: ProductMaterial[];
+  }
+
+  interface Material {
+    id: number;
+    name: string;
+    price_per_gram: number;
+    stock_grams: number;
+    created_at: string;
+    updated_at: string;
+  }
+
+  interface ProductMaterial {
+    id: number;
+    product_id: number;
+    material_id: number;
+    grams_used: number;
+    material: Material;
   }
 
   interface CartItem extends Product {
@@ -29,6 +53,7 @@ declare global {
     error?: string;
     success: boolean;
   }
+
   interface CartContextType {
     cart: CartItem[];
     addToCart: (product: Product) => Promise<void>;

@@ -5,12 +5,12 @@ import { usePathname } from "next/navigation";
 import {
   Home,
   Users,
+  BrickWall,
   Package,
   ShoppingCart,
   BarChart3,
   Settings,
   FileText,
-  UserCheck,
   ChevronDown,
   Users2,
 } from "lucide-react";
@@ -19,6 +19,7 @@ import { useState } from "react";
 const navigation = [
   { name: "Dashboard", href: "/admin", icon: Home },
   { name: "Customers", href: "/admin/customers", icon: Users },
+  { name: "Materials", href: "/admin/materials", icon: BrickWall },
   { name: "Products", href: "/admin/products", icon: Package },
   { name: "Orders", href: "/admin/orders", icon: ShoppingCart }, // special case
   { name: "Analytics", href: "/admin/analytics", icon: BarChart3 },

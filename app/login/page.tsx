@@ -11,54 +11,95 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+
+  // Check if user is already logged in
+  useEffect(() => {
+    const checkUser = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        
+        if (session) {
+          router.push("/profile");
+          return;
+        }
+      } catch (error) {
+        console.error("Error checking session:", error);
+      } finally {
+        setIsCheckingAuth(false);
+      }
+    };
+    
+    checkUser();
+  }, [router, supabase]);
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setErrorMsg("");
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (error) {
-      setErrorMsg(error.message);
-    } else {
-      router.push("/profile");
+      if (error) {
+        setErrorMsg(error.message);
+        return;
+      }
+
+      // Wait a moment for the session to be established
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Check if login was successful
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        router.push("/profile");
+      } else {
+        setErrorMsg("Login failed. Please try again.");
+      }
+    } catch (error: any) {
+      setErrorMsg(error.message || "An unexpected error occurred");
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   const handleGoogleLogin = async () => {
     setLoading(true);
     setErrorMsg("");
 
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/callback`,
-      },
-    });
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/callback`,
+        },
+      });
 
-    if (error) {
-      setErrorMsg(error.message);
+      if (error) {
+        setErrorMsg(error.message);
+        setLoading(false);
+      }
+      // Don't set loading to false here as we're redirecting
+    } catch (error: any) {
+      setErrorMsg(error.message || "An unexpected error occurred");
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    const checkUser = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (session) {
-        router.push("/profile");
-      }
-    };
-    checkUser();
-  }, [router]);
+  // Show loading while checking auth
+  if (isCheckingAuth) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <p className="mt-4 text-gray-600">Checking authentication...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col items-center justify-center h-screen space-y-6">
@@ -75,6 +116,7 @@ export default function LoginPage() {
           onChange={(e) => setEmail(e.target.value)}
           className="border p-2 rounded"
           required
+          disabled={loading}
         />
         <input
           type="password"
@@ -83,11 +125,12 @@ export default function LoginPage() {
           onChange={(e) => setPassword(e.target.value)}
           className="border p-2 rounded"
           required
+          disabled={loading}
         />
         <button
           type="submit"
           disabled={loading}
-          className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
+          className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition disabled:opacity-50"
         >
           {loading ? "Logging in..." : "Login"}
         </button>
@@ -107,7 +150,11 @@ export default function LoginPage() {
         {loading ? "Signing in..." : "Continue with Google"}
       </button>
 
-      {errorMsg && <p className="text-red-600">{errorMsg}</p>}
+      {errorMsg && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded w-72">
+          {errorMsg}
+        </div>
+      )}
     </div>
   );
 }
