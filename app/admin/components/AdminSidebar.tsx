@@ -13,17 +13,27 @@ import {
   FileText,
   ChevronDown,
   Users2,
+  Factory,
+  Truck,
+  Repeat,
+  ClipboardList,
+  DollarSign,
+  List,
+  Tag,
+  Star,
+  UserCheck,
+  UserPlus,
 } from "lucide-react";
 import { useState } from "react";
 
 const navigation = [
   { name: "Dashboard", href: "/admin", icon: Home },
   { name: "Customers", href: "/admin/customers", icon: Users },
-  { name: "Materials", href: "/admin/materials", icon: BrickWall },
-  { name: "Products", href: "/admin/products", icon: Package },
-  { name: "Orders", href: "/admin/orders", icon: ShoppingCart }, // special case
+  { name: "Materials", href: "/admin/materials", icon: BrickWall }, // dropdown
+  { name: "Products", href: "/admin/products", icon: Package }, // dropdown
+  { name: "Orders", href: "/admin/orders", icon: ShoppingCart }, // dropdown
   { name: "Analytics", href: "/admin/analytics", icon: BarChart3 },
-  { name: "People", href: "/admin/people", icon: Users2 }, // بدل Members
+  { name: "People", href: "/admin/people", icon: Users2 }, // dropdown
   { name: "Reports", href: "/admin/reports", icon: FileText },
   { name: "Settings", href: "/admin/settings", icon: Settings },
 ];
@@ -33,6 +43,7 @@ export default function AdminSidebar() {
   const [openOrders, setOpenOrders] = useState(false);
   const [openProducts, setOpenProducts] = useState(false);
   const [openPeople, setOpenPeople] = useState(false);
+  const [openMaterials, setOpenMaterials] = useState(false);
 
   return (
     <div className="w-64 bg-white shadow-sm border-r border-gray-200 min-h-screen">
@@ -41,7 +52,159 @@ export default function AdminSidebar() {
           {navigation.map((item) => {
             const isActive = pathname === item.href;
 
-            // ✅ Orders
+            // Materials Dropdown
+            if (item.name === "Materials") {
+              return (
+                <div key={item.name} className="mb-1">
+                  <button
+                    onClick={() => setOpenMaterials(!openMaterials)}
+                    className={`group flex items-center justify-between w-full px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                      pathname.startsWith("/admin/materials") ||
+                      pathname.startsWith("/admin/materials/production") ||
+                      pathname.startsWith("/admin/materials/movements") ||
+                      pathname.startsWith("/admin/materials/reports") ||
+                      pathname.startsWith("/admin/materials/suppliers") ||
+                      pathname.startsWith("/admin/materials/settings") ||
+                      pathname.startsWith("/admin/materials/costing") ||
+                      pathname.startsWith("/admin/materials/bom") ||
+                      pathname.startsWith("/admin/materials/inventory")
+                        ? "bg-primary-100 text-primary-700 border-r-2 border-primary-500"
+                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                    }`}
+                  >
+                    <span className="flex items-center">
+                      <item.icon
+                        className={`mr-3 h-5 w-5 ${
+                          pathname.startsWith("/admin/materials") ||
+                          pathname.startsWith("/admin/materials/production") ||
+                          pathname.startsWith("/admin/materials/movements") ||
+                          pathname.startsWith("/admin/materials/reports") ||
+                          pathname.startsWith("/admin/materials/suppliers") ||
+                          pathname.startsWith("/admin/materials/settings") ||
+                          pathname.startsWith("/admin/materials/costing") ||
+                          pathname.startsWith("/admin/materials/bom") ||
+                          pathname.startsWith("/admin/materials/inventory")
+                            ? "text-primary-500"
+                            : "text-gray-400 group-hover:text-gray-500"
+                        }`}
+                      />
+                      {item.name}
+                    </span>
+                    <ChevronDown
+                      className={`h-4 w-4 transition-transform ${
+                        openMaterials ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+
+                  {openMaterials && (
+                    <div className="ml-8 mt-1 space-y-1">
+                      <Link
+                        href="/admin/materials"
+                        className={`flex items-center px-2 py-1 text-sm rounded-md ${
+                          pathname === "/admin/materials"
+                            ? "bg-primary-50 text-primary-700"
+                            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                        }`}
+                      >
+                        <BrickWall className="h-4 w-4 mr-2" />
+                        Materials
+                      </Link>
+                      <Link
+                        href="/admin/materials/bom"
+                        className={`flex items-center px-2 py-1 text-sm rounded-md ${
+                          pathname === "/admin/materials/bom"
+                            ? "bg-primary-50 text-primary-700"
+                            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                        }`}
+                      >
+                        <List className="h-4 w-4 mr-2" />
+                        BOM
+                      </Link>
+                      <Link
+                        href="/admin/materials/inventory"
+                        className={`flex items-center px-2 py-1 text-sm rounded-md ${
+                          pathname === "/admin/materials/inventory"
+                            ? "bg-primary-50 text-primary-700"
+                            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                        }`}
+                      >
+                        <Package className="h-4 w-4 mr-2" />
+                        Inventory
+                      </Link>
+                      <Link
+                        href="/admin/materials/production"
+                        className={`flex items-center px-2 py-1 text-sm rounded-md ${
+                          pathname === "/admin/materials/production"
+                            ? "bg-primary-50 text-primary-700"
+                            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                        }`}
+                      >
+                        <Factory className="h-4 w-4 mr-2" />
+                        Production
+                      </Link>
+                      <Link
+                        href="/admin/materials/movements"
+                        className={`flex items-center px-2 py-1 text-sm rounded-md ${
+                          pathname === "/admin/materials/movements"
+                            ? "bg-primary-50 text-primary-700"
+                            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                        }`}
+                      >
+                        <Repeat className="h-4 w-4 mr-2" />
+                        Movements
+                      </Link>
+                      <Link
+                        href="/admin/materials/reports"
+                        className={`flex items-center px-2 py-1 text-sm rounded-md ${
+                          pathname === "/admin/materials/reports"
+                            ? "bg-primary-50 text-primary-700"
+                            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                        }`}
+                      >
+                        <ClipboardList className="h-4 w-4 mr-2" />
+                        Reports
+                      </Link>
+                      <Link
+                        href="/admin/materials/suppliers"
+                        className={`flex items-center px-2 py-1 text-sm rounded-md ${
+                          pathname === "/admin/materials/suppliers"
+                            ? "bg-primary-50 text-primary-700"
+                            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                        }`}
+                      >
+                        <Truck className="h-4 w-4 mr-2" />
+                        Suppliers
+                      </Link>
+                      <Link
+                        href="/admin/materials/settings"
+                        className={`flex items-center px-2 py-1 text-sm rounded-md ${
+                          pathname === "/admin/materials/settings"
+                            ? "bg-primary-50 text-primary-700"
+                            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                        }`}
+                      >
+                        <Settings className="h-4 w-4 mr-2" />
+                        Settings
+                      </Link>
+                      <Link
+                        href="/admin/materials/costing"
+                        className={`flex items-center px-2 py-1 text-sm rounded-md ${
+                          pathname === "/admin/materials/costing"
+                            ? "bg-primary-50 text-primary-700"
+                            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                        }`}
+                      >
+                        <DollarSign className="h-4 w-4 mr-2" />
+                        Costing
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            // Orders Dropdown
             if (item.name === "Orders") {
               return (
                 <div key={item.name} className="mb-1">
@@ -118,7 +281,7 @@ export default function AdminSidebar() {
               );
             }
 
-            // ✅ Products
+            // Products Dropdown
             if (item.name === "Products") {
               return (
                 <div key={item.name} className="mb-1">
@@ -185,7 +348,7 @@ export default function AdminSidebar() {
               );
             }
 
-            // ✅ People
+            // People Dropdown
             if (item.name === "People") {
               return (
                 <div key={item.name} className="mb-1">
