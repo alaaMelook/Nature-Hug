@@ -29,33 +29,44 @@ export default function BomPage() {
   const [materials, setMaterials] = useState<Material[]>([]);
   const [rows, setRows] = useState<BOMRow[]>([]);
 
-  // modal state
   const [manageProductId, setManageProductId] = useState<number | null>(null);
   const [showModal, setShowModal] = useState(false);
 
-  // add material to BOM
   const [materialId, setMaterialId] = useState("");
   const [grams, setGrams] = useState("");
 
-  // load products, materials, and bom rows
+  // 🔹 load products, materials, and bom rows safely
   useEffect(() => {
+    let isMounted = true;
+
     fetch("/api/admin/products")
       .then((res) => res.json())
-      .then((data) => setProducts(data.data || data || []));
+      .then((data) => {
+        if (isMounted) setProducts(data.data || data || []);
+      });
 
     fetch("/api/admin/inventory")
       .then((res) => res.json())
-      .then((data) => setMaterials(data.data || data || []));
+      .then((data) => {
+        if (isMounted) setMaterials(data.data || data || []);
+      });
 
     fetch("/api/admin/bom")
       .then((res) => res.json())
-      .then((data) => setRows(data.data || data || []));
+      .then((data) => {
+        if (isMounted) setRows(data.data || data || []);
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  // handle add new BOM row
+  // ✅ handle add new BOM row
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!manageProductId || !materialId || !grams) return;
+
     const res = await fetch("/api/admin/bom", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -65,10 +76,10 @@ export default function BomPage() {
         grams_used: grams,
       }),
     });
+
     const data = await res.json();
     if (res.ok) {
-      alert("BOM row added!");
-      setRows((prev) => [...prev, data.data || data]); // تأكد إنه بيضيف row جديد
+      setRows((prev) => [...prev, ...(data.data || data)]);
       setGrams("");
       setMaterialId("");
     } else {
@@ -76,7 +87,7 @@ export default function BomPage() {
     }
   };
 
-  // handle delete material from product
+  // ✅ handle delete
   const handleDelete = async (id: number) => {
     if (!confirm("Are you sure you want to delete this material?")) return;
 
@@ -89,22 +100,19 @@ export default function BomPage() {
     }
   };
 
-  // handle edit grams_used
+  // ✅ handle edit
   const handleEdit = async (id: number, grams_used: number) => {
     const res = await fetch(`/api/admin/bom?id=${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ grams_used }),
     });
+
     if (res.ok) {
       setRows((prev) =>
         prev.map((row) =>
           row.id === id
-            ? {
-                ...row,
-                grams_used,
-                total_cost: grams_used * row.unit_cost,
-              }
+            ? { ...row, grams_used, total_cost: grams_used * row.unit_cost }
             : row
         )
       );
@@ -114,7 +122,7 @@ export default function BomPage() {
     }
   };
 
-  // group rows by product
+  // ✅ group rows by product
   const groupedRows = products.map((product) => {
     const productRows = rows.filter((row) => row.product_id === product.id);
     const total_cost = productRows.reduce((sum, row) => sum + row.total_cost, 0);
@@ -125,7 +133,6 @@ export default function BomPage() {
     };
   });
 
-  // main table columns
   const columns: GridColDef[] = [
     { field: "product_name", headerName: "Product", flex: 1 },
     { field: "total_cost", headerName: "Total Cost", flex: 1 },
@@ -147,7 +154,7 @@ export default function BomPage() {
     },
   ];
 
-  // modal table: filter rows for selected product
+  // ✅ modal rows
   const modalRows = rows.filter((row) => row.product_id === manageProductId);
   const modalColumns: GridColDef[] = [
     { field: "material_name", headerName: "Material", flex: 1 },
@@ -191,22 +198,18 @@ export default function BomPage() {
 
       {/* main table */}
       <div style={{ height: 500, width: "100%" }}>
-        <DataGrid
-          rows={groupedRows}
-          columns={columns}
-          getRowId={(row) => row.id}
-        />
+        <DataGrid rows={groupedRows} columns={columns} getRowId={(row) => row.id} />
       </div>
 
-      {/* Modal for manage product's materials */}
+      {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-6 w-[600px] max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold mb-4">
-              Manage Materials for&nbsp;
+              Manage Materials for{" "}
               {products.find((p) => p.id === manageProductId)?.name_english}
             </h2>
-            {/* Materials Table */}
+
             <div style={{ height: 300, width: "100%" }}>
               <DataGrid
                 rows={modalRows}
@@ -215,7 +218,7 @@ export default function BomPage() {
                 hideFooter
               />
             </div>
-            {/* Add new material to BOM */}
+
             <form onSubmit={handleSubmit} className="space-y-4 mt-6">
               <div>
                 <label className="block mb-1">Material</label>
@@ -232,6 +235,7 @@ export default function BomPage() {
                   ))}
                 </select>
               </div>
+
               <div>
                 <label className="block mb-1">Grams Used</label>
                 <input
@@ -241,6 +245,7 @@ export default function BomPage() {
                   className="border p-2 w-full"
                 />
               </div>
+
               <button
                 type="submit"
                 className="bg-blue-600 text-white px-4 py-2 rounded"
@@ -248,6 +253,7 @@ export default function BomPage() {
                 Add Material
               </button>
             </form>
+
             <button
               className="mt-6 text-red-600 hover:underline w-full"
               onClick={() => {
