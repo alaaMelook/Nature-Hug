@@ -20,9 +20,7 @@ import {
   DollarSign,
   List,
   Tag,
-  Star,
   UserCheck,
-  UserPlus,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -34,6 +32,7 @@ const navigation = [
   { name: "Orders", href: "/admin/orders", icon: ShoppingCart }, // dropdown
   { name: "Analytics", href: "/admin/analytics", icon: BarChart3 },
   { name: "People", href: "/admin/people", icon: Users2 }, // dropdown
+  { name: "Finance", href: "/admin/finance", icon: DollarSign }, // ✅ dropdown جديد
   { name: "Reports", href: "/admin/reports", icon: FileText },
   { name: "Settings", href: "/admin/settings", icon: Settings },
 ];
@@ -44,6 +43,7 @@ export default function AdminSidebar() {
   const [openProducts, setOpenProducts] = useState(false);
   const [openPeople, setOpenPeople] = useState(false);
   const [openMaterials, setOpenMaterials] = useState(false);
+  const [openFinance, setOpenFinance] = useState(false); // ✅ جديد
 
   return (
     <div className="w-64 bg-white shadow-sm border-r border-gray-200 min-h-screen">
@@ -52,22 +52,14 @@ export default function AdminSidebar() {
           {navigation.map((item) => {
             const isActive = pathname === item.href;
 
-            // Materials Dropdown
+            // ✅ Materials Dropdown
             if (item.name === "Materials") {
               return (
                 <div key={item.name} className="mb-1">
                   <button
                     onClick={() => setOpenMaterials(!openMaterials)}
                     className={`group flex items-center justify-between w-full px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                      pathname.startsWith("/admin/materials") ||
-                      pathname.startsWith("/admin/materials/production") ||
-                      pathname.startsWith("/admin/materials/movements") ||
-                      pathname.startsWith("/admin/materials/reports") ||
-                      pathname.startsWith("/admin/materials/suppliers") ||
-                      pathname.startsWith("/admin/materials/settings") ||
-                      pathname.startsWith("/admin/materials/costing") ||
-                      pathname.startsWith("/admin/materials/bom") ||
-                      pathname.startsWith("/admin/materials/inventory")
+                      pathname.startsWith("/admin/materials")
                         ? "bg-primary-100 text-primary-700 border-r-2 border-primary-500"
                         : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                     }`}
@@ -75,15 +67,7 @@ export default function AdminSidebar() {
                     <span className="flex items-center">
                       <item.icon
                         className={`mr-3 h-5 w-5 ${
-                          pathname.startsWith("/admin/materials") ||
-                          pathname.startsWith("/admin/materials/production") ||
-                          pathname.startsWith("/admin/materials/movements") ||
-                          pathname.startsWith("/admin/materials/reports") ||
-                          pathname.startsWith("/admin/materials/suppliers") ||
-                          pathname.startsWith("/admin/materials/settings") ||
-                          pathname.startsWith("/admin/materials/costing") ||
-                          pathname.startsWith("/admin/materials/bom") ||
-                          pathname.startsWith("/admin/materials/inventory")
+                          pathname.startsWith("/admin/materials")
                             ? "text-primary-500"
                             : "text-gray-400 group-hover:text-gray-500"
                         }`}
@@ -204,7 +188,88 @@ export default function AdminSidebar() {
               );
             }
 
-            // Orders Dropdown
+            // ✅ Finance Dropdown
+            if (item.name === "Finance") {
+              return (
+                <div key={item.name} className="mb-1">
+                  <button
+                    onClick={() => setOpenFinance(!openFinance)}
+                    className={`group flex items-center justify-between w-full px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                      pathname.startsWith("/admin/finance")
+                        ? "bg-primary-100 text-primary-700 border-r-2 border-primary-500"
+                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                    }`}
+                  >
+                    <span className="flex items-center">
+                      <item.icon
+                        className={`mr-3 h-5 w-5 ${
+                          pathname.startsWith("/admin/finance")
+                            ? "text-primary-500"
+                            : "text-gray-400 group-hover:text-gray-500"
+                        }`}
+                      />
+                      {item.name}
+                    </span>
+                    <ChevronDown
+                      className={`h-4 w-4 transition-transform ${
+                        openFinance ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+
+                  {openFinance && (
+                    <div className="ml-8 mt-1 space-y-1">
+                      <Link
+                        href="/admin/finance/distributions"
+                        className={`flex items-center px-2 py-1 text-sm rounded-md ${
+                          pathname === "/admin/finance/distributions"
+                            ? "bg-primary-50 text-primary-700"
+                            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                        }`}
+                      >
+                        <Repeat className="h-4 w-4 mr-2" />
+                        Distributions
+                      </Link>
+                      <Link
+                        href="/admin/finance/expenses"
+                        className={`flex items-center px-2 py-1 text-sm rounded-md ${
+                          pathname === "/admin/finance/expenses"
+                            ? "bg-primary-50 text-primary-700"
+                            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                        }`}
+                      >
+                        <ClipboardList className="h-4 w-4 mr-2" />
+                        Expenses
+                      </Link>
+                      <Link
+                        href="/admin/finance/expense-types"
+                        className={`flex items-center px-2 py-1 text-sm rounded-md ${
+                          pathname === "/admin/finance/expense-types"
+                            ? "bg-primary-50 text-primary-700"
+                            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                        }`}
+                      >
+                        <Tag className="h-4 w-4 mr-2" />
+                        Expense Types
+                      </Link>
+                      <Link
+                        href="/admin/finance/partners"
+                        className={`flex items-center px-2 py-1 text-sm rounded-md ${
+                          pathname === "/admin/finance/partners"
+                            ? "bg-primary-50 text-primary-700"
+                            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                        }`}
+                      >
+                        <UserCheck className="h-4 w-4 mr-2" />
+                        Partners
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            // ✅ Orders Dropdown
             if (item.name === "Orders") {
               return (
                 <div key={item.name} className="mb-1">
@@ -281,7 +346,7 @@ export default function AdminSidebar() {
               );
             }
 
-            // Products Dropdown
+            // ✅ Products Dropdown
             if (item.name === "Products") {
               return (
                 <div key={item.name} className="mb-1">
@@ -348,7 +413,7 @@ export default function AdminSidebar() {
               );
             }
 
-            // People Dropdown
+            // ✅ People Dropdown
             if (item.name === "People") {
               return (
                 <div key={item.name} className="mb-1">
@@ -415,7 +480,7 @@ export default function AdminSidebar() {
               );
             }
 
-            // باقي العناصر العادية
+            // ✅ باقي العناصر العادية
             return (
               <Link
                 key={item.name}
