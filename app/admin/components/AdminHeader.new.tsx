@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { AdminUser } from "@/lib/adminAuthClient";
 import { LogOut, User, Settings } from "lucide-react";
-import LanguageSelector from "./LanguageSelector";
 import { useTranslation } from "../context/TranslationContext";
-
+import LangugageSwitcher from "@/app/components/LanguageSwitcher";
+import LanguageSwitcher from "@/app/components/LanguageSwitcher";
 interface AdminHeaderProps {
     adminUser: AdminUser;
 }
@@ -33,10 +33,7 @@ export default function AdminHeader({ adminUser }: AdminHeaderProps) {
                     </div>
 
                     <div className="flex items-center space-x-6">
-                        <LanguageSelector
-                            currentLang={language}
-                            onLanguageChange={(lang) => setLanguage(lang as "en" | "ar")}
-                        />
+                        <LanguageSwitcher />
 
                         <div className="relative">
                             <button

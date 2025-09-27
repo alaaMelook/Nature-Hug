@@ -629,7 +629,11 @@ export default function ProductsTable({
         <table className="min-w-full bg-white">
           <thead>
             <tr>
-              <th className="px-4 py-2 text-left">Name (EN/AR)</th>
+              <th className="px-4 py-2 text-left">Image</th>
+              <th className="px-4 py-2 text-left">Name (EN)</th>
+              <th className="px-4 py-2 text-left">Name (AR)</th>
+              <th className="px-4 py-2 text-left">Description (EN)</th>
+              <th className="px-4 py-2 text-left">Description (AR)</th>
               <th className="px-4 py-2 text-left">Category</th>
               <th className="px-4 py-2 text-left">Price</th>
               <th className="px-4 py-2 text-left">Cost</th>
@@ -654,14 +658,22 @@ export default function ProductsTable({
                 return (
                   <tr key={p.id} className="border-t">
                     <td className="px-4 py-2">
-                      {p.name_english} / {p.name_arabic}
+                      {p.image_url ? (
+                        <img
+                          src={p.image_url}
+                          alt={p.name_english || "Product Image"}
+                          className="h-10 w-10 object-cover rounded"
+                        />
+                      ) : (
+                        <span className="text-gray-400">No image</span>
+                      )}
                     </td>
-                    <td className="px-4 py-2">
-                      {category?.name_english || "—"}
-                    </td>
-                    <td className="px-4 py-2 font-semibold">
-                      {p.price} EGP
-                    </td>
+                    <td className="px-4 py-2">{p.name_english || "—"}</td>
+                    <td className="px-4 py-2">{p.name_arabic || "—"}</td>
+                    <td className="px-4 py-2">{p.description_english || "—"}</td>
+                    <td className="px-4 py-2">{p.description_arabic || "—"}</td>
+                    <td className="px-4 py-2">{category?.name_english || "—"}</td>
+                    <td className="px-4 py-2 font-semibold">{p.price} EGP</td>
                     <td className="px-4 py-2 text-red-600">
                       {productCost.toFixed(2)} EGP
                     </td>
@@ -697,7 +709,7 @@ export default function ProductsTable({
             ) : (
               <tr>
                 <td
-                  colSpan={8}
+                  colSpan={12}
                   className="px-4 py-6 text-center text-gray-500"
                 >
                   No products found.
