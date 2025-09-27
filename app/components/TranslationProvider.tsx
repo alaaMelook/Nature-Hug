@@ -39,9 +39,10 @@ export function TranslationProvider({
 
   useEffect(() => {
     setIsClient(true);
+    // Only access localStorage after client-side hydration
     const saved =
-      (localStorage.getItem("language") as LangKey) ||
-      (navigator.language.split("-")[0] as LangKey) ||
+      (typeof window !== "undefined" && localStorage.getItem("language") as LangKey) ||
+      (typeof window !== "undefined" && navigator.language.split("-")[0] as LangKey) ||
       "en";
 
     setLanguage(saved);
@@ -50,7 +51,7 @@ export function TranslationProvider({
 
   const switchLanguage = useCallback((lang: LangKey) => {
     setLanguage(lang);
-    if (typeof localStorage !== "undefined") {
+    if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
       localStorage.setItem("language", lang);
     }
     updateHtml(lang);

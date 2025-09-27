@@ -21,25 +21,31 @@ export const useCart = () => {
 export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isClient, setIsClient] = useState(false);
   const Cookies = require("js-cookie");
+  
   useEffect(() => {
-    const savedCart = Cookies.get("cart");
-    if (savedCart) {
-      try {
-        setCart(JSON.parse(savedCart));
-      } catch (error) {
-        console.error("Error parsing cart from cookies:", error);
-        setCart([]);
+    setIsClient(true);
+    // Only access cookies after client-side hydration
+    if (typeof window !== "undefined") {
+      const savedCart = Cookies.get("cart");
+      if (savedCart) {
+        try {
+          setCart(JSON.parse(savedCart));
+        } catch (error) {
+          console.error("Error parsing cart from cookies:", error);
+          setCart([]);
+        }
       }
     }
     setLoading(false);
   }, []);
 
   useEffect(() => {
-    if (!loading) {
+    if (!loading && isClient && typeof window !== "undefined") {
       Cookies.set("cart", JSON.stringify(cart), { expires: 1 });
     }
-  }, [cart, loading]);
+  }, [cart, loading, isClient]);
 
   const addToCart = async (product: Product) => {
     const existingItemIndex = cart.findIndex(

@@ -14,6 +14,7 @@ import {
   DollarSign,
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
+import { useTranslation } from "@/app/components/TranslationProvider";
 
 type Category = {
   id: number;
@@ -26,6 +27,8 @@ export default function ProductsTable({
 }: {
   categories: Category[];
 }) {
+  const { t } = useTranslation();
+
   const [products, setProducts] = useState<Product[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [search, setSearch] = useState("");
@@ -36,8 +39,14 @@ export default function ProductsTable({
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
-  const [formData, setFormData] = useState({
+  // Handle hydration
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const [formData, setFormData] = useState(() => ({
     name_english: "",
     name_arabic: "",
     description_english: "",
@@ -45,14 +54,24 @@ export default function ProductsTable({
     price: "",
     discount: "",
     stock: "",
-    category_id: categories[0]?.id?.toString() || "",
+    category_id: "",
     image_url: "",
     skin_type: "",
     sizes: "",
     status: "active" as "active" | "inactive",
     slug: "",
     meta_description: "",
-  });
+  }));
+
+  // Set category_id after initial render to avoid hydration mismatch
+  useEffect(() => {
+    if (categories.length > 0 && !formData.category_id) {
+      setFormData(prev => ({
+        ...prev,
+        category_id: categories[0].id.toString()
+      }));
+    }
+  }, [categories]);
 
   const [productMaterials, setProductMaterials] = useState<
     { material_id: number; grams_used: number }[]
@@ -405,7 +424,7 @@ export default function ProductsTable({
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm("هل أنت متأكد من حذف المنتج؟")) return;
+    if (!window.confirm(t("confirmDeleteProduct"))) return;
 
     try {
       console.log("🗑️ Deleting product with ID:", id);
@@ -434,10 +453,143 @@ export default function ProductsTable({
   };
 
   const filtered = products.filter((p) =>
-    ((p.name_english || "") + " " + (p.name_arabic || ""))
+    `${p.name_english || ""} ${p.name_arabic || ""}`
       .toLowerCase()
       .includes(search.toLowerCase())
   );
+
+  const renderMaterials = () => {
+    return productMaterials.map((pm, index) => {
+      const material = materials.find((m) => m.id === pm.material_id);
+      const materialCost = material ? material.price_per_gram * pm.grams_used : 0;
+      const availableStock = material ? material.stock_grams : 0;
+      const canMake =
+        material && pm.grams_used > 0
+          ? Math.floor(availableStock / pm.grams_used)
+          : 0;
+      const stockPercentage =
+        material && availableStock > 0
+          ? (pm.grams_used / availableStock) * 100
+          : 0;
+
+      return (
+        <div
+          key={pm.material_id}
+          className="p-3 border rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow"
+        >
+          <div className="flex items-center space-x-2 mb-2">
+            <div className="flex-1">
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                Material
+              </label>
+              <select
+                value={pm.material_id}
+                onChange={(e) =>
+                  updateMaterial(index, "material_id", Number(e.target.value))
+                }
+                className="w-full border border-gray-300 px-2 py-1.5 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value={0}>Select Material</option>
+                {materials
+                  .filter(
+                    (m) =>
+                      !productMaterials.some(
+                        (pm2, i) => i !== index && pm2.material_id === m.id
+                      )
+                  )
+                  .map((material) => (
+                    <option key={material.id} value={material.id}>
+                      {material.name} - {material.price_per_gram.toFixed(4)} EGP/g
+                    </option>
+                  ))}
+              </select>
+            </div>
+            <button
+              type="button"
+              onClick={() => removeMaterial(index)}
+              className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+              title="Remove material"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="flex items-center space-x-2 mb-2">
+            <div className="flex-1">
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                Grams Used
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                value={pm.grams_used}
+                onChange={(e) =>
+                  updateMaterial(index, "grams_used", Number(e.target.value))
+                }
+                className="w-full border border-gray-300 px-2 py-1.5 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <div className="text-xs text-gray-500 pt-5">g</div>
+          </div>
+
+          {material && pm.grams_used > 0 && (
+            <div className="bg-gray-50 p-2 rounded-lg">
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Cost:</span>
+                  <span className="font-semibold text-red-600">
+                    {materialCost.toFixed(2)} EGP
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Stock:</span>
+                  <span className="font-medium">
+                    {availableStock.toFixed(1)}g
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Can make:</span>
+                  <span
+                    className={`font-semibold ${canMake > 0 ? "text-green-600" : "text-red-600"
+                      }`}
+                  >
+                    {canMake}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Usage:</span>
+                  <span
+                    className={`font-medium ${stockPercentage > 10
+                      ? "text-orange-600"
+                      : "text-green-600"
+                      }`}
+                  >
+                    {stockPercentage.toFixed(1)}%
+                  </span>
+                </div>
+              </div>
+
+              {stockPercentage > 10 && (
+                <div className="bg-orange-100 border border-orange-300 text-orange-700 px-2 py-1 rounded text-xs flex items-center mt-2">
+                  <AlertTriangle className="h-3 w-3 mr-1" />
+                  High usage
+                </div>
+              )}
+
+              {canMake === 0 && pm.grams_used > 0 && (
+                <div className="bg-red-100 border border-red-300 text-red-700 px-2 py-1 rounded text-xs flex items-center mt-2">
+                  <AlertTriangle className="h-3 w-3 mr-1" />
+                  No stock
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    });
+  };
 
   if (loading) {
     return (
@@ -468,29 +620,23 @@ export default function ProductsTable({
             placeholder="Search products..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-8 pr-3 py-2 border border-gray-300 rounded-md w-full text-sm"
+            className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
       </div>
 
-      {/* Products Table */}
-      <div className="overflow-x-auto border rounded-md">
-        <table className="min-w-full text-sm">
-          <thead className="bg-gray-100 text-gray-700">
+      <div className="overflow-x-auto">
+        <table className="min-w-full bg-white">
+          <thead>
             <tr>
-              <th className="px-4 py-2 text-left">Image</th>
               <th className="px-4 py-2 text-left">Name (EN/AR)</th>
-              <th className="px-4 py-2 text-left">Description (EN/AR)</th>
               <th className="px-4 py-2 text-left">Category</th>
               <th className="px-4 py-2 text-left">Price</th>
               <th className="px-4 py-2 text-left">Cost</th>
               <th className="px-4 py-2 text-left">Profit</th>
               <th className="px-4 py-2 text-left">Discount</th>
               <th className="px-4 py-2 text-left">Stock</th>
-              <th className="px-4 py-2 text-left">Skin Type</th>
-              <th className="px-4 py-2 text-left">Sizes</th>
-              <th className="px-4 py-2 text-left">Status</th>
-              <th className="px-4 py-2 text-right">Actions</th>
+              <th className="px-4 py-2 text-left">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -508,70 +654,42 @@ export default function ProductsTable({
                 return (
                   <tr key={p.id} className="border-t">
                     <td className="px-4 py-2">
-                      {p.image_url ? (
-                        <img
-                          src={p.image_url}
-                          alt={p.name_english}
-                          className="h-10 w-10 object-cover rounded"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).style.display =
-                              "none";
-                          }}
-                        />
-                      ) : (
-                        <span className="text-gray-400">No image</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-2">
                       {p.name_english} / {p.name_arabic}
-                    </td>
-                    <td className="px-4 py-2">
-                      {p.description_english} / {p.description_arabic}
                     </td>
                     <td className="px-4 py-2">
                       {category?.name_english || "—"}
                     </td>
-                    <td className="px-4 py-2 font-semibold">{p.price} EGP</td>
+                    <td className="px-4 py-2 font-semibold">
+                      {p.price} EGP
+                    </td>
                     <td className="px-4 py-2 text-red-600">
                       {productCost.toFixed(2)} EGP
                     </td>
                     <td
-                      className={`px-4 py-2 font-semibold ${
-                        productProfit >= 0 ? "text-green-600" : "text-red-600"
-                      }`}
+                      className={`px-4 py-2 font-semibold ${productProfit >= 0 ? "text-green-600" : "text-red-600"
+                        }`}
                     >
                       {productProfit.toFixed(2)} EGP
                     </td>
                     <td className="px-4 py-2">{p.discount ?? "-"}</td>
                     <td className="px-4 py-2">{p.stock}</td>
-                    <td className="px-4 py-2">{p.skin_type ?? "-"}</td>
-                    <td className="px-4 py-2">{p.sizes ?? "-"}</td>
                     <td className="px-4 py-2">
-                      <span
-                        className={`px-2 py-1 text-xs rounded-full ${
-                          p.status === "active"
-                            ? "bg-green-100 text-green-700"
-                            : "bg-red-100 text-red-700"
-                        }`}
-                      >
-                        {p.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2 text-right space-x-2">
-                      <button
-                        onClick={() => openEditModal(p)}
-                        className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-                        title="Edit product"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(p.id)}
-                        className="p-1 text-red-600 hover:bg-red-50 rounded"
-                        title="Delete product"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => openEditModal(p)}
+                          className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                          title="Edit product"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(p.id)}
+                          className="p-1 text-red-600 hover:bg-red-50 rounded"
+                          title="Delete product"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -579,7 +697,7 @@ export default function ProductsTable({
             ) : (
               <tr>
                 <td
-                  colSpan={13}
+                  colSpan={8}
                   className="px-4 py-6 text-center text-gray-500"
                 >
                   No products found.
@@ -592,729 +710,484 @@ export default function ProductsTable({
 
       {/* Enhanced Modal with Detailed Material Analysis */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-md w-full max-w-6xl shadow-lg relative max-h-[95vh] overflow-y-auto">
-            <button
-              onClick={() => setShowModal(false)}
-              className="absolute top-3 right-3 text-gray-500 hover:text-gray-800"
-            >
-              <X className="h-5 w-5" />
-            </button>
-            <h2 className="text-xl font-bold mb-4">
-              {editingProduct ? "Edit Product" : "Add Product"}
-            </h2>
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg w-full max-w-5xl shadow-xl relative max-h-[95vh] overflow-y-auto">
+            {/* Header */}
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900">
+                {editingProduct ? "Edit Product" : "Add Product"}
+              </h2>
+              <button
+                onClick={() => setShowModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Left Column - Basic Info */}
-              <div className="space-y-3">
-                <h3 className="text-lg font-semibold mb-3">
-                  Basic Information
-                </h3>
+            {/* Content */}
+            <div className="p-6">
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                {/* Left Column - Basic Info */}
+                <div className="space-y-4">
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h3 className="text-lg font-semibold mb-4 text-gray-800">
+                      Basic Information
+                    </h3>
 
-                <input
-                  type="text"
-                  placeholder="Product name (English)"
-                  value={formData.name_english}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name_english: e.target.value })
-                  }
-                  className="w-full border px-3 py-2 rounded-md text-sm"
-                  required
-                />
-                <input
-                  type="text"
-                  placeholder="Product name (Arabic)"
-                  value={formData.name_arabic}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name_arabic: e.target.value })
-                  }
-                  className="w-full border px-3 py-2 rounded-md text-sm"
-                />
-                <textarea
-                  placeholder="Description (English)"
-                  value={formData.description_english}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      description_english: e.target.value,
-                    })
-                  }
-                  className="w-full border px-3 py-2 rounded-md text-sm h-16"
-                />
-                <textarea
-                  placeholder="Description (Arabic)"
-                  value={formData.description_arabic}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      description_arabic: e.target.value,
-                    })
-                  }
-                  className="w-full border px-3 py-2 rounded-md text-sm h-16"
-                />
-
-                <div className="grid grid-cols-2 gap-3">
-                  <input
-                    type="number"
-                    placeholder="Price *"
-                    value={formData.price}
-                    onChange={(e) =>
-                      setFormData({ ...formData, price: e.target.value })
-                    }
-                    className="w-full border px-3 py-2 rounded-md text-sm"
-                    required
-                  />
-                  <input
-                    type="number"
-                    placeholder="Stock *"
-                    value={formData.stock}
-                    onChange={(e) =>
-                      setFormData({ ...formData, stock: e.target.value })
-                    }
-                    className="w-full border px-3 py-2 rounded-md text-sm"
-                    required
-                  />
-                </div>
-
-                <input
-                  type="number"
-                  placeholder="Discount"
-                  value={formData.discount}
-                  onChange={(e) =>
-                    setFormData({ ...formData, discount: e.target.value })
-                  }
-                  className="w-full border px-3 py-2 rounded-md text-sm"
-                />
-
-                <select
-                  value={formData.category_id}
-                  onChange={(e) =>
-                    setFormData({ ...formData, category_id: e.target.value })
-                  }
-                  className="w-full border px-3 py-2 rounded-md text-sm"
-                  required
-                >
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name_english}
-                    </option>
-                  ))}
-                </select>
-
-                {/* Image Upload */}
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Product Image
-                  </label>
-                  {imageFile ? (
-                    <img
-                      src={URL.createObjectURL(imageFile)}
-                      alt="Preview"
-                      className="h-24 w-24 object-cover mb-2 rounded"
-                    />
-                  ) : formData.image_url ? (
-                    <img
-                      src={formData.image_url}
-                      alt="Preview"
-                      className="h-24 w-24 object-cover mb-2 rounded"
-                    />
-                  ) : null}
-                  <div className="flex items-center space-x-2">
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      className="hidden"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="flex items-center px-3 py-2 border rounded-md text-sm hover:bg-gray-50"
-                    >
-                      <Upload className="h-4 w-4 mr-2" /> Upload
-                    </button>
-                    {uploading && (
-                      <span className="text-xs ml-2">Uploading...</span>
-                    )}
-                  </div>
-                </div>
-
-                <input
-                  type="text"
-                  placeholder="Skin Type"
-                  value={formData.skin_type}
-                  onChange={(e) =>
-                    setFormData({ ...formData, skin_type: e.target.value })
-                  }
-                  className="w-full border px-3 py-2 rounded-md text-sm"
-                />
-                <input
-                  type="text"
-                  placeholder="Sizes (comma separated)"
-                  value={formData.sizes}
-                  onChange={(e) =>
-                    setFormData({ ...formData, sizes: e.target.value })
-                  }
-                  className="w-full border px-3 py-2 rounded-md text-sm"
-                />
-                <input
-                  type="text"
-                  placeholder="Slug (optional)"
-                  value={formData.slug}
-                  onChange={(e) =>
-                    setFormData({ ...formData, slug: e.target.value })
-                  }
-                  className="w-full border px-3 py-2 rounded-md text-sm"
-                />
-                <textarea
-                  placeholder="Meta description (SEO)"
-                  value={formData.meta_description}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      meta_description: e.target.value,
-                    })
-                  }
-                  className="w-full border px-3 py-2 rounded-md text-sm h-16"
-                />
-                <select
-                  value={formData.status}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      status: e.target.value as "active" | "inactive",
-                    })
-                  }
-                  className="w-full border px-3 py-2 rounded-md text-sm"
-                >
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
-              </div>
-
-              {/* Middle Column - Materials Selection */}
-              <div className="space-y-3">
-                <h3 className="text-lg font-semibold mb-3 flex items-center">
-                  <Beaker className="h-5 w-5 mr-2" />
-                  Materials & Consumption
-                </h3>
-
-                {/* Materials List */}
-                <div>
-                  <div className="flex justify-between items-center mb-3">
-                    <label className="block text-sm font-medium">
-                      Materials Used
-                    </label>
-                    <button
-                      type="button"
-                      onClick={addMaterial}
-                      className="flex items-center px-3 py-1.5 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
-                    >
-                      <Plus className="h-4 w-4 mr-1" /> Add Material
-                    </button>
-                  </div>
-
-                  {/* Material Search */}
-                  <div className="mb-3">
-                    <div className="relative">
-                      <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
-                      <input
-                        type="text"
-                        placeholder="Search materials..."
-                        value={materialSearch}
-                        onChange={(e) => setMaterialSearch(e.target.value)}
-                        className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
+                    {/* Product Names */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Name (English) *
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Product name (English)"
+                          value={formData.name_english}
+                          onChange={(e) =>
+                            setFormData({ ...formData, name_english: e.target.value })
+                          }
+                          className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Name (Arabic)
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Product name (Arabic)"
+                          value={formData.name_arabic}
+                          onChange={(e) =>
+                            setFormData({ ...formData, name_arabic: e.target.value })
+                          }
+                          className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
                     </div>
-                  </div>
 
-                  {productMaterials.length === 0 && (
-                    <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed">
-                      <Beaker className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                      <p className="text-sm">No materials added yet</p>
-                      <p className="text-xs text-gray-400">
-                        Click "Add Material" to get started
-                      </p>
+                    {/* Descriptions */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Description (English)
+                        </label>
+                        <textarea
+                          placeholder="Product description"
+                          value={formData.description_english}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              description_english: e.target.value,
+                            })
+                          }
+                          className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm h-20 resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Description (Arabic)
+                        </label>
+                        <textarea
+                          placeholder="وصف المنتج"
+                          value={formData.description_arabic}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              description_arabic: e.target.value,
+                            })
+                          }
+                          className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm h-20 resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
                     </div>
-                  )}
 
-                  <div className="space-y-3 max-h-80 overflow-y-auto">
-                    {productMaterials.map((pm, index) => {
-                      const material = materials.find(
-                        (m) => m.id === pm.material_id
-                      );
-                      const materialCost = material
-                        ? material.price_per_gram * pm.grams_used
-                        : 0;
-                      const availableStock = material
-                        ? material.stock_grams
-                        : 0;
-                      const canMake =
-                        material && pm.grams_used > 0
-                          ? Math.floor(availableStock / pm.grams_used)
-                          : 0;
-                      const stockPercentage =
-                        material && availableStock > 0
-                          ? (pm.grams_used / availableStock) * 100
-                          : 0;
-
-                      return (
-                        <div
-                          key={pm.material_id}
-                          className="p-4 border rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow"
+                    {/* Pricing & Stock */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Price (EGP) *
+                        </label>
+                        <input
+                          type="number"
+                          placeholder="0.00"
+                          value={formData.price}
+                          onChange={(e) =>
+                            setFormData({ ...formData, price: e.target.value })
+                          }
+                          className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Stock *
+                        </label>
+                        <input
+                          type="number"
+                          placeholder="0"
+                          value={formData.stock}
+                          onChange={(e) =>
+                            setFormData({ ...formData, stock: e.target.value })
+                          }
+                          className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Discount (EGP)
+                        </label>
+                        <input
+                          type="number"
+                          placeholder="0.00"
+                          value={formData.discount}
+                          onChange={(e) =>
+                            setFormData({ ...formData, discount: e.target.value })
+                          }
+                          className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Category *
+                        </label>
+                        <select
+                          value={formData.category_id}
+                          onChange={(e) =>
+                            setFormData({ ...formData, category_id: e.target.value })
+                          }
+                          className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          required
                         >
-                          {/* Material Selection */}
-                          <div className="flex items-center space-x-2 mb-3">
-                            <div className="flex-1">
-                              <label className="block text-xs font-medium text-gray-600 mb-1">
-                                Material {""}
-                                <select
-                                  value={pm.material_id}
-                                  onChange={(e) =>
-                                    updateMaterial(
-                                      index,
-                                      "material_id",
-                                      Number(e.target.value)
-                                    )
-                                  }
-                                  className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                >
-                                  <option value={0}>Select Material</option>
-                                  {(() => {
-                                    const filteredMaterials = materials.filter(
-                                      (m) =>
-                                        !productMaterials.some(
-                                          (pm2, i) =>
-                                            i !== index &&
-                                            pm2.material_id === m.id
-                                        ) &&
-                                        m.name
-                                          .toLowerCase()
-                                          .includes(
-                                            materialSearch.toLowerCase()
-                                          )
-                                    );
+                          {categories.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.name_english}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
 
-                                    if (
-                                      filteredMaterials.length === 0 &&
-                                      materialSearch
-                                    ) {
-                                      return (
-                                        <option value={0} disabled>
-                                          No materials found for "
-                                          {materialSearch}"
-                                        </option>
-                                      );
-                                    }
-
-                                    return filteredMaterials.map((material) => (
-                                      <option
-                                        key={material.id}
-                                        value={material.id}
-                                      >
-                                        {material.name} -{" "}
-                                        {material.price_per_gram.toFixed(4)}{" "}
-                                        EGP/g
-                                      </option>
-                                    ));
-                                  })()}
-                                </select>
-                              </label>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => removeMaterial(index)}
-                              className="p-2 text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                              title="Remove material"
-                            >
-                              <X className="h-4 w-4" />
-                            </button>
-                          </div>
-
-                          {/* Grams Input */}
-                          <div className="flex items-center space-x-2 mb-3">
-                            <div className="flex-1">
-                              <label className="block text-xs font-medium text-gray-600 mb-1">
-                                Grams Used
-                              </label>
-                              <input
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                placeholder="0.00"
-                                value={pm.grams_used}
-                                onChange={(e) =>
-                                  updateMaterial(
-                                    index,
-                                    "grams_used",
-                                    Number(e.target.value)
-                                  )
-                                }
-                                className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              />
-                            </div>
-                            <div className="text-xs text-gray-500 pt-6">
-                              grams
-                            </div>
-                          </div>
-
-                          {/* Material Details */}
-                          {material && pm.grams_used > 0 && (
-                            <div className="bg-gray-50 p-3 rounded-md space-y-2">
-                              <div className="grid grid-cols-2 gap-3 text-sm">
-                                <div className="flex justify-between">
-                                  <span className="text-gray-600">
-                                    Cost per product:
-                                  </span>
-                                  <span className="font-semibold text-red-600">
-                                    {materialCost.toFixed(2)} EGP
-                                  </span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-gray-600">
-                                    Available stock:
-                                  </span>
-                                  <span className="font-medium">
-                                    {availableStock.toFixed(2)}g
-                                  </span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-gray-600">
-                                    Can make:
-                                  </span>
-                                  <span
-                                    className={`font-semibold ${
-                                      canMake > 0
-                                        ? "text-green-600"
-                                        : "text-red-600"
-                                    }`}
-                                  >
-                                    {canMake} products
-                                  </span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-gray-600">
-                                    Stock usage:
-                                  </span>
-                                  <span
-                                    className={`font-medium ${
-                                      stockPercentage > 10
-                                        ? "text-orange-600"
-                                        : "text-green-600"
-                                    }`}
-                                  >
-                                    {stockPercentage.toFixed(1)}%
-                                  </span>
-                                </div>
-                              </div>
-
-                              {/* Stock Warning */}
-                              {stockPercentage > 10 && (
-                                <div className="bg-orange-100 border border-orange-300 text-orange-700 px-2 py-1 rounded text-xs flex items-center">
-                                  <AlertTriangle className="h-3 w-3 mr-1" />
-                                  High stock usage - consider reducing amount
-                                </div>
-                              )}
-
-                              {canMake === 0 && pm.grams_used > 0 && (
-                                <div className="bg-red-100 border border-red-300 text-red-700 px-2 py-1 rounded text-xs flex items-center">
-                                  <AlertTriangle className="h-3 w-3 mr-1" />
-                                  Insufficient stock to make any products
-                                </div>
-                              )}
+                    {/* Image Upload */}
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Product Image
+                      </label>
+                      <div className="flex items-start space-x-4">
+                        <div className="flex-shrink-0">
+                          {imageFile ? (
+                            <img
+                              src={URL.createObjectURL(imageFile)}
+                              alt="Preview"
+                              className="h-20 w-20 object-cover rounded-lg border"
+                            />
+                          ) : formData.image_url ? (
+                            <img
+                              src={formData.image_url}
+                              alt="Preview"
+                              className="h-20 w-20 object-cover rounded-lg border"
+                            />
+                          ) : (
+                            <div className="h-20 w-20 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center">
+                              <Upload className="h-6 w-6 text-gray-400" />
                             </div>
                           )}
                         </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-
-              {/* Right Column - Cost Analysis & Profit */}
-              <div className="space-y-3">
-                <h3 className="text-lg font-semibold mb-3 flex items-center">
-                  <Calculator className="h-5 w-5 mr-2" />
-                  Cost Analysis & Profit
-                </h3>
-
-                {/* Cost Summary */}
-                <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-5 rounded-lg space-y-4 border">
-                  <div className="text-center mb-4">
-                    <h4 className="text-lg font-semibold text-gray-800">
-                      Cost Analysis
-                    </h4>
-                    <p className="text-sm text-gray-600">Per product unit</p>
-                  </div>
-
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center p-3 bg-white rounded-md shadow-sm">
-                      <span className="font-medium flex items-center text-gray-700">
-                        <DollarSign className="h-4 w-4 mr-2 text-red-500" />
-                        Material Cost:
-                      </span>
-                      <span className="text-red-600 font-bold text-xl">
-                        {totalCost.toFixed(2)} EGP
-                      </span>
+                        <div className="flex-1">
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageUpload}
+                            className="hidden"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          >
+                            <Upload className="h-4 w-4 mr-2" /> Choose Image
+                          </button>
+                          {uploading && (
+                            <span className="text-xs text-gray-500 ml-2">Uploading...</span>
+                          )}
+                        </div>
+                      </div>
                     </div>
 
-                    <div className="flex justify-between items-center p-3 bg-white rounded-md shadow-sm">
-                      <span className="font-medium text-gray-700">
-                        Selling Price:
-                      </span>
-                      <span className="text-blue-600 font-bold text-xl">
-                        {Number(formData.price || 0).toFixed(2)} EGP
-                      </span>
+                    {/* Additional Fields */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Skin Type
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g., All skin types"
+                          value={formData.skin_type}
+                          onChange={(e) =>
+                            setFormData({ ...formData, skin_type: e.target.value })
+                          }
+                          className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Sizes
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="S, M, L (comma separated)"
+                          value={formData.sizes}
+                          onChange={(e) =>
+                            setFormData({ ...formData, sizes: e.target.value })
+                          }
+                          className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
                     </div>
 
-                    <div className="border-t-2 border-gray-200 pt-3">
-                      <div className="flex justify-between items-center p-3 bg-white rounded-md shadow-sm mb-2">
-                        <span className="font-semibold flex items-center text-gray-800">
-                          <TrendingUp className="h-5 w-5 mr-2" />
-                          Net Profit:
-                        </span>
-                        <span
-                          className={`font-bold text-2xl ${
-                            profit >= 0 ? "text-green-600" : "text-red-600"
-                          }`}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Slug (SEO)
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="product-url-slug"
+                          value={formData.slug}
+                          onChange={(e) =>
+                            setFormData({ ...formData, slug: e.target.value })
+                          }
+                          className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Status
+                        </label>
+                        <select
+                          value={formData.status}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              status: e.target.value as "active" | "inactive",
+                            })
+                          }
+                          className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         >
-                          {profit.toFixed(2)} EGP
-                        </span>
-                      </div>
-
-                      <div className="flex justify-between items-center p-2 bg-gray-100 rounded-md">
-                        <span className="text-sm font-medium text-gray-600">
-                          Profit Margin:
-                        </span>
-                        <span
-                          className={`text-sm font-bold ${
-                            profitMargin >= 0
-                              ? "text-green-600"
-                              : "text-red-600"
-                          }`}
-                        >
-                          {profitMargin.toFixed(1)}%
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Profit Status Indicator */}
-                  <div
-                    className={`p-3 rounded-md text-center ${
-                      profit >= 0
-                        ? "bg-green-100 border border-green-300 text-green-800"
-                        : "bg-red-100 border border-red-300 text-red-800"
-                    }`}
-                  >
-                    {profit >= 0 ? (
-                      <div className="flex items-center justify-center">
-                        <TrendingUp className="h-4 w-4 mr-2" />
-                        <span className="font-semibold">
-                          Profitable Product
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center">
-                        <AlertTriangle className="h-4 w-4 mr-2" />
-                        <span className="font-semibold">
-                          Loss-Making Product
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  {profit < 0 && (
-                    <div className="bg-red-50 border-l-4 border-red-400 p-3 rounded-r-md">
-                      <div className="flex items-center">
-                        <AlertTriangle className="h-5 w-5 text-red-400 mr-2" />
-                        <div>
-                          <p className="text-sm font-medium text-red-800">
-                            Price Below Cost
-                          </p>
-                          <p className="text-xs text-red-600">
-                            Increase price by {Math.abs(profit).toFixed(2)} EGP
-                            to break even
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Product Yield Analysis */}
-                <div className="bg-gradient-to-br from-blue-50 to-indigo-100 p-5 rounded-lg border border-blue-200">
-                  <h4 className="font-semibold mb-4 flex items-center text-blue-800">
-                    <Beaker className="h-5 w-5 mr-2" />
-                    Production Analysis
-                  </h4>
-                  <div className="space-y-3">
-                    <div className="bg-white p-3 rounded-md shadow-sm">
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-700 font-medium">
-                          Max Products from Stock:
-                        </span>
-                        <span
-                          className={`font-bold text-lg ${
-                            productYield > 0 ? "text-green-600" : "text-red-600"
-                          }`}
-                        >
-                          {productYield} units
-                        </span>
-                      </div>
-                      {productYield === 0 && productMaterials.length > 0 && (
-                        <p className="text-xs text-red-600 mt-1">
-                          Insufficient material stock
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-white p-3 rounded-md shadow-sm">
-                        <div className="text-xs text-gray-600 mb-1">
-                          Total Production Value
-                        </div>
-                        <div className="font-bold text-blue-600 text-lg">
-                          {(productYield * Number(formData.price || 0)).toFixed(
-                            2
-                          )}{" "}
-                          EGP
-                        </div>
-                      </div>
-                      <div className="bg-white p-3 rounded-md shadow-sm">
-                        <div className="text-xs text-gray-600 mb-1">
-                          Total Production Cost
-                        </div>
-                        <div className="font-bold text-red-600 text-lg">
-                          {(productYield * totalCost).toFixed(2)} EGP
-                        </div>
+                          <option value="active">Active</option>
+                          <option value="inactive">Inactive</option>
+                        </select>
                       </div>
                     </div>
 
-                    <div className="bg-white p-4 rounded-md shadow-sm border-l-4 border-green-400">
-                      <div className="flex justify-between items-center">
-                        <span className="font-semibold text-gray-800">
-                          Total Profit Potential:
-                        </span>
-                        <span
-                          className={`font-bold text-2xl ${
-                            productYield * profit >= 0
-                              ? "text-green-600"
-                              : "text-red-600"
-                          }`}
-                        >
-                          {(productYield * profit).toFixed(2)} EGP
-                        </span>
-                      </div>
-                      {productYield > 0 && (
-                        <div className="text-sm text-gray-600 mt-1">
-                          {productYield} units × {profit.toFixed(2)} EGP profit
-                          per unit
-                        </div>
-                      )}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Meta Description (SEO)
+                      </label>
+                      <textarea
+                        placeholder="Brief description for search engines"
+                        value={formData.meta_description}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            meta_description: e.target.value,
+                          })
+                        }
+                        className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm h-16 resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
                     </div>
                   </div>
                 </div>
 
-                {/* Material Consumption Breakdown */}
-                {productMaterials.length > 0 && (
-                  <div className="bg-gradient-to-br from-yellow-50 to-orange-100 p-5 rounded-lg border border-yellow-200">
-                    <h4 className="font-semibold mb-4 flex items-center text-yellow-800">
+                {/* Right Column - Materials & Analysis */}
+                <div className="space-y-4">
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <h3 className="text-lg font-semibold mb-4 text-blue-800 flex items-center">
                       <Beaker className="h-5 w-5 mr-2" />
-                      Material Consumption per Product
-                    </h4>
-                    <div className="space-y-2">
-                      {productMaterials
-                        .filter((pm) => pm.material_id > 0 && pm.grams_used > 0)
-                        .map((pm, index) => {
-                          const material = materials.find(
-                            (m) => m.id === pm.material_id
-                          );
-                          if (!material) return null;
+                      Materials & Cost Analysis
+                    </h3>
 
-                          const materialCost =
-                            material.price_per_gram * pm.grams_used;
-                          const stockPercentage =
-                            (pm.grams_used / material.stock_grams) * 100;
+                    {/* Materials List */}
+                    <div className="mb-4">
+                      <div className="flex justify-between items-center mb-3">
+                        <label className="block text-sm font-medium text-gray-700">
+                          Materials Used
+                        </label>
+                        <button
+                          type="button"
+                          onClick={addMaterial}
+                          className="flex items-center px-3 py-1.5 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                        >
+                          <Plus className="h-4 w-4 mr-1" /> Add Material
+                        </button>
+                      </div>
 
-                          return (
-                            <div
-                              key={index}
-                              className="bg-white p-3 rounded-md shadow-sm border-l-4 border-yellow-400"
-                            >
-                              <div className="flex justify-between items-center mb-2">
-                                <span className="font-medium text-gray-800">
-                                  {material.name}
-                                </span>
-                                <span className="text-sm text-gray-500">
-                                  {material.price_per_gram.toFixed(4)} EGP/g
-                                </span>
-                              </div>
-                              <div className="grid grid-cols-3 gap-3 text-sm">
-                                <div>
-                                  <div className="text-gray-600 text-xs">
-                                    Grams Used
-                                  </div>
-                                  <div className="font-semibold text-lg">
-                                    {pm.grams_used}g
-                                  </div>
-                                </div>
-                                <div>
-                                  <div className="text-gray-600 text-xs">
-                                    Cost
-                                  </div>
-                                  <div className="font-semibold text-red-600">
-                                    {materialCost.toFixed(2)} EGP
-                                  </div>
-                                </div>
-                                <div>
-                                  <div className="text-gray-600 text-xs">
-                                    Stock Usage
-                                  </div>
-                                  <div
-                                    className={`font-semibold ${
-                                      stockPercentage > 10
-                                        ? "text-orange-600"
-                                        : "text-green-600"
-                                    }`}
-                                  >
-                                    {stockPercentage.toFixed(1)}%
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
+                      {/* Material Search */}
+                      <div className="mb-3">
+                        <div className="relative">
+                          <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
+                          <input
+                            type="text"
+                            placeholder="Search materials..."
+                            value={materialSearch}
+                            onChange={(e) => setMaterialSearch(e.target.value)}
+                            className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          />
+                        </div>
+                      </div>
+
+                      {productMaterials.length === 0 && (
+                        <div className="text-center py-6 text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed">
+                          <Beaker className="h-6 w-6 mx-auto mb-2 text-gray-400" />
+                          <p className="text-sm">No materials added yet</p>
+                          <p className="text-xs text-gray-400">
+                            Click "Add Material" to get started
+                          </p>
+                        </div>
+                      )}
+
+                      <div className="space-y-2 max-h-64 overflow-y-auto">
+                        {renderMaterials()}
+                      </div>
                     </div>
                   </div>
-                )}
-              </div>
-            </div>
 
-            <div className="mt-6 flex justify-end space-x-2">
-              <button
-                onClick={() => setShowModal(false)}
-                className="px-4 py-2 border rounded-md text-sm"
-                disabled={saving}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSave}
-                className="px-4 py-2 bg-primary-600 text-white rounded-md text-sm hover:bg-primary-700 disabled:opacity-50"
-                disabled={uploading || saving || profit < 0}
-              >
-                {saving
-                  ? "Saving..."
-                  : editingProduct
-                  ? "Update Product"
-                  : "Create Product"}
-              </button>
+                  {/* Cost Analysis & Profit */}
+                  <div className="bg-green-50 p-4 rounded-lg">
+                    <h3 className="text-lg font-semibold mb-4 text-green-800 flex items-center">
+                      <Calculator className="h-5 w-5 mr-2" />
+                      Cost Analysis & Profit
+                    </h3>
+
+                    {/* Cost Summary */}
+                    <div className="bg-white p-4 rounded-lg space-y-3 border">
+                      <div className="text-center mb-3">
+                        <h4 className="text-md font-semibold text-gray-800">
+                          Cost Analysis
+                        </h4>
+                        <p className="text-xs text-gray-600">Per product unit</p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center p-2 bg-gray-50 rounded-md">
+                          <span className="font-medium text-gray-700 text-sm">
+                            Material Cost:
+                          </span>
+                          <span className="text-red-600 font-bold">
+                            {totalCost.toFixed(2)} EGP
+                          </span>
+                        </div>
+
+                        <div className="flex justify-between items-center p-2 bg-gray-50 rounded-md">
+                          <span className="font-medium text-gray-700 text-sm">
+                            Selling Price:
+                          </span>
+                          <span className="text-gray-900 font-bold">
+                            {Number(formData.price || 0).toFixed(2)} EGP
+                          </span>
+                        </div>
+
+                        <div className="border-t border-gray-200 pt-2">
+                          <div className="flex justify-between items-center p-2 bg-gray-50 rounded-md mb-1">
+                            <span className="font-semibold text-gray-800 text-sm">
+                              Net Profit:
+                            </span>
+                            <span className={`font-bold text-lg 
+                                ${profit >= 0 ? "text-green-600" : "text-red-600"}`}
+                            >
+                              {profit.toFixed(2)} EGP
+                            </span>
+                          </div>
+
+                          <div className="flex justify-between items-center p-1 bg-gray-100 rounded text-xs">
+                            <span className="font-medium text-gray-600">
+                              Profit Margin:
+                            </span>
+                            <span
+                              className={`font-bold ${profitMargin >= 0
+                                ? "text-green-600"
+                                : "text-red-600"
+                                }`}
+                            >
+                              {profitMargin.toFixed(1)}%
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Profit Status Indicator */}
+                      <div
+                        className={`p-2 rounded-md text-center ${profit >= 0
+                          ? "bg-green-100 border border-green-300 text-green-800"
+                          : "bg-red-100 border border-red-300 text-red-800"
+                          }`}
+                      >
+                        {profit >= 0 ? (
+                          <div className="flex items-center justify-center">
+                            <TrendingUp className="h-4 w-4 mr-1" />
+                            <span className="font-semibold text-sm">
+                              Profitable
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center">
+                            <AlertTriangle className="h-4 w-4 mr-1" />
+                            <span className="font-semibold text-sm">
+                              Loss-Making
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {profit < 0 && (
+                        <div className="bg-red-50   border-l-4 border-red-400 p-2 rounded-r-md">
+                          <div className="flex items-center">
+                            <AlertTriangle className="h-4 w-4 text-red-400 mr-1" />
+                            <div>
+                              <p className="text-xs font-medium text-red-800">
+                                Price Below Cost
+                              </p>
+                              <p className="text-xs text-red-600">
+                                Increase by {Math.abs(profit).toFixed(2)} EGP
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex justify-end space-x-3">
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50 transition-colors"
+                  disabled={saving}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSave}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 disabled:opacity-50 transition-colors font-medium"
+                  disabled={uploading || saving || profit < 0}
+                >
+                  {saving
+                    ? "Saving..."
+                    : editingProduct
+                      ? "Update Product"
+                      : "Create Product"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      )}
-    </div>
-  );
+      )}  </div>);
 }

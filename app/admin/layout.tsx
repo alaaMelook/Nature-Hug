@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { checkAdminAccessServer } from "@/lib/adminAuthServer";
 import AdminSidebar from "./components/AdminSidebar";
 import AdminHeader from "./components/AdminHeader";
+import { TranslationProvider } from "./context/TranslationContext";
 
 export default async function AdminLayout({
   children,
@@ -15,14 +16,16 @@ export default async function AdminLayout({
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <AdminHeader adminUser={adminUser} />
-      <div className="flex">
-        <AdminSidebar />
-        <main className="flex-1 p-6">
-          {children}
-        </main>
+    <TranslationProvider>
+      <div className="min-h-screen bg-gray-100">
+        <AdminHeader adminUser={adminUser} />
+        <div className="flex">
+          <AdminSidebar />
+          <main className="flex-1 p-6">
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+    </TranslationProvider>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type LocalCartItem = { productId: string; quantity: number };
@@ -9,9 +9,14 @@ export default function CartSyncer() {
   const supabase = createSupabaseBrowserClient();
   const hasSynced = useRef(false);
   const isSyncing = useRef(false);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const sync = useCallback(async () => {
-    if (hasSynced.current || isSyncing.current) return;
+    if (!isClient || hasSynced.current || isSyncing.current) return;
     
     isSyncing.current = true;
     
@@ -50,9 +55,11 @@ export default function CartSyncer() {
     } finally {
       isSyncing.current = false;
     }
-  }, [supabase]);
+  }, [supabase, isClient]);
 
   useEffect(() => {
+    if (!isClient) return;
+    
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (event === "SIGNED_IN" && session) {
@@ -65,7 +72,7 @@ export default function CartSyncer() {
     sync();
 
     return () => subscription.unsubscribe();
-  }, [supabase, sync]);
+  }, [supabase, sync, isClient]);
 
   return null;
 }

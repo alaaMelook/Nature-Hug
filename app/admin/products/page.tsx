@@ -21,7 +21,7 @@ export default async function ProductsPage() {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">All Products</h1>
+
       <Suspense fallback={<p>Loading products...</p>}>
         <ProductsTable categories={categories} />
       </Suspense>

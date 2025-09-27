@@ -135,7 +135,7 @@ const Navbar = () => {
         >
           <ShoppingCart className="w-4 h-4 md:w-5 md:h-5 mr-2" />
           {t("Cart")}
-          {count > 0 && (
+          {isClient && count > 0 && (
             <span className="absolute right-0 bottom-6 text-xs min-w-5 h-5 px-1 rounded-full text-primary-50 bg-primary-800 flex items-center justify-center font-sans">
               {count}
             </span>
@@ -223,7 +223,7 @@ const Navbar = () => {
           >
             <ShoppingCart className="w-5 h-5 mr-2" />
             {t("Cart")}
-            {count > 0 && (
+            {isClient && count > 0 && (
               <span className="text-xs w-5 h-5 rounded-full ml-2 text-bold text-primary-50 bg-primary-800 flex items-center justify-center">
                 {count}
               </span>
