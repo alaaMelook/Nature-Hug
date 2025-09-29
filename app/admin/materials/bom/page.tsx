@@ -13,6 +13,12 @@ interface Material {
   name: string;
 }
 
+interface Variant {
+  id: number;
+  product_id: number;
+  name: string;
+}
+
 interface BOMRow {
   id: number;
   product_id: number;
@@ -22,11 +28,14 @@ interface BOMRow {
   grams_used: number;
   unit_cost: number;
   total_cost: number;
+  variant_id?: number;
+  variant_name?: string;
 }
 
 export default function BomPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
+  const [variants, setVariants] = useState<Variant[]>([]);
   const [rows, setRows] = useState<BOMRow[]>([]);
 
   const [manageProductId, setManageProductId] = useState<number | null>(null);
@@ -34,64 +43,81 @@ export default function BomPage() {
 
   const [materialId, setMaterialId] = useState("");
   const [grams, setGrams] = useState("");
+  const [variantId, setVariantId] = useState("");
 
-  // 🔹 load products, materials, and bom rows safely
   useEffect(() => {
     let isMounted = true;
 
-    fetch("/api/admin/products")
-      .then((res) => res.json())
-      .then((data) => {
-        if (isMounted) setProducts(data.data || data || []);
-      });
+    const fetchData = async () => {
+      try {
+        const [prodRes, matRes, bomRes, varRes] = await Promise.all([
+          fetch("/api/admin/products").then((res) => res.json()),
+          fetch("/api/admin/inventory").then((res) => res.json()),
+          fetch("/api/admin/product-materials").then((res) => res.json()),
+          fetch("/api/admin/variant_materials").then((res) => res.json()),
+        ]);
 
-    fetch("/api/admin/inventory")
-      .then((res) => res.json())
-      .then((data) => {
-        if (isMounted) setMaterials(data.data || data || []);
-      });
+        if (!isMounted) return;
 
-    fetch("/api/admin/bom")
-      .then((res) => res.json())
-      .then((data) => {
-        if (isMounted) setRows(data.data || data || []);
-      });
+        setProducts(prodRes.data || []);
+        setMaterials(matRes.data || []);
+        setRows([
+          ...(bomRes.data || []),
+          ...(varRes.data || []),
+        ]); // دمج المنتجات والمكونات
+        setVariants(varRes.data || []);
+      } catch (err) {
+        console.error("BOM fetch error:", err);
+      }
+    };
+
+    fetchData();
 
     return () => {
-      isMounted = false;
+      isMounted = false; // مهم عشان نتجنب setState بعد unmount
     };
   }, []);
 
-  // ✅ handle add new BOM row
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!manageProductId || !materialId || !grams) return;
 
-    const res = await fetch("/api/admin/bom", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    try {
+      const body = {
         product_id: manageProductId,
         material_id: materialId,
         grams_used: grams,
-      }),
-    });
+        variant_id: variantId || null, // اختياري
+      };
 
-    const data = await res.json();
-    if (res.ok) {
-      setRows((prev) => [...prev, ...(data.data || data)]);
-      setGrams("");
-      setMaterialId("");
-    } else {
-      alert("Error: " + data.error);
+      const url = variantId ? "/api/admin/variant_materials" : "/api/admin/product-materials";
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setRows((prev) => [...prev, ...(data.data ? [data.data] : [])]);
+        setGrams("");
+        setMaterialId("");
+        setVariantId("");
+      } else {
+        alert("Error: " + data.error);
+      }
+    } catch (err) {
+      console.error(err);
     }
   };
 
-  // ✅ handle delete
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: number, isVariant?: boolean) => {
     if (!confirm("Are you sure you want to delete this material?")) return;
 
-    const res = await fetch(`/api/admin/bom?id=${id}`, { method: "DELETE" });
+    const url = isVariant ? `/api/admin/variant_materials?id=${id}` : `/api/admin/product-materials?id=${id}`;
+
+    const res = await fetch(url, { method: "DELETE" });
     if (res.ok) {
       setRows((prev) => prev.filter((row) => row.id !== id));
     } else {
@@ -100,12 +126,13 @@ export default function BomPage() {
     }
   };
 
-  // ✅ handle edit
-  const handleEdit = async (id: number, grams_used: number) => {
-    const res = await fetch(`/api/admin/bom?id=${id}`, {
+  const handleEdit = async (id: number, grams_used: number, isVariant?: boolean) => {
+    const url = isVariant ? `/api/admin/variant_materials` : `/api/admin/product-materials`;
+
+    const res = await fetch(url, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ grams_used }),
+      body: JSON.stringify({ id, grams_used }),
     });
 
     if (res.ok) {
@@ -122,7 +149,6 @@ export default function BomPage() {
     }
   };
 
-  // ✅ group rows by product
   const groupedRows = products.map((product) => {
     const productRows = rows.filter((row) => row.product_id === product.id);
     const total_cost = productRows.reduce((sum, row) => sum + row.total_cost, 0);
@@ -154,10 +180,10 @@ export default function BomPage() {
     },
   ];
 
-  // ✅ modal rows
   const modalRows = rows.filter((row) => row.product_id === manageProductId);
   const modalColumns: GridColDef[] = [
     { field: "material_name", headerName: "Material", flex: 1 },
+    { field: "variant_name", headerName: "Variant", flex: 1 },
     { field: "grams_used", headerName: "Grams Used", flex: 1 },
     { field: "unit_cost", headerName: "Unit Cost", flex: 1 },
     { field: "total_cost", headerName: "Total Cost", flex: 1 },
@@ -173,16 +199,14 @@ export default function BomPage() {
                 "Enter new grams:",
                 params.row.grams_used.toString()
               );
-              if (newGrams) {
-                handleEdit(params.row.id, parseFloat(newGrams));
-              }
+              if (newGrams) handleEdit(params.row.id, parseFloat(newGrams), !!params.row.variant_id);
             }}
             className="text-blue-600 hover:underline text-sm"
           >
             Edit
           </button>
           <button
-            onClick={() => handleDelete(params.row.id)}
+            onClick={() => handleDelete(params.row.id, !!params.row.variant_id)}
             className="text-red-600 hover:underline text-sm"
           >
             Delete
@@ -196,12 +220,10 @@ export default function BomPage() {
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-4">Bill of Materials (BOM)</h1>
 
-      {/* main table */}
       <div style={{ height: 500, width: "100%" }}>
         <DataGrid rows={groupedRows} columns={columns} getRowId={(row) => row.id} />
       </div>
 
-      {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-6 w-[600px] max-h-[90vh] overflow-y-auto">
@@ -220,6 +242,24 @@ export default function BomPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4 mt-6">
+              {variants.filter(v => v.product_id === manageProductId).length > 0 && (
+                <div>
+                  <label className="block mb-1">Variant (optional)</label>
+                  <select
+                    value={variantId}
+                    onChange={(e) => setVariantId(e.target.value)}
+                    className="border p-2 w-full"
+                  >
+                    <option value="">Select variant (or none)</option>
+                    {variants
+                      .filter(v => v.product_id === manageProductId)
+                      .map(v => (
+                        <option key={v.id} value={v.id}>{v.name}</option>
+                      ))}
+                  </select>
+                </div>
+              )}
+
               <div>
                 <label className="block mb-1">Material</label>
                 <select
@@ -229,9 +269,7 @@ export default function BomPage() {
                 >
                   <option value="">Select material</option>
                   {materials.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name}
-                    </option>
+                    <option key={m.id} value={m.id}>{m.name}</option>
                   ))}
                 </select>
               </div>
@@ -246,10 +284,7 @@ export default function BomPage() {
                 />
               </div>
 
-              <button
-                type="submit"
-                className="bg-blue-600 text-white px-4 py-2 rounded"
-              >
+              <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded">
                 Add Material
               </button>
             </form>
@@ -261,6 +296,7 @@ export default function BomPage() {
                 setManageProductId(null);
                 setMaterialId("");
                 setGrams("");
+                setVariantId("");
               }}
             >
               Close

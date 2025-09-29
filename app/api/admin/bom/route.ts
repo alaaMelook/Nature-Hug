@@ -2,177 +2,137 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-type SupaRow = any;
-
-function getSafeClient() {
-  const maybe = createSupabaseServerClient();
-  if (maybe && typeof (maybe as any).then === "function") {
-    return (maybe as any).then((c: any) => c);
-  }
-  return Promise.resolve(maybe);
-}
-
-function mapRows(items: any[]): SupaRow[] {
-  return items.map((item, idx) => {
-    const prod = Array.isArray(item.products) ? item.products[0] : item.products;
-    const mat = Array.isArray(item.materials) ? item.materials[0] : item.materials;
-    const productId = prod?.id ?? item.product_id ?? null;
-    const materialId = mat?.id ?? item.material_id ?? null;
-    const id =
-      item.id ??
-      (productId !== null && materialId !== null
-        ? `${productId}-${materialId}`
-        : `bom-${idx}`);
-    const grams = Number(item.grams_used ?? 0);
-    const pricePerGram = Number(mat?.price_per_gram ?? 0);
-    return {
-      id,
-      product_id: productId,
-      product_name: prod?.name_english ?? "",
-      material_id: materialId,
-      material_name: mat?.name ?? "",
-      grams_used: grams,
-      unit_cost: pricePerGram,
-      total_cost: grams * pricePerGram,
-    };
-  });
-}
-
-//
-// GET
-//
 export async function GET() {
   try {
-    const supabase = await getSafeClient();
+    const supabase = await createSupabaseServerClient();
+
+    // جلب كل الـ variant_materials مع المعلومات المرتبطة بالـ variant و material و product
     const { data, error } = await supabase
-      .from("product_materials")
+      .from("variant_materials")
       .select(`
         id,
+        variant_id,
         grams_used,
-        product_id,
-        material_id,
-        products ( id, name_english ),
-        materials ( id, name, price_per_gram )
+        material:materials(id, name, price_per_gram),
+        variant:product_variants(id, name, product_id, product:products(name_english))
       `);
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-    return NextResponse.json({ data: mapRows(data || []) });
+    if (error) throw error;
+
+    const formatted = (data || []).map((row: any) => ({
+      id: row.id,
+      variant_id: row.variant_id,
+      variant_name: row.variant?.name ?? "",
+      product_id: row.variant?.product_id ?? 0,
+      product_name: row.variant?.product?.name_english ?? "",
+      material_id: row.material_id,
+      material_name: row.material?.name ?? "",
+      grams_used: row.grams_used,
+      unit_cost: row.material?.price_per_gram ?? 0,
+      total_cost: row.grams_used * (row.material?.price_per_gram ?? 0),
+    }));
+
+    return NextResponse.json({ success: true, data: formatted });
   } catch (err: any) {
-    return NextResponse.json({ error: String(err?.message ?? err) }, { status: 500 });
+    console.error("BOM GET error:", err);
+    return NextResponse.json(
+      { success: false, error: err.message || "Server error" },
+      { status: 500 }
+    );
   }
 }
 
-//
-// POST
-//
+// ✅ إضافة مادة جديدة للـ variant
 export async function POST(req: Request) {
   try {
-    const supabase = await getSafeClient();
+    const supabase = await createSupabaseServerClient();
     const body = await req.json();
+    const { variant_id, material_id, grams_used } = body;
 
-    const product_id = body.product_id ?? null;
-    const items = Array.isArray(body.items) ? body.items : null;
-
-    let insertData: any[] = [];
-    if (items && product_id) {
-      insertData = items.map((it: any) => ({
-        product_id,
-        material_id: it.materialId,
-        grams_used: it.grams,
-      }));
-    } else if (product_id && body.material_id && body.grams_used != null) {
-      insertData = [
-        {
-          product_id,
-          material_id: body.material_id,
-          grams_used: body.grams_used,
-        },
-      ];
-    } else {
-      return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+    if (!variant_id || !material_id || !grams_used) {
+      return NextResponse.json(
+        { success: false, error: "Missing fields" },
+        { status: 400 }
+      );
     }
 
     const { data, error } = await supabase
-      .from("product_materials")
-      .insert(insertData)
-      .select(`
-        id,
-        grams_used,
-        product_id,
-        material_id,
-        products ( id, name_english ),
-        materials ( id, name, price_per_gram )
-      `);
+      .from("variant_materials")
+      .insert([{ variant_id, material_id, grams_used }])
+      .select();
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-    return NextResponse.json({ data: mapRows(data || []) });
+    if (error) throw error;
+
+    return NextResponse.json({ success: true, data });
   } catch (err: any) {
-    return NextResponse.json({ error: String(err?.message ?? err) }, { status: 500 });
+    console.error("BOM POST error:", err);
+    return NextResponse.json(
+      { success: false, error: err.message || "Server error" },
+      { status: 500 }
+    );
   }
 }
 
-//
-// PUT
-//
+// ✅ تعديل الـ grams_used
 export async function PUT(req: Request) {
   try {
-    const supabase = await getSafeClient();
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get("id");
-    if (!id) {
-      return NextResponse.json({ error: "Missing id" }, { status: 400 });
-    }
+    const supabase = await createSupabaseServerClient();
     const body = await req.json();
+    const { id, grams_used } = body;
+
+    if (!id || grams_used == null) {
+      return NextResponse.json(
+        { success: false, error: "Missing fields" },
+        { status: 400 }
+      );
+    }
 
     const { data, error } = await supabase
-      .from("product_materials")
-      .update({ grams_used: body.grams_used })
+      .from("variant_materials")
+      .update({ grams_used })
       .eq("id", id)
-      .select(`
-        id,
-        grams_used,
-        product_id,
-        material_id,
-        products ( id, name_english ),
-        materials ( id, name, price_per_gram )
-      `)
+      .select()
       .single();
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-    return NextResponse.json({ data: mapRows([data])[0] });
+    if (error) throw error;
+
+    return NextResponse.json({ success: true, data });
   } catch (err: any) {
-    return NextResponse.json({ error: String(err?.message ?? err) }, { status: 500 });
+    console.error("BOM PUT error:", err);
+    return NextResponse.json(
+      { success: false, error: err.message || "Server error" },
+      { status: 500 }
+    );
   }
 }
 
-//
-// DELETE
-//
+// ✅ حذف مادة من الـ variant
 export async function DELETE(req: Request) {
   try {
-    const supabase = await getSafeClient();
+    const supabase = await createSupabaseServerClient();
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
+
     if (!id) {
-      return NextResponse.json({ error: "Missing id" }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: "Missing id" },
+        { status: 400 }
+      );
     }
 
     const { error } = await supabase
-      .from("product_materials")
+      .from("variant_materials")
       .delete()
       .eq("id", id);
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-    return NextResponse.json({ success: true, id });
+    if (error) throw error;
+
+    return NextResponse.json({ success: true });
   } catch (err: any) {
-    return NextResponse.json({ error: String(err?.message ?? err) }, { status: 500 });
+    console.error("BOM DELETE error:", err);
+    return NextResponse.json(
+      { success: false, error: err.message || "Server error" },
+      { status: 500 }
+    );
   }
 }
