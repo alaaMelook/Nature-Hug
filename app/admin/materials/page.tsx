@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense } from "react"; 
 import MaterialsTable from "./materials-table";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Material, Unit, Supplier, Category } from "./types";
@@ -7,7 +7,7 @@ async function getMaterials() {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("materials")
-    .select("*, unit:units(*), supplier:suppliers(id, name)")
+    .select("*, unit:units(*), supplier:suppliers(id, name), category:categories(id, name_english)")
     .order("created_at", { ascending: false });
 
   if (error) return [];
@@ -38,7 +38,12 @@ export default async function MaterialsPage() {
     Unit[],
     Supplier[],
     Category[]
-  ] = await Promise.all([getMaterials(), getUnits(), getSuppliers(), getCategories()]);
+  ] = await Promise.all([
+    getMaterials(),
+    getUnits(),
+    getSuppliers(),
+    getCategories()
+  ]);
 
   return (
     <div className="p-6">

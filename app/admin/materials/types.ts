@@ -1,4 +1,5 @@
 export type Material = {
+  category: any;
   id: number;
   name: string;
   price_per_gram: number;

@@ -1,65 +1,224 @@
 "use client";
-
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-
-/* ----------------------- Types ----------------------- */
-type OrderRow = {
-  id: number;
-  created_at: string;
-  status: string;
-  total: number;
-  customer_id: number | null;
-  note?: string | null;
-};
 
 type Order = {
   id: number;
   created_at: string;
   status: string;
   total: number;
-  customer_id: number | null;
+  note?: string | null;
+  created_by_admin: string | null;
+  customer_id: number;
   customer_name: string | null;
   customer_phone: string | null;
   customer_address: string | null;
   customer_governorate: string | null;
-  note?: string | null;
 };
 
-type Customer = {
-  id: number;
-  name?: string | null;
-  phone?: string | null;
-  email?: string | null;
-  address?: string | null;
-  governorate?: string | null;
+type OrderProduct = {
+  order_id: number;
+  product_name: string;
+  quantity: number;
+  price: number;
 };
 
-/* ----------------------- Helpers ----------------------- */
-function downloadCsv(filename: string, csvContent: string) {
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.setAttribute("download", filename);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+function AddOrderModal({
+  onClose,
+  onSaved,
+  adminName,
+}: {
+  onClose: () => void;
+  onSaved: () => void;
+  adminName: string;
+}) {
+  const [form, setForm] = useState({
+    customer_name: "",
+    customer_phone: "",
+    customer_address: "",
+    customer_governorate: "",
+    total: "",
+    status: "pending",
+    note: "",
+  });
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    if (!form.customer_name || !form.customer_phone || !form.total) {
+      alert("Please fill required fields (name, phone, total)");
+      return;
+    }
+    setSaving(true);
+
+    // 1. حفظ العميل
+    const { data: custData, error: custError } = await supabase
+      .from("customers")
+      .insert([{ name: form.customer_name, phone: form.customer_phone }])
+      .select();
+
+    if (custError) { alert(custError.message); setSaving(false); return; }
+    const customerId = custData?.[0]?.id;
+
+    // 2. حفظ العنوان
+    await supabase
+      .from("customer_addresses")
+      .insert([{ customer_id: customerId, address: form.customer_address, governorate: form.customer_governorate }]);
+
+    // 3. حفظ الأوردر
+    await supabase
+      .from("orders")
+      .insert([
+        {
+          customer_id: customerId,
+          status: form.status,
+          total: Number(form.total),
+          note: form.note,
+          created_by_admin: adminName,
+        }
+      ]);
+
+    setSaving(false);
+    onSaved();
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative bg-white rounded max-w-md w-full shadow-lg p-6">
+        <h2 className="text-lg font-bold mb-4">Add Order</h2>
+        <input
+          type="text"
+          placeholder="Customer Name"
+          value={form.customer_name}
+          onChange={(e) => setForm({ ...form, customer_name: e.target.value })}
+          className="border px-3 py-2 rounded w-full mb-3"
+        />
+        <input
+          type="text"
+          placeholder="Phone"
+          value={form.customer_phone}
+          onChange={(e) => setForm({ ...form, customer_phone: e.target.value })}
+          className="border px-3 py-2 rounded w-full mb-3"
+        />
+        <input
+          type="text"
+          placeholder="Address"
+          value={form.customer_address}
+          onChange={(e) => setForm({ ...form, customer_address: e.target.value })}
+          className="border px-3 py-2 rounded w-full mb-3"
+        />
+        <input
+          type="text"
+          placeholder="Governorate"
+          value={form.customer_governorate}
+          onChange={(e) =>
+            setForm({ ...form, customer_governorate: e.target.value })
+          }
+          className="border px-3 py-2 rounded w-full mb-3"
+        />
+        <input
+          type="number"
+          placeholder="Total"
+          value={form.total}
+          onChange={(e) => setForm({ ...form, total: e.target.value })}
+          className="border px-3 py-2 rounded w-full mb-3"
+        />
+        <select
+          value={form.status}
+          onChange={(e) => setForm({ ...form, status: e.target.value })}
+          className="border px-3 py-2 rounded w-full mb-3"
+        >
+          <option value="pending">Pending</option>
+          <option value="processing">Processing</option>
+          <option value="shipped">Shipped</option>
+          <option value="delivered">Delivered</option>
+          <option value="completed">Completed</option>
+          <option value="cancelled">Cancelled</option>
+          <option value="returned">Returned</option>
+          <option value="refunded">Refunded</option>
+        </select>
+        <textarea
+          placeholder="Note"
+          value={form.note}
+          onChange={(e) => setForm({ ...form, note: e.target.value })}
+          className="border px-3 py-2 rounded w-full mb-3"
+        />
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 border rounded"
+            disabled={saving}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            className="px-4 py-2 bg-blue-600 text-white rounded"
+            disabled={saving}
+          >
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
-/* ----------------------- Order Details Modal ----------------------- */
+function ExportModal({
+  onClose,
+  onExport,
+}: {
+  onClose: () => void;
+  onExport: (status: string) => void;
+}) {
+  const [status, setStatus] = useState("pending");
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative bg-white rounded max-w-sm w-full shadow-lg p-6">
+        <h2 className="text-lg font-bold mb-4">Export Orders</h2>
+        <select
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+          className="border px-3 py-2 rounded w-full mb-4"
+        >
+          <option value="pending">Pending</option>
+          <option value="processing">Processing</option>
+          <option value="shipped">Shipped</option>
+          <option value="delivered">Delivered</option>
+          <option value="completed">Completed</option>
+          <option value="cancelled">Cancelled</option>
+          <option value="returned">Returned</option>
+          <option value="refunded">Refunded</option>
+        </select>
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 border rounded"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => onExport(status)}
+            className="px-4 py-2 bg-blue-600 text-white rounded"
+          >
+            Export
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function OrderDetailsModal({
   order,
-  customer,
   onClose,
 }: {
   order: Order | null;
-  customer: Customer | null;
   onClose: () => void;
 }) {
   if (!order) return null;
-
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center p-6">
       <div
@@ -81,7 +240,7 @@ function OrderDetailsModal({
             <strong>Status:</strong> {order.status ?? "-"}
           </p>
           <p>
-            <strong>Total:</strong> ${order.total ?? "0.00"}
+            <strong>Total:</strong> {order.total ?? "0.00"}
           </p>
           <p>
             <strong>Created:</strong>{" "}
@@ -90,212 +249,109 @@ function OrderDetailsModal({
           <p>
             <strong>Note:</strong> {order.note ?? "-"}
           </p>
+          <p>
+            <strong>Admin:</strong> {order.created_by_admin ?? "-"}
+          </p>
         </div>
-
         <div className="mb-4">
           <h3 className="font-semibold">Customer</h3>
-          {customer ? (
-            <div>
-              <p>{customer.name ?? "-"}</p>
-              <p className="text-sm text-gray-600">{customer.phone ?? "-"}</p>
-              <p className="text-sm text-gray-600">{customer.email ?? "-"}</p>
-              <p className="text-sm text-gray-600">
-                Address: {customer.address ?? "-"}
-              </p>
-              <p className="text-sm text-gray-600">
-                Governorate: {customer.governorate ?? "-"}
-              </p>
-            </div>
-          ) : (
-            <p>-</p>
-          )}
+          <p>{order.customer_name ?? "-"}</p>
+          <p className="text-sm text-gray-600">{order.customer_phone ?? "-"}</p>
+          <p className="text-sm text-gray-600">{order.customer_address ?? "-"}</p>
+          <p className="text-sm text-gray-600">
+            Governorate: {order.customer_governorate ?? "-"}
+          </p>
         </div>
       </div>
     </div>
   );
 }
 
-/* ----------------------- Main Page ----------------------- */
 export default function AllOrdersPage() {
-  /* state */
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sort, setSort] = useState("newest");
   const [page, setPage] = useState(1);
-  const [totalOrders, setTotalOrders] = useState(0);
-  const [totalSales, setTotalSales] = useState(0);
-  const [selectedOrders, setSelectedOrders] = useState<number[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
-    null
-  );
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
 
   const limit = 10;
+  const adminName = "AdminName";
 
-  /* Fetch function */
+  // جلب الطلبات مع العميل والعنوان
   const fetchOrders = async () => {
     setLoading(true);
-    try {
-      const from = (page - 1) * limit;
-      const to = from + limit - 1;
+    let q: any = supabase
+      .from("orders")
+      .select(`
+        id, created_at, status, total, note, created_by_admin, customer_id,
+        customers (name, phone),
+        customer_addresses (address, governorate)
+      `)
+      .order("created_at", { ascending: false });
+    if (statusFilter !== "all") q = q.eq("status", statusFilter);
 
-      // search customers first
-      let matchingCustomerIds: number[] | null = null;
-      if (search.trim()) {
-        const { data: customersData, error: custErr } = await supabase
-          .from("customers")
-          .select("id")
-          .or(`name.ilike.%${search}%,phone.ilike.%${search}%`);
-        if (custErr) {
-          console.warn("customer search error:", custErr);
-          matchingCustomerIds = [];
-        } else {
-          matchingCustomerIds = (customersData ?? []).map((c: any) => c.id);
-          if (matchingCustomerIds.length === 0) {
-            setOrders([]);
-            setTotalOrders(0);
-            setTotalSales(0);
-            setLoading(false);
-            return;
-          }
-        }
-      }
-
-      // main query
-      let q: any = supabase
-        .from("orders")
-        .select("id, created_at, status, total, customer_id, note", {
-          count: "exact",
-        });
-
-      if (statusFilter !== "all") q = q.eq("status", statusFilter);
-      if (matchingCustomerIds)
-        q = q.in(
-          "customer_id",
-          matchingCustomerIds.length ? matchingCustomerIds : [0]
-        );
-
-      if (sort === "newest") q = q.order("created_at", { ascending: false });
-      else if (sort === "oldest") q = q.order("created_at", { ascending: true });
-      else if (sort === "total_desc")
-        q = q.order("total", { ascending: false });
-      else if (sort === "total_asc") q = q.order("total", { ascending: true });
-
-      q = q.range(from, to);
-
-      const { data, error, count } = await q;
-      if (error) {
-        console.error("Error fetching orders:", error);
-        setOrders([]);
-        setTotalOrders(0);
-        setTotalSales(0);
-        setLoading(false);
-        return;
-      }
-
-      const rows: OrderRow[] = (data ?? []) as OrderRow[];
-
-      // fetch customers + addresses
-      const custIds = Array.from(
-        new Set(rows.map((r) => r.customer_id).filter(Boolean))
-      ) as number[];
-      let customersMap: Record<number, Customer> = {};
-      if (custIds.length) {
-        const { data: customersData } = await supabase
-          .from("customers")
-          .select("id, name, phone, email, customer_addresses(address, governorate)")
-          .in("id", custIds);
-
-        (customersData ?? []).forEach((c: any) => {
-          customersMap[c.id] = {
-            id: c.id,
-            name: c.name,
-            phone: c.phone,
-            email: c.email,
-            address: c.customer_addresses?.[0]?.address ?? null,
-            governorate: c.customer_addresses?.[0]?.governorate ?? null,
-          };
-        });
-      }
-
-      const mapped: Order[] = rows.map((r) => ({
-        id: r.id,
-        created_at: r.created_at,
-        status: r.status,
-        total: Number(r.total ?? 0),
-        customer_id: r.customer_id,
-        customer_name: r.customer_id
-          ? customersMap[r.customer_id]?.name ?? null
-          : null,
-        customer_phone: r.customer_id
-          ? customersMap[r.customer_id]?.phone ?? null
-          : null,
-        customer_address: r.customer_id
-          ? customersMap[r.customer_id]?.address ?? null
-          : null,
-        customer_governorate: r.customer_id
-          ? customersMap[r.customer_id]?.governorate ?? null
-          : null,
-        note: r.note ?? null,
-      }));
-
-      setOrders(mapped);
-      setTotalOrders(count ?? 0);
-
-      let sumQuery: any = supabase.from("orders").select("total");
-      if (statusFilter !== "all") sumQuery = sumQuery.eq("status", statusFilter);
-      if (matchingCustomerIds)
-        sumQuery = sumQuery.in(
-          "customer_id",
-          matchingCustomerIds.length ? matchingCustomerIds : [0]
-        );
-      const { data: totalsData } = await sumQuery;
-      const sum = (totalsData ?? []).reduce(
-        (acc: number, r: any) => acc + Number(r.total ?? 0),
-        0
-      );
-      setTotalSales(sum);
-    } catch (err) {
-      console.error("Error fetching orders:", err);
-      setOrders([]);
-      setTotalOrders(0);
-      setTotalSales(0);
-    } finally {
-      setLoading(false);
-    }
+    const { data, error } = await q;
+    const mapped = (data ?? []).map((o: any) => ({
+      id: o.id,
+      created_at: o.created_at,
+      status: o.status,
+      total: o.total,
+      note: o.note,
+      created_by_admin: o.created_by_admin,
+      customer_id: o.customer_id,
+      customer_name: o.customers?.name ?? "-",
+      customer_phone: o.customers?.phone ?? "-",
+      customer_address: o.customer_addresses?.[0]?.address ?? "-",
+      customer_governorate: o.customer_addresses?.[0]?.governorate ?? "-",
+    }));
+    setOrders(mapped);
+    setLoading(false);
   };
 
   useEffect(() => {
     fetchOrders();
-  }, [page, search, statusFilter, sort]);
+  }, [statusFilter, sort, page]);
 
-  /* Export CSV */
-  const handleExport = () => {
+  // تصدير الطلبات
+  const handleExport = async (status: string) => {
+    const { data, error } = await supabase
+      .from("orders")
+      .select(`
+        id, status, created_at, note, created_by_admin, customer_id,
+        customers (name, phone),
+        customer_addresses (address, governorate)
+      `)
+      .eq("status", status);
+
+    const mapped = (data ?? []).map((o: any) => [
+      o.id,
+      o.status,
+      new Date(o.created_at).toLocaleString(),
+      o.customers?.name ?? "-",
+      o.customers?.phone ?? "-",
+      o.customer_addresses?.[0]?.address ?? "-",
+      o.customer_addresses?.[0]?.governorate ?? "-",
+      o.note ?? "-",
+      o.created_by_admin ?? "-",
+    ]);
+
     const headers = [
-      "ID",
-      "Customer",
-      "Phone",
+      "Order ID",
+      "Status",
+      "Created At",
+      "Customer Name",
+      "Customer Phone",
       "Address",
       "Governorate",
       "Note",
-      "Status",
-      "Total",
-      "Created At",
+      "Admin",
     ];
-    const rows = orders.map((o) => [
-      o.id,
-      o.customer_name ?? "-",
-      o.customer_phone ?? "-",
-      o.customer_address ?? "-",
-      o.customer_governorate ?? "-",
-      o.note ?? "-",
-      o.status,
-      o.total,
-      new Date(o.created_at).toLocaleString(),
-    ]);
-    const csvContent = [headers, ...rows]
+
+    const csvContent = [headers, ...mapped]
       .map((row) =>
         row
           .map((cell) => {
@@ -308,48 +364,56 @@ export default function AllOrdersPage() {
           .join(",")
       )
       .join("\n");
-    downloadCsv("orders.csv", csvContent);
-  };
 
-  const toggleSelectOrder = (id: number) => {
-    setSelectedOrders((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
-  };
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `orders_${status}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 
-  const selectAllOnPage = () => {
-    if (selectedOrders.length === orders.length) setSelectedOrders([]);
-    else setSelectedOrders(orders.map((o) => o.id));
+    setShowExportModal(false);
   };
-
-  const pageCount = useMemo(
-    () => Math.max(1, Math.ceil((totalOrders || 0) / limit)),
-    [totalOrders]
-  );
 
   if (loading) return <p className="p-6">Loading orders...</p>;
 
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-4">All Orders</h1>
-
-      {/* Summary */}
-      <div className="flex gap-6 mb-6">
-        <div className="p-4 bg-gray-100 rounded-md">
-          <p className="text-gray-600">Total Orders</p>
-          <p className="text-xl font-bold">{totalOrders}</p>
-        </div>
-        <div className="p-4 bg-gray-100 rounded-md">
-          <p className="text-gray-600">Total Sales</p>
-          <p className="text-xl font-bold">${Number(totalSales).toFixed(2)}</p>
-        </div>
-      </div>
+      <button
+        onClick={() => setShowAddModal(true)}
+        className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 mb-4"
+      >
+        + Add Order
+      </button>
+      <button
+        onClick={() => setShowExportModal(true)}
+        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 mb-4 ml-2"
+      >
+        Export Orders
+      </button>
+      {showAddModal && (
+        <AddOrderModal
+          onClose={() => setShowAddModal(false)}
+          onSaved={fetchOrders}
+          adminName={adminName}
+        />
+      )}
+      {showExportModal && (
+        <ExportModal
+          onClose={() => setShowExportModal(false)}
+          onExport={handleExport}
+        />
+      )}
 
       {/* Filters */}
       <div className="flex gap-4 mb-4 items-center">
         <input
           type="text"
-          placeholder="Search by customer name or phone..."
+          placeholder="Search by name or phone..."
           value={search}
           onChange={(e) => {
             setPage(1);
@@ -385,85 +449,42 @@ export default function AllOrdersPage() {
           <option value="total_desc">Total (High → Low)</option>
           <option value="total_asc">Total (Low → High)</option>
         </select>
-
-        <button
-          onClick={handleExport}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-        >
-          Export CSV
-        </button>
       </div>
 
       {/* Table */}
       <table className="min-w-full border border-gray-200 rounded-md text-sm">
         <thead className="bg-gray-100">
           <tr>
-            <th className="px-4 py-2 border-b">
-              <input
-                type="checkbox"
-                checked={selectedOrders.length === orders.length && orders.length > 0}
-                onChange={selectAllOnPage}
-              />
-            </th>
             <th className="px-4 py-2 text-left border-b">ID</th>
-            <th className="px-4 py-2 text-left border-b">Customer</th>
+            <th className="px-4 py-2 text-left border-b">Customer Name</th>
             <th className="px-4 py-2 text-left border-b">Phone</th>
             <th className="px-4 py-2 text-left border-b">Address</th>
             <th className="px-4 py-2 text-left border-b">Governorate</th>
-            <th className="px-4 py-2 text-left border-b">Note</th>
             <th className="px-4 py-2 text-left border-b">Status</th>
             <th className="px-4 py-2 text-left border-b">Total</th>
+            <th className="px-4 py-2 text-left border-b">Note</th>
+            <th className="px-4 py-2 text-left border-b">Admin</th>
             <th className="px-4 py-2 text-left border-b">Created At</th>
           </tr>
         </thead>
         <tbody>
           {orders.length > 0 ? (
             orders.map((order) => (
-              <tr key={order.id} className="hover:bg-gray-50">
-                <td className="px-4 py-2 border-b">
-                  <input
-                    type="checkbox"
-                    checked={selectedOrders.includes(order.id)}
-                    onChange={() => toggleSelectOrder(order.id)}
-                  />
-                </td>
-                <td className="px-4 py-2 border-b">
-                  <button
-                    className="text-blue-600"
-                    onClick={() => {
-                      setSelectedOrder(order);
-                      setSelectedCustomer({
-                        id: order.customer_id ?? 0,
-                        name: order.customer_name,
-                        phone: order.customer_phone,
-                        address: order.customer_address,
-                        governorate: order.customer_governorate,
-                      });
-                    }}
-                  >
-                    #{order.id}
-                  </button>
-                </td>
-                <td className="px-4 py-2 border-b">
-                  {order.customer_name ?? "—"}
-                </td>
-                <td className="px-4 py-2 border-b">
-                  {order.customer_phone ?? "—"}
-                </td>
-                <td className="px-4 py-2 border-b">
-                  {order.customer_address ?? "—"}
-                </td>
-                <td className="px-4 py-2 border-b">
-                  {order.customer_governorate ?? "—"}
-                </td>
-                <td className="px-4 py-2 border-b">{order.note ?? "—"}</td>
+              <tr
+                key={order.id}
+                className="hover:bg-gray-50 cursor-pointer"
+                onClick={() => setSelectedOrder(order)}
+              >
+                <td className="px-4 py-2 border-b">{order.id}</td>
+                <td className="px-4 py-2 border-b">{order.customer_name}</td>
+                <td className="px-4 py-2 border-b">{order.customer_phone}</td>
+                <td className="px-4 py-2 border-b">{order.customer_address}</td>
+                <td className="px-4 py-2 border-b">{order.customer_governorate}</td>
                 <td className="px-4 py-2 border-b">{order.status}</td>
-                <td className="px-4 py-2 border-b">
-                  ${Number(order.total).toFixed(2)}
-                </td>
-                <td className="px-4 py-2 border-b">
-                  {new Date(order.created_at).toLocaleString()}
-                </td>
+                <td className="px-4 py-2 border-b">{order.total}</td>
+                <td className="px-4 py-2 border-b">{order.note ?? "—"}</td>
+                <td className="px-4 py-2 border-b">{order.created_by_admin ?? "—"}</td>
+                <td className="px-4 py-2 border-b">{new Date(order.created_at).toLocaleString()}</td>
               </tr>
             ))
           ) : (
@@ -480,31 +501,12 @@ export default function AllOrdersPage() {
       </table>
 
       {/* Pagination */}
-      <div className="flex justify-between items-center mt-4">
-        <button
-          disabled={page === 1}
-          onClick={() => setPage((p) => Math.max(1, p - 1))}
-          className="px-3 py-1 border rounded disabled:opacity-50"
-        >
-          Previous
-        </button>
-        <span>
-          Page {page} of {pageCount}
-        </span>
-        <button
-          disabled={page >= pageCount}
-          onClick={() => setPage((p) => p + 1)}
-          className="px-3 py-1 border rounded disabled:opacity-50"
-        >
-          Next
-        </button>
-      </div>
+      {/* ... يمكنك إضافة كود Pagination هنا إذا كنت تحتاجه ... */}
 
       {/* Order Details Modal */}
       {selectedOrder && (
         <OrderDetailsModal
           order={selectedOrder}
-          customer={selectedCustomer}
           onClose={() => setSelectedOrder(null)}
         />
       )}

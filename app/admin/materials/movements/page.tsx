@@ -1,41 +1,62 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { DataGrid, GridColDef } from "@mui/x-data-grid";
+
+interface Movement {
+  id: number;
+  date: string;
+  type: string;
+  quantity: number;
+  note: string | null;
+  material?: { id: number; name: string };
+  user_id?: number;
+}
+
 export default function MovementsPage() {
+  const [rows, setRows] = useState<Movement[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadMovements() {
+      try {
+        const res = await fetch("/api/admin/movements");
+        const data = await res.json();
+        setRows(data);
+      } catch (err) {
+        console.error("Failed to load movements:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadMovements();
+  }, []);
+
+  const columns: GridColDef[] = [
+    { field: "date", headerName: "Date", flex: 1 },
+    { field: "type", headerName: "Type", flex: 1 },
+    {
+      field: "material",
+      headerName: "Material",
+      flex: 1,
+      renderCell: (params) => params.row.material?.name || "-",
+    },
+    { field: "quantity", headerName: "Quantity", flex: 1 },
+    { field: "note", headerName: "Note", flex: 1 },
+    { field: "user_id", headerName: "User", flex: 1 },
+  ];
+
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">سجل الحركات</h1>
-      <div className="mb-4">
-        <input type="date" className="border px-2 py-1 rounded mr-2" />
-        <select className="border px-2 py-1 rounded">
-          <option>كل الحركات</option>
-          <option>إضافة</option>
-          <option>خصم</option>
-          <option>إنتاج</option>
-        </select>
-        <button className="bg-gray-600 text-white px-3 py-1 rounded ml-2">بحث</button>
-      </div>
-      <table className="min-w-full border text-sm">
-        <thead>
-          <tr>
-            <th>التاريخ</th>
-            <th>نوع الحركة</th>
-            <th>المادة/المنتج</th>
-            <th>الكمية</th>
-            <th>المستخدم</th>
-            <th>ملاحظات</th>
-            <th>مستند</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>2024-09-10</td>
-            <td>إضافة</td>
-            <td>زبدة الشيا</td>
-            <td>10 كجم</td>
-            <td>أحمد</td>
-            <td>فاتورة شراء</td>
-            <td><button className="text-blue-600">عرض pdf</button></td>
-          </tr>
-        </tbody>
-      </table>
+    <div style={{ height: 600, width: "100%" }}>
+      <h1 className="text-2xl font-bold mb-4">Movements</h1>
+      <DataGrid
+        rows={rows}
+        columns={columns}
+        getRowId={(row) => row.id}
+        loading={loading}
+        disableRowSelectionOnClick
+      />
     </div>
   );
 }
