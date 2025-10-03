@@ -1,3 +1,4 @@
+// app/api/admin/product-materials/route.ts
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 

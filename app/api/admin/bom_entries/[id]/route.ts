@@ -1,31 +1,42 @@
-// app/api/admin/bom/route.ts
+// app/api/admin/bom/[id]/route.ts   ------> draft
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export async function GET() {
-  try {
-    const supabase = await createSupabaseServerClient();
+async function getSupabaseClient() {
+  const maybeClient = createSupabaseServerClient();
+  if (maybeClient && typeof (maybeClient as any).then === "function") {
+    return await maybeClient;
+  }
+  return maybeClient;
+}
 
-    // جلب كل الـ variant_materials مع المعلومات المرتبطة بالـ variant و material و product
+// ✅ Get BOM of a specific variant
+export async function GET(
+  req: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const supabase = await getSupabaseClient();
+
     const { data, error } = await supabase
       .from("variant_materials")
       .select(`
         id,
-        variant_id,
         grams_used,
         material:materials(id, name, price_per_gram),
-        variant:product_variants(id, name, product_id, product:products(name_english))
-      `);
+        variant:product_variants(id, name, product_id, product:products(id, name_english))
+      `)
+      .eq("variant_id", params.id);
 
     if (error) throw error;
 
     const formatted = (data || []).map((row: any) => ({
       id: row.id,
-      variant_id: row.variant_id,
+      variant_id: row.variant?.id ?? 0,
       variant_name: row.variant?.name ?? "",
-      product_id: row.variant?.product_id ?? 0,
+      product_id: row.variant?.product?.id ?? 0,
       product_name: row.variant?.product?.name_english ?? "",
-      material_id: row.material_id,
+      material_id: row.material?.id ?? 0,
       material_name: row.material?.name ?? "",
       grams_used: row.grams_used,
       unit_cost: row.material?.price_per_gram ?? 0,
@@ -42,41 +53,10 @@ export async function GET() {
   }
 }
 
-// ✅ إضافة مادة جديدة للـ variant
-export async function POST(req: Request) {
-  try {
-    const supabase = await createSupabaseServerClient();
-    const body = await req.json();
-    const { variant_id, material_id, grams_used } = body;
-
-    if (!variant_id || !material_id || !grams_used) {
-      return NextResponse.json(
-        { success: false, error: "Missing fields" },
-        { status: 400 }
-      );
-    }
-
-    const { data, error } = await supabase
-      .from("variant_materials")
-      .insert([{ variant_id, material_id, grams_used }])
-      .select();
-
-    if (error) throw error;
-
-    return NextResponse.json({ success: true, data });
-  } catch (err: any) {
-    console.error("BOM POST error:", err);
-    return NextResponse.json(
-      { success: false, error: err.message || "Server error" },
-      { status: 500 }
-    );
-  }
-}
-
-// ✅ تعديل الـ grams_used
+// ✅ Update grams_used for a material in BOM
 export async function PUT(req: Request) {
   try {
-    const supabase = await createSupabaseServerClient();
+    const supabase = await getSupabaseClient();
     const body = await req.json();
     const { id, grams_used } = body;
 
@@ -106,24 +86,18 @@ export async function PUT(req: Request) {
   }
 }
 
-// ✅ حذف مادة من الـ variant
-export async function DELETE(req: Request) {
+// ✅ Delete a material from BOM
+export async function DELETE(
+  req: Request,
+  { params }: { params: { id: string } }
+) {
   try {
-    const supabase = await createSupabaseServerClient();
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get("id");
-
-    if (!id) {
-      return NextResponse.json(
-        { success: false, error: "Missing id" },
-        { status: 400 }
-      );
-    }
+    const supabase = await getSupabaseClient();
 
     const { error } = await supabase
       .from("variant_materials")
       .delete()
-      .eq("id", id);
+      .eq("id", params.id);
 
     if (error) throw error;
 

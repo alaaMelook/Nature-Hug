@@ -1,3 +1,4 @@
+// app/admin/products/page.tsx
 import { Suspense } from "react";
 import ProductsTable from "./products-table";
 import { supabase } from "@/lib/supabaseClient";
