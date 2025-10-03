@@ -1,8 +1,9 @@
 "use client";
 import { useState } from "react";
-import { ShoppingCart } from "lucide-react";
+import { ShoppingCart, BadgeAlert } from "lucide-react";
 import { useTranslation } from "./TranslationProvider";
 import { useCart } from "@/lib/CartContext";
+
 
 export default function AddToCartButton({
   product,
@@ -11,8 +12,10 @@ export default function AddToCartButton({
   const { t } = useTranslation();
   const { addToCart } = useCart();
 
+  const isDisabled = product.stock === 0 || product.stock == null;
+
   const handleClick = async () => {
-    setLoading(true);
+    await addToCart(product);
     try {
       addToCart(product);
     } catch (err) {
@@ -24,12 +27,16 @@ export default function AddToCartButton({
 
   return (
     <button
-      onClick={handleClick}
-      disabled={loading}
-      className="mt-4 w-full bg-[#8B4513] text-white py-2.5 rounded-lg shadow-md hover:bg-[#A0522D] transition-colors duration-300 flex items-center justify-center disabled:opacity-50"
+      onClick={isDisabled ? undefined : handleClick}
+      disabled={loading || product.stock === 0}
+      className={`mt-4 w-full py-2.5 rounded-lg shadow-md flex items-center justify-center transition-colors duration-300
+      ${loading || isDisabled ? "bg-gray-400 text-gray-200" : "bg-primary-700 text-white hover:bg-primary-500"}
+      disabled:opacity-50`}
     >
-      <ShoppingCart className="w-4 h-4 mr-2" />
-      {loading ? "..." : t("addToCart")}
+      {isDisabled ? <BadgeAlert className="w-4 h-4 mr-2" /> : <ShoppingCart className="w-4 h-4 mr-2" />}
+      {loading ? "..." :
+        isDisabled ? t("outOfStock") :
+          t("addToCart")}
     </button>
   );
 }

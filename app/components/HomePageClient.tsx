@@ -65,9 +65,9 @@ const HomePageClient = ({ initialProducts }: HomePageClientProps) => {
                 />
 
                 {/* Discount badge, positioned in the top-left */}
-                {!product.discount ? (
+                {product.discount != null ? (
                   <div className="absolute top-3 left-3 bg-red-600 text-white px-3 py-1 rounded-full text-sm font-semibold shadow-md">
-                    -20%
+                    -{product.discount} EGP
                   </div>
                 ) : null}
                 {(product.stock == null || product.stock == 0) && (
@@ -89,14 +89,14 @@ const HomePageClient = ({ initialProducts }: HomePageClientProps) => {
 
                   {/* Price and stock status container */}
                   <div className="flex items-center content-center mb-2 ">
-                    {product.discount ? (
+                    {!product.discount ? (
                       <p className="text-lg font-normal text-primary-900">
                         {product.price.toFixed(2)} EGP
                       </p>
                     ) : (
                       <div className="flex flex-col items-baseline space-x-2">
                         <p className="text-md font-medium text-primary-900">
-                          {(product.price * (1 - 20 / 100)).toFixed(2)} EGP
+                          {(product.price - product.discount)} EGP
                         </p>
                         <p className="text-lg text-gray-500 line-through">
                           {product.price.toFixed(2)} EGP

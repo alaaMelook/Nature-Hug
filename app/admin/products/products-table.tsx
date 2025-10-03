@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { useTranslation } from "@/app/components/TranslationProvider";
+import CollapsibleText from "@/app/components/CollapsibleText";
 
 type Category = {
   id: number;
@@ -670,8 +671,8 @@ export default function ProductsTable({
                     </td>
                     <td className="px-4 py-2">{p.name_english || "—"}</td>
                     <td className="px-4 py-2">{p.name_arabic || "—"}</td>
-                    <td className="px-4 py-2">{p.description_english || "—"}</td>
-                    <td className="px-4 py-2">{p.description_arabic || "—"}</td>
+                    <td className="px-4 py-2"><CollapsibleText text={p.description_english || "—"} /></td>
+                    <td className="px-4 py-2"><CollapsibleText text={p.description_arabic || "—"} /></td>
                     <td className="px-4 py-2">{category?.name_english || "—"}</td>
                     <td className="px-4 py-2 font-semibold">{p.price} EGP</td>
                     <td className="px-4 py-2 text-red-600">

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ShoppingCart, Menu, X, User } from "lucide-react";
+import { ShoppingCart, Menu, X, User, Settings, LogIn, LogOut } from "lucide-react";
 import LanguageSwitcher from "@/app/components/LanguageSwitcher";
 import { useTranslation } from "./TranslationProvider";
 import { useCart } from "@/lib/CartContext";
@@ -38,7 +38,7 @@ const Navbar = () => {
   // Optimized auth state handler
   const handleAuthStateChange = useCallback(async (session: any) => {
     setUser(session?.user ?? null);
-    
+
     if (session?.user) {
       await checkAdmin(session.user.id);
     } else {
@@ -50,7 +50,7 @@ const Navbar = () => {
 
   useEffect(() => {
     setIsClient(true);
-    
+
     // Initial auth check
     const initializeAuth = async () => {
       try {
@@ -127,8 +127,6 @@ const Navbar = () => {
 
       <div className="hidden md:flex items-center space-x-6" suppressHydrationWarning>
         <LanguageSwitcher />
-
-        {/* Cart */}
         <Link
           href="/cart"
           className="relative text-primary-950 bg-primary-50 px-4 py-2 rounded-lg shadow-md transition-colors duration-300 border border-transparent hover:border-primary-300 hover:bg-primary-100 flex items-center text-sm md:text-base"
@@ -141,54 +139,80 @@ const Navbar = () => {
             </span>
           )}
         </Link>
+        {/* User Menu Dropdown */}
+        {user ? <div className="relative">
+          <button
+            onClick={() => setIsOpen(prev => !prev)}
+            className=" cursor-pointer flex items-center px-4 py-2 bg-primary-800 rounded-lg shadow-md border hover:bg-primary-100 text-primary-100 hover:text-primary-800"
+          >
 
-        {/* Auth Section */}
-        {isLoading ? (
-          <div className="px-4 py-2 bg-gray-200 text-gray-500 rounded-md">
-            Loading...
-          </div>
-        ) : (
-          <>
-            {/* Profile Button */}
-            {user && (
-              <Link
-                href="/profile"
-                className="relative text-primary-950 bg-primary-50 px-4 py-2 rounded-lg shadow-md transition-colors duration-300 border border-transparent hover:border-primary-300 hover:bg-primary-100 flex items-center text-sm md:text-base"
-              >
-                <User className="w-4 h-4 md:w-5 md:h-5 mr-2" />
-                Profile
-              </Link>
-            )}
+            <Settings className="w-5 h-5 fill:bg-primary-100 " />
+          </button>
 
-            {/* Admin Button */}
-            {adminUser && (
-              <Link
-                href="/admin"
-                className="relative text-white bg-red-600 px-4 py-2 rounded-lg shadow-md transition-colors duration-300 border border-transparent hover:bg-red-700 flex items-center text-sm md:text-base"
-              >
-                <User className="w-4 h-4 md:w-5 md:h-5 mr-2" />
-                Admin
-              </Link>
-            )}
+          {isOpen && (
+            <div className="absolute text-center left-0 mt-2 w-48 bg-white rounded-lg shadow-lg border py-2 z-20">
 
-            {/* Auth Buttons */}
-            {!user ? (
-              <button
-                onClick={() => router.push("/login")}
-                className="px-4 py-2 bg-amber-800 text-white rounded-md hover:bg-amber-700"
-              >
-                Login / Signup
-              </button>
-            ) : (
-              <button
-                onClick={handleLogout}
-                className="px-4 py-2 bg-amber-800 text-white rounded-md hover:bg-amber-700"
-              >
-                Logout
-              </button>
-            )}
-          </>
-        )}
+
+              {/* Profile */}
+              {user && (
+                <Link
+                  href="/profile"
+                  className="flex items-center px-4 py-2 text-sm text-primary-900 hover:bg-gray-100"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <User className="w-4 h-4 mr-2" />
+                  Profile
+                </Link>
+              )}
+
+              {/* Admin */}
+              {adminUser && (
+                <Link
+                  href="/admin"
+                  className="flex items-center px-4 py-2 text-sm text-red-700 hover:bg-red-100"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <User className="w-4 h-4 mr-2" />
+                  Admin
+                </Link>
+              )}
+
+              {/* Auth */}
+              {!user ? (
+                <button
+                  onClick={() => {
+                    router.push("/login");
+                    setIsOpen(false);
+                  }}
+                  className="w-full flex items-center px-4 py-2 text-sm text-primary-900 hover:bg-gray-100"
+                >
+                  <LogIn className="w-4 h-4 mr-2" />
+                  Login / Signup
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    handleLogout();
+                    setIsOpen(false);
+                  }}
+                  className="w-full flex items-center px-4 py-2 text-sm text-primary-900 hover:bg-gray-100 cursor-pointer"
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Logout
+                </button>
+              )}
+            </div>
+          )}
+        </div> : <button
+          onClick={() => {
+            router.push("/login");
+            setIsOpen(false);
+          }}
+          className="w-full flex items-center px-4 py-2 text-sm text-primary-900 hover:bg-gray-100"
+        >
+          <LogIn className="w-4 h-4 mr-2" />
+          Login / Signup
+        </button>}
       </div>
 
       {/* Mobile Menu Toggle */}
@@ -215,7 +239,7 @@ const Navbar = () => {
               {item.label}
             </Link>
           ))}
-          
+
           <Link
             href="/cart"
             className="flex flex-row text-primary-950 hover:text-primary-300 transition-colors duration-300 text-xl"
@@ -229,7 +253,7 @@ const Navbar = () => {
               </span>
             )}
           </Link>
-          
+
           <LanguageSwitcher />
 
           {/* Mobile Auth Section */}

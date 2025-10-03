@@ -7,6 +7,7 @@ import React, {
   useMemo,
   useState,
 } from "react";
+import { toast } from "sonner";
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
@@ -23,7 +24,7 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [loading, setLoading] = useState(true);
   const [isClient, setIsClient] = useState(false);
   const Cookies = require("js-cookie");
-  
+
   useEffect(() => {
     setIsClient(true);
     // Only access cookies after client-side hydration
@@ -68,7 +69,7 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
       cart.push(newItem);
       newCart = [...cart];
     }
-
+    toast.success(`${product.name_english} added to cart`, { duration: 2000 });
     setCart(newCart);
   };
 
@@ -97,8 +98,7 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
 
   const getCartNetTotal = () => {
     return cart.reduce(
-      (total, item) =>
-        total + (item.discount ? item.discount : item.price) * item.quantity,
+      (acc, item) => acc + item.quantity * (item.price - (item.discount || 0) || 0),
       0
     );
   };

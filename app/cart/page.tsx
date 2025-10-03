@@ -5,16 +5,13 @@ import { useTranslation } from "../components/TranslationProvider";
 import { useCart } from "@/lib/CartContext";
 import { Tooltip } from "flowbite-react";
 import Counter from "../components/Counter";
+import Link from "next/link";
 
 export default function CartPage() {
   const { t, language } = useTranslation();
   const cart = useCart();
-  const { cart: items, removeFromCart } = cart;
+  const { cart: items, removeFromCart, getCartNetTotal } = cart;
 
-  const subtotal = cart.cart.reduce(
-    (acc, item) => acc + item.quantity * (item.price || 0),
-    0
-  );
 
   if (items.length === 0) {
     return (
@@ -28,7 +25,7 @@ export default function CartPage() {
         </p>
         <button
           className="flex items-center space-x-2 px-8 py-4 hover:bg-primary-50 hover:text-primary-700 transition-colors cursor-pointer bg-primary-800 text-primary-50 font-semibold rounded-full shadow-lg duration-300"
-          onClick={() => {}}
+          onClick={() => { }}
         >
           <ArrowRightIcon className="h-5 w-5" />
           <span>{t("shopNow")}</span>
@@ -43,7 +40,7 @@ export default function CartPage() {
         <div className="lg:grid lg:grid-cols-3 lg:gap-12">
           {/* Cart Items Section */}
           <div className="lg:col-span-2 space-y-6">
-            {cart.cart.map((item) => (
+            {items.map((item) => (
               <div
                 key={item.id}
                 className="bg-white rounded-3xl shadow-xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between transform transition-all duration-300 hover:scale-[1.01] hover:shadow-2xl border border-slate-100 "
@@ -76,13 +73,13 @@ export default function CartPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-6 mt-4 sm:mt-0 sm:ml-auto">
-                  {!item.discount ? (
+                  {item.discount ? (
                     <div className="flex flex-col items-end gap-2">
                       <p className="text-sm text-natural-500 line-through text-normal">
                         EGP {(item.quantity * (item.price || 0)).toFixed(2)}
                       </p>
                       <p className="text-xl text-primary-900 w-28 text-right text-semibold">
-                        EGP {(item.quantity * (item.price || 0)).toFixed(2)}
+                        EGP {(item.quantity * ((item.price || 0) - item.discount)).toFixed(2)}
                       </p>
                     </div>
                   ) : (
@@ -117,13 +114,16 @@ export default function CartPage() {
               <div className="flex justify-between items-center text-slate-700 mb-4">
                 <span className="text-lg">{t("subtotal")}</span>
                 <span className="text-lg font-semibold text-slate-900">
-                  EGP {subtotal.toFixed(2)}
+                  EGP {getCartNetTotal().toFixed(2)}
                 </span>
               </div>
               <p className="text-sm text-slate-500 mb-6">{t("checkoutInfo")}</p>
-              <button className="w-full cursor-pointer py-4 bg-primary-800 text-primary-50 font-bold rounded-full text-lg shadow-lg hover:bg-primary-50 hover:text-primary-700 transition-colors duration-300">
-                {t("proceedToCheckout")}
-              </button>
+              <Link href="/checkout">
+                <button className="w-full cursor-pointer py-4 bg-primary-800 text-primary-50 font-bold rounded-full text-lg shadow-lg hover:bg-primary-50 hover:text-primary-700 transition-colors duration-300"
+                >
+                  {t("proceedToCheckout")}
+                </button>
+              </Link>
             </div>
           </div>
         </div>
