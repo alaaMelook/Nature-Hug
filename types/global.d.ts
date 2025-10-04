@@ -1,4 +1,4 @@
-export {};
+export { };
 
 declare global {
   interface Product {
@@ -38,7 +38,13 @@ declare global {
     material: Material;
   }
 
-  interface CartItem extends Product {
+  interface CartItem {
+    id: number;
+    name_english: string;
+    name_arabic: string;
+    price: number;
+    discount: number | null;
+    image_url: string | null;
     quantity: number;
   }
 

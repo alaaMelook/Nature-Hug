@@ -15,9 +15,8 @@ export default function AddToCartButton({
   const isDisabled = product.stock === 0 || product.stock == null;
 
   const handleClick = async () => {
-    await addToCart(product);
     try {
-      addToCart(product);
+      await addToCart(product);
     } catch (err) {
       console.error("Error adding to cart:", err);
     } finally {
