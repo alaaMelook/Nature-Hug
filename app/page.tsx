@@ -1,17 +1,18 @@
 import React from "react";
 import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import HomePageClient from "./components/HomePageClient";
+import HomePageClient from "./server-pages/HomePage";
 
 // Server component for initial data fetching
 async function getProducts(language: string = "en") {
   try {
     const supabase = await createSupabaseServerClient();
-    
+
     const { data, error } = await supabase
       .from("products")
       .select("*")
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(4);
 
     if (error) {
       console.error("Error fetching products:", error);

@@ -15,7 +15,7 @@ export default function Counter({
   return (
     <div className="flex items-center justify-center space-x-4 bg-gray-100 rounded-full px-3 py-1.5 w-30">
       <button
-        onClick={onDecrease}
+        onClick={quantity < 1 ? undefined : onDecrease}
         className="text-gray-600 hover:text-gray-900 transition-colors duration-200 p-1"
         aria-label={t("decreaseQuantity")}
       >

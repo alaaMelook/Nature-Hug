@@ -38,13 +38,7 @@ declare global {
     material: Material;
   }
 
-  interface CartItem {
-    id: number;
-    name_english: string;
-    name_arabic: string;
-    price: number;
-    discount: number | null;
-    image_url: string | null;
+  interface CartItem extends Product {
     quantity: number;
   }
 

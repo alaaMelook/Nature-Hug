@@ -16,6 +16,7 @@ export default function AddToCartButton({
 
   const handleClick = async () => {
     try {
+      setLoading(true);
       await addToCart(product);
     } catch (err) {
       console.error("Error adding to cart:", err);
@@ -29,7 +30,7 @@ export default function AddToCartButton({
       onClick={isDisabled ? undefined : handleClick}
       disabled={loading || product.stock === 0}
       className={`mt-4 w-full py-2.5 rounded-lg shadow-md flex items-center justify-center transition-colors duration-300
-      ${loading || isDisabled ? "bg-gray-400 text-gray-200" : "bg-primary-700 text-white hover:bg-primary-500"}
+      ${loading || isDisabled ? "bg-gray-400 text-gray-200" : "bg-primary-50 text-primary-900 hover:bg-primary-200 hover:text-primary-700 cursor-pointer"}
       disabled:opacity-50`}
     >
       {isDisabled ? <BadgeAlert className="w-4 h-4 mr-2" /> : <ShoppingCart className="w-4 h-4 mr-2" />}
