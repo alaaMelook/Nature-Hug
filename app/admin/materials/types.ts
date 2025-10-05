@@ -1,52 +1,50 @@
-// types.ts
-export type Product = {
-  id: number;
-  name_english?: string;
-  name_arabic?: string;
-};
+// app/admin/materials/types.ts
 
-export type Material = {
+export interface Supplier {
+  id: number;
+  name: string;
+}
+
+export interface Unit {
+  id: number;
+  name: string;
+}
+
+export interface Product {
+  id: number;
+  name_english: string;
+  name_arabic?: string;
+}
+
+export interface MaterialProduct {
+  id?: number;
+  product: Product;
+}
+
+export interface Material {
   id: number;
   name: string;
   price_per_gram: number;
   stock_grams: number;
   supplier_id?: number | null;
+  unit_id?: number | null; // ✅ مهم جداً
   low_stock_threshold?: number | null;
+  material_type?: "normal" | "special" | "other";
+  products?: MaterialProduct[];
   created_at?: string;
-  updated_at?: string;
 
-  material_type?: "normal" | "variant" | "perfume";
+  // Relations
+  supplier?: Supplier | null;
+  unit?: Unit | null;
+}
 
-  unit?: Unit;
-  supplier?: Supplier;
-
-  // كل مادة هترجع مصفوفة من روابط product_materials,
-  // وكل رابط فيه حقل product (نتيجة الانضمام product:products(...))
-  products?: {
-    product: Product;
-    id?: number; // اختياري: id صف الرابط لو احتجته
-    grams_used?: number; // لو انت بتجيب هذا الحقل من product_materials
-  }[];
-};
-
-export type Unit = {
-  id: number;
-  name: string;
-};
-
-export type Supplier = {
-  id: number;
-  name: string;
-};
-
-export type MaterialFormData = {
+export interface MaterialFormData {
   name: string;
   price_per_gram: string;
   stock_grams: string;
-  supplier_id?: string;
-  low_stock_threshold?: string;
-  material_type: "normal" | "variant" | "perfume";
-
-  // IDs للـ products اللي هتربط بالمادة
-  products?: number[];
-};
+  supplier_id: string;
+  unit_id: string; // ✅ مهم جداً
+  low_stock_threshold: string;
+  material_type: "normal" | "special" | "other";
+  products: number[]; // product IDs
+}

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-// GET all materials
+// ✅ GET all materials
 export async function GET() {
   const supabase = await createSupabaseServerClient();
 
@@ -10,6 +10,7 @@ export async function GET() {
     .select(`
       *,
       supplier:suppliers(id, name),
+      unit:units(id, name),
       material_products(
         product:products(id, name_english, name_arabic)
       )
@@ -24,23 +25,20 @@ export async function GET() {
   return NextResponse.json(data);
 }
 
-// POST (create new material)
+// ✅ POST (create new material)
 export async function POST(req: Request) {
   const supabase = await createSupabaseServerClient();
   const body = await req.json();
 
-  // body ممكن يكون object واحد أو array (في حالة import Excel)
   const materials = Array.isArray(body) ? body : [body];
-
   const created: any[] = [];
 
   for (const material of materials) {
     const { products, ...rest } = material;
 
-    // 1. create material
     const { data: matData, error: matError } = await supabase
       .from("materials")
-      .insert([rest])
+      .insert([{ ...rest }])
       .select()
       .single();
 
@@ -49,17 +47,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: matError.message }, { status: 500 });
     }
 
-    // 2. link products
     if (products && products.length > 0) {
       const rows = products.map((pId: number) => ({
         material_id: matData.id,
         product_id: pId,
       }));
 
-      const { error: linkError } = await supabase
-        .from("material_products")
-        .insert(rows);
-
+      const { error: linkError } = await supabase.from("material_products").insert(rows);
       if (linkError) {
         console.error("POST link products error:", linkError);
         return NextResponse.json({ error: linkError.message }, { status: 500 });
@@ -72,27 +66,20 @@ export async function POST(req: Request) {
   return NextResponse.json(created, { status: 201 });
 }
 
-// PUT (update material)
+// ✅ PUT (update material)
 export async function PUT(req: Request) {
   const supabase = await createSupabaseServerClient();
   const { id, products, ...rest } = await req.json();
 
-  if (!id) {
-    return NextResponse.json({ error: "ID is required" }, { status: 400 });
-  }
+  if (!id) return NextResponse.json({ error: "ID is required" }, { status: 400 });
 
-  // 1. update material fields
-  const { error: updateError } = await supabase
-    .from("materials")
-    .update(rest)
-    .eq("id", id);
-
+  const { error: updateError } = await supabase.from("materials").update(rest).eq("id", id);
   if (updateError) {
     console.error("PUT /materials error:", updateError);
     return NextResponse.json({ error: updateError.message }, { status: 500 });
   }
 
-  // 2. reset product links
+  // update linked products
   await supabase.from("material_products").delete().eq("material_id", id);
 
   if (products && products.length > 0) {
@@ -101,10 +88,7 @@ export async function PUT(req: Request) {
       product_id: pId,
     }));
 
-    const { error: linkError } = await supabase
-      .from("material_products")
-      .insert(rows);
-
+    const { error: linkError } = await supabase.from("material_products").insert(rows);
     if (linkError) {
       console.error("PUT link products error:", linkError);
       return NextResponse.json({ error: linkError.message }, { status: 500 });
@@ -114,18 +98,14 @@ export async function PUT(req: Request) {
   return NextResponse.json({ success: true });
 }
 
-// DELETE (delete material)
+// ✅ DELETE (delete material)
 export async function DELETE(req: Request) {
   const supabase = await createSupabaseServerClient();
   const { id } = await req.json();
 
-  if (!id) {
-    return NextResponse.json({ error: "ID is required" }, { status: 400 });
-  }
+  if (!id) return NextResponse.json({ error: "ID is required" }, { status: 400 });
 
-  // delete product links first
   await supabase.from("material_products").delete().eq("material_id", id);
-
   const { error } = await supabase.from("materials").delete().eq("id", id);
 
   if (error) {
