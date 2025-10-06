@@ -30,6 +30,7 @@ export async function POST(req: Request) {
   const supabase = await createSupabaseServerClient();
   const body = await req.json();
 
+  // ممكن يكون Array أو Object واحد (من Excel أو من Form)
   const materials = Array.isArray(body) ? body : [body];
   const created: any[] = [];
 
@@ -38,7 +39,7 @@ export async function POST(req: Request) {
 
     const { data: matData, error: matError } = await supabase
       .from("materials")
-      .insert([{ ...rest }])
+      .insert([rest])
       .select()
       .single();
 
@@ -47,13 +48,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: matError.message }, { status: 500 });
     }
 
+    // ✅ Link products
     if (products && products.length > 0) {
       const rows = products.map((pId: number) => ({
         material_id: matData.id,
         product_id: pId,
       }));
 
-      const { error: linkError } = await supabase.from("material_products").insert(rows);
+      const { error: linkError } = await supabase
+        .from("material_products")
+        .insert(rows);
+
       if (linkError) {
         console.error("POST link products error:", linkError);
         return NextResponse.json({ error: linkError.message }, { status: 500 });
@@ -71,24 +76,35 @@ export async function PUT(req: Request) {
   const supabase = await createSupabaseServerClient();
   const { id, products, ...rest } = await req.json();
 
-  if (!id) return NextResponse.json({ error: "ID is required" }, { status: 400 });
+  if (!id) {
+    return NextResponse.json({ error: "ID is required" }, { status: 400 });
+  }
 
-  const { error: updateError } = await supabase.from("materials").update(rest).eq("id", id);
+  // Update material itself (including unit_id)
+  const { error: updateError } = await supabase
+    .from("materials")
+    .update(rest)
+    .eq("id", id);
+
   if (updateError) {
     console.error("PUT /materials error:", updateError);
     return NextResponse.json({ error: updateError.message }, { status: 500 });
   }
 
-  // update linked products
+  // Delete old product links
   await supabase.from("material_products").delete().eq("material_id", id);
 
+  // Insert new ones
   if (products && products.length > 0) {
     const rows = products.map((pId: number) => ({
       material_id: id,
       product_id: pId,
     }));
 
-    const { error: linkError } = await supabase.from("material_products").insert(rows);
+    const { error: linkError } = await supabase
+      .from("material_products")
+      .insert(rows);
+
     if (linkError) {
       console.error("PUT link products error:", linkError);
       return NextResponse.json({ error: linkError.message }, { status: 500 });
@@ -103,9 +119,14 @@ export async function DELETE(req: Request) {
   const supabase = await createSupabaseServerClient();
   const { id } = await req.json();
 
-  if (!id) return NextResponse.json({ error: "ID is required" }, { status: 400 });
+  if (!id) {
+    return NextResponse.json({ error: "ID is required" }, { status: 400 });
+  }
 
+  // Delete product links first
   await supabase.from("material_products").delete().eq("material_id", id);
+
+  // Delete material itself
   const { error } = await supabase.from("materials").delete().eq("id", id);
 
   if (error) {

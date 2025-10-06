@@ -1,80 +1,93 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-// ✅ Get all units
+// 🟢 Get all units
 export async function GET() {
   const supabase = await createSupabaseServerClient();
+
   const { data, error } = await supabase
     .from("units")
-    .select("*")
+    .select("id, name")
     .order("id", { ascending: true });
 
   if (error) {
     console.error("GET /units error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: "Failed to fetch units" }, { status: 500 });
   }
 
-  return NextResponse.json(data);
+  return NextResponse.json(data || []);
 }
 
-// ✅ Create new unit
+// 🟢 Add new unit
 export async function POST(req: Request) {
   const supabase = await createSupabaseServerClient();
-  const { name } = await req.json();
+  const body = await req.json();
+  const { name } = body;
 
   if (!name || !name.trim()) {
     return NextResponse.json({ error: "Unit name is required" }, { status: 400 });
   }
 
-  // prevent duplicates
-  const { data: existing } = await supabase.from("units").select("*").eq("name", name.trim());
-  if (existing && existing.length > 0) {
-    return NextResponse.json({ error: "Unit already exists" }, { status: 400 });
-  }
-
-  const { data, error } = await supabase.from("units").insert([{ name: name.trim() }]).select().single();
+  const { data, error } = await supabase
+    .from("units")
+    .insert([{ name: name.trim() }])
+    .select();
 
   if (error) {
     console.error("POST /units error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: "Failed to create unit" }, { status: 500 });
   }
 
-  return NextResponse.json(data, { status: 201 });
+  return NextResponse.json(data?.[0] || {});
 }
 
-// ✅ Update unit
+// 🟡 Update existing unit
 export async function PUT(req: Request) {
   const supabase = await createSupabaseServerClient();
-  const { id, name } = await req.json();
+  const body = await req.json();
+  const { id, name } = body;
 
   if (!id || !name || !name.trim()) {
-    return NextResponse.json({ error: "ID and name are required" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid data" }, { status: 400 });
   }
 
-  const { error } = await supabase.from("units").update({ name: name.trim() }).eq("id", id);
+  const { error } = await supabase
+    .from("units")
+    .update({ name: name.trim() })
+    .eq("id", id);
 
   if (error) {
     console.error("PUT /units error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: "Failed to update unit" }, { status: 500 });
   }
 
   return NextResponse.json({ success: true });
 }
 
-// ✅ Delete unit
+// 🔴 Delete unit
 export async function DELETE(req: Request) {
   const supabase = await createSupabaseServerClient();
-  const { id } = await req.json();
+  const body = await req.json();
+  const { id } = body;
 
   if (!id) {
-    return NextResponse.json({ error: "ID is required" }, { status: 400 });
+    return NextResponse.json({ error: "Missing unit ID" }, { status: 400 });
   }
 
+  // 👇 نحاول نحذف الوحدة
   const { error } = await supabase.from("units").delete().eq("id", id);
+
+  // ⚠️ لو في خطأ بسبب foreign key (مواد مرتبطة بالوحدة)
+  if (error && error.message.includes("foreign key")) {
+    return NextResponse.json(
+      { error: "Cannot delete unit — it’s used by existing materials" },
+      { status: 400 }
+    );
+  }
 
   if (error) {
     console.error("DELETE /units error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: "Failed to delete unit" }, { status: 500 });
   }
 
   return NextResponse.json({ success: true });

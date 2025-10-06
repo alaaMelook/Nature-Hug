@@ -1,32 +1,54 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
+import { DataGrid, GridColDef } from "@mui/x-data-grid";
 
 interface Supplier {
   id: number;
   name: string;
-  phone: string;
-  email: string;
-  address: string;
-  notes: string | null;
-  invoices: Invoice[];
+  phone?: string;
+  email?: string;
+  address?: string;
+  notes?: string | null;
+}
+
+interface Material {
+  id: number;
+  name: string;
+  price_per_gram: number;
+  stock_grams: number;
+}
+
+interface InvoiceItem {
+  material_id: number;
+  quantity: number;
+  price: number; // إجمالي السعر
 }
 
 interface Invoice {
-  id: number;
+  id?: number;
   invoice_no: string;
   supplier_id: number;
   date: string;
   total: number;
-  attachment: string | null;
+  attachments?: string[];
+  note?: string | null;
+  purchase_invoice_items?: InvoiceItem[];
+  extra_expenses?: number;
 }
 
 export default function SuppliersPage() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [materials, setMaterials] = useState<Material[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [formType, setFormType] = useState<"supplier" | "invoice">("supplier");
+  const [editingSupplierId, setEditingSupplierId] = useState<number | null>(null);
+  const [editingInvoiceId, setEditingInvoiceId] = useState<number | null>(null);
 
-  const [newSupplier, setNewSupplier] = useState({
+  const [newSupplier, setNewSupplier] = useState<Supplier>({
+    id: 0,
     name: "",
     phone: "",
     email: "",
@@ -34,288 +56,337 @@ export default function SuppliersPage() {
     notes: "",
   });
 
-  const [newInvoice, setNewInvoice] = useState({
-    supplier_id: "",
+  const [newInvoice, setNewInvoice] = useState<Invoice>({
     invoice_no: "",
+    supplier_id: 0,
     date: "",
-    total: "",
-    attachment: "",
+    total: 0,
+    attachments: [],
+    note: "",
+    extra_expenses: 0,
   });
 
-  const [editingSupplierId, setEditingSupplierId] = useState<number | null>(null);
-  const [editingInvoiceId, setEditingInvoiceId] = useState<number | null>(null);
+  const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>([]);
 
-  // Fetch suppliers
-  const fetchSuppliers = async () => {
-    const res = await fetch("/api/admin/suppliers");
-    const data = await res.json();
-    setSuppliers(data);
+  // 🟩 Load all data
+  const fetchAll = async () => {
+    try {
+      const [supRes, matRes, invRes] = await Promise.all([
+        fetch("/api/admin/suppliers"),
+        fetch("/api/admin/materials"),
+        fetch("/api/admin/purchase_invoices"),
+      ]);
+      const [sData, mData, iData] = await Promise.all([
+        supRes.json(),
+        matRes.json(),
+        invRes.json(),
+      ]);
+      setSuppliers(sData || []);
+      setMaterials(mData || []);
+      const uniqueInvoices = Array.isArray(iData)
+        ? iData.filter((v, i, a) => a.findIndex((t) => t.id === v.id) === i)
+        : [];
+      setInvoices(uniqueInvoices);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  useEffect(() => {
-    fetchSuppliers();
-  }, []);
+useEffect(() => {
+  let mounted = true;
 
-  // Add supplier
-  const handleAddSupplier = async () => {
-    if (editingSupplierId) {
-      // Update supplier
-      await fetch(`/api/admin/suppliers/${editingSupplierId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newSupplier),
-      });
-    } else {
-      // Add supplier
-      await fetch("/api/admin/suppliers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newSupplier),
-      });
+  const fetchAllSafe = async () => {
+    try {
+      const [supRes, matRes, invRes] = await Promise.all([
+        fetch("/api/admin/suppliers"),
+        fetch("/api/admin/materials"),
+        fetch("/api/admin/purchase_invoices"),
+      ]);
+
+      const [sData, mData, iData] = await Promise.all([
+        supRes.json(),
+        matRes.json(),
+        invRes.json(),
+      ]);
+
+      if (!mounted) return; // ⛔ لو الصفحة اتقفلت، ما نحدثش state
+
+      setSuppliers(sData || []);
+      setMaterials(mData || []);
+      const uniqueInvoices = Array.isArray(iData)
+        ? iData.filter((v, i, a) => a.findIndex((t) => t.id === v.id) === i)
+        : [];
+      setInvoices(uniqueInvoices);
+    } catch (err) {
+      console.error(err);
     }
-    setNewSupplier({ name: "", phone: "", email: "", address: "", notes: "" });
+  };
+
+  fetchAllSafe();
+
+  return () => {
+    mounted = false; // 🧹 cleanup
+  };
+}, []);
+
+
+  // 🟦 SUPPLIERS CRUD
+  const handleAddSupplier = async () => {
+    const url = editingSupplierId
+      ? `/api/admin/suppliers/${editingSupplierId}`
+      : "/api/admin/suppliers";
+    const method = editingSupplierId ? "PUT" : "POST";
+
+    await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newSupplier),
+    });
+
+    setNewSupplier({
+      id: 0,
+      name: "",
+      phone: "",
+      email: "",
+      address: "",
+      notes: "",
+    });
     setEditingSupplierId(null);
     setShowModal(false);
-    fetchSuppliers();
+    await fetchAll();
   };
 
-  // Edit supplier
-  const handleEditSupplier = (supplier: Supplier) => {
+  const handleEditSupplier = (s: Supplier) => {
     setFormType("supplier");
-    setNewSupplier({
-      name: supplier.name || "",
-      phone: supplier.phone || "",
-      email: supplier.email || "",
-      address: supplier.address || "",
-      notes: supplier.notes || "",
-    });
-    setEditingSupplierId(supplier.id);
+    setNewSupplier(s);
+    setEditingSupplierId(s.id);
     setShowModal(true);
   };
 
-  // Delete supplier
   const handleDeleteSupplier = async (id: number) => {
-    if (window.confirm("Are you sure you want to delete this supplier?")) {
-      await fetch(`/api/admin/suppliers/${id}`, { method: "DELETE" });
-      fetchSuppliers();
-    }
+    if (!confirm("Delete supplier?")) return;
+    await fetch(`/api/admin/suppliers/${id}`, { method: "DELETE" });
+    await fetchAll();
   };
 
-  // Add or update invoice
+  // 🟨 INVOICES CRUD
+  const addNewItem = () =>
+    setInvoiceItems((s) => [...s, { material_id: 0, quantity: 0, price: 0 }]);
+
+  const updateItem = (i: number, payload: Partial<InvoiceItem>) => {
+    setInvoiceItems((cur) =>
+      cur.map((it, idx) => (idx === i ? { ...it, ...payload } : it))
+    );
+  };
+
+  const calcTotal = () => {
+    const itemsTotal = invoiceItems.reduce((sum, it) => sum + it.price, 0);
+    return itemsTotal + Number(newInvoice.extra_expenses || 0);
+  };
+
   const handleAddInvoice = async () => {
-    if (editingInvoiceId) {
-      // Update invoice
-      await fetch(`/api/admin/invoices/${editingInvoiceId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newInvoice),
-      });
-    } else {
-      // Add invoice
-      await fetch("/api/admin/invoices", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newInvoice),
-      });
-    }
-    setNewInvoice({
-      supplier_id: "",
-      invoice_no: "",
-      date: "",
-      total: "",
-      attachment: "",
+    if (!newInvoice.supplier_id || !newInvoice.invoice_no)
+      return alert("Supplier & Invoice No required");
+
+    const payload = {
+      supplier_id: newInvoice.supplier_id,
+      invoice_no: newInvoice.invoice_no,
+      date: newInvoice.date || new Date().toISOString().slice(0, 10),
+      total: calcTotal(),
+      attachments: newInvoice.attachments || [],
+      note: newInvoice.note || "",
+      extra_expenses: newInvoice.extra_expenses || 0,
+      items: invoiceItems,
+    };
+
+    const method = editingInvoiceId ? "PUT" : "POST";
+    const url = editingInvoiceId
+      ? `/api/admin/purchase_invoices/${editingInvoiceId}`
+      : "/api/admin/purchase_invoices";
+
+    const res = await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
     });
-    setEditingInvoiceId(null);
-    setShowModal(false);
-    fetchSuppliers();
+
+    const result = await res.json();
+    if (result.error) alert(result.error);
+    else {
+      alert("✅ Invoice saved!");
+      await fetchAll();
+      setNewInvoice({
+        invoice_no: "",
+        supplier_id: 0,
+        date: "",
+        total: 0,
+        attachments: [],
+        note: "",
+        extra_expenses: 0,
+      });
+      setInvoiceItems([]);
+      setEditingInvoiceId(null);
+      setShowModal(false);
+    }
   };
 
-  // Edit invoice
-  const handleEditInvoice = (invoice: Invoice) => {
+  const handleEditInvoice = (inv: Invoice) => {
     setFormType("invoice");
+    setEditingInvoiceId(inv.id || null);
     setNewInvoice({
-      supplier_id: invoice.supplier_id.toString(),
-      invoice_no: invoice.invoice_no || "",
-      date: invoice.date || "",
-      total: invoice.total.toString() || "",
-      attachment: invoice.attachment || "",
+      ...inv,
+      attachments: inv.attachments || [],
+      extra_expenses: inv.extra_expenses || 0,
     });
-    setEditingInvoiceId(invoice.id);
+    setInvoiceItems(inv.purchase_invoice_items || []);
     setShowModal(true);
   };
 
-  // Delete invoice
-  const handleDeleteInvoice = async (id: number) => {
-    if (window.confirm("Are you sure you want to delete this invoice?")) {
-      await fetch(`/api/admin/invoices/${id}`, { method: "DELETE" });
-      fetchSuppliers();
-    }
+  const handleDeleteInvoice = async (id?: number) => {
+    if (!id) return;
+    if (!confirm("Delete invoice?")) return;
+    await fetch(`/api/admin/purchase_invoices/${id}`, { method: "DELETE" });
+    await fetchAll();
   };
+
+  // 🟧 Upload to Supabase bucket
+  const handleUploadFiles = async (files: FileList | null) => {
+    if (!files) return;
+    const uploadedUrls: string[] = [];
+    for (const file of Array.from(files)) {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      const result = await res.json();
+      if (result.url) uploadedUrls.push(result.url);
+    }
+    setNewInvoice((prev) => ({
+      ...prev,
+      attachments: [...(prev.attachments || []), ...uploadedUrls],
+    }));
+  };
+
+  // 🧾 Tables setup
+  const supplierCols: GridColDef[] = [
+    { field: "name", headerName: "Name", flex: 1 },
+    { field: "phone", headerName: "Phone", flex: 1 },
+    { field: "email", headerName: "Email", flex: 1 },
+    { field: "notes", headerName: "Notes", flex: 1 },
+    {
+      field: "actions",
+      headerName: "⚙️ Actions",
+      flex: 1,
+      renderCell: (params) => (
+        <div className="flex gap-3">
+          <button onClick={() => handleEditSupplier(params.row)}>✏️</button>
+          <button onClick={() => handleDeleteSupplier(params.row.id)}>🗑️</button>
+        </div>
+      ),
+    },
+  ];
+
+  const invoiceCols: GridColDef[] = [
+    { field: "invoice_no", headerName: "Invoice No", flex: 1 },
+    {
+      field: "supplier_name",
+      headerName: "Supplier",
+      flex: 1,
+      renderCell: (params) => {
+        const sup = suppliers.find((s) => s.id === params.row.supplier_id);
+        return <span>{sup ? sup.name : "-"}</span>;
+      },
+    },
+    { field: "date", headerName: "Date", flex: 1 },
+    { field: "total", headerName: "Total (EGP)", flex: 1 },
+    { field: "note", headerName: "Note", flex: 1 },
+    {
+      field: "attachments",
+      headerName: "📎 Attachments",
+      flex: 1.5,
+      renderCell: (params) =>
+        (params.row.attachments || []).length ? (
+          <div className="flex flex-wrap gap-1">
+            {params.row.attachments.map((url: string, i: number) => (
+              <a
+                key={i}
+                href={url}
+                target="_blank"
+                className="underline text-blue-600 text-xs"
+              >
+                img{i + 1}
+              </a>
+            ))}
+          </div>
+        ) : (
+          "-"
+        ),
+    },
+    {
+      field: "actions",
+      headerName: "⚙️",
+      flex: 1,
+      renderCell: (params) => (
+        <div className="flex gap-3">
+          <button onClick={() => handleEditInvoice(params.row)}>✏️</button>
+          <button onClick={() => handleDeleteInvoice(params.row.id)}>🗑️</button>
+        </div>
+      ),
+    },
+  ];
+
+  const totalSum = invoices.reduce((sum, inv) => sum + (inv.total || 0), 0);
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Suppliers Management</h1>
+    <div className="p-6 space-y-6">
+      <h1 className="text-2xl font-bold">📦 Suppliers & Purchase Invoices</h1>
+
+      <div className="flex gap-3">
         <button
-          onClick={() => {
-            setShowModal(true);
-            setFormType("supplier");
-            setEditingSupplierId(null);
-            setEditingInvoiceId(null);
-            setNewSupplier({ name: "", phone: "", email: "", address: "", notes: "" });
-            setNewInvoice({ supplier_id: "", invoice_no: "", date: "", total: "", attachment: "" });
-          }}
           className="bg-blue-600 text-white px-4 py-2 rounded"
+          onClick={() => {
+            setFormType("supplier");
+            setShowModal(true);
+          }}
         >
-          + Add
+          + Add Supplier
+        </button>
+        <button
+          className="bg-green-600 text-white px-4 py-2 rounded"
+          onClick={() => {
+            setFormType("invoice");
+            setShowModal(true);
+          }}
+        >
+          + Add Invoice
         </button>
       </div>
 
-      {/* Suppliers Table */}
-      <h2 className="text-xl font-bold mb-4">Suppliers</h2>
-      <table className="min-w-full border text-sm mb-6">
-        <thead className="bg-gray-100">
-          <tr>
-            <th className="border px-2 py-1">Name</th>
-            <th className="border px-2 py-1">Phone</th>
-            <th className="border px-2 py-1">Email</th>
-            <th className="border px-2 py-1">Address</th>
-            <th className="border px-2 py-1">Notes</th>
-            <th className="border px-2 py-1">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {suppliers.map((s) => (
-            <tr key={s.id}>
-              <td className="border px-2 py-1">{s.name}</td>
-              <td className="border px-2 py-1">{s.phone}</td>
-              <td className="border px-2 py-1">{s.email}</td>
-              <td className="border px-2 py-1">{s.address}</td>
-              <td className="border px-2 py-1">{s.notes}</td>
-              <td className="border px-2 py-1 space-x-2">
-                <button
-                  className="text-blue-600 underline"
-                  onClick={() => handleEditSupplier(s)}
-                >
-                  Edit
-                </button>
-                <button
-                  className="text-red-600 underline"
-                  onClick={() => handleDeleteSupplier(s.id)}
-                >
-                  Delete
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {/* Suppliers */}
+      <div>
+        <h2 className="text-xl font-bold mb-2">Suppliers</h2>
+        <DataGrid rows={suppliers} columns={supplierCols} autoHeight />
+      </div>
 
-      {/* Invoices Table */}
-      <h2 className="text-xl font-bold mb-4">Purchase Invoices</h2>
-      <table className="min-w-full border text-sm">
-        <thead className="bg-gray-100">
-          <tr>
-            <th className="border px-2 py-1">Invoice No</th>
-            <th className="border px-2 py-1">Supplier</th>
-            <th className="border px-2 py-1">Date</th>
-            <th className="border px-2 py-1">Total</th>
-            <th className="border px-2 py-1">Attachment</th>
-            <th className="border px-2 py-1">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {suppliers.flatMap((s) =>
-            s.invoices.map((inv) => (
-              <tr key={inv.id}>
-                <td className="border px-2 py-1">{inv.invoice_no}</td>
-                <td className="border px-2 py-1">{s.name}</td>
-                <td className="border px-2 py-1">{inv.date}</td>
-                <td className="border px-2 py-1">{inv.total}</td>
-                <td className="border px-2 py-1">
-                  {inv.attachment ? (
-                    <a
-                      href={inv.attachment}
-                      target="_blank"
-                      className="text-blue-600 underline"
-                    >
-                      View
-                    </a>
-                  ) : (
-                    "—"
-                  )}
-                </td>
-                <td className="border px-2 py-1 space-x-2">
-                  <button
-                    className="text-blue-600 underline"
-                    onClick={() => handleEditInvoice(inv)}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    className="text-red-600 underline"
-                    onClick={() => handleDeleteInvoice(inv.id)}
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+      {/* Invoices */}
+      <div>
+        <h2 className="text-xl font-bold mb-2">Purchase Invoices</h2>
+        <DataGrid rows={invoices} columns={invoiceCols} autoHeight />
+        <div className="text-right font-bold mt-4">
+          🧾 Total for all invoices: {totalSum.toFixed(2)} EGP
+        </div>
+      </div>
 
-      {/* Modal */}
+      {/* ✅ Modal */}
       {showModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white p-6 rounded shadow-lg w-96">
-            <h2 className="text-lg font-bold mb-4">
-              {editingSupplierId
-                ? "Edit Supplier"
-                : editingInvoiceId
-                ? "Edit Invoice"
-                : `Add ${formType === "supplier" ? "Supplier" : "Invoice"}`}
-            </h2>
-
-            {/* Switch Form Type */}
-            <div className="mb-4">
-              <button
-                className={`px-3 py-1 mr-2 rounded ${
-                  formType === "supplier"
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-200"
-                }`}
-                onClick={() => {
-                  setFormType("supplier");
-                  setEditingInvoiceId(null);
-                  setEditingSupplierId(null);
-                  setNewSupplier({ name: "", phone: "", email: "", address: "", notes: "" });
-                }}
-              >
-                Supplier
-              </button>
-              <button
-                className={`px-3 py-1 rounded ${
-                  formType === "invoice"
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-200"
-                }`}
-                onClick={() => {
-                  setFormType("invoice");
-                  setEditingInvoiceId(null);
-                  setEditingSupplierId(null);
-                  setNewInvoice({ supplier_id: "", invoice_no: "", date: "", total: "", attachment: "" });
-                }}
-              >
-                Invoice
-              </button>
-            </div>
-
-            {/* Supplier Form */}
-            {formType === "supplier" && (
-              <div className="space-y-2">
+        <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
+          <div className="bg-white p-6 rounded-lg w-[720px] max-h-[90vh] overflow-y-auto">
+            {formType === "supplier" ? (
+              <>
+                <h2 className="text-lg font-bold mb-4">
+                  {editingSupplierId ? "Edit Supplier" : "Add Supplier"}
+                </h2>
                 <input
-                  className="border p-2 w-full"
+                  className="border p-2 w-full mb-2"
                   placeholder="Name"
                   value={newSupplier.name}
                   onChange={(e) =>
@@ -323,7 +394,7 @@ export default function SuppliersPage() {
                   }
                 />
                 <input
-                  className="border p-2 w-full"
+                  className="border p-2 w-full mb-2"
                   placeholder="Phone"
                   value={newSupplier.phone}
                   onChange={(e) =>
@@ -331,49 +402,44 @@ export default function SuppliersPage() {
                   }
                 />
                 <input
-                  className="border p-2 w-full"
+                  className="border p-2 w-full mb-2"
                   placeholder="Email"
                   value={newSupplier.email}
                   onChange={(e) =>
                     setNewSupplier({ ...newSupplier, email: e.target.value })
                   }
                 />
-                <input
-                  className="border p-2 w-full"
-                  placeholder="Address"
-                  value={newSupplier.address}
-                  onChange={(e) =>
-                    setNewSupplier({ ...newSupplier, address: e.target.value })
-                  }
-                />
                 <textarea
-                  className="border p-2 w-full"
+                  className="border p-2 w-full mb-2"
                   placeholder="Notes"
-                  value={newSupplier.notes}
+                  value={newSupplier.notes || ""}
                   onChange={(e) =>
                     setNewSupplier({ ...newSupplier, notes: e.target.value })
                   }
                 />
                 <button
-                  onClick={handleAddSupplier}
                   className="bg-blue-600 text-white px-4 py-2 rounded w-full"
+                  onClick={handleAddSupplier}
                 >
-                  {editingSupplierId ? "Update Supplier" : "Save Supplier"}
+                  Save
                 </button>
-              </div>
-            )}
-
-            {/* Invoice Form */}
-            {formType === "invoice" && (
-              <div className="space-y-2">
+              </>
+            ) : (
+              <>
+                <h2 className="text-lg font-bold mb-4">
+                  {editingInvoiceId ? "Edit Invoice" : "Add Invoice"}
+                </h2>
                 <select
-                  className="border p-2 w-full"
+                  className="border p-2 w-full mb-2"
                   value={newInvoice.supplier_id}
                   onChange={(e) =>
-                    setNewInvoice({ ...newInvoice, supplier_id: e.target.value })
+                    setNewInvoice({
+                      ...newInvoice,
+                      supplier_id: Number(e.target.value),
+                    })
                   }
                 >
-                  <option value="">Select Supplier</option>
+                  <option value={0}>Select Supplier</option>
                   {suppliers.map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.name}
@@ -381,7 +447,7 @@ export default function SuppliersPage() {
                   ))}
                 </select>
                 <input
-                  className="border p-2 w-full"
+                  className="border p-2 w-full mb-2"
                   placeholder="Invoice No"
                   value={newInvoice.invoice_no}
                   onChange={(e) =>
@@ -393,49 +459,126 @@ export default function SuppliersPage() {
                 />
                 <input
                   type="date"
-                  className="border p-2 w-full"
+                  className="border p-2 w-full mb-2"
                   value={newInvoice.date}
                   onChange={(e) =>
                     setNewInvoice({ ...newInvoice, date: e.target.value })
                   }
                 />
                 <input
-                  className="border p-2 w-full"
-                  placeholder="Total"
-                  value={newInvoice.total}
-                  onChange={(e) =>
-                    setNewInvoice({ ...newInvoice, total: e.target.value })
-                  }
+                  type="file"
+                  multiple
+                  onChange={(e) => handleUploadFiles(e.target.files)}
+                  className="border p-2 w-full mb-2"
                 />
                 <input
-                  className="border p-2 w-full"
-                  placeholder="Attachment URL"
-                  value={newInvoice.attachment}
+                  className="border p-2 w-full mb-2"
+                  placeholder="Add image URL manually"
+                  onBlur={(e) => {
+                    if (e.target.value)
+                      setNewInvoice((prev) => ({
+                        ...prev,
+                        attachments: [
+                          ...(prev.attachments || []),
+                          e.target.value,
+                        ],
+                      }));
+                  }}
+                />
+                {newInvoice.attachments?.length ? (
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {newInvoice.attachments.map((url, i) => (
+                      <img
+                        key={i}
+                        src={url}
+                        className="w-20 h-20 border object-cover"
+                        alt=""
+                      />
+                    ))}
+                  </div>
+                ) : null}
+                <textarea
+                  className="border p-2 w-full mb-2"
+                  placeholder="Notes (optional)"
+                  value={newInvoice.note || ""}
                   onChange={(e) =>
-                    setNewInvoice({
-                      ...newInvoice,
-                      attachment: e.target.value,
-                    })
+                    setNewInvoice({ ...newInvoice, note: e.target.value })
                   }
                 />
+                <div>
+                  <h3 className="font-semibold mb-2">Invoice Items</h3>
+                  {invoiceItems.map((it, i) => (
+                    <div key={i} className="flex gap-2 mb-2">
+                      <select
+                        className="border p-2 flex-1"
+                        value={it.material_id}
+                        onChange={(e) =>
+                          updateItem(i, {
+                            material_id: Number(e.target.value),
+                          })
+                        }
+                      >
+                        <option value={0}>Select Material</option>
+                        {materials.map((m) => (
+                          <option key={m.id} value={m.id}>
+                            {m.name}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        type="number"
+                        className="border p-2 w-24"
+                        placeholder="Qty"
+                        value={it.quantity}
+                        onChange={(e) =>
+                          updateItem(i, { quantity: Number(e.target.value) })
+                        }
+                      />
+                      <input
+                        type="number"
+                        className="border p-2 w-32"
+                        placeholder="Total Price"
+                        value={it.price}
+                        onChange={(e) =>
+                          updateItem(i, { price: Number(e.target.value) })
+                        }
+                      />
+                      <button
+                        className="text-red-600"
+                        onClick={() =>
+                          setInvoiceItems((cur) =>
+                            cur.filter((_, idx) => idx !== i)
+                          )
+                        }
+                      >
+                        ❌
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    className="bg-gray-200 px-3 py-1 rounded"
+                    onClick={addNewItem}
+                  >
+                    + Add Item
+                  </button>
+                </div>
+                <div className="mt-4 font-bold text-right">
+                  Total: {calcTotal().toFixed(2)} EGP
+                </div>
                 <button
+                  className="bg-green-600 text-white px-4 py-2 rounded w-full mt-3"
                   onClick={handleAddInvoice}
-                  className="bg-blue-600 text-white px-4 py-2 rounded w-full"
                 >
-                  {editingInvoiceId ? "Update Invoice" : "Save Invoice"}
+                  Save Invoice
                 </button>
-              </div>
+              </>
             )}
-
             <button
-              onClick={() => {
-                setShowModal(false);
-                setEditingSupplierId(null);
-                setEditingInvoiceId(null);
-              }}
-              className="mt-4 text-red-600 w-full"
+              className="underline mt-4 text-gray-600 w-full"
+              onClick={() => setShowModal(false)}
             >
-              Cancel
+             
+              Close
             </button>
           </div>
         </div>

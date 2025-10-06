@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
-import { Plus, Edit, Trash2, Upload, Download, ExternalLink } from "lucide-react";
+import { Plus, Edit, Trash2, Upload, Download, Layers } from "lucide-react";
 import * as XLSX from "xlsx";
 import type { Material, Unit, Supplier, Product, MaterialFormData } from "./types";
 
@@ -26,14 +26,17 @@ export default function MaterialsTable({
     price_per_gram: "",
     stock_grams: "",
     supplier_id: "",
+    unit_id: "",
     low_stock_threshold: "",
     material_type: "normal",
     products: [],
-    unit_id: "", // ✅ Added unit field
   });
 
   const router = useRouter();
 
+  /** ───────────────────────────────
+   * 🟢 Modal Open (Add / Edit)
+   * ─────────────────────────────── */
   const openAddModal = () => {
     setEditingMaterial(null);
     setFormData({
@@ -41,10 +44,10 @@ export default function MaterialsTable({
       price_per_gram: "",
       stock_grams: "",
       supplier_id: "",
+      unit_id: "",
       low_stock_threshold: "",
       material_type: "normal",
       products: [],
-      unit_id: "",
     });
     setShowModal(true);
   };
@@ -56,14 +59,18 @@ export default function MaterialsTable({
       price_per_gram: String(material.price_per_gram),
       stock_grams: String(material.stock_grams),
       supplier_id: material.supplier_id?.toString() || "",
-      low_stock_threshold: material.low_stock_threshold?.toString() || "",
-      material_type: (material.material_type as MaterialFormData["material_type"]) || "normal",
-      products: material.products?.map((p) => p.product.id) || [],
       unit_id: material.unit_id?.toString() || "",
+      low_stock_threshold: material.low_stock_threshold?.toString() || "",
+      material_type:
+        (material.material_type as MaterialFormData["material_type"]) || "normal",
+      products: material.products?.map((p: any) => p.product?.id || p.id) || [],
     });
     setShowModal(true);
   };
 
+  /** ───────────────────────────────
+   * 💾 Save Material
+   * ─────────────────────────────── */
   const handleSave = async () => {
     try {
       const materialData = {
@@ -71,10 +78,12 @@ export default function MaterialsTable({
         price_per_gram: Number(formData.price_per_gram || 0),
         stock_grams: Number(formData.stock_grams || 0),
         supplier_id: formData.supplier_id ? Number(formData.supplier_id) : null,
-        low_stock_threshold: formData.low_stock_threshold ? Number(formData.low_stock_threshold) : null,
+        unit_id: formData.unit_id ? Number(formData.unit_id) : null,
+        low_stock_threshold: formData.low_stock_threshold
+          ? Number(formData.low_stock_threshold)
+          : null,
         material_type: formData.material_type,
         products: formData.products,
-        unit_id: formData.unit_id ? Number(formData.unit_id) : null,
       };
 
       let res: Response;
@@ -106,6 +115,9 @@ export default function MaterialsTable({
     }
   };
 
+  /** ───────────────────────────────
+   * ❌ Delete
+   * ─────────────────────────────── */
   const handleDelete = async (id: number) => {
     if (!confirm("Are you sure you want to delete this material?")) return;
     try {
@@ -126,16 +138,18 @@ export default function MaterialsTable({
     }
   };
 
-  // Export
+  /** ───────────────────────────────
+   * 📤 Export
+   * ─────────────────────────────── */
   const handleExport = () => {
     const exportData = materials.map((m) => ({
       name: m.name,
       price_per_gram: m.price_per_gram,
       stock_grams: m.stock_grams,
       supplier_id: m.supplier_id,
+      unit_id: m.unit_id,
       low_stock_threshold: m.low_stock_threshold,
       material_type: m.material_type || "normal",
-      unit_id: m.unit_id || "",
       products: m.products?.map((p) => p.product.id).join(",") || "",
     }));
     const ws = XLSX.utils.json_to_sheet(exportData);
@@ -144,7 +158,9 @@ export default function MaterialsTable({
     XLSX.writeFile(wb, "materials.xlsx");
   };
 
-  // Import
+  /** ───────────────────────────────
+   * 📥 Import
+   * ─────────────────────────────── */
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -160,10 +176,16 @@ export default function MaterialsTable({
         price_per_gram: Number(r.price_per_gram || 0),
         stock_grams: Number(r.stock_grams || 0),
         supplier_id: r.supplier_id ? Number(r.supplier_id) : null,
-        low_stock_threshold: r.low_stock_threshold ? Number(r.low_stock_threshold) : null,
-        material_type: (r.material_type as MaterialFormData["material_type"]) || "normal",
         unit_id: r.unit_id ? Number(r.unit_id) : null,
-        products: r.products ? String(r.products).split(",").map((id) => Number(id)) : [],
+        low_stock_threshold: r.low_stock_threshold
+          ? Number(r.low_stock_threshold)
+          : null,
+        material_type: (r.material_type as MaterialFormData["material_type"]) || "normal",
+        products: r.products
+          ? String(r.products)
+              .split(",")
+              .map((id) => Number(id))
+          : [],
       }));
 
       const res = await fetch("/api/admin/materials", {
@@ -186,14 +208,11 @@ export default function MaterialsTable({
     }
   };
 
+  /** ───────────────────────────────
+   * 📊 Table Columns
+   * ─────────────────────────────── */
   const columns: GridColDef[] = [
     { field: "name", headerName: "Name", flex: 1 },
-    {
-      field: "supplier",
-      headerName: "Supplier",
-      flex: 1,
-      renderCell: (params) => params.row.supplier?.name || "-",
-    },
     {
       field: "unit",
       headerName: "Unit",
@@ -201,11 +220,17 @@ export default function MaterialsTable({
       renderCell: (params) => params.row.unit?.name || "-",
     },
     {
+      field: "supplier",
+      headerName: "Supplier",
+      flex: 1,
+      renderCell: (params) => params.row.supplier?.name || "-",
+    },
+    {
       field: "products",
       headerName: "Products",
-      flex: 1,
+      flex: 1.5,
       renderCell: (params) =>
-        params.row.products?.map((p: any) => p.product.name_english).join(", ") || "-",
+        params.row.products?.map((p: any) => p.product?.name_english || p.product?.name_arabic).join(", ") || "-",
     },
     { field: "price_per_gram", headerName: "Price/g", flex: 1 },
     { field: "stock_grams", headerName: "Stock", flex: 1 },
@@ -220,10 +245,16 @@ export default function MaterialsTable({
       flex: 1,
       renderCell: (params) => (
         <div className="space-x-2">
-          <button onClick={() => openEditModal(params.row as Material)} className="text-blue-600 hover:text-blue-800">
+          <button
+            onClick={() => openEditModal(params.row as Material)}
+            className="text-blue-600 hover:text-blue-800"
+          >
             <Edit className="h-4 w-4 inline" />
           </button>
-          <button onClick={() => handleDelete((params.row as Material).id)} className="text-red-600 hover:text-red-800">
+          <button
+            onClick={() => handleDelete((params.row as Material).id)}
+            className="text-red-600 hover:text-red-800"
+          >
             <Trash2 className="h-4 w-4 inline" />
           </button>
         </div>
@@ -231,84 +262,123 @@ export default function MaterialsTable({
     },
   ];
 
-  const totalInventoryValue = useMemo(() => {
-    return materials.reduce((sum, m) => sum + (m.price_per_gram || 0) * (m.stock_grams || 0), 0);
-  }, [materials]);
+  /** ───────────────────────────────
+   * 📈 Totals
+   * ─────────────────────────────── */
+  const totalInventoryValue = useMemo(
+    () =>
+      materials.reduce(
+        (sum, m) => sum + (m.price_per_gram || 0) * (m.stock_grams || 0),
+        0
+      ),
+    [materials]
+  );
 
-  const totalStock = useMemo(() => {
-    return materials.reduce((sum, m) => sum + (m.stock_grams || 0), 0);
-  }, [materials]);
+  const totalStock = useMemo(
+    () => materials.reduce((sum, m) => sum + (m.stock_grams || 0), 0),
+    [materials]
+  );
 
+  /** ───────────────────────────────
+   * 🖥️ Render
+   * ─────────────────────────────── */
   return (
     <div style={{ height: 700, width: "100%" }}>
-      <div className="flex gap-2 mb-4">
-        <button onClick={openAddModal} className="px-3 py-2 bg-primary-600 text-white rounded flex items-center gap-1">
+      <div className="flex flex-wrap gap-2 mb-4">
+        <button
+          onClick={openAddModal}
+          className="px-3 py-2 bg-amber-700 text-white rounded flex items-center gap-1"
+        >
           <Plus className="h-4 w-4" /> Add Material
         </button>
-        <button onClick={handleExport} className="px-3 py-2 bg-green-600 text-white rounded flex items-center gap-1">
+
+        <button
+          onClick={() => router.push("/admin/materials/units")}
+          className="px-3 py-2 bg-gray-600 text-white rounded flex items-center gap-1"
+        >
+          <Layers className="h-4 w-4" /> Manage Units
+        </button>
+
+        <button
+          onClick={handleExport}
+          className="px-3 py-2 bg-green-600 text-white rounded flex items-center gap-1"
+        >
           <Download className="h-4 w-4" /> Export
         </button>
+
         <label className="px-3 py-2 bg-blue-600 text-white rounded cursor-pointer flex items-center gap-1">
           <Upload className="h-4 w-4" /> Import
           <input type="file" accept=".xlsx" hidden onChange={handleImport} />
         </label>
-
-        {/* ✅ Shortcut to Units Page */}
-        <button
-          onClick={() => router.push("/admin/units")}
-          className="px-3 py-2 bg-amber-600 text-white rounded flex items-center gap-1"
-        >
-          <ExternalLink className="h-4 w-4" /> Manage Units
-        </button>
       </div>
 
-      <DataGrid rows={materials} columns={columns} getRowId={(row) => row.id} disableRowSelectionOnClick />
+      <DataGrid
+        rows={materials}
+        columns={columns}
+        getRowId={(row) => row.id}
+        disableRowSelectionOnClick
+      />
 
       <div className="mt-4 p-3 bg-gray-100 rounded">
         <p className="font-semibold">
-          Total Stock (grams): <span className="text-blue-600">{totalStock}</span>
+          Total Stock (grams):{" "}
+          <span className="text-blue-600">{totalStock}</span>
         </p>
         <p className="font-semibold">
-          Total Inventory Value: <span className="text-green-600">{totalInventoryValue.toFixed(2)}</span>
+          Total Inventory Value:{" "}
+          <span className="text-green-600">{totalInventoryValue.toFixed(2)}</span>
         </p>
       </div>
 
-      {/* ✅ Modal for Add/Edit */}
+      {/* 🟡 Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center">
-          <div className="bg-white p-6 rounded shadow-lg w-[400px]">
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
+          <div className="bg-white p-6 rounded shadow-lg w-[500px] max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-semibold mb-4">
               {editingMaterial ? "Edit Material" : "Add Material"}
             </h3>
 
             <div className="space-y-3">
+              {/* Name */}
               <input
                 type="text"
-                placeholder="Name"
+                placeholder="Material Name"
                 className="border w-full p-2 rounded"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
               />
 
-              {/* Supplier */}
-              <select
+              {/* Price */}
+              <input
+                type="number"
+                placeholder="Price per gram"
                 className="border w-full p-2 rounded"
-                value={formData.supplier_id}
-                onChange={(e) => setFormData({ ...formData, supplier_id: e.target.value })}
-              >
-                <option value="">Select Supplier</option>
-                {suppliers.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
+                value={formData.price_per_gram}
+                onChange={(e) =>
+                  setFormData({ ...formData, price_per_gram: e.target.value })
+                }
+              />
+
+              {/* Stock */}
+              <input
+                type="number"
+                placeholder="Stock in grams"
+                className="border w-full p-2 rounded"
+                value={formData.stock_grams}
+                onChange={(e) =>
+                  setFormData({ ...formData, stock_grams: e.target.value })
+                }
+              />
 
               {/* Unit */}
               <select
                 className="border w-full p-2 rounded"
                 value={formData.unit_id}
-                onChange={(e) => setFormData({ ...formData, unit_id: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, unit_id: e.target.value })
+                }
               >
                 <option value="">Select Unit</option>
                 {units.map((u) => (
@@ -318,21 +388,34 @@ export default function MaterialsTable({
                 ))}
               </select>
 
-              {/* Price / Stock */}
-              <input
-                type="number"
-                placeholder="Price per gram"
+              {/* Supplier */}
+              <select
                 className="border w-full p-2 rounded"
-                value={formData.price_per_gram}
-                onChange={(e) => setFormData({ ...formData, price_per_gram: e.target.value })}
-              />
+                value={formData.supplier_id}
+                onChange={(e) =>
+                  setFormData({ ...formData, supplier_id: e.target.value })
+                }
+              >
+                <option value="">Select Supplier</option>
+                {suppliers.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
 
+              {/* Low stock */}
               <input
                 type="number"
-                placeholder="Stock (grams)"
+                placeholder="Low Stock Threshold"
                 className="border w-full p-2 rounded"
-                value={formData.stock_grams}
-                onChange={(e) => setFormData({ ...formData, stock_grams: e.target.value })}
+                value={formData.low_stock_threshold}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    low_stock_threshold: e.target.value,
+                  })
+                }
               />
 
               {/* Material Type */}
@@ -340,40 +423,62 @@ export default function MaterialsTable({
                 className="border w-full p-2 rounded"
                 value={formData.material_type}
                 onChange={(e) =>
-                  setFormData({ ...formData, material_type: e.target.value as MaterialFormData["material_type"] })
+                  setFormData({
+                    ...formData,
+                    material_type: e.target.value as
+                      | "normal"
+                      | "special"
+                      | "other",
+                  })
                 }
               >
                 <option value="normal">Normal</option>
-                <option value="variant">Variant</option>
-                <option value="perfume">Perfume</option>
+                <option value="special">Special</option>
+                <option value="other">Other</option>
               </select>
 
-              {/* Products Multi-select */}
+              {/* ✅ Products Checkboxes */}
               <div>
-                <label className="block mb-1 font-medium">Products</label>
-                <select
-                  multiple
-                  className="border w-full p-2 rounded h-24"
-                  value={formData.products.map(String)}
-                  onChange={(e) => {
-                    const selected = Array.from(e.target.selectedOptions, (o) => Number(o.value));
-                    setFormData({ ...formData, products: selected });
-                  }}
-                >
-                  {products.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name_english}
-                    </option>
-                  ))}
-                </select>
+                <label className="block text-sm font-medium mb-1">
+                  Select Products
+                </label>
+                <div className="grid grid-cols-2 gap-2 max-h-[150px] overflow-y-auto border p-2 rounded">
+                  {products.map((p) => {
+                    const isChecked = formData.products.includes(Number(p.id));
+                    return (
+                      <label key={p.id} className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => {
+                            const updated = e.target.checked
+                              ? [...formData.products, Number(p.id)]
+                              : formData.products.filter(
+                                  (id) => id !== Number(p.id)
+                                );
+                            setFormData({ ...formData, products: updated });
+                          }}
+                        />
+                        {p.name_english || p.name_arabic || `Product #${p.id}`}
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 mt-4">
-              <button onClick={() => setShowModal(false)} className="px-4 py-2 border rounded">
+            {/* Buttons */}
+            <div className="flex justify-end gap-2 mt-5">
+              <button
+                onClick={() => setShowModal(false)}
+                className="px-4 py-2 border rounded"
+              >
                 Cancel
               </button>
-              <button onClick={handleSave} className="px-4 py-2 bg-primary-600 text-white rounded">
+              <button
+                onClick={handleSave}
+                className="bg-green-600 text-white px-4 py-2 rounded"
+              >
                 Save
               </button>
             </div>
