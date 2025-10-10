@@ -1,33 +1,53 @@
-// app/api/admin/purchase_invoices/[id]/route.ts
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+export async function PUT(req: Request, context: { params: Promise<{ id: string }> }) {
+  const supabase = await createSupabaseServerClient();
+  const { id } = await context.params;
+  const invoiceId = Number(id);
 
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
-  try {
-    const id = Number(params.id);
-    const body = await req.json();
-    const { data, error } = await supabase
-      .from("purchase_invoices")
-      .update(body)
-      .eq("id", id)
-      .select()
-      .single();
+  const body = await req.json();
 
-    if (error) throw error;
-    return NextResponse.json(data);
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 400 });
+  // 1️⃣ حدّث بيانات الفاتورة الأساسية
+  const { items, ...invoiceData } = body;
+  const { error: invErr } = await supabase
+    .from("purchase_invoices")
+    .update(invoiceData)
+    .eq("id", id);
+
+  if (invErr) return Response.json({ error: invErr.message }, { status: 400 });
+
+  // 2️⃣ احذف البنود القديمة
+  await supabase.from("purchase_invoice_items").delete().eq("purchase_invoice_id", id);
+
+  // 3️⃣ أضف البنود الجديدة
+  if (Array.isArray(items) && items.length > 0) {
+    const newItems = items.map((it: any) => ({
+      purchase_invoice_id: id,
+      material_id: it.material_id,
+      quantity: it.quantity,
+      price: it.price,
+    }));
+    const { error: itemErr } = await supabase
+      .from("purchase_invoice_items")
+      .insert(newItems);
+
+    if (itemErr) return Response.json({ error: itemErr.message }, { status: 400 });
   }
+
+  return Response.json({ success: true });
 }
 
-export async function DELETE(_: Request, { params }: { params: { id: string } }) {
+export async function DELETE(_: Request, context: { params: Promise<{ id: string }> }) {
+  const params = await context.params;
   const id = Number(params.id);
-  const { error } = await supabase.from("purchase_invoices").delete().eq("id", id);
+  const supabase = await createSupabaseServerClient();
+
+  const { error } = await supabase
+    .from("purchase_invoices")
+    .delete()
+    .eq("id", id);
+
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   return NextResponse.json({ success: true });
 }

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -68,7 +67,42 @@ export default function SuppliersPage() {
 
   const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>([]);
 
-  // 🟩 Load all data
+  // 🟩 Load all data safely (with mounted check)
+  useEffect(() => {
+    let mounted = true;
+
+    const fetchAllSafe = async () => {
+      try {
+        const [supRes, matRes, invRes] = await Promise.all([
+          fetch("/api/admin/suppliers"),
+          fetch("/api/admin/materials"),
+          fetch("/api/admin/purchase_invoices"),
+        ]);
+
+        const [sData, mData, iData] = await Promise.all([
+          supRes.json(),
+          matRes.json(),
+          invRes.json(),
+        ]);
+
+        if (!mounted) return;
+        setSuppliers(sData || []);
+        setMaterials(mData || []);
+        const uniqueInvoices = Array.isArray(iData)
+          ? iData.filter((v, i, a) => a.findIndex((t) => t.id === v.id) === i)
+          : [];
+        setInvoices(uniqueInvoices);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    fetchAllSafe();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const fetchAll = async () => {
     try {
       const [supRes, matRes, invRes] = await Promise.all([
@@ -91,44 +125,6 @@ export default function SuppliersPage() {
       console.error(err);
     }
   };
-
-useEffect(() => {
-  let mounted = true;
-
-  const fetchAllSafe = async () => {
-    try {
-      const [supRes, matRes, invRes] = await Promise.all([
-        fetch("/api/admin/suppliers"),
-        fetch("/api/admin/materials"),
-        fetch("/api/admin/purchase_invoices"),
-      ]);
-
-      const [sData, mData, iData] = await Promise.all([
-        supRes.json(),
-        matRes.json(),
-        invRes.json(),
-      ]);
-
-      if (!mounted) return; // ⛔ لو الصفحة اتقفلت، ما نحدثش state
-
-      setSuppliers(sData || []);
-      setMaterials(mData || []);
-      const uniqueInvoices = Array.isArray(iData)
-        ? iData.filter((v, i, a) => a.findIndex((t) => t.id === v.id) === i)
-        : [];
-      setInvoices(uniqueInvoices);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  fetchAllSafe();
-
-  return () => {
-    mounted = false; // 🧹 cleanup
-  };
-}, []);
-
 
   // 🟦 SUPPLIERS CRUD
   const handleAddSupplier = async () => {
@@ -196,8 +192,9 @@ useEffect(() => {
       attachments: newInvoice.attachments || [],
       note: newInvoice.note || "",
       extra_expenses: newInvoice.extra_expenses || 0,
-      items: invoiceItems,
+      items: invoiceItems.filter(it => it.material_id && it.material_id !== 0),
     };
+
 
     const method = editingInvoiceId ? "PUT" : "POST";
     const url = editingInvoiceId
@@ -249,7 +246,7 @@ useEffect(() => {
     await fetchAll();
   };
 
-  // 🟧 Upload to Supabase bucket
+  // 🟧 Upload files
   const handleUploadFiles = async (files: FileList | null) => {
     if (!files) return;
     const uploadedUrls: string[] = [];
@@ -266,7 +263,7 @@ useEffect(() => {
     }));
   };
 
-  // 🧾 Tables setup
+  // 🧾 TABLES
   const supplierCols: GridColDef[] = [
     { field: "name", headerName: "Name", flex: 1 },
     { field: "phone", headerName: "Phone", flex: 1 },
@@ -297,6 +294,12 @@ useEffect(() => {
       },
     },
     { field: "date", headerName: "Date", flex: 1 },
+    {
+      field: "extra_expenses",
+      headerName: "Extra Expenses",
+      flex: 1,
+      renderCell: (params) => `${params.row.extra_expenses || 0} EGP`,
+    },
     { field: "total", headerName: "Total (EGP)", flex: 1 },
     { field: "note", headerName: "Note", flex: 1 },
     {
@@ -370,7 +373,12 @@ useEffect(() => {
       {/* Invoices */}
       <div>
         <h2 className="text-xl font-bold mb-2">Purchase Invoices</h2>
-        <DataGrid rows={invoices} columns={invoiceCols} autoHeight />
+        <DataGrid
+          rows={invoices.map((inv) => ({ ...inv, id: inv.id }))}
+          columns={invoiceCols}
+          autoHeight
+          getRowId={(row) => row.id!}
+        />
         <div className="text-right font-bold mt-4">
           🧾 Total for all invoices: {totalSum.toFixed(2)} EGP
         </div>
@@ -505,6 +513,21 @@ useEffect(() => {
                     setNewInvoice({ ...newInvoice, note: e.target.value })
                   }
                 />
+
+                {/* 🟩 Extra Expenses Input */}
+                <input
+                  type="number"
+                  className="border p-2 w-full mb-2"
+                  placeholder="Extra Expenses (EGP)"
+                  value={newInvoice.extra_expenses || 0}
+                  onChange={(e) =>
+                    setNewInvoice({
+                      ...newInvoice,
+                      extra_expenses: Number(e.target.value),
+                    })
+                  }
+                />
+
                 <div>
                   <h3 className="font-semibold mb-2">Invoice Items</h3>
                   {invoiceItems.map((it, i) => (
@@ -577,7 +600,6 @@ useEffect(() => {
               className="underline mt-4 text-gray-600 w-full"
               onClick={() => setShowModal(false)}
             >
-             
               Close
             </button>
           </div>

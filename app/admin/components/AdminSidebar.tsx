@@ -172,15 +172,15 @@ export default function AdminSidebar() {
                         Settings
                       </Link>
                       <Link
-                        href="/admin/materials/costing"
+                        href="/admin/materials/missing-items"
                         className={`flex items-center px-2 py-1 text-sm rounded-md ${
-                          pathname === "/admin/materials/costing"
+                          pathname === "/admin/materials/missing-items"
                             ? "bg-primary-50 text-primary-700"
                             : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                         }`}
                       >
                         <DollarSign className="h-4 w-4 mr-2" />
-                        Costing
+                        Missing-items
                       </Link>
                     </div>
                   )}
