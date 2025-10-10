@@ -14,6 +14,7 @@ export async function GET(req: Request) {
     const { data, error } = await supabase
       .from("products")
       .select("*")
+      .eq("status", "active") // ✅ هنا الإضافة
       .order("created_at", { ascending: false });
 
     if (error) throw error;

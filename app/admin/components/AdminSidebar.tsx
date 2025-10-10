@@ -9,7 +9,6 @@ import {
   Package,
   ShoppingCart,
   BarChart3,
-  Settings,
   FileText,
   ChevronDown,
   Users2,
@@ -34,7 +33,6 @@ const navigation = [
   { name: "People", href: "/admin/people", icon: Users2 }, // dropdown
   { name: "Finance", href: "/admin/finance", icon: DollarSign }, // ✅ dropdown جديد
   { name: "Reports", href: "/admin/reports", icon: FileText },
-  { name: "Settings", href: "/admin/settings", icon: Settings },
 ];
 
 export default function AdminSidebar() {
@@ -160,17 +158,7 @@ export default function AdminSidebar() {
                         <Truck className="h-4 w-4 mr-2" />
                         Suppliers
                       </Link>
-                      <Link
-                        href="/admin/materials/settings"
-                        className={`flex items-center px-2 py-1 text-sm rounded-md ${
-                          pathname === "/admin/materials/settings"
-                            ? "bg-primary-50 text-primary-700"
-                            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                        }`}
-                      >
-                        <Settings className="h-4 w-4 mr-2" />
-                        Settings
-                      </Link>
+                      
                       <Link
                         href="/admin/materials/missing-items"
                         className={`flex items-center px-2 py-1 text-sm rounded-md ${
