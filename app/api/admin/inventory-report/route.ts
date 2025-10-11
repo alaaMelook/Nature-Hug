@@ -5,10 +5,10 @@ export async function GET(req: Request) {
   const supabase = await createSupabaseServerClient();
 
   const { searchParams } = new URL(req.url);
-  const from = searchParams.get("from"); // ex: 2025-01-01
-  const to = searchParams.get("to");     // ex: 2025-09-01
+  const from = searchParams.get("from");
+  const to = searchParams.get("to");
 
-  // 🟢 المواد
+  // 🟢 المواد الخام
   const { data: materials } = await supabase
     .from("materials")
     .select("id, name, stock_grams, price_per_gram, low_stock_threshold");
@@ -18,30 +18,51 @@ export async function GET(req: Request) {
     .from("products")
     .select("id, name_english, stock, price");
 
-  // 🟢 الحركات (مع الفلترة بالوقت لو موجودة)
-  let query = supabase.from("movements").select("type, material_id, product_id, quantity, date");
+  // 🟢 الحركات
+  let query = supabase
+    .from("movements")
+    .select("type, material_id, product_id, quantity, date");
 
   if (from) query = query.gte("date", from);
   if (to) query = query.lte("date", to);
 
   const { data: movements } = await query;
 
-  // 🟢 إجمالي قيمة الخامات
+  // 🔥 حساب الاستهلاك (لكل مادة)
+  const consumption: Record<number, number> = {};
+  movements
+    ?.filter((m) => m.type === "out" && m.material_id)
+    .forEach((m) => {
+      consumption[m.material_id!] =
+        (consumption[m.material_id!] || 0) + m.quantity;
+    });
+
+  // 🧱 قائمة المواد الخام + الاستهلاك
+  const materialStocks =
+    materials?.map((m) => ({
+      id: m.id,
+      name: m.name,
+      stock_grams: m.stock_grams ?? 0,
+      price_per_gram: m.price_per_gram ?? 0,
+      totalValue: (m.stock_grams ?? 0) * (m.price_per_gram ?? 0),
+      consumed: consumption[m.id] || 0,
+      low_stock_threshold: m.low_stock_threshold ?? 0,
+    })) ?? [];
+
+  // 🧮 إجمالي قيمة المواد الخام
   const totalMaterialsValue =
-    materials?.reduce(
-      (sum, m) => sum + m.stock_grams * m.price_per_gram,
-      0
-    ) ?? 0;
+    materialStocks.reduce((sum, m) => sum + m.totalValue, 0);
 
-  // 🟢 المواد الـ Low
+  // 🔴 المواد الخام القليلة
   const lowMaterials =
-    materials?.filter((m) => m.stock_grams <= m.low_stock_threshold).length ?? 0;
+    materials?.filter((m) => m.stock_grams <= (m.low_stock_threshold ?? 0))
+      .length ?? 0;
 
-  // 🟢 المنتجات الـ Low
+  // 🟡 المنتجات القليلة
   const lowProducts =
     products?.filter((p) => (p.stock ?? 0) <= 5).length ?? 0;
 
-  // 🟢 قيمة كل منتج
+  // 🧾 المنتجات
   const productStocks =
     products?.map((p) => ({
       id: p.id,
@@ -54,26 +75,7 @@ export async function GET(req: Request) {
   const totalProductsValue =
     productStocks.reduce((sum, p) => sum + p.totalValue, 0);
 
-  // 🟢 الأكثر استهلاكًا
-  const consumption: Record<number, number> = {};
-  movements
-    ?.filter((m) => m.type === "out" && m.material_id)
-    .forEach((m) => {
-      consumption[m.material_id!] =
-        (consumption[m.material_id!] || 0) + m.quantity;
-    });
-
-  const topConsumed =
-    materials
-      ?.map((m) => ({
-        id: m.id,
-        name: m.name,
-        totalConsumed: consumption[m.id] || 0,
-      }))
-      .sort((a, b) => b.totalConsumed - a.totalConsumed)
-      .slice(0, 5) ?? [];
-
-  // 🟢 الأكثر إنتاجًا
+  // 🏭 الأكثر إنتاجًا
   const production: Record<number, number> = {};
   movements
     ?.filter((m) => m.type === "in" && m.product_id)
@@ -92,14 +94,15 @@ export async function GET(req: Request) {
       .sort((a, b) => b.totalProduced - a.totalProduced)
       .slice(0, 5) ?? [];
 
+  // ✅ النتيجة النهائية
   return NextResponse.json({
     totalMaterialsValue,
     lowMaterials,
     lowProducts,
     totalProductsValue,
-    topConsumed,
-    topProduced,
+    materialStocks, // ← فيها كمان consumed
     productStocks,
+    topProduced,
     from: from || "beginning",
     to: to || "now",
   });
