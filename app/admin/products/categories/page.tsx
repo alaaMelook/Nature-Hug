@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Plus, Trash2 } from "lucide-react";
 
 type Category = {
@@ -11,6 +11,7 @@ type Category = {
 };
 
 export default function CategoriesPage() {
+  const supabase = createSupabaseBrowserClient()
   const [categories, setCategories] = useState<Category[]>([]);
   const [nameEnglish, setNameEnglish] = useState("");
   const [nameArabic, setNameArabic] = useState("");

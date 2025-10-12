@@ -1,8 +1,9 @@
 import ProductDetail from "@/app/server-pages/ProductDetail";
-import { supabase } from "@/lib/supabaseClient";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import Link from "next/link";
 
 async function getProduct(id: string) {
+  const supabase = createSupabaseBrowserClient();
   const { data, error } = await supabase
     .from("products")
     .select("*")

@@ -2,6 +2,7 @@
 
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import { FcGoogle } from 'react-icons/fc';
 import { useEffect, useState } from "react";
 
 export default function LoginPage() {
@@ -10,6 +11,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
@@ -20,7 +22,7 @@ export default function LoginPage() {
         const {
           data: { session },
         } = await supabase.auth.getSession();
-        
+
         if (session) {
           router.push("/profile");
           return;
@@ -31,7 +33,7 @@ export default function LoginPage() {
         setIsCheckingAuth(false);
       }
     };
-    
+
     checkUser();
   }, [router, supabase]);
 
@@ -53,7 +55,7 @@ export default function LoginPage() {
 
       // Wait a moment for the session to be established
       await new Promise(resolve => setTimeout(resolve, 100));
-      
+
       // Check if login was successful
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
@@ -69,7 +71,7 @@ export default function LoginPage() {
   };
 
   const handleGoogleLogin = async () => {
-    setLoading(true);
+    setGoogleLoading(true);
     setErrorMsg("");
 
     try {
@@ -82,12 +84,12 @@ export default function LoginPage() {
 
       if (error) {
         setErrorMsg(error.message);
-        setLoading(false);
+        setGoogleLoading(false);
       }
       // Don't set loading to false here as we're redirecting
     } catch (error: any) {
       setErrorMsg(error.message || "An unexpected error occurred");
-      setLoading(false);
+      setGoogleLoading(false);
     }
   };
 
@@ -116,7 +118,7 @@ export default function LoginPage() {
           onChange={(e) => setEmail(e.target.value)}
           className="border p-2 rounded"
           required
-          disabled={loading}
+          disabled={loading || googleLoading}
         />
         <input
           type="password"
@@ -129,10 +131,18 @@ export default function LoginPage() {
         />
         <button
           type="submit"
-          disabled={loading}
-          className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition disabled:opacity-50"
+          disabled={loading || googleLoading}
+          className="px-6 py-3 bg-primary-900 text-white rounded-md cursor-pointer"
         >
           {loading ? "Logging in..." : "Login"}
+        </button>
+        <button
+          type="button"
+          onClick={() => { router.push('/signup') }}
+          disabled={loading || googleLoading}
+          className="px-6 py-3 bg-primary-200 text-primary-900 rounded-md cursor-pointer"
+        >
+          {loading ? "Logging in..." : "Sign Up"}
         </button>
       </form>
 
@@ -144,10 +154,11 @@ export default function LoginPage() {
 
       <button
         onClick={handleGoogleLogin}
-        disabled={loading}
-        className="px-6 py-3 bg-red-500 text-white rounded-md hover:bg-red-600 transition w-72 disabled:opacity-50"
+        disabled={loading || googleLoading}
+        className="cursor-pointer flex items-center justify-center w-fit gap-3 px-15 py-3 border border-gray-200 rounded-md bg-white shadow-sm hover:bg-gray-50 transition disabled:opacity-60 disabled:cursor-not-allowed"
       >
-        {loading ? "Signing in..." : "Continue with Google"}
+        <FcGoogle className="text-xl" />
+        {googleLoading ? "Signing in..." : "Continue with Google"}
       </button>
 
       {errorMsg && (

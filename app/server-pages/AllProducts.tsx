@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import ProductView from "../components/ProductsView";
 
 
@@ -11,6 +11,7 @@ export default function ProductsPage({
     initialProducts: Product[];
 }>) {
 
+    const supabase = createSupabaseBrowserClient();
     const [products, setProducts] = useState<Product[]>([]);
 
     const [loading, setLoading] = useState(true);

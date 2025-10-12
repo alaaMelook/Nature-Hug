@@ -2,10 +2,13 @@
 import { useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import { FcGoogle } from "react-icons/fc";
 
 export default function SignupPage() {
   const supabase = createSupabaseBrowserClient();
   const router = useRouter();
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
   const [form, setForm] = useState({
     email: "",
     password: "",
@@ -39,18 +42,29 @@ export default function SignupPage() {
     }
   };
 
-  const handleGoogleSignup = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${
-          process.env.NEXT_PUBLIC_VERCEL_URL || "http://localhost:3000"
-        }/auth/callback`,
-      },
-    });
+  const handleGoogleLogin = async () => {
+    setGoogleLoading(true);
+    setErrorMsg("");
 
-    if (error) setMessage(error.message);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/callback`,
+        },
+      });
+
+      if (error) {
+        setErrorMsg(error.message);
+        setGoogleLoading(false);
+      }
+      // Don't set loading to false here as we're redirecting
+    } catch (error: any) {
+      setErrorMsg(error.message || "An unexpected error occurred");
+      setGoogleLoading(false);
+    }
   };
+
 
   return (
     <div className="max-w-md mx-auto mt-20 p-6 bg-white shadow rounded">
@@ -96,18 +110,26 @@ export default function SignupPage() {
         </button>
       </form>
 
-      <div className="flex items-center w-full mt-4">
+      <div className="flex items-center w-full mt-4 mb-4">
         <div className="flex-1 h-px bg-gray-300"></div>
         <span className="px-2 text-gray-500">OR</span>
-        <div className="flex-1 h-px bg-gray-300"></div>
+        <div className="flex-1 h-px  bg-gray-300"></div>
       </div>
 
       <button
-        onClick={handleGoogleSignup}
-        className="w-full mt-4 bg-red-500 text-white py-2 rounded"
+        onClick={handleGoogleLogin}
+        disabled={googleLoading}
+        className="cursor-pointer flex items-center justify-center w-full border border-gray-200 gap-3 px-15 py-3 rounded-md bg-white shadow-sm hover:bg-gray-50 transition disabled:opacity-60 disabled:cursor-not-allowed"
       >
-        Continue with Google
+        <FcGoogle className="text-xl" />
+        {googleLoading ? "Signing in..." : "Continue with Google"}
       </button>
+
+      {errorMsg && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded w-72">
+          {errorMsg}
+        </div>
+      )}
 
       {message && <p className="mt-4 text-red-500">{message}</p>}
     </div>

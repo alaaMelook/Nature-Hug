@@ -1,7 +1,8 @@
 "use client";
 import React, { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
+const supabase = createSupabaseBrowserClient();
 type Order = {
   id: number;
   created_at: string;
@@ -354,7 +355,7 @@ export default function AllOrdersPage() {
     const csvContent = [headers, ...mapped]
       .map((row) =>
         row
-          .map((cell) => {
+          .map((cell: any) => {
             const s = String(cell ?? "");
             if (s.includes(",") || s.includes('"') || s.includes("\n")) {
               return `"${s.replace(/"/g, '""')}"`;

@@ -14,9 +14,12 @@ import {
   TrendingUp,
   DollarSign,
 } from "lucide-react";
-import { supabase } from "@/lib/supabaseClient";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useTranslation } from "@/app/components/TranslationProvider";
 import CollapsibleText from "@/app/components/CollapsibleText";
+
+
+const supabase = createSupabaseBrowserClient();
 
 type Category = {
   id: number;

@@ -66,7 +66,7 @@ const Navbar = () => {
 
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (_event: any, session: any) => {
         await handleAuthStateChange(session);
       }
     );
@@ -78,6 +78,7 @@ const Navbar = () => {
 
   const handleLogout = useCallback(async () => {
     try {
+      router.push('/');
       await supabase.auth.signOut();
       clearAdminCache();
     } catch (error) {

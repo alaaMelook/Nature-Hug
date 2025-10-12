@@ -6,17 +6,20 @@ import FontWrapper from "./components/FontWrapper";
 import "./globals.css";
 import Script from "next/script";
 import { Toaster } from "sonner";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   title: "Hug Nature",
   description: "Natural Skincare Store",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const supabase = await createSupabaseServerClient();
+  const { data: { session } } = await supabase.auth.getSession();
   return (
     <html lang="en">
       <head>

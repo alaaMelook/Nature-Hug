@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+
 
 type Review = {
   id: number;
@@ -21,6 +22,7 @@ const statusOptions = [
 ];
 
 export default function AdminReviewsTable() {
+  const supabase = createSupabaseBrowserClient();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -65,20 +67,19 @@ export default function AdminReviewsTable() {
               <tr key={r.id} className="border-t">
                 <td className="px-4 py-2">{r.products?.name_english || r.product_id}</td>
                 <td className="px-4 py-2">{r.customers?.name || r.customer_id}</td>
-                <td className="px-4 py-2">{r.rating} <span style={{color: "#e2b007"}}>★</span></td>
+                <td className="px-4 py-2">{r.rating} <span style={{ color: "#e2b007" }}>★</span></td>
                 <td className="px-4 py-2">{r.comment}</td>
                 <td className="px-4 py-2">{new Date(r.created_at).toLocaleString()}</td>
                 <td className="px-4 py-2 text-center">
                   <select
                     value={r.status}
                     onChange={e => handleStatusChange(r.id, e.target.value)}
-                    className={`px-2 py-1 text-xs rounded-full border ${
-                      r.status === "approved"
+                    className={`px-2 py-1 text-xs rounded-full border ${r.status === "approved"
                         ? "bg-green-100 text-green-700"
                         : r.status === "rejected"
                           ? "bg-red-100 text-red-700"
                           : "bg-yellow-100 text-yellow-700"
-                    }`}
+                      }`}
                     style={{ minWidth: "100px" }}
                   >
                     {statusOptions.map(opt => (
