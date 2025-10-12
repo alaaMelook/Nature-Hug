@@ -3,9 +3,7 @@ import { createBrowserClient } from "@supabase/ssr";
 
 let supabase: ReturnType<typeof createBrowserClient> | null = null;
 
-export function createSupabaseBrowserClient() {
-  if (typeof window === "undefined") return null;
-
+export const createSupabaseBrowserClient = () => {
   if (!supabase) {
     supabase = createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,

@@ -56,7 +56,7 @@ declare global {
 
   interface CartContextType {
     cart: CartItem[];
-    addToCart: (product: Product) => Promise<void>;
+    addToCart: (product: Product, quantity: number) => Promise<void>;
     removeFromCart: (product: Product) => Promise<void>;
     updateQuantity: (product: Product, quantity: number) => Promise<void>;
     clearCart: () => Promise<void>;

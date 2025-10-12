@@ -7,7 +7,8 @@ import { useCart } from "@/lib/CartContext";
 
 export default function AddToCartButton({
   product,
-}: Readonly<{ product: Product }>) {
+  quantity,
+}: Readonly<{ product: Product, quantity: number }>) {
   const [loading, setLoading] = useState(false);
   const { t } = useTranslation();
   const { addToCart } = useCart();
@@ -17,7 +18,7 @@ export default function AddToCartButton({
   const handleClick = async () => {
     try {
       setLoading(true);
-      await addToCart(product);
+      await addToCart(product, quantity);
     } catch (err) {
       console.error("Error adding to cart:", err);
     } finally {

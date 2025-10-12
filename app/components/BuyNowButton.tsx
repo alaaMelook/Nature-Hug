@@ -4,14 +4,14 @@ import { useRouter } from 'next/navigation';
 import { useCart } from '@/lib/CartContext';
 import { useState } from 'react';
 
-export default function BuyNowButton({ product }: { product: Product }) {
+export default function BuyNowButton({ product, quantity }: { product: Product, quantity: number }) {
     const router = useRouter();
     const { addToCart } = useCart();
     const [loading, setLoading] = useState(false);
     const isDisabled = product.stock === 0 || product.stock == null;
     const handleBuyNow = async () => {
         setLoading(true);
-        await addToCart(product);
+        await addToCart(product, quantity);
         router.push('/cart');
         setLoading(false);
     };

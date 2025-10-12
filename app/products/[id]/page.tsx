@@ -1,6 +1,5 @@
 import ProductDetail from "@/app/server-pages/ProductDetail";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import Link from "next/link";
 
 async function getProduct(id: string) {
   const supabase = createSupabaseBrowserClient();

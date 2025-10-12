@@ -5,6 +5,7 @@ import BuyNowButton from "./BuyNowButton";
 import AddToCartButton from "./CartButton";
 import { useTranslation } from "./TranslationProvider";
 import Link from "next/link";
+import { queryObjects } from "node:v8";
 
 function ProductCard({
   product,
@@ -81,8 +82,8 @@ function ProductCard({
 
         {/* Interactive Actions (NOT wrapped in Link) */}
         <div className="mt-4 space-y-2">
-          <AddToCartButton product={product} />
-          {product.stock > 0 && <BuyNowButton product={product} />}
+          <AddToCartButton product={product} quantity={1} />
+          {product.stock > 0 && <BuyNowButton product={product} quantity={1} />}
         </div>
       </div>
     </div>

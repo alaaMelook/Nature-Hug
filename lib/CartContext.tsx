@@ -51,7 +51,7 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
     }
   }, [cart, loading, isClient]);
 
-  const addToCart = async (product: Product) => {
+  const addToCart = async (product: Product, quantity: number) => {
     const existingItemIndex = cart.findIndex(
       (item) => item.id === product.id  // Use ID instead of name_english
     );
@@ -62,7 +62,7 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
           ? { ...item, quantity: item.quantity + 1 }
           : item
       )
-      : [...cart, { ...product, quantity: 1 }];
+      : [...cart, { ...product, quantity: quantity }];
 
     toast.success(`${product.name_english} added to cart`, { duration: 2000 });
     setCart(newCart);

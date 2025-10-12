@@ -17,9 +17,9 @@ export default function CartSyncer() {
 
   const sync = useCallback(async () => {
     if (!isClient || hasSynced.current || isSyncing.current) return;
-    
+
     isSyncing.current = true;
-    
+
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
@@ -59,9 +59,9 @@ export default function CartSyncer() {
 
   useEffect(() => {
     if (!isClient) return;
-    
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      (event: string, session: any) => {
         if (event === "SIGNED_IN" && session) {
           sync();
         }
