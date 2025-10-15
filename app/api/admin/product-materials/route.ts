@@ -1,5 +1,5 @@
 // app/api/admin/product-materials/route.ts
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/data/supabase/server";
 import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
@@ -10,7 +10,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Product ID is required" }, { status: 400 });
   }
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = await supabase();
   const { data, error } = await supabase
     .from("product_materials")
     .select(`
@@ -41,7 +41,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await supabase();
   const body = await req.json();
   const { product_id, material_id, grams_used } = body;
 

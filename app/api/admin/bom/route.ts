@@ -1,11 +1,11 @@
 // app/api/admin/bom/route.ts
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/data/supabase/server";
 
 type SupaRow = any;
 
 function getSafeClient() {
-  const maybe = createSupabaseServerClient();
+  const maybe = supabase();
   if (maybe && typeof (maybe as any).then === "function") {
     return (maybe as any).then((c: any) => c);
   }

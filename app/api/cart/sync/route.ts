@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/data/supabase/server";
 
 type LocalItem = { productId: string; quantity: number };
 
 export async function POST(req: Request) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await supabase();
 
   const {
     data: { user },

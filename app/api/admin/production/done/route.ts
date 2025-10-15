@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/data/supabase/server";
 
 export async function POST(req: Request) {
   const { productId, qty } = await req.json();
-  const supabase = await createSupabaseServerClient();
+  const supabase = await supabase();
 
   // جيب المنتج مع خاماته
   const { data: product, error } = await supabase

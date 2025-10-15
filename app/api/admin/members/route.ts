@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/data/supabase/server";
 import { checkAdminAccessServer } from "@/lib/adminAuthServer";
 
 export async function GET() {
@@ -10,8 +10,8 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const supabase = await createSupabaseServerClient();
-    
+    const supabase = await supabase();
+
     const { data: members, error } = await supabase
       .from("members")
       .select(`
@@ -52,8 +52,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "user_id and role are required" }, { status: 400 });
     }
 
-    const supabase = await createSupabaseServerClient();
-    
+    const supabase = await supabase();
+
     const { data: member, error } = await supabase
       .from("members")
       .insert({
@@ -88,8 +88,8 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: "id is required" }, { status: 400 });
     }
 
-    const supabase = await createSupabaseServerClient();
-    
+    const supabase = await supabase();
+
     const { error } = await supabase
       .from("members")
       .delete()

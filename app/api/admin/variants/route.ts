@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/data/supabase/server";
 
 // 🟢 GET Variants (اختياري: ممكن تبعتي product_id في الكويري)
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const productId = searchParams.get("product_id");
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = await supabase();
 
   let query = supabase
     .from("product_variants")

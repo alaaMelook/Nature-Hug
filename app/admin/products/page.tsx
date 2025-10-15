@@ -1,11 +1,11 @@
 // app/admin/products/page.tsx
 import { Suspense } from "react";
 import ProductsTable from "./products-table";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { supabase } from "@/data/supabase/client";
 
 
 async function getCategories() {
-  const supabase = createSupabaseBrowserClient();
+  ;
   const { data, error } = await supabase
     .from("categories")
     .select("*")

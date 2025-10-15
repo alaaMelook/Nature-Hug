@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/data/supabase/server";
 
 export async function PUT(request: Request, context: { params: { id: string } }) {
   const id = context.params.id;
   const body = await request.json();
-  const supabase = await createSupabaseServerClient(); // لو الدالة async
-  // const supabase = createSupabaseServerClient(); // لو الدالة sync
+  const supabase = await supabase(); // لو الدالة async
+  // const supabase = supabase(); // لو الدالة sync
 
   const { data, error } = await supabase
     .from("suppliers")
@@ -29,8 +29,8 @@ export async function PUT(request: Request, context: { params: { id: string } })
 
 export async function DELETE(request: Request, context: { params: { id: string } }) {
   const id = context.params.id;
-  const supabase = await createSupabaseServerClient(); // لو الدالة async
-  // const supabase = createSupabaseServerClient(); // لو الدالة sync
+  const supabase = await supabase(); // لو الدالة async
+  // const supabase = supabase(); // لو الدالة sync
 
   const { error } = await supabase
     .from("suppliers")

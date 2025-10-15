@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/data/supabase/server";
 
 export async function GET() {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await supabase();
 
   const { data: categories, error } = await supabase
     .from("overhead_categories")

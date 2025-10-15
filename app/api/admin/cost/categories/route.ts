@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/data/supabase/server";
 
 // GET all categories
 export async function GET() {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await supabase();
 
   try {
     const { data, error } = await supabase
@@ -25,7 +25,7 @@ export async function GET() {
 // POST create category
 export async function POST(req: Request) {
   const body = await req.json();
-  const supabase = await createSupabaseServerClient();
+  const supabase = await supabase();
 
   try {
     const { data, error } = await supabase

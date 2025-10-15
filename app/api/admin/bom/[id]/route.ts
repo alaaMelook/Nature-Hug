@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/data/supabase/server";
 
 async function getSupabaseClient() {
-  const maybeClient = createSupabaseServerClient();
+  const maybeClient = supabase();
   if (maybeClient && typeof (maybeClient as any).then === "function") {
     return await maybeClient;
   }

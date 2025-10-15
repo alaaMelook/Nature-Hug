@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
-import { CartProvider } from "@/lib/CartContext";
-import ConditionalComponents from "@/app/components/ConditionalComponents";
-import { TranslationProvider } from "@/app/components/TranslationProvider";
-import FontWrapper from "./components/FontWrapper";
+import { TranslationProvider } from "@/providers/TranslationProvider";
+import FontProvider from "../providers/FontProvider";
 import "./globals.css";
 import Script from "next/script";
 import { Toaster } from "sonner";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/data/supabase/server";
+import { SupabaseAuthProvider } from "@/providers/SupabaseAuthProvider";
+import { ReactQueryProvider } from "@/providers/ReactQueryProvider";
 
 export const metadata: Metadata = {
   title: "Hug Nature",
@@ -53,12 +53,15 @@ export default async function RootLayout({
         <Toaster position="top-center" richColors />
         {/* End Google Tag Manager (noscript) */}
         <TranslationProvider>
-          <FontWrapper>
-            <CartProvider>
-              <ConditionalComponents />
-              <main>{children}</main>
-            </CartProvider>
-          </FontWrapper>
+          <FontProvider>
+            <SupabaseAuthProvider>
+              <ReactQueryProvider>
+
+                <main>{children}</main>
+
+              </ReactQueryProvider>
+            </SupabaseAuthProvider>
+          </FontProvider>
         </TranslationProvider>
       </body>
     </html>

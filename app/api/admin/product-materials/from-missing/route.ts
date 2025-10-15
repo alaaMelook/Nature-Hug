@@ -1,6 +1,6 @@
 // app/api/admin/product-materials/from-missing/route.ts
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/data/supabase/server";
 
 type ReqBody = {
   itemIds: Array<number | string>;
@@ -12,7 +12,7 @@ type ReqBody = {
 };
 
 export async function POST(req: Request) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await supabase();
   try {
     const body: ReqBody = await req.json();
 

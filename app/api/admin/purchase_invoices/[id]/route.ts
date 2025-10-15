@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/data/supabase/server";
 
 export async function PUT(req: Request, context: { params: Promise<{ id: string }> }) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await supabase();
   const { id } = await context.params;
   const invoiceId = Number(id);
 
@@ -41,7 +41,7 @@ export async function PUT(req: Request, context: { params: Promise<{ id: string 
 export async function DELETE(_: Request, context: { params: Promise<{ id: string }> }) {
   const params = await context.params;
   const id = Number(params.id);
-  const supabase = await createSupabaseServerClient();
+  const supabase = await supabase();
 
   const { error } = await supabase
     .from("purchase_invoices")

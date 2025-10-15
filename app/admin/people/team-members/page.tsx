@@ -1,9 +1,9 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/data/supabase/server";
 import { Search, UserPlus, Shield, User } from "lucide-react";
 
 async function getMembers() {
-  const supabase = await createSupabaseServerClient();
-  
+  const supabase = await supabase();
+
   const { data: members, error } = await supabase
     .from("members")
     .select(`

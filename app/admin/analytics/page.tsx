@@ -1,6 +1,6 @@
 "use client";
 
-import NotImplemented from "../components/NotImplemented";
+import NotImplemented from "../../../ui/components/admin/NotImplemented";
 
 export default function AnalyticsPage() {
     return <NotImplemented />;

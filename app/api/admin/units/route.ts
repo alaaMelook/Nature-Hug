@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/data/supabase/server";
 
 // 🟢 Get all units
 export async function GET() {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await supabase();
 
   const { data, error } = await supabase
     .from("units")
@@ -20,7 +20,7 @@ export async function GET() {
 
 // 🟢 Add new unit
 export async function POST(req: Request) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await supabase();
   const body = await req.json();
   const { name } = body;
 
@@ -43,7 +43,7 @@ export async function POST(req: Request) {
 
 // 🟡 Update existing unit
 export async function PUT(req: Request) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await supabase();
   const body = await req.json();
   const { id, name } = body;
 
@@ -66,7 +66,7 @@ export async function PUT(req: Request) {
 
 // 🔴 Delete unit
 export async function DELETE(req: Request) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await supabase();
   const body = await req.json();
   const { id } = body;
 

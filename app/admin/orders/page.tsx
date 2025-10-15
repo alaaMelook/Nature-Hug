@@ -1,8 +1,8 @@
 "use client";
 import React, { useEffect, useMemo, useState } from "react";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { supabase } from "@/data/supabase/client";
 
-const supabase = createSupabaseBrowserClient();
+;
 type Order = {
   id: number;
   created_at: string;

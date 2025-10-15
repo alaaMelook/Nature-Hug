@@ -1,13 +1,13 @@
 // app/admin/materials/page.tsx  
 import { Suspense } from "react";
 import MaterialsTable from "./materials-table";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/data/supabase/server";
 
 async function getMaterials() {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await supabase();
   const { data } = await supabase
-  .from("materials")
-  .select(`
+    .from("materials")
+    .select(`
     *,
     supplier:suppliers(id, name),
     unit:units(id, name),
@@ -20,19 +20,19 @@ async function getMaterials() {
 }
 
 async function getUnits() {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await supabase();
   const { data } = await supabase.from("units").select("*");
   return data || [];
 }
 
 async function getSuppliers() {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await supabase();
   const { data } = await supabase.from("suppliers").select("id, name");
   return data || [];
 }
 
 async function getProducts() {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await supabase();
   const { data } = await supabase.from("products").select("id, name_english, name_arabic");
   return data || [];
 }

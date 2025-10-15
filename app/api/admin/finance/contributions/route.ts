@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/data/supabase/server";
 
 // GET: كل المساهمات لشريك معين
 export async function GET(req: Request) {
-  const supabase = createSupabaseServerClient();
+  const supabase = supabase();
   const { searchParams } = new URL(req.url);
   const partner_id = searchParams.get("partner_id");
 
@@ -23,7 +23,7 @@ export async function GET(req: Request) {
 
 // POST: إضافة مساهمة لشريك
 export async function POST(req: Request) {
-  const supabase = createSupabaseServerClient();
+  const supabase = supabase();
   const body = await req.json();
 
   if (!body.partner_id || !body.amount) {

@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/data/supabase/server";
 
 // 📍 GET → كل الموردين + الفواتير بتاعتهم
 export async function GET() {
-  const supabase = createSupabaseServerClient();
+  const supabase = supabase();
 
   const { data: suppliers, error: suppliersError } = await (await supabase)
     .from("suppliers")
@@ -38,7 +38,7 @@ export async function GET() {
 
 // 📍 POST → إضافة مورد جديد
 export async function POST(req: Request) {
-  const supabase = createSupabaseServerClient();
+  const supabase = supabase();
   const body = await req.json();
 
   const { data, error } = await (await supabase)

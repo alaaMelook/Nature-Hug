@@ -1,4 +1,4 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/data/supabase/server";
 import { Users, Package, ShoppingCart, DollarSign, TrendingUp, TrendingDown } from "lucide-react";
 
 async function getDashboardStats() {
@@ -112,9 +112,8 @@ export default async function AdminDashboard() {
               ) : (
                 <TrendingDown className="h-4 w-4 text-red-500 mr-1" />
               )}
-              <span className={`text-sm font-medium ${
-                stat.changeType === "positive" ? "text-green-600" : "text-red-600"
-              }`}>
+              <span className={`text-sm font-medium ${stat.changeType === "positive" ? "text-green-600" : "text-red-600"
+                }`}>
                 {stat.change}
               </span>
               <span className="text-sm text-gray-500 ml-1">from last month</span>
@@ -165,13 +164,12 @@ export default async function AdminDashboard() {
                     {new Date(order.created_at).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      order.status === "completed" 
-                        ? "bg-green-100 text-green-800"
-                        : order.status === "pending"
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${order.status === "completed"
+                      ? "bg-green-100 text-green-800"
+                      : order.status === "pending"
                         ? "bg-yellow-100 text-yellow-800"
                         : "bg-red-100 text-red-800"
-                    }`}>
+                      }`}>
                       {order.status}
                     </span>
                   </td>

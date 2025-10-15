@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { supabase } from "@/data/supabase/client";
 
 
 type Review = {
@@ -22,7 +22,7 @@ const statusOptions = [
 ];
 
 export default function AdminReviewsTable() {
-  const supabase = createSupabaseBrowserClient();
+  ;
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -75,10 +75,10 @@ export default function AdminReviewsTable() {
                     value={r.status}
                     onChange={e => handleStatusChange(r.id, e.target.value)}
                     className={`px-2 py-1 text-xs rounded-full border ${r.status === "approved"
-                        ? "bg-green-100 text-green-700"
-                        : r.status === "rejected"
-                          ? "bg-red-100 text-red-700"
-                          : "bg-yellow-100 text-yellow-700"
+                      ? "bg-green-100 text-green-700"
+                      : r.status === "rejected"
+                        ? "bg-red-100 text-red-700"
+                        : "bg-yellow-100 text-yellow-700"
                       }`}
                     style={{ minWidth: "100px" }}
                   >

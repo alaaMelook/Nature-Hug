@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/data/supabase/server";
 
 // ✅ GET all materials
 export async function GET() {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await supabase();
 
   const { data, error } = await supabase
     .from("materials")
@@ -27,7 +27,7 @@ export async function GET() {
 
 // ✅ POST (create new material)
 export async function POST(req: Request) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await supabase();
   const body = await req.json();
 
   // ممكن يكون Array أو Object واحد (من Excel أو من Form)
@@ -73,7 +73,7 @@ export async function POST(req: Request) {
 
 // ✅ PUT (update material)
 export async function PUT(req: Request) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await supabase();
   const { id, products, ...rest } = await req.json();
 
   if (!id) {
@@ -116,7 +116,7 @@ export async function PUT(req: Request) {
 
 // ✅ DELETE (delete material)
 export async function DELETE(req: Request) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await supabase();
   const { id } = await req.json();
 
   if (!id) {

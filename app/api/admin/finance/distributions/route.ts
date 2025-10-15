@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/data/supabase/server";
 
 // ✅ GET: كل التوزيعات أو توزيع واحد
 export async function GET(req: Request) {
-  const supabase = createSupabaseServerClient();
+  const supabase = supabase();
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");
 
@@ -29,7 +29,7 @@ export async function GET(req: Request) {
 
 // ✅ POST: إضافة توزيع جديد
 export async function POST(req: Request) {
-  const supabase = createSupabaseServerClient();
+  const supabase = supabase();
   const body = await req.json();
 
   const { data, error } = await (await supabase)

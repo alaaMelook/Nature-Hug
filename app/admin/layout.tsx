@@ -1,19 +1,49 @@
 import { redirect } from "next/navigation";
-import { checkAdminAccessServer } from "@/lib/adminAuthServer";
-import AdminSidebar from "./components/AdminSidebar";
-import AdminHeader from "./components/AdminHeader";
-import { TranslationProvider } from "./context/TranslationContext";
+import AdminSidebar from "../../ui/components/admin/AdminSidebar";
+import AdminHeader from "../../ui/components/admin/AdminHeader";
+import { TranslationProvider } from "../../providers/TranslationProvider";
 
-export default async function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const adminUser = await checkAdminAccessServer();
+import { ReactNode } from "react";
 
-  if (!adminUser) {
-    redirect("/");
-  }
+import { createSupabaseServerClient } from "@/data/supabase/server";
+
+import { AdminUser } from "@/providers/SupabaseAuthProvider";
+
+export default async function AdminLayout({ children }: { children: ReactNode }) {
+  const supabase = await createSupabaseServerClient();
+
+  // 🔒 Get current user
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) redirect("/login");
+
+  // 🔒 Check role
+  const { data: customer } = await supabase
+    .from("store.customers")
+    .select("id, name, email")
+    .eq("auth_user_id", user.id)
+    .maybeSingle();
+
+  if (!customer) redirect("/");
+
+  const { data: member } = await supabase
+    .from("store.members")
+    .select("role")
+    .eq("user_id", customer.id)
+    .maybeSingle();
+
+  if (member?.role !== "admin") redirect("/");
+
+  const adminUser: AdminUser = {
+    id: user.id,
+    email: user.email || "",
+    name: customer.name,
+    role: member.role,
+    customerId: customer.id,
+  };
+
 
   return (
     <TranslationProvider>

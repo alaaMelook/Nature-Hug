@@ -6,8 +6,8 @@ import Link from "next/link";
 import * as XLSX from "xlsx";
 
 // ✅ Lazy load للرسومات
-const OwnershipPie = dynamic(() => import("../../../components/charts/OwnershipPie"), { ssr: false });
-const ContribVsProfitBar = dynamic(() => import("../../../components/charts/ContribVsProfitBar"), { ssr: false });
+const OwnershipPie = dynamic(() => import("@/ui/components/admin/charts/OwnershipPie"), { ssr: false });
+const ContribVsProfitBar = dynamic(() => import("@/ui/components/admin/charts/ContribVsProfitBar"), { ssr: false });
 
 // ✅ دالة للتصدير Excel
 function exportToExcel(data: any[], fileName: string) {
@@ -59,9 +59,8 @@ export default function PartnerSummaryPage() {
         <div className="p-4 bg-white shadow rounded">
           <h2 className="text-lg font-semibold">Net Position</h2>
           <p
-            className={`text-xl font-bold ${
-              netPosition >= 0 ? "text-green-600" : "text-red-600"
-            }`}
+            className={`text-xl font-bold ${netPosition >= 0 ? "text-green-600" : "text-red-600"
+              }`}
           >
             {netPosition}
           </p>
@@ -112,9 +111,8 @@ export default function PartnerSummaryPage() {
                 <td className="border px-4 py-2">{p.totalContributions}</td>
                 <td className="border px-4 py-2">{p.totalProfitShare}</td>
                 <td
-                  className={`border px-4 py-2 ${
-                    p.netPosition >= 0 ? "text-green-600" : "text-red-600"
-                  }`}
+                  className={`border px-4 py-2 ${p.netPosition >= 0 ? "text-green-600" : "text-red-600"
+                    }`}
                 >
                   {p.netPosition}
                 </td>

@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/data/supabase/server";
 
 export async function GET() {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await supabase();
   const { data, error } = await supabase
     .from("expenses")
     .select("*, partners(name)")
@@ -13,7 +13,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await supabase();
   const body = await req.json();
 
   if (!body.type || !body.item_name || !body.amount) {

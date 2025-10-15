@@ -1,13 +1,13 @@
 // app/api/admin/materials/missing-items/route.ts
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/data/supabase/server";
 
 /* -----------------------------
    GET /api/admin/materials/missing-items
    → Get all missing items
 ------------------------------ */
 export async function GET() {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await supabase();
 
   const { data, error } = await supabase
     .from("missing_items")
@@ -45,7 +45,7 @@ export async function GET() {
    → Add new missing item
 ------------------------------ */
 export async function POST(req: Request) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await supabase();
   const body = await req.json();
 
   const { data, error } = await supabase
@@ -80,7 +80,7 @@ export async function POST(req: Request) {
    → Update missing item
 ------------------------------ */
 export async function PUT(req: Request) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await supabase();
   const body = await req.json();
   const id = body.id;
 
@@ -120,7 +120,7 @@ export async function PUT(req: Request) {
    → Delete missing item
 ------------------------------ */
 export async function DELETE(req: Request) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await supabase();
   const { id } = await req.json();
 
   if (!id) {

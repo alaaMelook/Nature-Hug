@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/data/supabase/server";
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await supabase();
 
   const { data, error } = await supabase
     .from("expenses")
@@ -15,7 +15,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 }
 
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await supabase();
   const body = await req.json();
 
   const { data, error } = await supabase
@@ -29,7 +29,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 }
 
 export async function DELETE(req: Request, { params }: { params: { id: string } }) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await supabase();
 
   const { error } = await supabase.from("expenses").delete().eq("id", params.id);
 

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/data/supabase/server";
 
 // GET one category
 export async function GET(
@@ -7,7 +7,7 @@ export async function GET(
   context: { params: { id: string } }
 ) {
   const { id } = context.params;
-  const supabase = await createSupabaseServerClient();
+  const supabase = await supabase();
 
   try {
     const { data, error } = await supabase
@@ -34,7 +34,7 @@ export async function PATCH(
 ) {
   const { id } = context.params;
   const body = await req.json();
-  const supabase = await createSupabaseServerClient();
+  const supabase = await supabase();
 
   try {
     const { data, error } = await supabase
@@ -64,7 +64,7 @@ export async function DELETE(
   context: { params: { id: string } }
 ) {
   const { id } = context.params;
-  const supabase = await createSupabaseServerClient();
+  const supabase = await supabase();
 
   try {
     const { error } = await supabase

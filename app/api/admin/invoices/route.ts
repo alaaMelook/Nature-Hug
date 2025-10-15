@@ -1,10 +1,10 @@
 // app/api/admin/invoices/route.ts
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/data/supabase/server";
 
 // 📍 POST → Add Purchase Invoice
 export async function POST(req: Request) {
-  const supabase = createSupabaseServerClient();
+  const supabase = supabase();
   const body = await req.json();
 
   const { data, error } = await (await supabase)

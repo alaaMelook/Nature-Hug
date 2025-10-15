@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 // 📁 app/api/admin/purchase_invoices/route.ts
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/data/supabase/server";
 
 export async function GET() {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await supabase();
 
   // 👇 بنجيب كل الفواتير ومعاها الأصناف المرتبطة من جدول items
   const { data, error } = await supabase
@@ -37,7 +37,7 @@ export async function GET() {
 
 
 export async function POST(req: Request) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await supabase();
 
   try {
     const body = await req.json();
