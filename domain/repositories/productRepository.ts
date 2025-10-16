@@ -1,13 +1,14 @@
 import { ProductDetailView } from "@/domain/entities/views/shop/productDetailView";
 import { ProductView } from "@/domain/entities/views/shop/productView";
 import { Product } from "@/domain/entities/database/product";
-import { ProductVariant } from "../entities/database/productVariant";
-import { ProductMaterial } from "../entities/database/productMaterials";
+import { ProductVariant } from "@/domain/entities/database/productVariant";
+import { ProductMaterial } from "@/domain/entities/database/productMaterials";
 import { IProductRepository } from "@/data/repositories/iProductsRepository";
 
-export interface ProductRepositoryAbstract {
+export interface ProductRepository {
     viewBySlug(slug: string): Promise<ProductDetailView>;
     viewAll(): Promise<ProductView[]>;
+    viewRecent(count: number): Promise<ProductView[]>;
     viewByCategory(categoryName: string): Promise<ProductView[]>;
 
     getAll(): Promise<Product[]>;
@@ -20,5 +21,3 @@ export interface ProductRepositoryAbstract {
     delete(id: number): Promise<void>;
 
 }
-
-export const ProductRepository = new IProductRepository();

@@ -4,27 +4,30 @@ import React from "react";
 import BuyNowButton from "./BuyNowButton";
 import AddToCartButton from "./CartButton";
 import { useTranslation } from "../../../providers/TranslationProvider";
-import Link from "next/link";
-import { queryObjects } from "node:v8";
+import { useRouter } from "next/navigation";
 import { ProductView } from "@/domain/entities/views/shop/productView";
+import Skeleton from "@mui/material/Skeleton";
+import { StarRating } from "./StarRating";
 
 function ProductCard({
   product,
   t,
 }: {
   product: ProductView;
-
   t: (key: string) => string;
 }) {
+  const router = useRouter();
 
+  const handleCardClick = () => {
+    router.push(`/products/${product.slug}`);
+  };
 
   return (
-    <div className="bg-white rounded-xl shadow-lg overflow-hidden flex flex-col transform transition-transform duration-300 hover:scale-105">
-      {/* Image wrapped in Link */}
-      <Link
-        href={`/products/${product.id}`}
-        className="relative aspect-w-4 aspect-h-3 block"
-      >
+    <div
+      className="bg-white rounded-xl shadow-lg overflow-hidden flex flex-col transform transition-transform duration-300 hover:scale-105 cursor-pointer"
+      onClick={handleCardClick}
+    >
+      <div className="relative aspect-w-4 aspect-h-3 block">
         <img
           src={product.image || undefined}
           alt={product.name || "Product image"}
@@ -48,17 +51,17 @@ function ProductCard({
             {t("outOfStock")}
           </div>
         )}
-      </Link>
+      </div>
 
       {/* Details */}
       <div className="p-5 flex flex-col justify-between flex-grow">
         <div>
-          {/* Title wrapped in Link */}
-          <Link href={`/products/${product.id}`}>
+          <div className="flex items-center justify-between">
             <h3 className="text-xl font-semibold text-gray-800 mb-5">
               {product.name}
             </h3>
-          </Link>
+            <StarRating rating={product.avg_rating} />
+          </div>
 
           {/* Price */}
           <div className="flex items-center content-center mb-2">
@@ -69,7 +72,7 @@ function ProductCard({
             ) : (
               <div className="flex flex-col items-baseline space-x-2">
                 <p className="text-md font-medium text-primary-900">
-                  {product.price - product.discount} EGP
+                  {(product.price - product.discount).toFixed(2)} EGP
                 </p>
                 <p className="text-lg text-gray-500 line-through">
                   {product.price.toFixed(2)} EGP
@@ -79,10 +82,13 @@ function ProductCard({
           </div>
         </div>
 
-        {/* Interactive Actions (NOT wrapped in Link) */}
-        <div className="mt-4 space-y-2">
+        {/* Interactive Actions */}
+        <div
+          className="mt-4 space-y-2"
+          onClick={(e) => e.stopPropagation()}
+        >
           <AddToCartButton product={product} quantity={1} />
-          {product.stock > 0 && <BuyNowButton product={product} quantity={1} />}
+          {product.stock != null && product.stock > 0 && <BuyNowButton product={product} quantity={1} />}
         </div>
       </div>
     </div>
@@ -91,13 +97,17 @@ function ProductCard({
 
 export default function ProductGrid({
   products,
+  isLoading,
 }: Readonly<{
-
-  products: ProductView[];
+  isLoading: boolean;
+  products?: ProductView[];
 }>) {
-  const { language, t } = useTranslation();
-
-  if (products.length === 0) {
+  const { t } = useTranslation();
+  const skeletonWidth = 283.6;
+  const skeletonHeight = 604;
+  const skeletonAnimation = "wave";
+  const variant = 'rounded'
+  if (!isLoading && (products == null || products.length == 0)) {
     return (
       <div className="flex justify-center items-center h-64">
         <p className="text-gray-500 text-lg">{t("noProd")}</p>
@@ -107,13 +117,26 @@ export default function ProductGrid({
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-      {products.map((product) => (
-        <ProductCard
-          key={product.id}
-          product={product}
-          t={t}
-        />
-      ))}
+
+      {isLoading ? (
+        <>
+          <Skeleton variant={variant} width={skeletonWidth} height={skeletonHeight} animation={skeletonAnimation} />
+          <Skeleton variant={variant} width={skeletonWidth} height={skeletonHeight} animation={skeletonAnimation} />
+          <Skeleton variant={variant} width={skeletonWidth} height={skeletonHeight} animation={skeletonAnimation} />
+          <Skeleton variant={variant} width={skeletonWidth} height={skeletonHeight} animation={skeletonAnimation} />
+        </>
+
+      ) :
+
+        products?.map((product) => (
+          <ProductCard
+            key={product.slug}
+            product={product}
+            t={t}
+          />
+        ))
+
+      }
     </div>
   );
 }

@@ -8,11 +8,11 @@ import {
 } from "@/lib/fonts";
 
 export default function LanguageSwitcher() {
-  const { language, setLanguage } = useTranslation();
+  const { language, switchLanguage } = useTranslation();
 
   const toggleLanguage = () => {
     const newLanguage = language === "en" ? "ar" : "en";
-    setLanguage(newLanguage);
+    switchLanguage(newLanguage);
   };
   const fontClass =
     language === "en"

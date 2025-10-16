@@ -1,3 +1,5 @@
+import { Type } from "lucide-react";
+
 export { };
 
 declare global {
@@ -30,4 +32,7 @@ declare global {
   type FormEvent = React.FormEvent<HTMLFormElement>;
   type InputChangeEvent = React.ChangeEvent<HTMLInputElement>;
   type SelectChangeEvent = React.ChangeEvent<HTMLSelectElement>;
+  type LangKey = 'en' | 'ar';
+  type LangChangeListener = (lang: LangKey) => void;
+
 }

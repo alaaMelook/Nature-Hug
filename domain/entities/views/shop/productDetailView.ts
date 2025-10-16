@@ -5,6 +5,7 @@ import { FAQs } from "../../database/faq";
 export interface ProductDetailView {
 
     id: number;
+    variant_id?: number;
     name: string;
     description?: string | null;
     price: number;
@@ -40,6 +41,7 @@ export interface ProductReviewView {
     created_at: string;
     customer_name?: string | null;
 }
+/**
 
 /** Embedded materials objects from JSONB aggregation */
 export interface ProductMaterialView {

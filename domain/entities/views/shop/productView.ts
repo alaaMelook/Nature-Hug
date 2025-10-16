@@ -12,5 +12,5 @@ export interface ProductView {
     slug: string;
     product_type: string;
     created_at: string;
-    avgRating: number;
+    avg_rating: number;
 }

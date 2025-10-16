@@ -1,11 +1,28 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ReactNode, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
+import { langStore } from "@/lib/i18n/langStore";
+
+let globalQueryClient: QueryClient | null = null;
+
+export function getQueryClient() {
+    if (!globalQueryClient) {
+        globalQueryClient = new QueryClient();
+    }
+    return globalQueryClient;
+}
 
 export function ReactQueryProvider({ children }: { children: ReactNode }) {
-    // ensure stable QueryClient between renders
-    const [client] = useState(() => new QueryClient());
+    const [client] = useState(() => getQueryClient());
+
+    // 🔥 Auto invalidate queries when language changes
+    useEffect(() => {
+        const unsubscribe = langStore.onChange(() => {
+            client.invalidateQueries(); // refetch all data on language switch
+        });
+        return unsubscribe;
+    }, [client]);
 
     return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }

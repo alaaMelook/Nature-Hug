@@ -1,40 +1,30 @@
+'use client'
 import React from "react";
-import { createSupabaseServerClient } from "@/data/supabase/server";
-import ProductsPage from "../../../ui/screens/AllProducts";
+import { useQuery } from "@tanstack/react-query";
+import { viewAllProducts } from "@/domain/use-case/shop/viewAllProducts";
+import ProductGrid from "@/ui/components/(shop)/ProductsGrid";
 
-// Server component for initial data fetching
-async function getProducts(language: string = "en") {
-  try {
-    const supabase = await supabase();
 
-    const { data, error } = await supabase
-      .from("products")
-      .select("*")
+export default function Products() {
+  let {
+    data: products,
 
-    if (error) {
-      console.error("Error fetching products:", error);
-      return [];
-    }
+    isLoading } = useQuery({
+      queryKey: ["products"],
+      queryFn: () => viewAllProducts(),
+    });
 
-    const formatted = (data || []).map((p: any) => ({
-      ...p,
-      name: language === "en" ? p.name_english : p.name_arabic,
-      description: language === "en" ? p.description_english : p.description_arabic,
-      id: Number(p.id),
-      price: Number(p.price) || 0,
-      discount: p.discount != null ? Number(p.discount) : null,
-      quantity: p.quantity != null ? Number(p.quantity) : null,
-    }));
 
-    return formatted;
-  } catch (error) {
-    console.error("Error fetching products:", error);
-    return [];
-  }
-}
 
-export default async function Products() {
-  const products = await getProducts();
+  return (
+    <div className="p-8 sm:p-12 bg-primary-50 min-h-screen font-sans">
+      {/* Minimalist Centered Header */}
+      <div className="text-center mb-16">
+        <h1 className="text-5xl font-extralight text-gray-900">All Products</h1>
+        <p className="mt-4 max-w-2xl mx-auto text-gray-600 text-lg">Pure ingredients for visible results. Discover your new daily ritual.</p>
+      </div>
 
-  return <ProductsPage initialProducts={products} />;
+      <ProductGrid products={products} isLoading={isLoading} />
+    </div>
+  );
 }
