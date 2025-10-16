@@ -3,12 +3,14 @@ import { useState } from "react";
 import { ShoppingCart, BadgeAlert } from "lucide-react";
 import { useTranslation } from "../../../providers/TranslationProvider";
 import { useCart } from "@/providers/CartProvider";
+import { ProductView } from "@/domain/entities/views/shop/productView";
+import { ProductDetailView } from "@/domain/entities/views/shop/productDetailView";
 
 
 export default function AddToCartButton({
   product,
   quantity,
-}: Readonly<{ product: Product, quantity: number }>) {
+}: Readonly<{ product: ProductView | ProductDetailView, quantity: number }>) {
   const [loading, setLoading] = useState(false);
   const { t } = useTranslation();
   const { addToCart } = useCart();
@@ -30,7 +32,7 @@ export default function AddToCartButton({
     <button
       onClick={isDisabled ? undefined : handleClick}
       disabled={loading || product.stock === 0}
-      className={`mt-4 w-full py-2.5 rounded-lg shadow-md flex items-center justify-center transition-colors duration-300
+      className={` w-full py-2.5 rounded-lg shadow-md flex items-center justify-center transition-colors duration-300
       ${loading || isDisabled ? "bg-gray-400 text-gray-200" : "bg-primary-50 text-primary-900 hover:bg-primary-200 hover:text-primary-700 cursor-pointer"}
       disabled:opacity-50`}
     >

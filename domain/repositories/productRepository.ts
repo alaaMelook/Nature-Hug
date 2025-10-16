@@ -4,6 +4,7 @@ import { Product } from "@/domain/entities/database/product";
 import { ProductVariant } from "@/domain/entities/database/productVariant";
 import { ProductMaterial } from "@/domain/entities/database/productMaterials";
 import { IProductRepository } from "@/data/repositories/iProductsRepository";
+import { Review } from "@/domain/entities/database/review";
 
 export interface ProductRepository {
     viewBySlug(slug: string): Promise<ProductDetailView>;
@@ -15,9 +16,9 @@ export interface ProductRepository {
     getVariantsOf(product: Product): Promise<ProductVariant[]>;
     getAllUsedMaterials(product: Product | ProductVariant): Promise<ProductMaterial[]>;
     getBySlug(slug: string): Promise<Product>;
-
+    addReview(review: Review): Promise<void>;
     create(product: Product): Promise<number>;
     update(product: Product): Promise<number>;  // for restocking, adding faq or any queries..
-    delete(id: number): Promise<void>;
+    delete(slug: string): Promise<void>;
 
 }

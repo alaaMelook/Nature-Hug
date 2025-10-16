@@ -4,6 +4,6 @@ export interface Review {
     customer_id?: number;
     rating?: number;
     comment?: string;
-    status: 'pending' | 'approved' | 'rejected';
+    status: 'pending' | 'approved' | 'rejected' | string;
     created_at: string;
 }

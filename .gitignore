@@ -19,7 +19,8 @@
 
 # production
 /build
-
+instructions.md
+schemas.sql
 # misc
 .DS_Store
 *.pem

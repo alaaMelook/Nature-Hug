@@ -3,6 +3,7 @@
 @source "../.flowbite-react/class-list.json";
 
 @theme {
+  --color-primary-10: #fffefb;
   --color-primary-50: #faf8ec;
   --color-primary-100: #f4edcd;
   --color-primary-200: #eadb9e;

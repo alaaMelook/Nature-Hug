@@ -14,3 +14,6 @@ export interface ProductView {
     created_at: string;
     avg_rating: number;
 }
+export interface CartItem extends ProductView {
+    quantity: number;
+}

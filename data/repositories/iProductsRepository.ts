@@ -2,6 +2,7 @@ import { supabase } from "@/data/supabase/client";
 import { Product } from "@/domain/entities/database/product";
 import { ProductMaterial } from "@/domain/entities/database/productMaterials";
 import { ProductVariant } from "@/domain/entities/database/productVariant";
+import { Review } from "@/domain/entities/database/review";
 import { ProductDetailView } from "@/domain/entities/views/shop/productDetailView";
 import { ProductView } from "@/domain/entities/views/shop/productView";
 import { ProductRepository } from "@/domain/repositories/productRepository";
@@ -62,7 +63,15 @@ export class IProductRepository implements ProductRepository {
             return [];
         }
     }
-
+    async addReview(review: Review): Promise<void> {
+        try {
+            const { error } = await supabase.schema('store').from('reviews').insert(review);
+            if (error) console.error(error);
+        } catch (error) {
+            console.error(error);
+            throw error;
+        }
+    }
     // admin
 
     async getAll(): Promise<Product[]> {
@@ -127,9 +136,9 @@ export class IProductRepository implements ProductRepository {
             throw error;
         }
     }
-    async delete(id: number): Promise<void> {
+    async delete(slug: string): Promise<void> {
         try {
-            const { error } = await supabase.schema('store').from('products').delete().eq('id', id);
+            const { error } = await supabase.schema('store').from('products').delete().eq('slug', slug);
             if (error) throw error
         } catch (error) {
             console.error(error);

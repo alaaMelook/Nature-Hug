@@ -3,8 +3,10 @@
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/providers/CartProvider';
 import { useState } from 'react';
+import { ProductView } from '@/domain/entities/views/shop/productView';
+import { ProductDetailView } from '@/domain/entities/views/shop/productDetailView';
 
-export default function BuyNowButton({ product, quantity }: { product: Product, quantity: number }) {
+export default function BuyNowButton({ product, quantity }: { product: ProductView | ProductDetailView, quantity: number }) {
     const router = useRouter();
     const { addToCart } = useCart();
     const [loading, setLoading] = useState(false);
@@ -19,7 +21,7 @@ export default function BuyNowButton({ product, quantity }: { product: Product, 
     return (
         <button
             onClick={isDisabled ? undefined : handleBuyNow}
-            className={`mt-4 w-full py-2.5 rounded-lg shadow-md flex items-center justify-center transition-colors duration-300 
+            className={`w-full py-2.5 rounded-lg shadow-md flex items-center justify-center transition-colors duration-300 
       ${loading || isDisabled ? "bg-gray-400 text-gray-200" : "bg-primary-700 text-primary-50 hover:bg-primary-200 hover:text-primary-700 cursor-pointer"}
       disabled:opacity-50`}
             disabled={!product.stock}

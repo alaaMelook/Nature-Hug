@@ -6,12 +6,6 @@ declare global {
 
 
 
-  interface User {
-    id: string;
-    email: string;
-    name?: string;
-  }
-
   interface ApiResponse<T = any> {
     data?: T;
     error?: string;
@@ -28,6 +22,16 @@ declare global {
     getCartNetTotal: () => number;
     getCartCount: () => number;
   }
+  type SupabaseAuthContextType = {
+    user: Customer | null;
+    session: Session | null;
+    loading: boolean;
+    member: Member | null;
+    signInWithGoogle: () => Promise<void>;
+    signInWithEmail: (email: string, password: string) => Promise<{ error?: string }>;
+    signUpWithEmail: (email: string, password: string, name?: string) => Promise<{ error?: string }>;
+    signOut: () => Promise<void>;
+  };
 
   type FormEvent = React.FormEvent<HTMLFormElement>;
   type InputChangeEvent = React.ChangeEvent<HTMLInputElement>;

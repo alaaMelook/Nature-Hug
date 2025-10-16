@@ -1,13 +1,17 @@
 "use client";
-import { X, Handbag, ArrowRightIcon } from "lucide-react";
+import { X, Handbag, ArrowRightIcon, Trash2Icon } from "lucide-react";
 
 import { useTranslation } from "../../../providers/TranslationProvider";
 import { useCart } from "@/providers/CartProvider";
 import { Tooltip } from "flowbite-react";
 import Counter from "../../../ui/components/(shop)/Counter";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+
+
 
 export default function CartPage() {
+  const router = useRouter();
   const { t, language } = useTranslation();
   const cart = useCart();
   const { cart: items, removeFromCart, getCartNetTotal } = cart;
@@ -42,14 +46,14 @@ export default function CartPage() {
           <div className="lg:col-span-2 space-y-6">
             {items.map((item) => (
               <div
-                key={item.id}
+                key={item.slug}
                 className="bg-white rounded-3xl shadow-xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between transform transition-all duration-300 hover:scale-[1.01] hover:shadow-2xl border border-slate-100 "
               >
                 <div className="flex items-center gap-6 w-full">
                   <div className="flex-shrink-0 relative w-24 h-24 rounded-2xl overflow-hidden shadow-inner">
                     <img
                       src={
-                        item.image_url ||
+                        item.image ||
                         "https://placehold.co/100x100/E2E8F0/FFF?text=No+Image"
                       }
                       alt={item.name_english || item.name_arabic || ""}
@@ -58,7 +62,7 @@ export default function CartPage() {
                   </div>
                   <div className="flex-grow">
                     <h3 className="text-lg text-primary-950 font-semibold mb-5">
-                      {language === "ar" ? item.name_arabic : item.name_english}
+                      {item.name}
                     </h3>
 
                     <Counter
@@ -117,15 +121,27 @@ export default function CartPage() {
                   EGP {getCartNetTotal().toFixed(2)}
                 </span>
               </div>
-              <p className="text-sm text-slate-500 mb-6">{t("checkoutInfo")}</p>
-              <Link href="/checkout">
-                <button className="w-full cursor-pointer py-4 bg-primary-800 text-primary-50 font-bold rounded-full text-lg shadow-lg hover:bg-primary-50 hover:text-primary-700 transition-colors duration-300"
-                >
-                  {t("proceedToCheckout")}
-                </button>
-              </Link>
+              <p className="text-sm text-slate-500 mb-6 flex">{t("checkoutInfo")}</p>
+
+
+              <button className=" w-full cursor-pointer py-4 bg-primary-800 text-primary-50 font-bold rounded-full text-lg shadow-lg hover:bg-primary-50 hover:text-primary-700 transition-colors duration-300"
+                onClick={() => { router.push("/checkout"); }}
+              >
+
+                {t("proceedToCheckout")}
+              </button>
+
+
             </div>
           </div>
+          <button className=" w-15 h-15 cursor-pointer m-5 bg-gray-400 text-primary-50 rounded-full text-lg shadow-lg"
+            onClick={() => cart.clearCart()}
+          >
+            <center>
+              <Trash2Icon></Trash2Icon>
+
+            </center>
+          </button>
         </div>
       </div>
     </div>

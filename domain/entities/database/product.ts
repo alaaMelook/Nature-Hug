@@ -25,7 +25,3 @@ export interface Product {
     variants: ProductVariant[];
     materials: ProductMaterial[];
 }
-
-export interface CartItem extends Product {
-    quantity: number;
-}

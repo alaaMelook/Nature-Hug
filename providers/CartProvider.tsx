@@ -9,7 +9,7 @@ import React, {
 } from "react";
 import { toast } from "sonner";
 import lz from 'lz-string';
-import { Product, CartItem } from "@/domain/entities/database/product";
+import { CartItem, ProductView } from "@/domain/entities/views/shop/productView";
 
 
 
@@ -54,9 +54,9 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
     }
   }, [cart, loading, isClient]);
 
-  const addToCart = async (product: Product, quantity: number) => {
+  const addToCart = async (product: ProductView, quantity: number) => {
     const existingItemIndex = cart.findIndex(
-      (item) => item.id === product.id  // Use ID instead of name_english
+      (item) => item.slug === product.slug  // Use ID instead of name_english
     );
 
     const newCart = existingItemIndex >= 0
@@ -67,25 +67,25 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
       )
       : [...cart, { ...product, quantity: quantity }];
 
-    toast.success(`${product.name_en} added to cart`, { duration: 2000 });
+    toast.success(`${product.name} added to cart`, { duration: 2000 });
     setCart(newCart);
   };
 
-  const removeFromCart = async (product: Product) => {
+  const removeFromCart = async (product: ProductView) => {
     const newCart = cart.filter(
-      (item) => item.id !== product.id  // Use ID instead of name_english
+      (item) => item.slug === product.slug  // Use ID instead of name_english
     );
     setCart(newCart);
   };
 
-  const updateQuantity = async (product: Product, quantity: number) => {
+  const updateQuantity = async (product: ProductView, quantity: number) => {
     if (quantity <= 0) {
       removeFromCart(product);
       return;
     }
 
     const newCart = cart.map((item) =>
-      item.id === product.id ? { ...item, quantity } : item
+      item.slug === product.slug ? { ...item, quantity } : item
     );
     setCart(newCart);
   };

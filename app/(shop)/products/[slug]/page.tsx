@@ -74,29 +74,12 @@ export default function ProductPage({ params }: { params: { slug: string } | Pro
     },
     { id: 'bestfor', title: 'Best For', content: product.highlight, icon: ShoppingBag },
     { id: 'precautions', title: 'Precautions', content: product.description, icon: Minus },
-    // {
-    //   id: 'reviews',
-    //   title: `Customer Reviews`,
-    //   icon: Star,
-    //   content: (
-    //     product.reviews && product.reviews.length > 0 ? (
-    //       product.reviews.map(review => (
-    //         <div key={review.id} className="p-4 mb-3 border border-gray-100 rounded-lg bg-primary-50 shadow-sm">
-    //           <StarRating rating={review.rating} />
-    //           <p className="font-semibold text-primary-800 mt-1">{review.customer_name}</p>
-    //           <p className="text-sm text-gray-600 mt-1">{review.comment}</p>
-    //         </div>
-    //       ))
-    //     ) : (
-    //       <p>No reviews yet. Be the first!</p>
-    //     )
-    //   ),
-    // },
+
   ];
   console.log(product.variants);
   return (
-    <div className={`flex flex-col items-center px-6 p-4 w-full bg-white font-sans`}>
-      <div className={`lg:flex lg:space-x-8 max-w-7xl w-full`}>
+    <div className={`flex flex-col items-center  w-full bg-primary-10 font-sans`}>
+      <div className={`lg:flex lg:space-x-8 px-6 p-4 max-w-7xl w-full`}>
         <div className="lg:w-1/2 flex flex-col items-center mb-6 lg:mb-0 p-4">
           <div className="w-full max-w-md h-96 relative">
             <ImageCarousel images={[product.image ?? '', ...(product.gallery || [])]} />
@@ -162,19 +145,6 @@ export default function ProductPage({ params }: { params: { slug: string } | Pro
 
             <div className="flex flex-col gap-4">
 
-              <div className="flex items-center justify-between text-gray-700">
-                <span className="text-lg font-medium">{t('quantity')}:</span>
-                <Counter
-                  quantity={quantity}
-                  onIncrease={() => setQuantity(q => Math.min(q + 1, product.stock ?? 1))}
-                  onDecrease={() => setQuantity(q => Math.max(q - 1, 1))}
-                />
-                {quantity === product.stock && <p className='text-sm text-red-500 font-medium'>{t('maxAvailable')}</p>}
-              </div>
-              <div className="flex flex-col sm:flex-row gap-3 mt-4">
-                <AddToCartButton product={product} quantity={quantity} />
-                <BuyNowButton product={product} quantity={quantity} />
-              </div>
               {(product.stock ?? 0) === 0 && (
                 <div className="text-center text-red-600 font-semibold mt-2 p-2 bg-red-50 rounded-lg">
                   {t('outOfStock')}
@@ -184,9 +154,32 @@ export default function ProductPage({ params }: { params: { slug: string } | Pro
           </div>
         </div>
       </div>
-      <div className="p-3 mt-5 w-full" >
+      <div className=' w-full h-full py-10  bg-primary-950 text-primary-50 flex-col items-center justify-center'>
+        <h2 className="font-bold text-center text-4xl">
+          {t('reviews').toUpperCase()}
+        </h2>
 
-        <ReviewsSlider reviews={product.reviews ?? []} />
+        <div className="py-3 mt-5 w-full " >
+
+          <ReviewsSlider product={product} />
+        </div>
+      </div>
+
+      <div className=" w-full sticky bottom-0 left-0 rounded-2xl bg-white  shadow-lg shadow-gray-950" >
+
+        <div className="flex items-center justify-between text-gray-700 px-5 gap-10 py-2 ">
+          <span className="text-lg font-medium">{t('quantity')}:</span>
+          <Counter
+            quantity={quantity}
+            onIncrease={() => setQuantity(q => Math.min(q + 1, product.stock ?? 1))}
+            onDecrease={() => setQuantity(q => Math.max(q - 1, 1))}
+          />
+          {quantity === product.stock && <p className='text-sm text-red-500 font-medium'>{t('maxAvailable')}</p>}
+
+          {/* <div className="flex flex-col sm:flex-row gap-3 mt-4"> */}
+          <AddToCartButton product={product} quantity={quantity} />
+          <BuyNowButton product={product} quantity={quantity} />
+        </div>
       </div>
     </div>
   );
