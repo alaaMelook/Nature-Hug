@@ -3,8 +3,11 @@ import { Review } from '@/domain/entities/database/review';
 
 
 
-/** Fetch all products for product listing page */
-export async function addProductReview(review: Review): Promise<void> {
-    let ProductRepository = new IProductRepository();
-    await ProductRepository.addReview(review);
+export class AddProductReview {
+
+    constructor(private repo = new IProductRepository()) { }
+
+    async execute(review: Review): Promise<void> {
+        await this.repo.addReview(review);
+    }
 }

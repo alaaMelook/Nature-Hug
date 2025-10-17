@@ -7,3 +7,11 @@ export interface Customer {
     email?: string;
     auth_user_id?: string;
 }
+
+export interface CustomerAddress {
+    id: number;
+    customer_id: number;
+    address: string;
+    governorate?: string;
+    created_at: string;
+}

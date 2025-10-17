@@ -4,7 +4,7 @@ import { X, Handbag, ArrowRightIcon, Trash2Icon } from "lucide-react";
 import { useTranslation } from "../../../providers/TranslationProvider";
 import { useCart } from "@/providers/CartProvider";
 import { Tooltip } from "flowbite-react";
-import Counter from "../../../ui/components/(shop)/Counter";
+import Counter from "../../../ui/(shop)/components/Counter";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 

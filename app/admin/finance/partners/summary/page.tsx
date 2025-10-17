@@ -6,8 +6,8 @@ import Link from "next/link";
 import * as XLSX from "xlsx";
 
 // ✅ Lazy load للرسومات
-const OwnershipPie = dynamic(() => import("@/ui/components/admin/charts/OwnershipPie"), { ssr: false });
-const ContribVsProfitBar = dynamic(() => import("@/ui/components/admin/charts/ContribVsProfitBar"), { ssr: false });
+const OwnershipPie = dynamic(() => import("@/ui/admin/components/charts/OwnershipPie"), { ssr: false });
+const ContribVsProfitBar = dynamic(() => import("@/ui/admin/components/charts/ContribVsProfitBar"), { ssr: false });
 
 // ✅ دالة للتصدير Excel
 function exportToExcel(data: any[], fileName: string) {

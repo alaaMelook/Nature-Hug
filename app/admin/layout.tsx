@@ -1,61 +1,36 @@
 import { redirect } from "next/navigation";
-import AdminSidebar from "../../ui/components/admin/AdminSidebar";
-import AdminHeader from "../../ui/components/admin/AdminHeader";
+import AdminSidebar from "../../ui/admin/components/AdminSidebar";
+import AdminHeader from "../../ui/admin/components/AdminHeader";
 import { TranslationProvider } from "../../providers/TranslationProvider";
 
 import { ReactNode } from "react";
 
-import { createSupabaseServerClient } from "@/data/supabase/server";
-
-import { AdminUser } from "@/providers/SupabaseAuthProvider";
+import { ViewMember } from "@/domain/use-case/admin/viewMember";
+import { getCurrentUser } from "@/domain/use-case/shop/getCurrentUser";
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
-  const supabase = await createSupabaseServerClient();
 
   // 🔒 Get current user
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await new getCurrentUser().execute(true); // to run from server side not client's
 
   if (!user) redirect("/login");
+  console.log(user);
 
-  // 🔒 Check role
-  const { data: customer } = await supabase
-    .from("store.customers")
-    .select("id, name, email")
-    .eq("auth_user_id", user.id)
-    .maybeSingle();
+  const member = await new ViewMember().fromCustomerId({ customerId: user.id, fromServer: true });
+  console.log(member);
+  if (!member) redirect("/");
 
-  if (!customer) redirect("/");
-
-  const { data: member } = await supabase
-    .from("store.members")
-    .select("role")
-    .eq("user_id", customer.id)
-    .maybeSingle();
-
-  if (member?.role !== "admin") redirect("/");
-
-  const adminUser: AdminUser = {
-    id: user.id,
-    email: user.email || "",
-    name: customer.name,
-    role: member.role,
-    customerId: customer.id,
-  };
 
 
   return (
-    <TranslationProvider>
-      <div className="min-h-screen bg-gray-100">
-        <AdminHeader adminUser={adminUser} />
-        <div className="flex">
-          <AdminSidebar />
-          <main className="flex-1 p-6">
-            {children}
-          </main>
-        </div>
+    <div className="min-h-screen bg-gray-100">
+      <AdminHeader adminUser={member} />
+      <div className="flex">
+        <AdminSidebar />
+        <main className="flex-1 p-6">
+          {children}
+        </main>
       </div>
-    </TranslationProvider>
+    </div>
   );
 }

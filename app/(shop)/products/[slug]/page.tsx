@@ -2,21 +2,19 @@
 
 
 import React, { useCallback, useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { viewProduct } from "@/domain/use-case/shop/viewProduct";
 import Skeleton from "@mui/material/Skeleton";
 import { useTranslation } from "@/providers/TranslationProvider";
-import BuyNowButton from "@/ui/components/(shop)/BuyNowButton";
-import AddToCartButton from "@/ui/components/(shop)/CartButton";
-import { CollapsibleSection } from "@/ui/components/(shop)/CollapsibleSection";
-import Counter from "@/ui/components/(shop)/Counter";
-import ImageCarousel from "@/ui/components/(shop)/ImageCarousel";
-import { StarRating } from "@/ui/components/(shop)/StarRating";
+import BuyNowButton from "@/ui/(shop)/components/BuyNowButton";
+import AddToCartButton from "@/ui/(shop)/components/CartButton";
+import { CollapsibleSection } from "@/ui/(shop)/components/CollapsibleSection";
+import Counter from "@/ui/(shop)/components/Counter";
+import ImageCarousel from "@/ui/(shop)/components/ImageCarousel";
+import { StarRating } from "@/ui/(shop)/components/StarRating";
 import { Info, CheckCircle, ShoppingBag, Minus, Star } from "lucide-react";
 import { langStore } from '@/lib/i18n/langStore';
-import { ReviewsSlider } from "@/ui/components/(shop)/ReviewsSlider";
+import { ReviewsSlider } from "@/ui/(shop)/components/ReviewsSlider";
 import Link from "next/link";
-import CollapsibleText from "@/ui/components/(shop)/CollapsibleText";
+import { useProductDetailData } from "@/ui/(shop)/hooks/useProductDetailData";
 
 
 export default function ProductPage({ params }: { params: { slug: string } | Promise<{ slug: string }> }) {
@@ -24,11 +22,7 @@ export default function ProductPage({ params }: { params: { slug: string } | Pro
   const slug = resolvedParams.slug;
   const [isLoading, setLoading] = useState(true); // local loading tied to lang change
 
-  const { data: product, isFetching, refetch } = useQuery({
-    queryKey: ["product", slug, langStore.get()], // include language to auto-refetch
-    queryFn: () => viewProduct(slug),
-
-  });
+  const { data: product, refetch } = useProductDetailData(slug);
 
   // Set loading true on language change and refetch
   useEffect(() => {

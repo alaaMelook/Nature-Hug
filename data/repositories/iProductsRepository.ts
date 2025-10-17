@@ -1,4 +1,5 @@
 import { supabase } from "@/data/supabase/client";
+import { Category } from "@/domain/entities/database/category";
 import { Product } from "@/domain/entities/database/product";
 import { ProductMaterial } from "@/domain/entities/database/productMaterials";
 import { ProductVariant } from "@/domain/entities/database/productVariant";
@@ -70,6 +71,17 @@ export class IProductRepository implements ProductRepository {
         } catch (error) {
             console.error(error);
             throw error;
+        }
+    }
+
+    async getAllCategories(): Promise<Category[]> {
+        try {
+            const { data, error } = await supabase.schema('store').from('categories').select('*');
+            if (error) console.error(error);
+            return data || [];
+        } catch (error) {
+            console.error(error);
+            return [];
         }
     }
     // admin

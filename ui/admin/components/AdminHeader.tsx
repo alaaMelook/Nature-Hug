@@ -3,13 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/data/supabase/client";
-import { AdminUser } from "@/providers/SupabaseAuthProvider";
 import { LogOut, User, Settings } from "lucide-react";
 import { useTranslation } from "@/providers/TranslationProvider";
-import LanguageSwitcher from "@/ui/components/(shop)/LanguageSwitcher";
+import LanguageSwitcher from "@/ui/(shop)/components/LanguageSwitcher";
+import { MemberView } from "@/domain/entities/views/admin/memberView";
 
 
-export default function AdminHeader({ adminUser }: { adminUser: AdminUser }) {
+export default function AdminHeader({ adminUser }: { adminUser: MemberView }) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const router = useRouter();
   ;

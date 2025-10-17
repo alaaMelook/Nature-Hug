@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/data/supabase/client";
 import { useTranslation } from "@/providers/TranslationProvider";
-import CollapsibleText from "@/ui/components/(shop)/CollapsibleText";
+import CollapsibleText from "@/ui/(shop)/components/CollapsibleText";
 
 
 ;

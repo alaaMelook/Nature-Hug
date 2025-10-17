@@ -38,5 +38,5 @@ declare global {
   type SelectChangeEvent = React.ChangeEvent<HTMLSelectElement>;
   type LangKey = 'en' | 'ar';
   type LangChangeListener = (lang: LangKey) => void;
-
+  type MemberRole = 'admin' | 'moderator' | 'user';
 }

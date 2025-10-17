@@ -9,6 +9,7 @@ import {
   Menu,
   X,
   User,
+  FlaskConicalIcon,
   Settings,
   LogIn,
   LogOut,
@@ -28,7 +29,7 @@ export default function Navbar() {
   );
 
   const router = useRouter();
-  const { user, signOut } = useSupabaseAuth();
+  const { user, member, signOut } = useSupabaseAuth();
 
   // Toggle mobile menu
   const toggleMobileMenu = useCallback(() => {
@@ -112,16 +113,16 @@ export default function Navbar() {
                   <User className="w-4 h-4 mr-2" />
                   Profile
                 </Link>
-
-                <Link
-                  href="/admin"
-                  onClick={() => setIsOpen(false)}
-                  className="flex items-center px-4 py-2 text-sm text-red-700 hover:bg-red-100"
-                >
-                  <User className="w-4 h-4 mr-2" />
-                  Admin
-                </Link>
-
+                {member && (
+                  <Link
+                    href="/admin"
+                    onClick={() => setIsOpen(false)}
+                    className="flex items-center px-4 py-2 text-sm text-red-700 hover:bg-red-100"
+                  >
+                    <FlaskConicalIcon className="w-4 h-4 mr-2" />
+                    Panel
+                  </Link>
+                )}
                 <button
                   onClick={handleLogout}
                   className="w-full flex items-center px-4 py-2 text-sm text-primary-900 hover:bg-gray-100"
@@ -193,13 +194,16 @@ export default function Navbar() {
               >
                 My Profile
               </Link>
-              <Link
-                href="/admin"
-                className="bg-red-600 text-white px-4 py-2 rounded shadow-md hover:bg-red-700"
-                onClick={() => setIsOpen(false)}
-              >
-                Admin Panel
-              </Link>
+              {member && (
+                <Link
+                  href="/admin"
+                  onClick={() => setIsOpen(false)}
+                  className="flex items-center px-4 py-2 text-sm text-red-700 hover:bg-red-100"
+                >
+                  <FlaskConicalIcon className="w-4 h-4 mr-2" />
+                  Panel
+                </Link>
+              )}
               <button
                 onClick={() => {
                   handleLogout();

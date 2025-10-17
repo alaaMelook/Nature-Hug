@@ -1,23 +1,21 @@
 'use client'
 
 import React from "react";
-import { viewRecentProducts } from "@/domain/use-case/shop/viewRecentProducts";
 import { useTranslation, useFeatures } from "@/providers/TranslationProvider";
-import ProductGrid from "@/ui/components/(shop)/ProductsGrid";
-import { Link } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import ProductGrid from "@/ui/(shop)/components/ProductsGrid";
+
+
+import { useProductsData } from "@/ui/(shop)/hooks/useProductsData";
+import Link from "next/link";
 
 
 export default function HomePage() {
-  let {
-    data: products,
-    isLoading } = useQuery({
-      queryKey: ["products"],
-      queryFn: () => viewRecentProducts(),
-    });
-
   const { t } = useTranslation();
   const features = useFeatures();
+
+  let {
+    data: products,
+    isLoading } = useProductsData({ recent: true });
 
 
   return (
@@ -32,7 +30,7 @@ export default function HomePage() {
             <p className="sm:text-lg text-primary-800 max-w-2xl mx-auto mb-8">
               {t("heroDescription")}
             </p>
-            <div className="flex flex-col sm:flex-row justify-center gap-4">
+            <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
               <Link
                 href="/products"
                 className="bg-primary-800 text-white font-semibold px-6 py-3 rounded-lg shadow-md hover:bg-primary-50 hover:text-primary-700 transition-colors duration-300 text-center"
@@ -89,15 +87,7 @@ export default function HomePage() {
         </section>
       </main>
 
-      {/* Footer */}
-      <footer className=" bg-primary-50 font-semibold text-gray-700 py-8 md:py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p className="text-sm md:text-base" suppressHydrationWarning>
-            &copy; {new Date().getFullYear()} Hug Nature.{" "}
-            {t("allRightsReserved")}
-          </p>
-        </div>
-      </footer>
+
     </div>
   );
 }

@@ -1,30 +1,66 @@
 'use client'
-import React from "react";
-import { useQuery } from "@tanstack/react-query";
-import { viewAllProducts } from "@/domain/use-case/shop/viewAllProducts";
-import ProductGrid from "@/ui/components/(shop)/ProductsGrid";
+import React, { useMemo, useState } from "react";
+import ProductGrid from "@/ui/(shop)/components/ProductsGrid";
+import { useProductsData } from "@/ui/(shop)/hooks/useProductsData";
+import ProductFilters from "@/ui/(shop)/components/ProductFilters";
 
 
 export default function Products() {
-  let {
-    data: products,
+  let { data: products, isLoading } = useProductsData({});
+  const [filters, setFilters] = useState({ search: '', category: '', sortBy: 'name-asc', inStock: false, onSale: false });
 
-    isLoading } = useQuery({
-      queryKey: ["products"],
-      queryFn: () => viewAllProducts(),
+
+  const handleFilterChange = (newFilters: any) => {
+    setFilters(prevFilters => ({ ...prevFilters, ...newFilters }));
+  };
+
+  const filteredProducts = useMemo(() => {
+    if (!products) return [];
+
+    let filtered = products.filter(product => {
+      const searchMatch = product.name.toLowerCase().includes(filters.search.toLowerCase());
+      const categoryMatch = filters.category ? product.category_name === filters.category : true;
+      const inStockMatch = filters.inStock ? product.stock != null && product.stock > 0 : true;
+      const onSaleMatch = filters.onSale ? product.discount != null && product.discount > 0 : true;
+      return searchMatch && categoryMatch && inStockMatch && onSaleMatch;
     });
 
+    return filtered.sort((a, b) => {
+      switch (filters.sortBy) {
+        case 'name-asc':
+          return a.name.localeCompare(b.name);
+        case 'name-desc':
+          return b.name.localeCompare(a.name);
+        case 'price-asc':
+          return (a.price - (a.discount ?? 0)) - (b.price - (b.discount ?? 0));
+        case 'price-desc':
+          return (b.price - (b.discount ?? 0)) - (a.price - (a.discount ?? 0));
+        case 'rating-desc':
+          return (b.avg_rating || 0) - (a.avg_rating || 0);
+        default:
+          return 0;
+      }
+    });
 
+  }, [products, filters]);
 
   return (
-    <div className="p-8 sm:p-12 bg-primary-50 min-h-screen font-sans">
-      {/* Minimalist Centered Header */}
-      <div className="text-center mb-16">
-        <h1 className="text-5xl font-extralight text-gray-900">All Products</h1>
-        <p className="mt-4 max-w-2xl mx-auto text-gray-600 text-lg">Pure ingredients for visible results. Discover your new daily ritual.</p>
-      </div>
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
-      <ProductGrid products={products} isLoading={isLoading} />
+      {/* Minimalist Centered Header */}
+
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        {/* Filters Column */}
+        <div className="lg:col-span-1">
+          <ProductFilters onFilterChange={handleFilterChange} />
+        </div>
+        {/* Product Grid Column */}
+        <div className="lg:col-span-3">
+          <ProductGrid products={filteredProducts} isLoading={isLoading} perPage={5} />
+        </div>
+      </div>
     </div>
+
+
   );
 }
