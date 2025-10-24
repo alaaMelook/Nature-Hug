@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/data/supabase/client";
+import { supabase } from "@/data/datasources/supabase/client";
 
 ;
 type Order = {

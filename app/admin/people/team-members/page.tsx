@@ -1,4 +1,4 @@
-import { createSupabaseServerClient } from "@/data/supabase/server";
+import { createSupabaseServerClient } from "@/data/datasources/supabase/server";
 import { Search, UserPlus, Shield, User } from "lucide-react";
 
 async function getMembers() {

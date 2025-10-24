@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
-import AdminSidebar from "../../ui/admin/components/AdminSidebar";
-import AdminHeader from "../../ui/admin/components/AdminHeader";
-import { TranslationProvider } from "../../providers/TranslationProvider";
+import AdminSidebar from "../../ui/components/admin/AdminSidebar";
+import AdminHeader from "../../ui/components/admin/AdminHeader";
+import { TranslationProvider } from "../../ui/providers/TranslationProvider";
 
 import { ReactNode } from "react";
 
-import { ViewMember } from "@/domain/use-case/admin/viewMember";
+import { ViewMember } from "@/domain/use-case/admin/members";
 import { getCurrentUser } from "@/domain/use-case/shop/getCurrentUser";
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {

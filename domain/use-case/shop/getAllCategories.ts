@@ -1,5 +1,4 @@
 import { IProductRepository } from "@/data/repositories/iProductsRepository";
-import { supabase } from "@/data/supabase/client";
 import { Category } from "@/domain/entities/database/category";
 
 export class GetAllCategories {

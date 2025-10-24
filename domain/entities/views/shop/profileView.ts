@@ -1,4 +1,4 @@
-import { CustomerAddress } from "@/domain/entities/database/customer";
+import { CustomerAddress } from "@/domain/entities/auth/customer";
 
 export interface ProfileView {
     id: number;

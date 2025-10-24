@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/data/supabase/server";
+import { createSupabaseServerClient } from "@/data/datasources/supabase/server";
 
 // GET one category
 export async function GET(

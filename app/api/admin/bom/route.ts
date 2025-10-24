@@ -1,6 +1,6 @@
 // app/api/admin/bom/route.ts
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/data/supabase/server";
+import { createSupabaseServerClient } from "@/data/datasources/supabase/server";
 
 type SupaRow = any;
 

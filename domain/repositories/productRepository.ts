@@ -9,6 +9,7 @@ import { Category } from "../entities/database/category";
 
 export interface ProductRepository {
     viewBySlug(slug: string): Promise<ProductDetailView>;
+
     viewAll(): Promise<ProductView[]>;
     viewRecent(count: number): Promise<ProductView[]>;
     viewByCategory(categoryName: string): Promise<ProductView[]>;
@@ -20,8 +21,6 @@ export interface ProductRepository {
 
     getBySlug(slug: string): Promise<Product>;
     addReview(review: Review): Promise<void>;
-    create(product: Product): Promise<number>;
-    update(product: Product): Promise<number>;  // for restocking, adding faq or any queries..
-    delete(slug: string): Promise<void>;
 
+    uploadImage(file: File): Promise<string>;
 }

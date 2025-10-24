@@ -1,11 +1,11 @@
-import { IAuthRepository } from "@/data/repositories/iAuthRepository";
-import { Customer } from "@/domain/entities/database/customer";
+import { ICustomerRepository } from "@/data/repositories/iCustomerRepository";
+import { Customer } from "@/domain/entities/auth/customer";
 
 export class getCurrentUser {
     constructor() { }
 
     async execute(fromServer: boolean = false): Promise<Customer | null> {
-        const repo = new IAuthRepository(fromServer);
+        const repo = new ICustomerRepository(fromServer);
         const user = await repo.getCurrentUser();
         if (!user) throw new Error("User not found");
         return await repo.fetchCustomer(user.id);

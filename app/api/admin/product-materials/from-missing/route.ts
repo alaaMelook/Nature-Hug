@@ -1,6 +1,6 @@
 // app/api/admin/product-materials/from-missing/route.ts
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/data/supabase/server";
+import { createSupabaseServerClient } from "@/data/datasources/supabase/server";
 
 type ReqBody = {
   itemIds: Array<number | string>;

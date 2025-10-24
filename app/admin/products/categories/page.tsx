@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/data/supabase/client";
+import { supabase } from "@/data/datasources/supabase/client";
 import { Plus, Trash2 } from "lucide-react";
 
 type Category = {

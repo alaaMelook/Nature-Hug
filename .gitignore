@@ -16,6 +16,7 @@
 # next.js
 /.next/
 /out/
+http.md
 
 # production
 /build

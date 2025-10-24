@@ -1,6 +1,6 @@
 // app/api/admin/invoices/route.ts
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/data/supabase/server";
+import { createSupabaseServerClient } from "@/data/datasources/supabase/server";
 
 // 📍 POST → Add Purchase Invoice
 export async function POST(req: Request) {

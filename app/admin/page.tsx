@@ -1,90 +1,48 @@
-import { createSupabaseServerClient } from "@/data/supabase/server";
-import { Users, Package, ShoppingCart, DollarSign, TrendingUp, TrendingDown } from "lucide-react";
+'use client'
+import { Users, Package, ShoppingCart, DollarSign, TrendingUp, TrendingDown, TrendingUpDown } from "lucide-react";
+import { useAdminDashboard, useRecentOrders } from "../../ui/hooks/admin/useAdminDashboard";
+import { OrderDetailsView } from "@/domain/entities/views/admin/orderDetailsView";
 
-async function getDashboardStats() {
-  const supabase = await createSupabaseServerClient();
 
-  // Get total customers
-  const { count: totalCustomers } = await supabase
-    .from("customers")
-    .select("*", { count: "exact", head: true });
+export default function AdminDashboard() {
+  const { data: stats, isPending } = useAdminDashboard();
+  const { data: recentOrders } = useRecentOrders();
 
-  // Get total products
-  const { count: totalProducts } = await supabase
-    .from("products")
-    .select("*", { count: "exact", head: true });
-
-  // Get total orders
-  const { count: totalOrders } = await supabase
-    .from("orders")
-    .select("*", { count: "exact", head: true });
-
-  // Get total revenue
-  const { data: orders } = await supabase
-    .from("orders")
-    .select("total")
-    .eq("status", "completed");
-
-  const totalRevenue = orders?.reduce((sum, order) => sum + (order.total || 0), 0) || 0;
-
-  // Get recent orders
-  const { data: recentOrders } = await supabase
-    .from("orders")
-    .select(`
-      id,
-      created_at,
-      status,
-      total,
-      customers (
-        name,
-        email
-      )
-    `)
-    .order("created_at", { ascending: false })
-    .limit(5);
-
-  return {
-    totalCustomers: totalCustomers || 0,
-    totalProducts: totalProducts || 0,
-    totalOrders: totalOrders || 0,
-    totalRevenue,
-    recentOrders: recentOrders || [],
-  };
-}
-
-export default async function AdminDashboard() {
-  const stats = await getDashboardStats();
-
+  console.log('Stats:', stats);
   const statCards = [
     {
       title: "Total Customers",
-      value: stats.totalCustomers,
+      value: stats?.total_customers ?? 0,
       icon: Users,
-      change: "+12%",
-      changeType: "positive" as const,
+      change: stats?.customers_change,
+      changeType: stats?.customers_change_status,
     },
     {
       title: "Total Products",
-      value: stats.totalProducts,
+      value: stats?.total_products ?? 0,
       icon: Package,
-      change: "+5%",
-      changeType: "positive" as const,
+      change: stats?.products_change,
+      changeType: stats?.products_change_status,
     },
     {
       title: "Total Orders",
-      value: stats.totalOrders,
+      value: stats?.total_orders,
       icon: ShoppingCart,
-      change: "+8%",
-      changeType: "positive" as const,
+      change: stats?.orders_change,
+      changeType: stats?.orders_change_status,
     },
     {
       title: "Total Revenue",
-      value: `$${stats.totalRevenue.toLocaleString()}`,
+      value: stats?.total_revenue.toLocaleString(),
       icon: DollarSign,
-      change: "+15%",
-      changeType: "positive" as const,
+      change: stats?.revenue_change,
+      changeType: stats?.revenue_change_status,
     },
   ];
+
+  if (isPending) {
+    return <div>Loading...</div>
+  }
 
   return (
     <div className="space-y-6">
@@ -109,10 +67,10 @@ export default async function AdminDashboard() {
             <div className="mt-4 flex items-center">
               {stat.changeType === "positive" ? (
                 <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
-              ) : (
+              ) : stat.changeType === "negative" ? (
                 <TrendingDown className="h-4 w-4 text-red-500 mr-1" />
-              )}
-              <span className={`text-sm font-medium ${stat.changeType === "positive" ? "text-green-600" : "text-red-600"
+              ) : <TrendingUpDown className="h-4 w-4  text-gray-600 mr-1" ></TrendingUpDown>}
+              <span className={`text-sm font-medium ${stat.changeType === "positive" ? "text-green-600" : stat.changeType === "negative" ? "text-red-600" : "text-gray-600"
                 }`}>
                 {stat.change}
               </span>
@@ -149,39 +107,44 @@ export default async function AdminDashboard() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {stats.recentOrders.map((order: any) => (
-                <tr key={order.id}>
+              {recentOrders?.map((order: OrderDetailsView) => (
+                <tr key={order.order_id}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    #{order.id}
+                    #{order.order_id}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     <div>
-                      <div className="font-medium">{order.customers?.name || "N/A"}</div>
-                      <div className="text-gray-500">{order.customers?.email || "N/A"}</div>
+                      <div className="font-medium">{order.customer_name || "N/A"}</div>
+                      <div className="text-gray-500">{order.customer_email || "N/A"}</div>
+                      {order.customer_phone.map((phone) => (
+                        <div key={phone} className="text-gray-500">{phone}</div>
+                      ))}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {new Date(order.created_at).toLocaleDateString()}
+                    {new Date(order.order_date).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${order.status === "completed"
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${order.order_status === "completed"
                       ? "bg-green-100 text-green-800"
-                      : order.status === "pending"
+                      : order.order_status === "pending"
                         ? "bg-yellow-100 text-yellow-800"
                         : "bg-red-100 text-red-800"
                       }`}>
-                      {order.status}
+                      {order.order_status}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    ${order.total?.toLocaleString() || "0"}
+                    ${order.final_order_total?.toLocaleString() || "0"}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+
       </div>
+
     </div>
   );
 }

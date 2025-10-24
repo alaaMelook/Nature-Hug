@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
-import { TranslationProvider } from "@/providers/TranslationProvider";
-import FontProvider from "../providers/FontProvider";
+import { TranslationProvider } from "@/ui/providers/TranslationProvider";
+import FontProvider from "../ui/providers/FontProvider";
 import "./globals.css";
 import Script from "next/script";
 import { Toaster } from "sonner";
-import { createSupabaseServerClient } from "@/data/supabase/server";
-import { SupabaseAuthProvider } from "@/providers/SupabaseAuthProvider";
-import { ReactQueryProvider } from "@/providers/ReactQueryProvider";
+import { createSupabaseServerClient } from "@/data/datasources/supabase/server";
+import { SupabaseAuthProvider } from "@/ui/providers/SupabaseAuthProvider";
+import { ReactQueryProvider } from "@/ui/providers/ReactQueryProvider";
 
 export const metadata: Metadata = {
   title: "Hug Nature",

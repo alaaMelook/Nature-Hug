@@ -1,25 +1,10 @@
-import { createSupabaseServerClient } from "@/data/supabase/server";
+'use client';
+import { ProfileView } from "@/domain/entities/views/shop/profileView";
+import { useAllCustomers } from "@/ui/hooks/admin/useAllCustomers";
 import { Search, Mail, Phone, Calendar } from "lucide-react";
 
-async function getCustomers() {
-  const supabase = await supabase();
-
-  const { data: customers, error } = await supabase
-    .from("customers")
-    .select(`*
-    `)
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    console.log("Error fetching customers:", error);
-    return [];
-  }
-
-  return customers || [];
-}
-
-export default async function CustomersPage() {
-  const customers = await getCustomers();
+export default function CustomersPage() {
+  const { data: customers } = useAllCustomers({ withoutMembers: true });
 
   return (
     <div className="space-y-6">
@@ -63,7 +48,7 @@ export default async function CustomersPage() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {customers.map((customer: any) => (
+              {customers?.map((customer: ProfileView) => (
                 <tr key={customer.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
@@ -76,7 +61,7 @@ export default async function CustomersPage() {
                       </div>
                       <div className="ml-4">
                         <div className="text-sm font-medium text-gray-900">
-                          {customer.name || customer.profiles?.full_name || "Unknown"}
+                          {customer.name || "Unknown"}
                         </div>
                         <div className="text-sm text-gray-500">
                           ID: {customer.id}
@@ -124,13 +109,13 @@ export default async function CustomersPage() {
         </div>
       </div>
 
-      {customers.length === 0 && (
+      {!customers || customers?.length === 0 && (
         <div className="text-center py-12">
           <div className="text-gray-500">
             <div className="mx-auto h-12 w-12 text-gray-400" />
             <h3 className="mt-2 text-sm font-medium text-gray-900">No customers</h3>
             <p className="mt-1 text-sm text-gray-500">
-              Get started by creating your first customer.
+              Couldn't find any customers.
             </p>
           </div>
         </div>

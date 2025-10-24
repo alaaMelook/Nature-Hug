@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 // 📁 app/api/admin/purchase_invoices/route.ts
-import { createSupabaseServerClient } from "@/data/supabase/server";
+import { createSupabaseServerClient } from "@/data/datasources/supabase/server";
 
 export async function GET() {
   const supabase = await supabase();

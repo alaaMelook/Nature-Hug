@@ -1,5 +1,5 @@
 // app/api/admin/product-materials/route.ts
-import { createSupabaseServerClient } from "@/data/supabase/server";
+import { createSupabaseServerClient } from "@/data/datasources/supabase/server";
 import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {

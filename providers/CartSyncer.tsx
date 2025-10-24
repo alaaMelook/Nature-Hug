@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useCallback, useState } from "react";
-import { supabase } from "@/data/supabase/client";
+import { supabase } from "@/data/datasources/supabase/client";
 
 type LocalCartItem = { productId: string; quantity: number };
 
@@ -67,8 +67,7 @@ export default function CartSyncer() {
       }
     );
 
-    // Initial sync
-    sync();
+
 
     return () => subscription.unsubscribe();
   }, [supabase, sync, isClient]);

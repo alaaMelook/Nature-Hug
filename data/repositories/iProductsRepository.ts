@@ -1,4 +1,4 @@
-import { supabase } from "@/data/supabase/client";
+import { supabase } from "@/data/datasources/supabase/client";
 import { Category } from "@/domain/entities/database/category";
 import { Product } from "@/domain/entities/database/product";
 import { ProductMaterial } from "@/domain/entities/database/productMaterials";
@@ -28,6 +28,8 @@ export class IProductRepository implements ProductRepository {
             return [];
         }
     }
+
+
     async viewRecent(count: number): Promise<ProductView[]> {
         try {
 
@@ -128,33 +130,31 @@ export class IProductRepository implements ProductRepository {
             throw error;
         }
     }
-    async create(product: Product): Promise<number> {
+    async uploadImage(file: File): Promise<string> {
         try {
-            const { data, error } = await supabase.schema('admin').rpc('create_product', { product_data: product });
-            if (error) console.error(error);
-            return data;
-        } catch (error) {
-            console.error(error);
-            throw error;
+
+            const fileExt = file.name.split(".").pop();
+            const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+
+            const { data, error } = await supabase.storage
+                .from("invoices")
+                .upload(fileName, file, { contentType: file.type });
+
+            if (error) {
+                console.error(error);
+                throw new Error(error.message);
+            }
+
+            const { data: url } = supabase.storage
+                .from("invoices")
+                .getPublicUrl(data.path);
+
+            return url.publicUrl;
+        } catch (err: any) {
+            console.error("Upload error:", err);
+            throw new Error(err.message);
         }
     }
-    async update(product: Product): Promise<number> {
-        try {
-            const { data, error } = await supabase.schema('admin').rpc('update_product', { product_data: product });
-            if (error) console.error(error);
-            return data;
-        } catch (error) {
-            console.error(error);
-            throw error;
-        }
-    }
-    async delete(slug: string): Promise<void> {
-        try {
-            const { error } = await supabase.schema('store').from('products').delete().eq('slug', slug);
-            if (error) throw error
-        } catch (error) {
-            console.error(error);
-        }
-    }
+
 
 }

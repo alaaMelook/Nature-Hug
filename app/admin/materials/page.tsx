@@ -1,7 +1,7 @@
 // app/admin/materials/page.tsx  
 import { Suspense } from "react";
 import MaterialsTable from "./materials-table";
-import { createSupabaseServerClient } from "@/data/supabase/server";
+import { createSupabaseServerClient } from "@/data/datasources/supabase/server";
 
 async function getMaterials() {
   const supabase = await supabase();
