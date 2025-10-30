@@ -1,32 +1,38 @@
 'use client'
 
-import React, { useState } from 'react'
-import { Star } from 'lucide-react'
-import { useTranslation } from '@/ui/providers/TranslationProvider'
-import { useSupabaseAuth } from '@/ui/providers/SupabaseAuthProvider'
-import { toast } from 'sonner'
-import { AddProductReview } from '@/domain/use-case/shop/addProductReview'
-import { ProductDetailView } from '@/domain/entities/views/shop/productDetailView'
-import { ProductView } from '@/domain/entities/views/shop/productView'
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Review } from '@/domain/entities/database/review'
-import { addReview } from '@/ui/hooks/store/useAddReview'
+import React, {useEffect, useState} from 'react'
+import {ChevronDown, ChevronUp, Star} from 'lucide-react' // Import icons for expansion
+import {useTranslation} from '@/ui/providers/TranslationProvider'
+import {toast} from 'sonner'
+import {ProductDetailView} from '@/domain/entities/views/shop/productDetailView'
+import {ProductView} from '@/domain/entities/views/shop/productView'
+import {Review} from '@/domain/entities/database/review'
+import {addReview} from '@/ui/hooks/store/useAddReview'
 import Link from 'next/link'
-import { ChevronDown, ChevronUp } from 'lucide-react' // Import icons for expansion
+import {useSupabase} from "@/ui/hooks/useSupabase";
+import {Customer} from "@/domain/entities/auth/customer";
 
 interface AddReviewProps {
     product: ProductView | ProductDetailView,
     onReviewAdded: () => void
 }
 
-export const AddReview: React.FC<AddReviewProps> = ({ product, onReviewAdded }) => {
-    const { t } = useTranslation()
-    const { user, loading: authLoading } = useSupabaseAuth()
+export const AddReview: React.FC<AddReviewProps> = ({product, onReviewAdded}) => {
+    const {t} = useTranslation()
     const [rating, setRating] = useState(0)
     const [comment, setComment] = useState('')
     const [hoverRating, setHoverRating] = useState(0)
     const [isExpanded, setIsExpanded] = useState(false) // New state for expand/collapse
-    const queryClient = useQueryClient();
+    const {getUser} = useSupabase();
+    const [user, setUser] = useState<Customer | undefined>();
+
+    useEffect(() => {
+        getUser().then((result) => {
+                setUser(result);
+            }
+        )
+    }, []);
+
 
     const onAdded = () => {
         toast.success(t('reviewAddedSuccessfully'))
@@ -34,7 +40,6 @@ export const AddReview: React.FC<AddReviewProps> = ({ product, onReviewAdded }) 
         setComment('')
         setIsExpanded(false); // Collapse the form after successful submission
         onReviewAdded()
-        queryClient.invalidateQueries({ queryKey: ["reviews", product.slug] });
     }
     const onError = (error: any) => {
         console.error('Failed to add review:', error)
@@ -53,10 +58,6 @@ export const AddReview: React.FC<AddReviewProps> = ({ product, onReviewAdded }) 
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (!user) {
-            toast.error(t('loginToAddReview'))
-            return
-        }
         if (rating === 0) {
             toast.error(t('pleaseSelectRating'))
             return
@@ -70,7 +71,7 @@ export const AddReview: React.FC<AddReviewProps> = ({ product, onReviewAdded }) 
             const review: Review = {
                 id: 0,
                 product_id: product.id,
-                customer_id: user.id,
+                // customer_id: user.id,
                 rating: rating,
                 comment: comment,
                 status: 'pending',
@@ -81,14 +82,6 @@ export const AddReview: React.FC<AddReviewProps> = ({ product, onReviewAdded }) 
             console.error('Failed to add review:', error)
             toast.error(t('failedToAddReview'))
         }
-    }
-
-    if (authLoading) {
-        return (
-            <div className="flex justify-center items-center py-8">
-                <p>{t('loading')}...</p>
-            </div>
-        )
     }
 
     // Toggle function
@@ -104,12 +97,14 @@ export const AddReview: React.FC<AddReviewProps> = ({ product, onReviewAdded }) 
                 className="w-full flex items-center justify-between px-6 py-4 bg-primary-800 text-white rounded-lg shadow-lg hover:bg-primary-700 transition-colors duration-300 focus:outline-none focus:ring-4 focus:ring-primary-300"
             >
                 <span className="text-xl font-semibold">{t('addYourReview')}</span>
-                {isExpanded ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+                {isExpanded ? <ChevronUp size={24}/> : <ChevronDown size={24}/>}
             </button>
 
             {/* The Review Form Content, shown only when isExpanded is true */}
-            <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isExpanded ? 'max-h-screen pt-6' : 'max-h-0'}`}>
-                <div className={`relative ${!user ? 'bg-gray-300' : "bg-white"} p-6 rounded-lg shadow-md border border-gray-100`}>
+            <div
+                className={`overflow-hidden transition-all duration-500 ease-in-out ${isExpanded ? 'max-h-screen pt-6' : 'max-h-0'}`}>
+                <div
+                    className={`relative ${!user ? 'bg-gray-300' : "bg-white"} p-6 rounded-lg shadow-md border border-gray-100`}>
 
                     <div className={`${!user ? 'filter blur-sm' : ''}`}>
                         <h3 className="text-2xl font-bold text-primary-800 mb-4">{t('addYourReview')}</h3>
@@ -126,7 +121,7 @@ export const AddReview: React.FC<AddReviewProps> = ({ product, onReviewAdded }) 
                                             className={`cursor-pointer transition-colors duration-200 ${index < (hoverRating || rating)
                                                 ? 'text-yellow-400 fill-yellow-400'
                                                 : 'text-gray-300'
-                                                }`}
+                                            }`}
                                             onClick={() => handleStarClick(index)}
                                             onMouseEnter={() => setHoverRating(index + 1)}
                                             onMouseLeave={() => setHoverRating(0)}

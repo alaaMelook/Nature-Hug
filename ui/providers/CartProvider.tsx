@@ -80,7 +80,7 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
 
   const updateQuantity = async (product: ProductView, quantity: number) => {
     if (quantity <= 0) {
-      removeFromCart(product);
+      await removeFromCart(product);
       return;
     }
 

@@ -22,7 +22,6 @@ const statusOptions = [
 ];
 
 export default function AdminReviewsTable() {
-  ;
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
 

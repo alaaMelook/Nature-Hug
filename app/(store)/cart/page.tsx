@@ -1,7 +1,7 @@
 "use client";
 import { X, Handbag, ArrowRightIcon, Trash2Icon } from "lucide-react";
 
-import { useTranslation } from "../../../ui/providers/TranslationProvider";
+import { useTranslation } from "@/ui/providers/TranslationProvider";
 import { useCart } from "@/ui/providers/CartProvider";
 import { Tooltip } from "flowbite-react";
 import Counter from "@/ui/components/store/Counter";

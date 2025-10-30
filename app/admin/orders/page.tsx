@@ -2,7 +2,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/data/datasources/supabase/client";
 
-;
 type Order = {
   id: number;
   created_at: string;

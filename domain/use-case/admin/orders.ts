@@ -4,6 +4,15 @@ export class getRecentOrders {
     constructor(private repo = new IAdminRepository()) { }
 
     async execute() {
-        return this.repo.getOrderDetails();
+        try {
+            console.log("[getRecentOrders] execute called.");
+            console.log("[getRecentOrders] Calling getOrderDetails.");
+            const result = await this.repo.getOrderDetails();
+            console.log("[getRecentOrders] getOrderDetails result:", result);
+            return result;
+        } catch (error) {
+            console.error("[getRecentOrders] Error in execute:", error);
+            throw error;
+        }
     }
 }

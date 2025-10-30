@@ -4,7 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 
 export function useUploadImage() {
     return useMutation({
-        mutationKey: ["upload-image", Date.now()],
+        mutationKey: ["upload-image"],
         mutationFn: async (file: File) =>
             await new UploadImage().execute(file)
     });

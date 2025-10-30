@@ -6,13 +6,13 @@ import { useQuery } from "@tanstack/react-query";
 export function useProductsData({ recent = false, count = 4 }: { recent?: boolean, count?: number }) {
     if (recent) {
         return useQuery({
-            queryKey: ["recent-products", langStore.get()],
+            queryKey: ["recent-products"],
             queryFn: async () => await new ViewRecentProducts().execute(count),
             staleTime: 1000 * 60 * 5
         });
     }
     return useQuery({
-        queryKey: ["products", langStore.get()],
+        queryKey: ["products"],
         queryFn: async () => await new ViewAllProducts().execute(),
         staleTime: 1000 * 60 * 5
     });

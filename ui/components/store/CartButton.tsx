@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { ShoppingCart, BadgeAlert } from "lucide-react";
-import { useTranslation } from "../../providers/TranslationProvider";
+import { useTranslation } from "@/ui/providers/TranslationProvider";
 import { useCart } from "@/ui/providers/CartProvider";
 import { ProductView } from "@/domain/entities/views/shop/productView";
 import { ProductDetailView } from "@/domain/entities/views/shop/productDetailView";

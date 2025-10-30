@@ -1,15 +1,19 @@
 import Navbar from "@/ui/components/store/Navbar";
-import { CartProvider } from "@/ui/providers/CartProvider";
+import {CartProvider} from "@/ui/providers/CartProvider";
 import CartSyncer from "@/ui/providers/CartSyncer";
+import React from "react";
+import {GetCurrentUser} from "@/domain/use-case/shop/getCurrentUser";
+import {GetCurrentMember} from "@/domain/use-case/admin/getCurrentMember";
 
 
-
-export default function ShopLayout({ children }: { children: React.ReactNode }) {
+export default function ShopLayout({children}: { children: React.ReactNode }) {
+    const user = new GetCurrentUser().execute();
+    const member = new GetCurrentMember().execute();
     return (
         <div className="min-h-screen flex flex-col">
-            <CartSyncer />
+            <CartSyncer/>
             <CartProvider>
-                <Navbar />
+                <Navbar initialMember={member} initialUser={user}/>
                 <main className="flex-1">{children}</main>
             </CartProvider>
             {/* Footer */}

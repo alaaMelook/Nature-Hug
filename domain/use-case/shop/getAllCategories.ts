@@ -5,7 +5,14 @@ export class GetAllCategories {
     constructor(private repo = new IProductRepository()) { }
 
     async execute(): Promise<Category[]> {
-        return await this.repo.getAllCategories();
+        try {
+            console.log("[GetAllCategories] execute called.");
+            const result = await this.repo.getAllCategories();
+            console.log("[GetAllCategories] getAllCategories result:", result);
+            return result;
+        } catch (error) {
+            console.error("[GetAllCategories] Error in execute:", error);
+            throw error;
+        }
     }
 }
-

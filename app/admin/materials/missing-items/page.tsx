@@ -82,8 +82,6 @@ export default function MissingItemsPage() {
   const lowStockMaterials = useMemo(() => {
     return materials.filter(
       (mat) =>
-        typeof mat.stock_grams === "number" &&
-        typeof mat.low_stock_threshold === "number" &&
         mat.stock_grams <= mat.low_stock_threshold
     );
   }, [materials]);

@@ -1,6 +1,7 @@
 
 export interface ProductView {
     id: number;
+    variant_id?: number;
     name: string;            // from variant.name_en or product.name_en
     description?: string | null;    // from variant.description_en or product.description_en
     price: number;          // from variant.price or product.price

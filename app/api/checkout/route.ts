@@ -8,6 +8,7 @@ const supabase = createClient(
 
 export async function POST(req: Request) {
   try {
+    console.log("[Supabase] Inserting new customer.");
     const { name, address, phone, email } = await req.json();
 
     const { data: customer, error } = await supabase
@@ -16,10 +17,16 @@ export async function POST(req: Request) {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error("[Supabase] Error inserting customer:", error);
+      throw error;
+    }
+
+    console.log("[Supabase] Customer inserted successfully:", customer);
 
     return NextResponse.json({ success: true, customer });
   } catch (err) {
+    console.error("[Supabase] Error in POST handler:", err);
     return NextResponse.json({ success: false, error: err });
   }
 }

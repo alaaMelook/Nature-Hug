@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 
 export async function createSupabaseServerClient() {
+  console.log("[Supabase] Creating server client.");
   const cookieStore = await cookies();
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -23,5 +24,6 @@ export async function createSupabaseServerClient() {
       },
     }
   );
+  console.log("[Supabase] Server client created.");
   return supabase;
 }

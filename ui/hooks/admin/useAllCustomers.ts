@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 
 export function useAllCustomers({ withoutMembers = false }: { withoutMembers?: boolean }) {
     return useQuery({
-        queryKey: ["allCustomers", langStore.get(), withoutMembers],
+        queryKey: ["allCustomers", withoutMembers],
         queryFn: async () => await new GetAllCustomers().execute({ withoutMembers }),
     });
 }

@@ -18,23 +18,27 @@ export default function ProductsPage() {
   const { formData, setFormData, setImageFile, saveProduct, saving } = useProductForm();
 
   const [showModal, setShowModal] = useState(false);
-  let isEditing = false;
+  const [isEditing, setIsEditing] = useState(false);
 
   const openAddModal = () => {
-    isEditing = false;
+    setIsEditing(false);
     setFormData({});
     setImageFile(null);
     setShowModal(true);
   };
 
   const openEditModal = (product: ProductAdminView) => {
-    isEditing = true;
+    setIsEditing(true);
     setFormData(product);
     setImageFile(null);
     setShowModal(true);
   };
 
-  const closeModal = () => setShowModal(false);
+  const closeModal = () => {
+    setShowModal(false);
+    setFormData({});
+    setIsEditing(false);
+  };
 
   if (isPending) return <div className="text-center py-10 text-gray-600">Loading...</div>;
   if (isError) return <div className="text-center py-10 text-red-500">Error loading products.</div>;
@@ -130,8 +134,9 @@ export default function ProductsPage() {
       {/* Modal */}
       {showModal && (
         <ProductModal
+          key={isEditing ? `edit-${formData?.id || 'unknown'}` : 'add'}
           onClose={closeModal}
-          formData={formData ?? {}}
+          formData={formData || {}}
           setFormData={setFormData}
           saveProduct={() => saveProduct(isEditing)}
           saving={saving}

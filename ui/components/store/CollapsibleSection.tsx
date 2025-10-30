@@ -1,7 +1,7 @@
 'use client';
 
 import { ChevronUp, ChevronDown } from 'lucide-react';
-import { useTranslation } from '../../providers/TranslationProvider';
+import { useTranslation } from '@/ui/providers/TranslationProvider';
 import type { LucideIcon } from 'lucide-react';
 
 type CollapsibleSectionProps = {
@@ -10,7 +10,7 @@ type CollapsibleSectionProps = {
     content: string | any;
     icon?: LucideIcon;
     isOpen: boolean;
-    onToggle: (id: string) => void;
+    onToggleAction: (id: string) => void;
 };
 
 export const CollapsibleSection = ({
@@ -19,7 +19,7 @@ export const CollapsibleSection = ({
     content,
     icon: Icon,
     isOpen,
-    onToggle,
+    onToggleAction,
 }: CollapsibleSectionProps) => {
     const { t } = useTranslation();
 
@@ -27,7 +27,7 @@ export const CollapsibleSection = ({
         <div className="border-b border-gray-200 last:border-b-0 font-semibold text-primary-800 uppercase text-sm tracking-widest">
             <button
                 className="flex justify-between items-center w-full py-4 text-left font-semibold text-sm text-primary-800 hover:bg-primary-50 transition duration-150"
-                onClick={() => onToggle(id)}
+                onClick={() => onToggleAction(id)}
                 aria-expanded={isOpen}
             >
                 <div className="flex items-center gap-3">

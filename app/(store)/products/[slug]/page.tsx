@@ -125,7 +125,7 @@ export default function ProductPage({ params }: { params: { slug: string } | Pro
                 content={section.content}
                 icon={section.icon}
                 isOpen={activeSection === section.id}
-                onToggle={toggleSection}
+                onToggleAction={toggleSection}
               // iconColor="text-primary-800" // Styling for icons
               // titleClass="font-semibold text-primary-800 uppercase text-sm tracking-widest" // Styling for titles
               />

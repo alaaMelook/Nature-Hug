@@ -1,34 +1,34 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-// import { UpdatePhoneUseCase } from "@/domain/use-case/shop/updatePhone";
-// import { AddAddressUseCase } from "@/domain/use-case/shop/addAddress";
-// import { DeleteAddressUseCase } from "@/domain/use-case/shop/deleteAddress";
+import {NextApiRequest, NextApiResponse} from 'next';
 
-export function useProfileActions(userId?: string) {
-    const queryClient = useQueryClient();
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+    if (req.method === 'POST') {
+        const {action, userId, data} = req.body;
 
-    const updatePhone = useMutation({
-        mutationFn: async (phone: string) => {
-            // const useCase = new UpdatePhoneUseCase();
-            // return await useCase.execute(userId!, phone);
-        },
-        onSuccess: () => queryClient.invalidateQueries({ queryKey: ["profile", userId] }),
-    });
+        if (!userId) {
+            return res.status(400).json({message: 'User ID is required'});
+        }
 
-    const addAddress = useMutation({
-        mutationFn: async (address: string) => {
-            // const useCase = new AddAddressUseCase();
-            // return await useCase.execute(userId!, address);
-        },
-        onSuccess: () => queryClient.invalidateQueries({ queryKey: ["profile", userId] }),
-    });
-
-    const deleteAddress = useMutation({
-        mutationFn: async (addressId: number) => {
-            // const useCase = new DeleteAddressUseCase();
-            // return await useCase.execute(addressId);
-        },
-        onSuccess: () => queryClient.invalidateQueries({ queryKey: ["profile", userId] }),
-    });
-
-    return { updatePhone, addAddress, deleteAddress };
+        try {
+            let response;
+            switch (action) {
+                case 'updatePhone':
+                    response = await fetch(`YOUR_API_ENDPOINT/users/${userId}/phone`, {
+                        method: 'PUT',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({phone: data.phone}),
+                    });
+                    break;
+                // Add cases for 'addAddress' and 'deleteAddress' similarly
+                default:
+                    return res.status(400).json({message: 'Invalid action'});
+            }
+            const result = await response.json();
+            return res.status(response.status).json(result);
+        } catch (error: any) {
+            return res.status(500).json({message: error.message});
+        }
+    } else {
+        res.setHeader('Allow', ['POST']);
+        return res.status(405).end(`Method ${req.method} Not Allowed`);
+    }
 }

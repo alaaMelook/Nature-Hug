@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslation } from "../../providers/TranslationProvider";
+import { useTranslation } from "@/ui/providers/TranslationProvider";
 import { Minus, Plus } from "lucide-react";
 export default function Counter({
   quantity,

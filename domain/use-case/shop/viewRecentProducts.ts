@@ -1,12 +1,14 @@
-import { IProductRepository } from '@/data/repositories/iProductsRepository';
-import { ProductView } from '@/domain/entities/views/shop/productView';
+import {IProductRepository} from '@/data/repositories/iProductsRepository';
+import {ProductView} from '@/domain/entities/views/shop/productView';
 
 
 export class ViewRecentProducts {
-    constructor(private repo = new IProductRepository()) { }
+    constructor() {
+    }
 
-    async execute(count: number = 4): Promise<ProductView[]> {
-        return await this.repo.viewRecent(count);
+    async execute(count: number = 4, useClient: boolean = false): Promise<ProductView[]> {
+        const repo = new IProductRepository(useClient)
+        return await repo.viewRecent(count);
     }
 
 }

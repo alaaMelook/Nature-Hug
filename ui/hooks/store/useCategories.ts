@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 export function useCategories() {
     return useQuery(
         {
-            queryKey: ["categories", langStore.get()],
+            queryKey: ["categories"],
             queryFn: async () => await new GetAllCategories().execute(),
 
         }

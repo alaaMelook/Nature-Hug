@@ -1,23 +1,18 @@
 "use client";
 
-import React, { use, useEffect, useRef, useState } from "react";
+import React, {useEffect, useRef, useState} from "react";
+import {AlertTriangle, Beaker, Calculator, Plus, Search, TrendingUp, Upload, X,} from "lucide-react";
+import {useProfitCalculator} from "@/ui/hooks/admin/useProfitCalculator";
+import {useMaterials} from "@/ui/hooks/admin/useMaterials";
 import {
-    X,
-    Upload,
-    Beaker,
-    Plus,
-    Search,
-    Calculator,
-    TrendingUp,
-    AlertTriangle,
-} from "lucide-react";
-import { useProfitCalculator } from "@/ui/hooks/admin/useProfitCalculator";
-import { useMaterials } from "@/ui/hooks/admin/useMaterials";
-import { ProductAdminView, ProductMaterialAdminView, ProductVariantAdminView } from "@/domain/entities/views/admin/productAdminView";
-import { useCategories } from "@/ui/hooks/store/useCategories";
-import { VariantItem } from './VariantItem';
-import { useUploadImage } from "@/ui/hooks/admin/useUploadImage";
-import { fileURLToPath } from "url";
+    ProductAdminView,
+    ProductMaterialAdminView,
+    ProductVariantAdminView
+} from "@/domain/entities/views/admin/productAdminView";
+import {useCategories} from "@/ui/hooks/store/useCategories";
+import {VariantItem} from './VariantItem';
+import {useUploadImage} from "@/ui/hooks/admin/useUploadImage";
+
 
 interface ProductModalProps {
     onClose: () => void;
@@ -28,17 +23,18 @@ interface ProductModalProps {
 }
 
 export function ProductModal({
-    onClose,
-    formData,
-    setFormData,
-    saveProduct,
-    saving,
-}: ProductModalProps) {
-    const { data: materials } = useMaterials();
-    const { totalCost, profit, profitMargin } = useProfitCalculator(formData, materials || []);
-    const { data: categories, isPending: isCategoriesPending, isError: isCategoriesError } = useCategories();
+                                 onClose,
+                                 formData,
+                                 setFormData,
+                                 saveProduct,
+                                 saving,
+                             }: ProductModalProps) {
+    const {data: materials} = useMaterials();
+    const {totalCost, profit, profitMargin} = useProfitCalculator(formData, materials || []);
+    const {data: categories, isPending: isCategoriesPending, isError: isCategoriesError} = useCategories();
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [uploading, setUploading] = useState(false);
+    const [loading, setLoading] = useState(false);
     const [gallery, setGallery] = useState<File[]>([]);
     const [materialSearch, setMaterialSearch] = useState("");
     const [productMaterials, setProductMaterials] = useState<ProductMaterialAdminView[]>(formData.materials || []);
@@ -46,19 +42,21 @@ export function ProductModal({
     const fileInputRef = useRef<HTMLInputElement>(null);
     const uploadImage = useUploadImage();
     useEffect(() => {
-        // Only update if the arrays are actually different
-        const materialsChanged = JSON.stringify(formData.materials) !== JSON.stringify(productMaterials);
-        const variantsChanged = JSON.stringify(formData.variants) !== JSON.stringify(variants);
-
-        if (materialsChanged || variantsChanged) {
+        const syncToFormData = () => {
+            const mainSlug = generateSlug(formData.name_en || "");
             const updatedData: Partial<ProductAdminView> = {
                 ...formData,
+                slug: mainSlug,
                 materials: productMaterials,
                 variants: variants,
             };
             setFormData(updatedData);
-        }
-    }, [productMaterials, variants, formData]);
+        };
+
+        // Debounce the sync to avoid rapid updates
+        const timeoutId = setTimeout(syncToFormData, 100);
+        return () => clearTimeout(timeoutId);
+    }, [productMaterials, variants, formData.name_en]);
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, isGallery: boolean = false) => {
         const files = e.target.files;
@@ -66,39 +64,27 @@ export function ProductModal({
         setUploading(true);
 
         if (isGallery) {
-            const newFiles = Array.from(files);
-            const uploadedUrls = newFiles.map(file => {
-                // uploadImage.mutate(file);
-                return fileURLToPath(file.name);
-            });
             setGallery(prev => [...prev, ...files]);
-            setFormData({ ...formData, gallery: [...(formData.gallery || []), ...(uploadedUrls || [])] });
         } else {
             const file = files[0];
-            // uploadImage.mutate(file);
-            setFormData({ ...formData, image_url: fileURLToPath(file.name) });
             setImageFile(file);
         }
         setUploading(false);
     };
 
-    const handleVariantImageUpload = (variantId: number, e: React.ChangeEvent<HTMLInputElement>, isGallery: boolean = false) => {
+    const handleVariantImageUpload = (variantId: number, e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
         if (!files?.length) return;
         setUploading(true);
 
-
         try {
-
             const file = files[0];
             uploadImage.mutate(file);
-            if (!uploadImage.data) return
+            if (!uploadImage.data) return;
             updateVariant(variantId, "image", uploadImage.data);
-
         } catch (error) {
-            alert('Failed to upload image. Please try again.');
-        }
-        finally {
+            alert("Failed to upload image. Please try again.");
+        } finally {
             setUploading(false);
         }
     };
@@ -150,11 +136,11 @@ export function ProductModal({
         setVariants(prev =>
             prev.map(v => {
                 if (v.id === id) {
-                    const updatedVariant = { ...v, [field]: value };
+                    const updatedVariant = {...v, [field]: value};
                     if (field === 'name_en' && value) {
                         const newSlug = generateSlug(value);
                         if (checkSlugExists(newSlug, id)) {
-                            alert('A variant with similar name already exists. Please use a different name.');
+                            alert('A variant with a similar name already exists. Please use a different name.');
                             return v;
                         }
                         updatedVariant.slug = newSlug;
@@ -167,31 +153,30 @@ export function ProductModal({
     };
 
     const updateMaterial = (id: number, updates: Partial<ProductMaterialAdminView>) => {
-        const updatedMaterials = productMaterials.map(m =>
-            m.id === id ? { ...m, ...updates } : m
+        setProductMaterials(prev =>
+            prev.map(m => (m.id === id ? {...m, ...updates} : m))
         );
-        setProductMaterials(updatedMaterials);
-        setFormData({ ...formData, materials: updatedMaterials });
     };
 
     const handleSave = async () => {
         try {
-
-
-            let mainImageUrl = formData.image_url;
+            setLoading(true)
             if (imageFile) {
                 uploadImage.mutate(imageFile);
                 if (!uploadImage.data) return;
-                mainImageUrl = uploadImage.data
+                setFormData({
+                    ...formData,
+                    image_url: uploadImage.data,
+                });
             }
-            let galleryUrls = formData.gallery;
+            let galleryUrls: string[] = [];
             if (gallery) {
-                gallery.map((img, index) => {
+                gallery.map(img => {
                     uploadImage.mutate(img);
                     if (!uploadImage.data) return;
                     galleryUrls?.push(uploadImage.data);
                 });
-                setFormData({ ...formData, gallery: galleryUrls });
+                setFormData({...formData, gallery: galleryUrls});
             }
 
             const validMaterials = (formData.materials || []).filter(
@@ -200,17 +185,19 @@ export function ProductModal({
 
             setFormData({
                 ...formData,
-                image_url: mainImageUrl,
                 materials: validMaterials,
             });
 
-            await saveProduct();
+            saveProduct();
             onClose();
+            setLoading(false)
         } catch (error) {
             console.error('Error saving product:', error);
+
             alert('Failed to save product. Please try again.');
         } finally {
             setUploading(false);
+            setLoading(false)
         }
     };
 
@@ -226,7 +213,7 @@ export function ProductModal({
                         const materialId = Number(e.target.value);
                         const selectedMaterial = materials?.find(mat => mat.id === materialId);
 
-                        const updates: Partial<ProductMaterialAdminView> = { material_id: materialId };
+                        const updates: Partial<ProductMaterialAdminView> = {material_id: materialId};
                         if (selectedMaterial) updates.measurement_unit = selectedMaterial.unit || "gram";
 
                         updateMaterial(m.id, updates);
@@ -245,7 +232,7 @@ export function ProductModal({
                     placeholder="Grams"
                     value={m.grams_used || ""}
                     onChange={(e) => {
-                        const updates: Partial<ProductMaterialAdminView> = { grams_used: parseFloat(e.target.value) || 0 };
+                        const updates: Partial<ProductMaterialAdminView> = {grams_used: parseFloat(e.target.value) || 0};
                         updateMaterial(m.id, updates);
                     }}
                     className="w-24 border border-gray-300 rounded-md text-sm px-2 py-1"
@@ -253,16 +240,13 @@ export function ProductModal({
                 <button
                     type="button"
                     onClick={() => {
-                        const updatedMaterials = productMaterials.filter(material => material.id !== m.id);
-                        setProductMaterials(updatedMaterials);
-                        setFormData({
-                            ...formData,
-                            materials: updatedMaterials
-                        });
+                        setProductMaterials(prev =>
+                            prev.filter(material => material.id !== m.id)
+                        );
                     }}
                     className="p-1 text-red-500 hover:text-red-700 rounded-full hover:bg-red-50"
                 >
-                    <X className="h-4 w-4" />
+                    <X className="h-4 w-4"/>
                 </button>
             </div>
         ));
@@ -271,7 +255,8 @@ export function ProductModal({
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg w-full max-w-5xl shadow-xl relative max-h-[95vh] overflow-y-auto">
                 {/* Header */}
-                <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
+                <div
+                    className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
                     <h2 className="text-xl font-bold text-gray-900">
                         {formData.id ? "Edit Product" : "Add Product"}
                     </h2>
@@ -280,7 +265,7 @@ export function ProductModal({
                         onClick={onClose}
                         className="text-gray-400 hover:text-gray-600 transition-colors"
                     >
-                        <X className="h-6 w-6" />
+                        <X className="h-6 w-6"/>
                     </button>
                 </div>
 
@@ -303,7 +288,7 @@ export function ProductModal({
                                         type="text"
                                         value={formData.name_en || ""}
                                         onChange={(e) =>
-                                            setFormData({ ...formData, name_en: e.target.value })
+                                            setFormData({...formData, name_en: e.target.value})
                                         }
                                         className="w-full border px-3 py-2 rounded-md text-sm"
                                         required
@@ -317,7 +302,7 @@ export function ProductModal({
                                         type="text"
                                         value={formData.name_ar || ""}
                                         onChange={(e) =>
-                                            setFormData({ ...formData, name_ar: e.target.value })
+                                            setFormData({...formData, name_ar: e.target.value})
                                         }
                                         className="w-full border px-3 py-2 rounded-md text-sm"
                                     />
@@ -330,7 +315,7 @@ export function ProductModal({
                                     placeholder="Description (EN)"
                                     value={formData.description_en || ""}
                                     onChange={(e) =>
-                                        setFormData({ ...formData, description_en: e.target.value })
+                                        setFormData({...formData, description_en: e.target.value})
                                     }
                                     className="w-full border px-3 py-2 rounded-md text-sm h-20 resize-none"
                                 />
@@ -338,20 +323,20 @@ export function ProductModal({
                                     placeholder="Description (AR)"
                                     value={formData.description_ar || ""}
                                     onChange={(e) =>
-                                        setFormData({ ...formData, description_ar: e.target.value })
+                                        setFormData({...formData, description_ar: e.target.value})
                                     }
                                     className="w-full border px-3 py-2 rounded-md text-sm h-20 resize-none"
                                 />
                             </div>
 
                             {/* Price & Stock */}
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
                                 <input
                                     type="number"
                                     placeholder="Price"
                                     value={formData.price || ""}
                                     onChange={(e) =>
-                                        setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })
+                                        setFormData({...formData, price: parseFloat(e.target.value) || 0})
                                     }
                                     className="w-full border px-3 py-2 rounded-md text-sm"
                                 />
@@ -360,7 +345,7 @@ export function ProductModal({
                                     placeholder="Stock"
                                     value={formData.stock || ""}
                                     onChange={(e) =>
-                                        setFormData({ ...formData, stock: parseInt(e.target.value) || 0 })
+                                        setFormData({...formData, stock: parseInt(e.target.value) || 0})
                                     }
                                     className="w-full border px-3 py-2 rounded-md text-sm"
                                 />
@@ -369,10 +354,19 @@ export function ProductModal({
                                     placeholder="Discount"
                                     value={formData.discount || ""}
                                     onChange={(e) =>
-                                        setFormData({ ...formData, discount: parseFloat(e.target.value) || 0 })
+                                        setFormData({...formData, discount: parseFloat(e.target.value) || 0})
                                     }
                                     className="w-full border px-3 py-2 rounded-md text-sm"
                                 />
+                                <input
+                                    placeholder="Slug"
+                                    value={formData.slug || ""}
+                                    onChange={(e) =>
+                                        setFormData({...formData, slug: e.target.value || ''})
+                                    }
+                                    className="w-full border px-3 py-2 rounded-md text-sm"
+                                />
+
                             </div>
 
                             {/* Category Select */}
@@ -417,8 +411,9 @@ export function ProductModal({
                                                 className="h-20 w-20 object-cover rounded-lg border"
                                             />
                                         ) : (
-                                            <div className="h-20 w-20 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center">
-                                                <Upload className="h-6 w-6 text-gray-400" />
+                                            <div
+                                                className="h-20 w-20 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center">
+                                                <Upload className="h-6 w-6 text-gray-400"/>
                                             </div>
                                         )}
                                     </div>
@@ -435,7 +430,7 @@ export function ProductModal({
                                             onClick={() => fileInputRef.current?.click()}
                                             className="flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50"
                                         >
-                                            <Upload className="h-4 w-4 mr-2" /> Choose Image
+                                            <Upload className="h-4 w-4 mr-2"/> Choose Image
                                         </button>
                                         {uploading && (
                                             <span className="text-xs text-gray-500 ml-2">
@@ -464,11 +459,11 @@ export function ProductModal({
                                                     type="button"
                                                     onClick={() => {
                                                         const newGallery = formData.gallery?.filter((_, i) => i !== index);
-                                                        setFormData({ ...formData, gallery: newGallery });
+                                                        setFormData({...formData, gallery: newGallery});
                                                     }}
                                                     className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5"
                                                 >
-                                                    <X className="h-3 w-3" />
+                                                    <X className="h-3 w-3"/>
                                                 </button>
                                             </div>
                                         ))}
@@ -486,7 +481,7 @@ export function ProductModal({
                                             htmlFor={`gallery-${formData.slug}`}
                                             className="cursor-pointer inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50"
                                         >
-                                            <Upload className="h-4 w-4 mr-2" /> Add Gallery Images
+                                            <Upload className="h-4 w-4 mr-2"/> Add Gallery Images
                                         </label>
                                         {uploading && (
                                             <span className="text-xs text-gray-500 ml-2">
@@ -501,7 +496,7 @@ export function ProductModal({
                         {/* Materials Section */}
                         <div className="bg-blue-50 p-4 rounded-lg">
                             <h3 className="text-lg font-semibold mb-4 text-blue-800 flex items-center">
-                                <Beaker className="h-5 w-5 mr-2" /> Materials & Cost Analysis
+                                <Beaker className="h-5 w-5 mr-2"/> Materials & Cost Analysis
                             </h3>
 
                             <div className="mb-3">
@@ -514,11 +509,11 @@ export function ProductModal({
                                         onClick={addMaterial}
                                         className="flex items-center px-3 py-1.5 text-sm bg-green-600 text-white rounded-md hover:bg-green-700"
                                     >
-                                        <Plus className="h-4 w-4 mr-1" /> Add
+                                        <Plus className="h-4 w-4 mr-1"/> Add
                                     </button>
                                 </div>
                                 <div className="relative mb-2">
-                                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
+                                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400"/>
                                     <input
                                         type="text"
                                         placeholder="Search materials..."
@@ -531,8 +526,9 @@ export function ProductModal({
                                     {productMaterials.length > 0 ? (
                                         renderMaterials()
                                     ) : (
-                                        <div className="text-center py-6 text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed">
-                                            <Beaker className="h-6 w-6 mx-auto mb-2 text-gray-400" />
+                                        <div
+                                            className="text-center py-6 text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed">
+                                            <Beaker className="h-6 w-6 mx-auto mb-2 text-gray-400"/>
                                             <p className="text-sm">No materials added yet</p>
                                             <p className="text-xs text-gray-400">
                                                 Click "Add" to get started
@@ -550,7 +546,7 @@ export function ProductModal({
                         <div className="bg-purple-50 p-4 rounded-lg mb-4">
                             <div className="flex justify-between items-center mb-4">
                                 <h3 className="text-lg font-semibold text-purple-800 flex items-center">
-                                    <TrendingUp className="h-5 w-5 mr-2" />
+                                    <TrendingUp className="h-5 w-5 mr-2"/>
                                     Product Variants
                                 </h3>
                                 <button
@@ -558,15 +554,16 @@ export function ProductModal({
                                     onClick={addVariant}
                                     className="flex items-center px-3 py-1.5 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700"
                                 >
-                                    <Plus className="h-4 w-4 mr-1" />
+                                    <Plus className="h-4 w-4 mr-1"/>
                                     Add Variant
                                 </button>
                             </div>
 
                             <div className="space-y-4 max-h-[calc(100vh-300px)] overflow-y-auto">
                                 {variants.length === 0 ? (
-                                    <div className="text-center py-6 text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed">
-                                        <TrendingUp className="h-6 w-6 mx-auto mb-2 text-gray-400" />
+                                    <div
+                                        className="text-center py-6 text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed">
+                                        <TrendingUp className="h-6 w-6 mx-auto mb-2 text-gray-400"/>
                                         <p className="text-sm">No variants added yet</p>
                                         <p className="text-xs text-gray-400">
                                             Click "Add Variant" to get started
@@ -579,12 +576,9 @@ export function ProductModal({
                                             variant={variant}
                                             onUpdate={updateVariant}
                                             onDelete={(id) => {
-                                                const updatedVariants = variants.filter(v => v.id !== id);
-                                                setVariants(updatedVariants);
-                                                setFormData({
-                                                    ...formData,
-                                                    variants: updatedVariants
-                                                });
+                                                setVariants(prev =>
+                                                    prev.filter(v => v.id !== id)
+                                                );
                                             }}
                                             materials={materials || []}
                                             uploading={uploading}
@@ -598,7 +592,7 @@ export function ProductModal({
                         {/* Cost Analysis Section */}
                         <div className="bg-green-50 p-4 rounded-lg">
                             <h3 className="text-lg font-semibold mb-4 text-green-800 flex items-center">
-                                <Calculator className="h-5 w-5 mr-2" /> Cost Analysis & Profit
+                                <Calculator className="h-5 w-5 mr-2"/> Cost Analysis & Profit
                             </h3>
                             <div className="bg-white p-4 rounded-lg border space-y-3">
                                 <div className="text-center mb-2">
@@ -627,7 +621,7 @@ export function ProductModal({
                                         className={`flex justify-between items-center p-2 rounded-md mb-1 ${profit >= 0
                                             ? "bg-green-50 text-green-700"
                                             : "bg-red-50 text-red-700"
-                                            }`}
+                                        }`}
                                     >
                                         <span className="font-semibold text-sm">Net Profit:</span>
                                         <span className="font-bold text-lg">
@@ -642,7 +636,7 @@ export function ProductModal({
                                             className={`font-bold ${profitMargin >= 0
                                                 ? "text-green-600"
                                                 : "text-red-600"
-                                                }`}
+                                            }`}
                                         >
                                             {profitMargin.toFixed(1)}%
                                         </span>
@@ -653,7 +647,7 @@ export function ProductModal({
                             {profit < 0 && (
                                 <div className="bg-red-50 border-l-4 border-red-400 p-2 mt-3 rounded-r-md">
                                     <div className="flex items-center">
-                                        <AlertTriangle className="h-4 w-4 text-red-400 mr-1" />
+                                        <AlertTriangle className="h-4 w-4 text-red-400 mr-1"/>
                                         <div>
                                             <p className="text-xs font-medium text-red-800">
                                                 Price Below Cost
@@ -670,7 +664,8 @@ export function ProductModal({
                 </div>
 
                 {/* Footer */}
-                <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex justify-end space-x-3 z-10">
+                <div
+                    className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex justify-end space-x-3 z-10">
                     <button
                         type="button"
                         onClick={onClose}
@@ -681,13 +676,14 @@ export function ProductModal({
                     <button
                         type="button"
                         onClick={handleSave}
-                        disabled={saving}
+                        disabled={saving || loading || uploading}
                         className="px-5 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 disabled:opacity-50"
                     >
-                        {saving ? "Saving..." : "Save Product"}
+                        {uploading ? 'Uploading...' : saving || loading ? "Saving..." : "Save Product"}
                     </button>
                 </div>
             </div>
         </div>
     );
 }
+

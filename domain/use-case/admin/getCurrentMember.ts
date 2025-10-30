@@ -1,20 +1,16 @@
+import {Member} from "@/domain/entities/auth/member";
 import {ICustomerRepository} from "@/data/repositories/iCustomerRepository";
-import {ProfileView} from "@/domain/entities/views/shop/profileView";
 import {GetCurrentUser} from "@/domain/use-case/shop/getCurrentUser";
 
-export class ViewProfile {
+export class GetCurrentMember {
     constructor(private repo = new ICustomerRepository()) {
+
     }
 
-    async execute(): Promise<ProfileView | null> {
+    async execute(): Promise<Member | null> {
         const user = await new GetCurrentUser().execute();
         if (!user) return null;
-        return await this.repo.viewProfile(user.id);
+        return await this.repo.fetchMember(user.id);
+
     }
-
-    async executeForAll(): Promise<ProfileView[]> {
-        return await this.repo.getAllCustomers();
-    }
-
-
-} 
+}

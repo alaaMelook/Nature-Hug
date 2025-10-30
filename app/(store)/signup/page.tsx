@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { FcGoogle } from "react-icons/fc";
 
 export default function SignupPage() {
-  ;
   const router = useRouter();
   const [googleLoading, setGoogleLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");

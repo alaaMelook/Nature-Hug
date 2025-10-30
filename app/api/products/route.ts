@@ -8,16 +8,22 @@ const supabase = createClient(
 
 export async function GET(req: Request) {
   try {
+    console.log("[Supabase] Fetching products.");
     const { searchParams } = new URL(req.url);
     const language = searchParams.get("lang") || "en";
 
     const { data, error } = await supabase
       .from("products")
       .select("*")
-      .eq("status", "active") // ✅ هنا الإضافة
+      .eq("status", "active")
       .order("created_at", { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      console.error("[Supabase] Error fetching products:", error);
+      throw error;
+    }
+
+    console.log("[Supabase] Products fetched successfully:", data);
 
     const formatted = (data || []).map((p: any) => ({
       ...p,
@@ -32,7 +38,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json({ success: true, products: formatted });
   } catch (err: any) {
-    console.error("Error fetching products:", err);
+    console.error("[Supabase] Error in GET handler:", err);
     return NextResponse.json(
       { success: false, error: err.message || "Failed to fetch products" },
       { status: 500 }

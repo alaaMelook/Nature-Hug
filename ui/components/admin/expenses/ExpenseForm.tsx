@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 
-export default function ExpenseForm({ onSuccess }: { onSuccess?: () => void }) {
+export default function ExpenseForm({ onSuccessAction }: { onSuccessAction?: () => void }) {
   const [partners, setPartners] = useState<any[]>([]);
   const [form, setForm] = useState<any>({
     type: "asset",
@@ -38,7 +38,7 @@ export default function ExpenseForm({ onSuccess }: { onSuccess?: () => void }) {
     if (res.ok) {
       alert("✅ تم تسجيل المصروف");
       setForm({ ...form, item_name: "", amount: 0, description: "" });
-      onSuccess?.();
+      onSuccessAction?.();
     }
   };
 

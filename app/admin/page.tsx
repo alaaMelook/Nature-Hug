@@ -1,6 +1,6 @@
 'use client'
 import { Users, Package, ShoppingCart, DollarSign, TrendingUp, TrendingDown, TrendingUpDown } from "lucide-react";
-import { useAdminDashboard, useRecentOrders } from "../../ui/hooks/admin/useAdminDashboard";
+import { useAdminDashboard, useRecentOrders } from "@/ui/hooks/admin/useAdminDashboard";
 import { OrderDetailsView } from "@/domain/entities/views/admin/orderDetailsView";
 
 

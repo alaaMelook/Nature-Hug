@@ -6,7 +6,6 @@ export interface Order {
     id: number;
     customer_id: number;
     status?: OrderStatus;
-    total: number;
     customer_uuid?: string;
     note?: string | null;
     customer_phone2?: string;

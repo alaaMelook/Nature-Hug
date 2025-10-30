@@ -12,7 +12,6 @@ import { MemberView } from "@/domain/entities/views/admin/memberView";
 export default function AdminHeader({ adminUser }: { adminUser: MemberView }) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const router = useRouter();
-  ;
   const { t } = useTranslation();
 
   const handleLogout = async () => {
