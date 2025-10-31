@@ -1,6 +1,6 @@
 "use client";
 
-import {use, useCallback, useMemo, useState} from "react";
+import {useCallback, useMemo, useState} from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {useRouter} from "next/navigation";
@@ -14,12 +14,12 @@ import {Member} from "@/domain/entities/auth/member";
 
 
 export default function Navbar({initialUser, initialMember}: {
-    initialUser: Promise<Customer | null>,
-    initialMember: Promise<Member | null>
+    initialUser: Customer | null,
+    initialMember: Member | null
 }) {
     const [isOpen, setIsOpen] = useState(false);
-    const user = use(initialUser);
-    const member = use(initialMember);
+    const [user, setUser] = useState(initialUser);
+    const [member, setMember] = useState(initialMember);
     const {cart} = useCart();
     const count = useMemo(
         () => cart.reduce((s, i) => s + i.quantity, 0),
@@ -27,7 +27,7 @@ export default function Navbar({initialUser, initialMember}: {
     );
 
     const router = useRouter();
-    const {getUser, getMember, signOut} = useSupabase();
+    const {signOut} = useSupabase();
 
     // Toggle mobile menu
     const toggleMobileMenu = useCallback(() => {
@@ -38,6 +38,8 @@ export default function Navbar({initialUser, initialMember}: {
     const handleLogout = useCallback(async () => {
         await signOut();
         router.push("/");
+        setUser(null);
+        setMember(null);
     }, [signOut, router]);
 
     const navigationItems = useMemo(
@@ -125,7 +127,7 @@ export default function Navbar({initialUser, initialMember}: {
                                 )}
                                 <button
                                     onClick={handleLogout}
-                                    className="w-full flex items-center px-4 py-2 text-sm text-primary-900 hover:bg-gray-100"
+                                    className="w-full flex items-center px-4 py-2 text-sm text-primary-900 hover:bg-gray-100 cursor-pointer"
                                 >
                                     <LogOut className="w-4 h-4 mr-2"/>
                                     Logout

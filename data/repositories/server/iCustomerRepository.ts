@@ -1,0 +1,279 @@
+import {Member} from "@/domain/entities/auth/member";
+import {Customer, CustomerAddress} from "@/domain/entities/auth/customer";
+import {CustomerRepository} from "@/domain/repositories/customerRepository";
+import {Session, User} from "@supabase/supabase-js";
+import {ProfileView} from "@/domain/entities/views/shop/profileView";
+import {MemberView} from "@/domain/entities/views/admin/memberView";
+import {createSupabaseServerClient} from "@/data/datasources/supabase/server";
+import {Governorate} from "@/domain/entities/database/governorate";
+
+export class ICustomerServerRepository implements CustomerRepository {
+
+    async getSession(): Promise<Session | null> {
+        try {
+            console.log("[ICustomerRepository] getSession called.");
+            const supabase = await createSupabaseServerClient();
+            const {data} = await supabase.auth.getSession();
+            console.log("[ICustomerRepository] getSession result:", data.session);
+            return data.session;
+        } catch (error) {
+            console.error("[ICustomerRepository] Error in getSession:", error);
+            throw error;
+        }
+    }
+
+    async getCurrentUser(): Promise<User | null> {
+        try {
+            console.log("[ICustomerRepository] getCurrentUser called.");
+            const supabase = await createSupabaseServerClient();
+            const {data} = await supabase.auth.getUser();
+            console.log("[ICustomerRepository] getCurrentUser result:", data.user);
+            return data.user;
+        } catch (error) {
+            console.error("[ICustomerRepository] Error in getCurrentUser:", error);
+            throw error;
+        }
+    }
+
+    async fetchCustomer(authUserId: string): Promise<Customer> {
+        try {
+            console.log("[ICustomerRepository] fetchCustomer called with authUserId:", authUserId);
+            const supabase = await createSupabaseServerClient();
+            const {data, error, status, statusText} = await supabase.schema("store")
+                .from("customers")
+                .select("*")
+                .eq("auth_user_id", authUserId)
+                .maybeSingle();
+            if (error || status < 200 || status >= 300) {
+                console.error(`Failed to fetch customer: ${error?.message || statusText}`);
+            }
+
+            console.log("[ICustomerRepository] fetchCustomer result:", data);
+            return data;
+        } catch (error) {
+            console.error("[ICustomerRepository] Error in fetchCustomer:", error);
+            throw error;
+        }
+    }
+
+    async fetchMember(customerId: number): Promise<Member | null> {
+        try {
+            console.log("[ICustomerRepository] fetchMember called with customerId:", customerId);
+            const supabase = await createSupabaseServerClient();
+            const {data, error, status, statusText} = await supabase.schema("store")
+                .from("members")
+                .select("*")
+                .eq("user_id", customerId)
+                .maybeSingle();
+            if (error || status < 200 || status >= 300) {
+                console.error(`Failed to fetch member: ${error?.message || statusText}`);
+            }
+
+            console.log("[ICustomerRepository] fetchMember result:", data);
+            return data;
+        } catch (error) {
+            console.error("[ICustomerRepository] Error in fetchMember:", error);
+            throw error;
+        }
+    }
+
+    async fetchAllMembers(): Promise<Member[]> {
+        try {
+            console.log("[ICustomerRepository] fetchAllMembers called.");
+            const supabase = await createSupabaseServerClient();
+            const {data, error, status, statusText} = await supabase.schema("store")
+                .from("members")
+                .select("*");
+            if (error || status < 200 || status >= 300) {
+                console.error(`Failed to fetch all members: ${error?.message || statusText}`);
+            }
+
+            console.log("[ICustomerRepository] fetchAllMembers result:", data);
+            if (!data) return [];
+            return data;
+        } catch (error) {
+            console.error("[ICustomerRepository] Error in fetchAllMembers:", error);
+            throw error;
+        }
+    }
+
+    async viewProfile(customerId: number): Promise<ProfileView> {
+        try {
+            console.log("[ICustomerRepository] viewProfile called with customerId:", customerId);
+            const supabase = await createSupabaseServerClient();
+            const {
+                data,
+                error, status, statusText
+            } = await supabase.schema('store').from('profile_view').select('*').eq('id', customerId).single();
+            if (error || status < 200 || status >= 300) {
+                console.error(`Failed to view profile: ${error?.message || statusText}`);
+            }
+
+            console.log("[ICustomerRepository] viewProfile result:", data);
+            return data;
+        } catch (error) {
+            console.error("[ICustomerRepository] Error in viewProfile:", error);
+            throw error;
+        }
+    }
+
+    async getAllCustomers(): Promise<ProfileView[]> {
+        try {
+            console.log("[ICustomerRepository] getAllCustomers called.");
+            const supabase = await createSupabaseServerClient();
+            const {data, error, status, statusText} = await supabase.schema('store').from('profile_view').select('*');
+            if (error || status < 200 || status >= 300) {
+                console.error(`Failed to get all customers: ${error?.message || statusText}`);
+            }
+
+            console.log("[ICustomerRepository] getAllCustomers result:", data);
+            if (!data) return [];
+            return data;
+        } catch (error) {
+            console.error("[ICustomerRepository] Error in getAllCustomers:", error);
+            throw error;
+        }
+    }
+
+    async getAllMembers(): Promise<MemberView[]> {
+        try {
+            console.log("[ICustomerRepository] getAllMembers called.");
+            const supabase = await createSupabaseServerClient();
+            const {data, error, status, statusText} = await supabase.schema('admin').from('member_view').select('*');
+            if (error || status < 200 || status >= 300) {
+                console.error(`Failed to get all members: ${error?.message || statusText}`);
+            }
+
+            console.log("[ICustomerRepository] getAllMembers result:", data);
+            if (!data) return [];
+            return data;
+        } catch (error) {
+            console.error("[ICustomerRepository] Error in getAllMembers:", error);
+            throw error;
+        }
+    }
+
+    async viewMember(memberId: number): Promise<MemberView> {
+        try {
+            console.log("[ICustomerRepository] viewMember called with memberId:", memberId);
+            const supabase = await createSupabaseServerClient();
+            const {
+                data,
+                error, status, statusText
+            } = await supabase.schema('admin').from('member_view').select('*').eq('id', memberId).single();
+            if (error || status < 200 || status >= 300) {
+                console.error(`Failed to view member: ${error?.message || statusText}`);
+            }
+
+            console.log("[ICustomerRepository] viewMember result:", data);
+            return data;
+        } catch (error) {
+            console.error("[ICustomerRepository] Error in viewMember:", error);
+            throw error;
+        }
+    }
+
+    async fetchAllGovernorates(): Promise<Governorate[]> {
+        try {
+            console.log("[ICustomerRepository] fetchAllGovernorates called.");
+            const supabase = await createSupabaseServerClient();
+            const {
+                data,
+                error,
+                status,
+                statusText
+            } = await supabase.schema('store').from('shipping_governorates').select('*');
+            if (error || status < 200 || status >= 300) {
+                console.error(`Failed to fetch all governorates: ${error?.message || statusText}`);
+            }
+
+            console.log("[ICustomerRepository] fetchAllGovernorates result:", data, 'status', status, 'statusText', statusText);
+            if (!data) return [];
+            return data;
+        } catch (error) {
+            console.error("[ICustomerRepository] Error in fetchAllGovernorates:", error);
+            throw error;
+        }
+    }
+
+    async updateCustomerData(data: Partial<Customer>): Promise<void> {
+        try {
+            const {id, ...updateData} = data;
+            console.log("[ICustomerRepository] updateCustomerData called with data:", updateData);
+            const supabase = await createSupabaseServerClient();
+            const {data: updatedRows, error, status, statusText} = await supabase
+                .schema('store')
+                .from('customers')
+                .update(updateData)
+                .eq('id', data.id)
+                .select(); // <--- ensure it returns rows
+            if (error || status < 200 || status >= 300) {
+                console.error(`Failed to update customer data: ${error?.message || statusText}`);
+            }
+
+            console.log("[ICustomerRepository] update response:", {status, statusText, error, updatedRows});
+            console.log("[ICustomerRepository] Customer data updated successfully.");
+        } catch (error) {
+            console.error("[ICustomerRepository] Error in updateCustomerData:", error);
+            throw error;
+        }
+    }
+
+    async deleteCustomerAddress(addressId: number): Promise<void> {
+        try {
+            console.log("[ICustomerRepository] deleteCustomerAddress called with addressId", addressId);
+            const supabase = await createSupabaseServerClient();
+            const {
+                error,
+                status,
+                statusText
+            } = await supabase.schema('store').from('customer_addresses').delete().eq('id', addressId);
+            if (error || status < 200 || status >= 300) {
+                console.error(`Failed to delete customer address: ${error?.message || statusText}`);
+            } else console.log("[ICustomerRepository] Customer address deleted successfully.");
+        } catch (error) {
+            console.error("[ICustomerRepository] Error in deleteCustomerAddress:", error);
+            throw error;
+        }
+    }
+
+    async updateCustomerAddress(address: Partial<CustomerAddress>): Promise<void> {
+        try {
+            console.log("[ICustomerRepository] updateCustomerAddress called with address:", address);
+            const supabase = await createSupabaseServerClient();
+            const {
+                error,
+                status,
+                statusText
+            } = await supabase.schema('store').from('customer_addresses').update(address).eq('customer_id', address.customer_id);
+            if (error || status < 200 || status >= 300) {
+                console.error(`Failed to update customer address: ${error?.message || statusText}`);
+            }
+            console.log("[ICustomerRepository] Customer address updated successfully.");
+        } catch (error) {
+            console.error("[ICustomerRepository] Error in updateCustomerAddress:", error);
+            throw error;
+        }
+    }
+
+    async addCustomerAddress(address: Partial<CustomerAddress>): Promise<void> {
+        try {
+            console.log("[ICustomerRepository] addCustomerAddress called with address:", address);
+            const supabase = await createSupabaseServerClient();
+            const {
+                error,
+                status,
+                statusText
+            } = await supabase.schema('store').from('customer_addresses').insert(address);
+            if (error || status < 200 || status >= 300) {
+                console.error(`Failed to add customer address: ${error?.message || statusText}`);
+                return;
+            }
+            console.log("[ICustomerRepository] Customer address added successfully.");
+        } catch (error) {
+            console.error("[ICustomerRepository] Error in addCustomerAddress:", error);
+            throw error;
+        }
+    }
+
+}

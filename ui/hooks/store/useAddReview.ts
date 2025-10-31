@@ -1,12 +1,29 @@
-import { Review } from "@/domain/entities/database/review";
-import { AddProductReview } from "@/domain/use-case/shop/addProductReview";
-import { useMutation } from "@tanstack/react-query";
-import { toast } from "sonner";
+'use server'
 
-export function addReview({ onError, onSuccess }: { onError?: (error: Error) => void, onSuccess?: () => void }) {
-    return useMutation({
-        mutationFn: async (review: Review) => await new AddProductReview().execute(review),
-        onSuccess: onSuccess,
-        onError: onError
-    });
+import {revalidatePath} from 'next/cache'
+import {Review} from "@/domain/entities/database/review";
+import {GetCurrentUser} from "@/domain/use-case/shop/getCurrentUser";
+import {AddProductReview} from "@/domain/use-case/shop/addProductReview";
+
+
+export async function postReview(data: { product: number; rating: number; comment: string }) {
+    const user = await new GetCurrentUser().execute();
+    if (!user) return {error: 'User not logged in'};
+
+
+    const review: Partial<Review> = {
+        // id: 0,
+        product_id: data['product'],
+        customer_id: user.id,
+        rating: data['rating'],
+        comment: data['comment'],
+        // status: 'pending',
+        // created_at: '',
+    };
+    if (!review.product_id) return {error: 'Product not found'};
+
+    await new AddProductReview().execute(review);
+
+    revalidatePath('/', 'layout');
+    return {success: true};
 }

@@ -1,8 +1,8 @@
-import {ICustomerRepository} from "@/data/repositories/iCustomerRepository";
 import {Customer} from "@/domain/entities/auth/customer";
+import {ICustomerServerRepository} from "@/data/repositories/server/iCustomerRepository";
 
 export class GetCurrentUser {
-    constructor(private repo = new ICustomerRepository()) {
+    constructor(private repo = new ICustomerServerRepository()) {
     }
 
     async execute(): Promise<Customer | null> {

@@ -1,34 +1,68 @@
-import {NextApiRequest, NextApiResponse} from 'next';
+'use server'
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-    if (req.method === 'POST') {
-        const {action, userId, data} = req.body;
+import {revalidatePath} from 'next/cache'
+import {GetCurrentUser} from "@/domain/use-case/shop/getCurrentUser";
+import {Customer, CustomerAddress} from "@/domain/entities/auth/customer";
+import {AddUpdatePhone} from "@/domain/use-case/shop/addUpdatePhone";
+import {AddUpdateAddress} from "@/domain/use-case/shop/addUpdateAddress";
+import {DeleteAddress} from "@/domain/use-case/shop/deleteAddress";
 
-        if (!userId) {
-            return res.status(400).json({message: 'User ID is required'});
-        }
 
-        try {
-            let response;
-            switch (action) {
-                case 'updatePhone':
-                    response = await fetch(`YOUR_API_ENDPOINT/users/${userId}/phone`, {
-                        method: 'PUT',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({phone: data.phone}),
-                    });
-                    break;
-                // Add cases for 'addAddress' and 'deleteAddress' similarly
-                default:
-                    return res.status(400).json({message: 'Invalid action'});
-            }
-            const result = await response.json();
-            return res.status(response.status).json(result);
-        } catch (error: any) {
-            return res.status(500).json({message: error.message});
-        }
-    } else {
-        res.setHeader('Allow', ['POST']);
-        return res.status(405).end(`Method ${req.method} Not Allowed`);
-    }
+export async function updateOrAddPhone(data: Partial<{ index: number, phone: string | null }>) {
+    const user = await new GetCurrentUser().execute();
+    if (!user) return {error: 'User not logged in'};
+    let sentData: Partial<Customer>;
+    if (data.index === 1)
+        sentData = {
+            id: user.id,
+            phone: data.phone,
+        };
+    else
+        sentData = {
+            id: user.id,
+            phone2: data.phone,
+        };
+    await new AddUpdatePhone().execute(sentData);
+
+    revalidatePath('/', 'layout');
+    return {success: true};
+}
+
+export async function updateAddress(data: Partial<CustomerAddress>) {
+    const user = await new GetCurrentUser().execute();
+    if (!user) return {error: 'User not logged in'};
+    let sentData: Partial<CustomerAddress> = {
+        customer_id: user.id,
+        address: data.address,
+        governorate_slug: data.governorate_slug,
+    };
+
+    await new AddUpdateAddress().update(sentData);
+
+    revalidatePath('/', 'layout');
+    return {success: true};
+}
+
+export async function addAddress(data: Partial<CustomerAddress>) {
+    const user = await new GetCurrentUser().execute();
+    if (!user) return {error: 'User not logged in'};
+    let sentData: Partial<CustomerAddress> = {
+        customer_id: user.id,
+        address: data.address,
+        governorate_slug: data.governorate_slug,
+    };
+
+    await new AddUpdateAddress().add(sentData);
+
+    revalidatePath('/', 'layout');
+    return {success: true};
+}
+
+export async function deleteAddress(id: number) {
+    const user = await new GetCurrentUser().execute();
+    if (!user) return {error: 'User not logged in'};
+    await new DeleteAddress().execute(id);
+    revalidatePath('/', 'layout');
+    return {success: true};
+
 }

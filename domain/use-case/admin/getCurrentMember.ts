@@ -1,9 +1,9 @@
 import {Member} from "@/domain/entities/auth/member";
-import {ICustomerRepository} from "@/data/repositories/iCustomerRepository";
+import {ICustomerServerRepository} from "@/data/repositories/server/iCustomerRepository";
 import {GetCurrentUser} from "@/domain/use-case/shop/getCurrentUser";
 
 export class GetCurrentMember {
-    constructor(private repo = new ICustomerRepository()) {
+    constructor(private repo = new ICustomerServerRepository()) {
 
     }
 

@@ -1,62 +1,91 @@
-"use client"
+"use client";
 
+import {useProfileManager} from "@/ui/hooks/store/useProfileManager";
+import {EditableAddressField, EditableAddressItem, EditablePhoneField} from "@/ui/components/editableFields";
+import {ConfirmDialog} from "@/ui/components/confirmDialog";
+import {Plus} from "lucide-react";
 import {ProfileView} from "@/domain/entities/views/shop/profileView";
-import {use, useState} from "react";
+import {Governorate} from "@/domain/entities/database/governorate";
+import {useState} from "react";
+import {deleteAddress, updateAddress} from "@/ui/hooks/store/useProfileActions";
+import {toast} from "sonner";
 
-export function ProfileScreen({initialProfile}: { initialProfile: Promise<ProfileView | null> }) {
-    const profile = use(initialProfile)
-    const [newAddress, setNewAddress] = useState("");
+export function ProfileScreen({profile, governorates}: { profile: ProfileView, governorates: Governorate[] }) {
+    const {
+        loading,
+        newPhone,
+        setNewPhone,
+        editingPhone,
+        setEditingPhone,
+        newAddress,
+        setNewAddress,
+        editingAddress,
+        setEditingAddress,
+        handlePhoneSave,
+        handlePhoneDelete,
+        handleAddressSave,
+        handleAddressDelete,
+    } = useProfileManager(profile);
 
-    // const {updatePhone, addAddress, deleteAddress} = useProfileActions(user?.id);
-
-    // if (!user) {
-    //   return (
-    //     <div className="max-w-2xl mx-auto mt-10 p-6 bg-white rounded-lg shadow">
-    //       <p className="text-red-600">No profile found. Please login.</p>
-    //     </div>
-    //   );
-    // }
-
-    /*
-      if (isLoading) {
-        return (
-          <div className="max-w-2xl mx-auto mt-10 p-6 bg-white rounded-lg shadow">
-            <p className="text-gray-600">Loading profile…</p>
-          </div>
-        );
-      }
-
-      if (error) {
-        return (
-          <div className="max-w-2xl mx-auto mt-10 p-6 bg-white rounded-lg shadow">
-            <p className="text-red-600">Error loading profile.</p>
-          </div>
-        );
-      }
-    */
+    const [confirmDelete, setConfirmDelete] = useState<{
+        type: "phone" | "address";
+        data: number | Partial<{ index: number, phone: string }>
+    } | null>(null);
 
     return (
-        <div className="max-w-3xl mx-auto mt-10 p-6 bg-white rounded-lg shadow">
+        <div className="max-w-3xl mx-auto my-10 p-6 bg-white rounded-lg shadow">
             <h1 className="text-2xl font-bold mb-6 text-amber-800">My Profile</h1>
 
             {/* --- Basic Info --- */}
             <section className="space-y-4 mb-8">
-                <InfoField label="Name" value={profile?.name ?? ""} disabled/>
-                <InfoField label="Email" value={profile?.email ?? ""} disabled/>
-                {profile?.phone.map((p: any, index: number) => (
+                <label className="block text-sm font-medium text-gray-700">
+                    Name
+                    <input
+                        type="text"
+                        value={profile?.name ?? ""}
+                        disabled
+                        className="mt-1 block w-full rounded border-gray-300 bg-gray-100"
+                    />
+                </label>
+                <label className="block text-sm font-medium text-gray-700">
+                    Email
+                    <input
+                        type="text"
+                        value={profile?.email ?? ""}
+                        disabled
+                        className="mt-1 block w-full rounded border-gray-300 bg-gray-100"
+                    />
+                </label>
 
-                    <EditableField
-                        label={`Phone ${profile?.phone.length > 1 ? index + 1 : ""}`}
+                {/* --- Phone Fields --- */}
+                {profile?.phone?.map((p, index) => (
+                    <EditablePhoneField
                         key={index}
+                        label={`Phone ${profile?.phone.length > 1 ? index + 1 : ""}`}
                         value={p ?? ""}
-                        onSave={() => {
-                        }}
-                        // onSave={(v) => updatePhone.mutate(v)}
-                        // loading={updatePhone.isPending}
+                        loading={loading}
+                        onChange={(val) => setEditingPhone({index: index + 1, phone: val})}
+                        onSave={() => handlePhoneSave(editingPhone)}
+                        onDelete={() => setConfirmDelete({type: "phone", data: {index: index + 1, phone: p}})}
                     />
                 ))}
-                {(profile?.phone.length ?? 0) < 2 && (
-                    <button>
+
+                {newPhone && (
+                    <EditablePhoneField
+                        label="New Phone"
+                        value={newPhone?.phone ?? ""}
+                        newItem
+                        loading={loading}
+                        onChange={(val) => setNewPhone({index: (profile?.phone.length ?? 0) + 1, phone: val})}
+                        onSave={() => handlePhoneSave(newPhone)}
+                    />
+                )}
+
+                {(profile?.phone?.length ?? 0) < 2 && !newPhone && (
+                    <button
+                        className="px-4 py-2 rounded bg-amber-700 text-white hover:bg-amber-800 disabled:opacity-60"
+                        onClick={() => setNewPhone({})}
+                    >
                         Add Phone
                     </button>
                 )}
@@ -65,119 +94,68 @@ export function ProfileScreen({initialProfile}: { initialProfile: Promise<Profil
             {/* --- Addresses --- */}
             <section className="mb-10">
                 <h2 className="font-semibold mb-2">Addresses</h2>
-                <div className="flex gap-2 mt-2">
-                    <input
-                        type="text"
-                        placeholder="Add a new address"
-                        value={newAddress}
-                        onChange={(e) => setNewAddress(e.target.value)}
-                        className="flex-1 rounded border-gray-300"
-                    />
-                    <button
-                        onClick={() => {
-                            // addAddress.mutate(newAddress);
-                            setNewAddress("");
-                        }}
-                        // disabled={addAddress.isPending}
-                        className="px-4 py-2 rounded bg-amber-700 text-white hover:bg-amber-800 disabled:opacity-60"
-                    >
-                        {/*{addAddress.isPending ? "Adding…" : "➕ Add"}*/}
-                    </button>
-                </div>
 
                 <ul className="mt-4 space-y-2">
-                    {(profile?.address?.length ?? 0) === 0 ? (
+                    {/* No addresses */}
+                    {(profile?.address?.length ?? 0) === 0 && newAddress == null ? (
                         <li className="text-gray-500 text-sm">No addresses yet.</li>
                     ) : (
-                        profile?.address?.map((a: any) => (
-                            <li key={a.id} className="flex justify-between border rounded p-2">
-                                <span>{a.address}</span>
-                                <button
-                                    // onClick={() => deleteAddress.mutate(a.id)}
-                                    // disabled={deleteAddress.isPending}
-                                    className="text-red-600 hover:underline"
-                                >
-                                    Delete
-                                </button>
-                            </li>
+                        profile?.address?.map((a) => (
+                            <EditableAddressItem
+                                key={a.id}
+                                address={a}
+                                governorates={governorates}
+                                onDeleteAction={async (id) => {
+                                    const res = await deleteAddress(id);
+                                    if (res?.error) toast.error(res.error);
+                                    else toast.success("Address deleted successfully");
+                                }}
+                                onSaveAction={async (updated) => {
+                                    const res = await updateAddress(updated);
+                                    if (res?.error) toast.error(res.error);
+                                    else toast.success("Address updated successfully");
+                                }}
+                            />
                         ))
                     )}
+
+                    {newAddress != null && (
+                        <EditableAddressField
+                            label={`New Address`}
+                            key="new"
+                            address={newAddress}
+                            newItem={true}
+                            onChange={(value) => setNewAddress(value)}
+                            governorates={governorates}
+                            onSave={() => handleAddressSave(newAddress)}
+                        />
+                    )}
                 </ul>
+
+                <div className="flex gap-2 mt-10 justify-end">
+                    <button
+                        onClick={() => setNewAddress({address: ""})}
+                        className="flex px-4 py-2 bg-amber-700 text-white hover:bg-amber-800 disabled:opacity-60 justify-between gap-2 rounded-2xl "
+                    >
+                        <Plus className="w-4 h-4 text-white self-center"/>
+                        Add a new address
+                    </button>
+                </div>
             </section>
 
-            {/* --- Orders --- */}
-            {/*  <section>
-        <h2 className="text-xl font-semibold mb-4 text-amber-700">
-          Order History
-        </h2>
-        {profile?.orderslength === 0 ? (
-          <p className="text-gray-500">You have no orders yet.</p>
-        ) : (
-          <ul className="space-y-4">
-            {orders.map((o: any) => (
-              <li key={o.id} className="border rounded-lg p-4">
-                <div className="flex justify-between">
-                  <span className="font-medium">Order #{o.id}</span>
-                  <span className="text-sm text-gray-500">
-                    {new Date(o.created_at).toLocaleDateString()}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-600">Status: {o.status}</p>
-                <p className="text-sm text-gray-600">Total: ${o.total}</p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section> */}
-        </div>
-    );
-}
 
-/* --- Reusable UI components --- */
-function InfoField({label, value, disabled}: { label: string; value: string; disabled?: boolean }) {
-    return (
-        <label className="block text-sm font-medium text-gray-700">
-            {label}
-            <input
-                type="text"
-                value={value}
-                disabled={disabled}
-                className="mt-1 block w-full rounded border-gray-300 bg-gray-100"
+            {/* --- Confirm Delete Dialog --- */}
+            <ConfirmDialog
+                open={!!confirmDelete}
+                title={`Are you sure you want to delete this ${confirmDelete?.type}?`}
+                description=""
+                onCancel={() => setConfirmDelete(null)}
+                onConfirm={() => {
+                    if (confirmDelete?.type === "phone") handlePhoneDelete(confirmDelete.data);
+                    // else if (confirmDelete?.type === "address") handleAddressDelete(confirmDelete.data);
+                    setConfirmDelete(null);
+                }}
             />
-        </label>
-    );
-}
-
-function EditableField({
-                           label,
-                           value,
-                           onSave,
-                           loading,
-                       }: {
-    label: string;
-    value: string;
-    onSave: (value: string) => void;
-    loading?: boolean;
-}) {
-    const [input, setInput] = useState(value);
-    return (
-        <label className="block text-sm font-medium text-gray-700">
-            {label}
-            <div className="flex gap-2 mt-1">
-                <input
-                    type="text"
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    className="flex-1 rounded border-gray-300"
-                />
-                <button
-                    onClick={() => onSave(input)}
-                    disabled={loading}
-                    className="px-4 py-2 rounded bg-amber-700 text-white hover:bg-amber-800 disabled:opacity-60"
-                >
-                    {loading ? "Saving…" : "Save"}
-                </button>
-            </div>
-        </label>
+        </div>
     );
 }

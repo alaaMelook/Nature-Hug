@@ -1,9 +1,9 @@
-import { IProductRepository } from '@/data/repositories/iProductsRepository';
-import { Review } from '@/domain/entities/database/review';
+import {IProductServerRepository} from '@/data/repositories/server/iProductsRepository';
 import {Order} from "@/domain/entities/database/order";
 
 export class CreateOrder {
-    constructor(private repo = new IProductRepository()) { }
+    constructor(private repo = new IProductServerRepository()) {
+    }
 
     async execute(order: Order): Promise<void> {
         try {

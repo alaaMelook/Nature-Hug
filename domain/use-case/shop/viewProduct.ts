@@ -1,9 +1,10 @@
-import { IProductRepository } from "@/data/repositories/iProductsRepository";
-import { ProductDetailView } from "@/domain/entities/views/shop/productDetailView";
+import {IProductServerRepository} from "@/data/repositories/server/iProductsRepository";
+import {ProductDetailView} from "@/domain/entities/views/shop/productDetailView";
 
 
 export class ViewProduct {
-    constructor(private repo = new IProductRepository()) { }
+    constructor(private repo = new IProductServerRepository()) {
+    }
 
     async execute(slug: string): Promise<ProductDetailView> {
         try {

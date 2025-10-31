@@ -1,22 +1,24 @@
-import {ICustomerRepository} from "@/data/repositories/iCustomerRepository";
-import {Customer} from "@/domain/entities/auth/customer";
+import {Customer, CustomerAddress} from "@/domain/entities/auth/customer";
 import {Member} from "@/domain/entities/auth/member";
 import {Session, User} from "@supabase/supabase-js";
 import {ProfileView} from "@/domain/entities/views/shop/profileView";
 import {MemberView} from "@/domain/entities/views/admin/memberView";
+import {Governorate} from "@/domain/entities/database/governorate";
 
 export interface CustomerRepository {
+    fetchAllGovernorates(): Promise<Governorate[]>;
+
     getSession(): Promise<Session | null>;
 
     getCurrentUser(): Promise<User | null>;
 
-    signInWithEmail(email: string, password: string): Promise<{ error?: string }>;
+    updateCustomerData(data: Partial<Customer>): Promise<void>;
 
-    signUpWithEmail(email: string, password: string, name?: string): Promise<{ error?: string }>;
+    addCustomerAddress(address: Partial<CustomerAddress>): Promise<void>;
 
-    signInWithGoogle(): Promise<{ error?: string }>;
+    updateCustomerAddress(address: Partial<CustomerAddress>): Promise<void>;
 
-    signOut(): Promise<void>;
+    deleteCustomerAddress(addressId: number): Promise<void>
 
     fetchCustomer(authUserId: string): Promise<Customer>; // Stays here as it links auth user to customer
     fetchMember(customerId: number): Promise<Member | null>; // This could move to a future MemberRepository
@@ -27,4 +29,3 @@ export interface CustomerRepository {
     viewMember(memberId: number): Promise<MemberView>;
 }
 
-export const CustomerRepo: CustomerRepository = new ICustomerRepository();

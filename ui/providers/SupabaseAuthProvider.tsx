@@ -1,17 +1,15 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { Session } from "@supabase/supabase-js";
-import { CustomerRepo } from "@/domain/repositories/customerRepository";
-import { Member } from "@/domain/entities/auth/member";
-import { Customer } from "@/domain/entities/auth/customer";
-import { supabase } from "@/data/datasources/supabase/client";
-
+import {createContext, ReactNode, useContext, useEffect, useState} from "react";
+import {Session} from "@supabase/supabase-js";
+import {Member} from "@/domain/entities/auth/member";
+import {Customer} from "@/domain/entities/auth/customer";
+import {supabase} from "@/data/datasources/supabase/client";
 
 
 const SupabaseAuthContext = createContext<SupabaseAuthContextType | undefined>(undefined);
 
-export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
+export function SupabaseAuthProvider({children}: { children: ReactNode }) {
     const [user, setUser] = useState<Customer | null>(null);
     const [session, setSession] = useState<Session | null>(null);
     const [member, setMember] = useState<Member | null>(null);
@@ -20,14 +18,14 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     // -------- Auth session listener --------
     useEffect(() => {
         async function init() {
-            const sess = await CustomerRepo.getSession();
+            const sess = await CustomerRepoServer.getSession();
             setSession(sess);
 
             if (sess?.user) {
-                const customer = await CustomerRepo.fetchCustomer(sess.user.id);
+                const customer = await CustomerRepoServer.fetchCustomer(sess.user.id);
                 setUser(customer);
                 if (customer) {
-                    const member = await CustomerRepo.fetchMember(customer.id);
+                    const member = await CustomerRepoServer.fetchMember(customer.id);
                     setMember(member);
                 }
             }
@@ -36,14 +34,14 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
 
         init();
 
-        const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+        const {data: listener} = supabase.auth.onAuthStateChange(async (_event, session) => {
             setSession(session);
 
             if (session?.user) {
-                const customer = await CustomerRepo.fetchCustomer(session.user.id);
+                const customer = await CustomerRepoServer.fetchCustomer(session.user.id);
                 setUser(customer);
                 if (customer) {
-                    const member = await CustomerRepo.fetchMember(customer.id);
+                    const member = await CustomerRepoServer.fetchMember(customer.id);
                     setMember(member);
                 }
             } else {
@@ -57,14 +55,14 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
 
     // -------- Actions --------
     const signInWithGoogle = async () => {
-        const { error } = await CustomerRepo.signInWithGoogle();
+        const {error} = await CustomerRepoServer.signInWithGoogle();
         if (error) alert(error);
     };
 
-    const signInWithEmail = (email: string, password: string) => CustomerRepo.signInWithEmail(email, password);
-    const signUpWithEmail = (email: string, password: string, name?: string) => CustomerRepo.signUpWithEmail(email, password, name);
+    const signInWithEmail = (email: string, password: string) => CustomerRepoServer.signInWithEmail(email, password);
+    const signUpWithEmail = (email: string, password: string, name?: string) => CustomerRepoServer.signUpWithEmail(email, password, name);
     const signOut = async () => {
-        await CustomerRepo.signOut();
+        await CustomerRepoServer.signOut();
         setUser(null);
         setMember(null);
     };

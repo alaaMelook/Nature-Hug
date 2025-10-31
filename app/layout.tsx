@@ -4,7 +4,9 @@ import Script from "next/script";
 
 
 import React from "react";
-import Providers from "@/ui/providers/Providers";
+import {TranslationProvider} from "@/ui/providers/TranslationProvider";
+import FontProvider from "@/ui/providers/FontProvider";
+import {Toaster} from "sonner";
 
 export const metadata: Metadata = {
     title: "Hug Nature",
@@ -43,7 +45,13 @@ export default async function RootLayout({children}: Readonly<{ children: React.
                 style={{display: "none", visibility: "hidden"}}
             ></iframe>
         </noscript>
-        <Providers>{children}</Providers> {/* ✅ client layer */}
+        <TranslationProvider>
+            <FontProvider>
+
+                {children}
+                <Toaster position="top-center" richColors/>
+            </FontProvider>
+        </TranslationProvider>
         </body>
         </html>
     );

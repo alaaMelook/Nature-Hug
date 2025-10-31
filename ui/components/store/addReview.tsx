@@ -5,22 +5,18 @@ import {ChevronDown, ChevronUp, Star} from 'lucide-react' // Import icons for ex
 import {useTranslation} from '@/ui/providers/TranslationProvider'
 import {toast} from 'sonner'
 import {ProductDetailView} from '@/domain/entities/views/shop/productDetailView'
-import {ProductView} from '@/domain/entities/views/shop/productView'
-import {Review} from '@/domain/entities/database/review'
-import {addReview} from '@/ui/hooks/store/useAddReview'
 import Link from 'next/link'
 import {useSupabase} from "@/ui/hooks/useSupabase";
 import {Customer} from "@/domain/entities/auth/customer";
+import {postReview} from "@/ui/hooks/store/useAddReview";
 
-interface AddReviewProps {
-    product: ProductView | ProductDetailView,
-    onReviewAdded: () => void
-}
 
-export const AddReview: React.FC<AddReviewProps> = ({product, onReviewAdded}) => {
+export function AddReview({product}: { product: ProductDetailView }) {
+
     const {t} = useTranslation()
     const [rating, setRating] = useState(0)
     const [comment, setComment] = useState('')
+    const [loading, setLoading] = useState(false)
     const [hoverRating, setHoverRating] = useState(0)
     const [isExpanded, setIsExpanded] = useState(false) // New state for expand/collapse
     const {getUser} = useSupabase();
@@ -34,55 +30,33 @@ export const AddReview: React.FC<AddReviewProps> = ({product, onReviewAdded}) =>
     }, []);
 
 
-    const onAdded = () => {
-        toast.success(t('reviewAddedSuccessfully'))
-        setRating(0)
-        setComment('')
-        setIsExpanded(false); // Collapse the form after successful submission
-        onReviewAdded()
-    }
-    const onError = (error: any) => {
-        console.error('Failed to add review:', error)
-        toast.error(t('failedToAddReview'))
+    async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+        e.preventDefault();
+        setLoading(true);
+        const data = {
+            product: product.product_id,
+            rating: rating,
+            comment: comment,
+        };
+
+        const result = await postReview(data); // send plain object
+
+        if (result?.error) {
+            toast.error(result.error);
+        } else {
+            toast.success(t('reviewAddedSuccessfully'))
+            setRating(0)
+            setComment('')
+            setIsExpanded(false); // Collapse the form after successful submission
+        }
+        setLoading(false)
     }
 
-    const mutation =
-        addReview({
-            onSuccess: onAdded,
-            onError: onError
-        })
 
     const handleStarClick = (index: number) => {
         setRating(index + 1)
     }
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-        if (rating === 0) {
-            toast.error(t('pleaseSelectRating'))
-            return
-        }
-        if (!comment.trim()) {
-            toast.error(t('pleaseEnterComment'))
-            return
-        }
-
-        try {
-            const review: Review = {
-                id: 0,
-                product_id: product.id,
-                // customer_id: user.id,
-                rating: rating,
-                comment: comment,
-                status: 'pending',
-                created_at: ''
-            };
-            mutation.mutate(review)
-        } catch (error) {
-            console.error('Failed to add review:', error)
-            toast.error(t('failedToAddReview'))
-        }
-    }
 
     // Toggle function
     const toggleExpansion = () => {
@@ -109,6 +83,12 @@ export const AddReview: React.FC<AddReviewProps> = ({product, onReviewAdded}) =>
                     <div className={`${!user ? 'filter blur-sm' : ''}`}>
                         <h3 className="text-2xl font-bold text-primary-800 mb-4">{t('addYourReview')}</h3>
                         <form onSubmit={handleSubmit} className="space-y-4">
+                            <input
+                                name='product'
+                                value={product.product_id}
+                                hidden={true}
+                                readOnly={true}
+                            />
                             <div>
                                 <label htmlFor="rating" className="block text-sm font-medium text-gray-700 mb-2">
                                     {t('yourRating')}
@@ -136,19 +116,29 @@ export const AddReview: React.FC<AddReviewProps> = ({product, onReviewAdded}) =>
                                 <textarea
                                     id="comment"
                                     rows={4}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500 text-b"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500 text-gray-700"
+                                    name='comment'
                                     value={comment}
                                     onChange={(e) => setComment(e.target.value)}
                                     placeholder={t('writeYourReviewHere')}
                                 />
+                                <input
+                                    name='rating'
+                                    type={'number'}
+                                    hidden={true}
+                                    value={rating}
+                                    readOnly={true}
+                                />
                             </div>
                             <div className="text-right">
+
+
                                 <button
                                     type="submit"
-                                    disabled={mutation.isPending || rating === 0 || !comment.trim()}
+                                    disabled={loading || rating === 0 || !comment.trim()}
                                     className="px-6 py-3 bg-primary-800 text-white rounded-full shadow-md hover:bg-primary-700 transition-colors duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed"
                                 >
-                                    {mutation.isPending ? t('submitting') : t('submitReview')}
+                                    {loading ? t('submitting') : t('submitReview')}
                                 </button>
                             </div>
                         </form>

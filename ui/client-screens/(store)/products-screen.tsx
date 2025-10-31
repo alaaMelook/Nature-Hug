@@ -1,15 +1,15 @@
 "use client";
 import {ProductView} from "@/domain/entities/views/shop/productView";
-import {use, useEffect, useMemo, useState} from "react";
+import {useEffect, useMemo, useState} from "react";
 import ProductFilters from "@/ui/components/store/ProductFilters";
 import ProductGrid from "@/ui/components/store/ProductsGrid";
 import {useTranslation} from "@/ui/providers/TranslationProvider";
-import {ViewAllProducts} from "@/domain/use-case/shop/viewAllProducts";
 import {Category} from "@/domain/entities/database/category";
+import {GetProductsData} from "@/ui/hooks/store/useProductsData";
 
 export function ProductsScreen({initProducts, initCategories}: {
-    initProducts: Promise<ProductView[]>,
-    initCategories: Promise<Category[]>
+    initProducts: ProductView[],
+    initCategories: Category[]
 }) {
     const [filters, setFilters] = useState({
         search: '',
@@ -18,14 +18,14 @@ export function ProductsScreen({initProducts, initCategories}: {
         inStock: false,
         onSale: false
     });
-    const [products, setProducts] = useState<ProductView[]>(use(initProducts));
+    const [products, setProducts] = useState<ProductView[]>(initProducts);
     const [loading, setLoading] = useState(false);
     const {language} = useTranslation()
 
     useEffect(() => {
         async function refetch() {
             setLoading(true);
-            const updated = await new ViewAllProducts().execute(true);
+            const updated = await new GetProductsData().all();
             setProducts(updated);
             setLoading(false);
         }

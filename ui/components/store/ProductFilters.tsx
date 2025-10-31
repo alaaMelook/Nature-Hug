@@ -3,11 +3,11 @@
 import {Category} from "@/domain/entities/database/category";
 import {langStore} from "@/lib/i18n/langStore";
 import {useTranslation} from "@/ui/providers/TranslationProvider";
-import React, {use} from "react";
+import React from "react";
 
 export default function ProductFilters({onFilterChangeAction, initCategories}: {
     onFilterChangeAction: (filters: any) => void,
-    initCategories: Promise<Category[]>
+    initCategories: Category[]
 }) {
     const {t} = useTranslation();
 
@@ -17,7 +17,7 @@ export default function ProductFilters({onFilterChangeAction, initCategories}: {
         const checked = (e.target as HTMLInputElement).checked;
         onFilterChangeAction({[name]: isCheckbox ? checked : value});
     };
-    let categories: Category[] = use(initCategories);
+    let categories: Category[] = initCategories;
     console.log('Categories:', categories);
     return (
         <div className="bg-primary-10 p-6 rounded-lg shadow-lg h-3/5  ">

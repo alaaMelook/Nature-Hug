@@ -1,4 +1,4 @@
-import {ICustomerRepository} from "@/data/repositories/iCustomerRepository";
+import {ICustomerServerRepository} from "@/data/repositories/server/iCustomerRepository";
 import {MemberView} from "@/domain/entities/views/admin/memberView";
 
 export class ViewMember {
@@ -8,7 +8,7 @@ export class ViewMember {
     async execute({memberId}: { memberId: number }): Promise<MemberView> {
         try {
             console.log("[ViewMember] execute called with memberId:", memberId);
-            const repo = new ICustomerRepository();
+            const repo = new ICustomerServerRepository();
             console.log("[ViewMember] Calling viewMember.");
             const result = await repo.viewMember(memberId);
             console.log("[ViewMember] viewMember result:", result);
@@ -22,7 +22,7 @@ export class ViewMember {
     async fromCustomerId({customerId}: { customerId: number }): Promise<MemberView> {
         try {
             console.log("[ViewMember] fromCustomerId called with customerId:", customerId);
-            const repo = new ICustomerRepository();
+            const repo = new ICustomerServerRepository();
             console.log("[ViewMember] Calling fetchMember.");
             const member = await repo.fetchMember(customerId);
             console.log("[ViewMember] fetchMember result:", member);

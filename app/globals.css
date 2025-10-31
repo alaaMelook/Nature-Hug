@@ -1,33 +1,38 @@
 @import "tailwindcss";
+
 @plugin "flowbite-react/plugin/tailwindcss";
 @source "../.flowbite-react/class-list.json";
 
 @theme {
-  --color-primary-10: #fffefb;
-  --color-primary-50: #faf8ec;
-  --color-primary-100: #f4edcd;
-  --color-primary-200: #eadb9e;
-  --color-primary-300: #ddc167;
-  --color-primary-400: #d2a93d;
-  --color-primary-500: #c3942f;
-  --color-primary-600: #a87426;
-  --color-primary-700: #875622;
-  --color-primary-800: #704623;
-  --color-primary-900: #603b23;
-  --color-primary-950: #381e10;
+    --color-primary-10: #fffefb;
+    --color-primary-50: #faf8ec;
+    --color-primary-100: #f4edcd;
+    --color-primary-200: #eadb9e;
+    --color-primary-300: #ddc167;
+    --color-primary-400: #d2a93d;
+    --color-primary-500: #c3942f;
+    --color-primary-600: #a87426;
+    --color-primary-700: #875622;
+    --color-primary-800: #704623;
+    --color-primary-900: #603b23;
+    --color-primary-950: #381e10;
 
-  --font-sans: var(--font-gerlach-sans), ui-sans-serif, system-ui;
-  --font-arabic: var(--font-muslimah), ui-sans-serif, system-ui;
+    --font-sans: var(--font-gerlach-sans), ui-sans-serif, system-ui;
+    --font-arabic: var(--font-muslimah), ui-sans-serif, system-ui;
 
-  --color-text: var(--color-primary-50);
+    --color-text: var(--color-primary-50);
 }
 
 [dir="rtl"] .ml-2 {
-  margin-left: 0;
-  margin-right: 0.5rem;
+    margin-left: 0;
+    margin-right: 0.5rem;
 }
 
 [dir="rtl"] .mr-2 {
-  margin-right: 0;
-  margin-left: 0.5rem;
+    margin-right: 0;
+    margin-left: 0.5rem;
+}
+
+button {
+    cursor: pointer;
 }

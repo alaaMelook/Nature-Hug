@@ -1,53 +1,24 @@
 "use client"
 import {useRouter} from "next/navigation";
-import {useSupabase} from "@/ui/hooks/useSupabase";
+import {googleLogin, login} from "@/ui/hooks/store/useLoginActions";
 import React, {useState} from "react";
+import {FcGoogle} from "react-icons/fc";
 
 export function LoginScreen() {
     const router = useRouter();
-    const {signInWithGoogle, signInWithEmail} = useSupabase();
-
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [errorMsg, setErrorMsg] = useState("");
     const [loading, setLoading] = useState(false);
 
-    const handleEmailLogin = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setErrorMsg("");
-        setLoading(true);
-        try {
-            const {error} = await signInWithEmail(email, password);
-            if (error) {
-                throw error;
-            }
-            router.push("/profile");
-        } catch (err: any) {
-            setErrorMsg(err.message || "Login failed");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleGoogleLogin = async () => {
-        setErrorMsg("");
-        setLoading(true);
-        try {
-            await signInWithGoogle();
-        } catch (err: any) {
-            setErrorMsg(err.message || "Google login failed");
-        } finally {
-            setLoading(false);
-        }
-    };
-
     return (
         <div className="flex flex-col items-center justify-center h-screen space-y-6">
             <h1 className="text-2xl font-bold">Login</h1>
 
-            <form onSubmit={handleEmailLogin} className="flex flex-col space-y-4 w-72">
+            <form className="flex flex-col space-y-4 w-72">
                 <input
                     type="email"
+                    name="email"
                     placeholder="Email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -57,6 +28,7 @@ export function LoginScreen() {
                 />
                 <input
                     type="password"
+                    name="password"
                     placeholder="Password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -67,6 +39,7 @@ export function LoginScreen() {
                 <button
                     type="submit"
                     disabled={loading}
+                    formAction={login}
                     className="px-6 py-3 bg-primary-900 text-white rounded-md cursor-pointer"
                 >
                     {loading ? "Logging in..." : "Login"}
@@ -89,11 +62,11 @@ export function LoginScreen() {
             </div>
 
             <button
-                onClick={handleGoogleLogin}
+                onClick={googleLogin}
                 disabled={loading}
                 className="cursor-pointer flex items-center justify-center w-fit gap-3 px-15 py-3 border border-gray-200 rounded-md bg-white shadow-sm hover:bg-gray-50 transition disabled:opacity-60 disabled:cursor-not-allowed"
             >
-                {/* <FcGoogle className="text-xl"/> */}
+                <FcGoogle className="text-xl"/>
                 {loading ? "Signing in..." : "Continue with Google"}
             </button>
 

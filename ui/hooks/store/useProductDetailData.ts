@@ -1,12 +1,11 @@
-import { ViewProduct } from "@/domain/use-case/shop/viewProduct";
-import { langStore } from "@/lib/i18n/langStore";
-import { useQuery } from "@tanstack/react-query";
+import {IProductClientRepository} from "@/data/repositories/client/iProductsRepository";
 
-export function useProductDetailData(slug: string) {
-    return useQuery({
-        queryKey: ["product-detail", slug], // include language to auto-refetch
-        queryFn: async () => await new ViewProduct().execute(slug),
-        staleTime: 1000 * 60 * 2
+export class GetProductDetails {
+    constructor(private repo = new IProductClientRepository()) {
+    }
 
-    });
+    async bySlug(slug: string) {
+        return await this.repo.viewBySlug(slug);
+    }
+
 }

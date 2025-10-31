@@ -10,12 +10,12 @@ import {GetCurrentUser} from "@/domain/use-case/shop/getCurrentUser";
 export default async function AdminLayout({children}: { children: ReactNode }) {
 
     // 🔒 Get current user
-    const user = await new GetCurrentUser().execute(true); // to run from server side not client's
+    const user = await new GetCurrentUser().execute(); // to run from server side not client's
 
-    if (!user) redirect("/login");
+    if (!user) redirect("/");
     console.log(user);
 
-    const member = await new ViewMember().fromCustomerId({customerId: user.id, fromServer: true});
+    const member = await new ViewMember().fromCustomerId({customerId: user.id});
     console.log(member);
     if (!member) redirect("/");
 

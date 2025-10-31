@@ -1,21 +1,19 @@
-import { Order } from "@/domain/entities/database/order";
-import { supabase } from "@/data/datasources/supabase/client";
-import { AdminRepository } from "@/domain/repositories/adminRepository";
-import { OrderDetailsView } from "@/domain/entities/views/admin/orderDetailsView";
-import { DashboardMetricsView } from "@/domain/entities/views/admin/dashboardMetricsView";
-import { Material } from "@/domain/entities/database/material";
-import { ProductAdminView } from "@/domain/entities/views/admin/productAdminView";
+import {supabase} from "@/data/datasources/supabase/client";
+import {AdminRepository} from "@/domain/repositories/adminRepository";
+import {OrderDetailsView} from "@/domain/entities/views/admin/orderDetailsView";
+import {DashboardMetricsView} from "@/domain/entities/views/admin/dashboardMetricsView";
+import {Material} from "@/domain/entities/database/material";
+import {ProductAdminView} from "@/domain/entities/views/admin/productAdminView";
 
-export class IAdminRepository implements AdminRepository {
+export class IAdminClientRepository implements AdminRepository {
     async getOrderDetails(): Promise<OrderDetailsView[]> {
         try {
             console.log("[IAdminRepository] getOrderDetails called.");
-            const { data, error } = await supabase.schema('admin')
+            const {data} = await supabase.schema('admin')
                 .from("order_details")
                 .select('*')
-                .order("order_date", { ascending: false })
+                .order("order_date", {ascending: false})
                 .limit(5);
-            if (error) throw error;
             console.log("[IAdminRepository] getOrderDetails result:", data);
             return data || [];
         } catch (error) {
@@ -27,11 +25,10 @@ export class IAdminRepository implements AdminRepository {
     async getDashboardMetrics(): Promise<DashboardMetricsView> {
         try {
             console.log("[IAdminRepository] getDashboardMetrics called.");
-            const { data, error } = await supabase.schema('admin')
+            const {data} = await supabase.schema('admin')
                 .from("monthly_stats_view")
                 .select('*')
                 .single();
-            if (error) throw error;
             console.log("[IAdminRepository] getDashboardMetrics result:", data);
             return data as DashboardMetricsView;
         } catch (error) {
@@ -43,10 +40,9 @@ export class IAdminRepository implements AdminRepository {
     async getAllMaterials(): Promise<Material[]> {
         try {
             console.log("[IAdminRepository] getAllMaterials called.");
-            const { data, error } = await supabase.schema('admin')
+            const {data} = await supabase.schema('admin')
                 .from("materials")
                 .select('*');
-            if (error) throw error;
             console.log("[IAdminRepository] getAllMaterials result:", data);
             return data || [];
         } catch (error) {
@@ -58,35 +54,34 @@ export class IAdminRepository implements AdminRepository {
     async addMaterial(material: Material): Promise<void> {
         try {
             console.log("[IAdminRepository] addMaterial called with material:", material);
-            const { error } = await supabase.schema('admin')
+            await supabase.schema('admin')
                 .from("materials")
                 .insert(material);
-            if (error) throw error;
             console.log("[IAdminRepository] addMaterial completed.");
         } catch (error) {
             console.error("[IAdminRepository] Error in addMaterial:", error);
             throw error;
         }
     }
+
     async deleteMaterial(id: number): Promise<void> {
         try {
             console.log("[IAdminRepository] deleteMaterial called with id:", id);
-            const { error } = await supabase.schema('admin')
+            await supabase.schema('admin')
                 .from("materials")
                 .delete()
                 .eq('id', id);
-            if (error) throw error;
             console.log("[IAdminRepository] deleteMaterial completed.");
         } catch (error) {
             console.error("[IAdminRepository] Error in deleteMaterial:", error);
             throw error;
         }
     }
+
     async createProduct(product: ProductAdminView): Promise<number> {
         try {
             console.log("[IAdminRepository] createProduct called with product:", product);
-            const { data, error } = await supabase.schema('admin').rpc('create_product', { product_data: product });
-            if (error) throw error;
+            const {data} = await supabase.schema('admin').rpc('create_product', {product_data: product});
             console.log("[IAdminRepository] createProduct result:", data);
             return data;
         } catch (error) {
@@ -94,11 +89,11 @@ export class IAdminRepository implements AdminRepository {
             throw error;
         }
     }
+
     async updateProduct(product: ProductAdminView): Promise<number> {
         try {
             console.log("[IAdminRepository] updateProduct called with product:", product);
-            const { data, error } = await supabase.schema('admin').rpc('update_product', { product_data: product });
-            if (error) throw error;
+            const {data} = await supabase.schema('admin').rpc('update_product', {product_data: product});
             console.log("[IAdminRepository] updateProduct result:", data);
             return data;
         } catch (error) {
@@ -106,22 +101,22 @@ export class IAdminRepository implements AdminRepository {
             throw error;
         }
     }
+
     async deleteProduct(slug: string): Promise<void> {
         try {
             console.log("[IAdminRepository] deleteProduct called with slug:", slug);
-            const { error } = await supabase.schema('store').from('products').delete().eq('slug', slug);
-            if (error) throw error;
+            await supabase.schema('store').from('products').delete().eq('slug', slug);
             console.log("[IAdminRepository] deleteProduct completed.");
         } catch (error) {
             console.error("[IAdminRepository] Error in deleteProduct:", error);
             throw error;
         }
     }
+
     async viewAllWithDetails(): Promise<ProductAdminView[]> {
         try {
             console.log("[IAdminRepository] viewAllWithDetails called.");
-            const { data, error } = await supabase.schema('store').from(`product_detail`).select('*');
-            if (error) throw error;
+            const {data} = await supabase.schema('store').from(`product_detail`).select('*');
             console.log("[IAdminRepository] viewAllWithDetails result:", data);
             return data || [];
         } catch (error) {

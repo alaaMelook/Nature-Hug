@@ -1,17 +1,17 @@
-import {IProductRepository} from '@/data/repositories/iProductsRepository';
+import {IProductServerRepository} from '@/data/repositories/server/iProductsRepository';
 import {ProductView} from '@/domain/entities/views/shop/productView';
 
 
 export class ViewAllProducts {
 
-    constructor() {
+    constructor(private repo = new IProductServerRepository()) {
     }
 
-    async execute(useClient: boolean = false): Promise<ProductView[]> {
+    async execute(): Promise<ProductView[]> {
         try {
-            const repo = new IProductRepository(useClient);
+
             console.log("[ViewAllProducts] execute called.");
-            const result = await repo.viewAll();
+            const result = await this.repo.viewAll();
             console.log("[ViewAllProducts] viewAll result:", result);
             return result;
         } catch (error) {

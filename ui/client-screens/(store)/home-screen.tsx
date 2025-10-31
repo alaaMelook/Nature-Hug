@@ -1,20 +1,20 @@
 "use client"
-import React, {use, useEffect, useState} from "react";
+import React, {useEffect, useState} from "react";
 import {useFeatures, useTranslation} from "@/ui/providers/TranslationProvider";
 import ProductGrid from "@/ui/components/store/ProductsGrid";
 import Link from "next/link";
 import {ProductView} from "@/domain/entities/views/shop/productView";
-import {ViewRecentProducts} from "@/domain/use-case/shop/viewRecentProducts";
+import {GetProductsData} from "@/ui/hooks/store/useProductsData";
 
-export function HomeScreen({initialProducts}: { initialProducts: Promise<ProductView[]> }) {
+export function HomeScreen({initialProducts}: { initialProducts: ProductView[] }) {
     const {t, language} = useTranslation();
     const features = useFeatures();
-    const [products, setProducts] = useState(use(initialProducts));
+    const [products, setProducts] = useState(initialProducts);
     const [loading, setLoading] = useState(false);
     useEffect(() => {
         async function refetch() {
             setLoading(true);
-            const updated = await new ViewRecentProducts().execute(4, true);
+            const updated = await new GetProductsData().recent();
             setProducts(updated);
             setLoading(false);
         }

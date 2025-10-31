@@ -1,8 +1,8 @@
-import { IAdminRepository } from "@/data/repositories/iAdminRepository";
-import { AdminRepository } from "@/domain/repositories/adminRepository";
+import {IAdminServerRepository} from "@/data/repositories/server/iAdminRepository";
 
 export class getAdminDashboardStats {
-    constructor(private repo = new IAdminRepository()) { }
+    constructor(private repo = new IAdminServerRepository()) {
+    }
 
     async execute() {
         try {

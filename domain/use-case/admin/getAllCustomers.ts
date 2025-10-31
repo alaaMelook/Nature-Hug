@@ -1,9 +1,11 @@
-import { ICustomerRepository } from "@/data/repositories/iCustomerRepository";
-import { ProfileView } from "@/domain/entities/views/shop/profileView";
+import {ICustomerServerRepository} from "@/data/repositories/server/iCustomerRepository";
+import {ProfileView} from "@/domain/entities/views/shop/profileView";
 
 export class GetAllCustomers {
-    constructor(private repo = new ICustomerRepository()) { }
-    async execute({ withoutMembers = false }: { withoutMembers?: boolean }): Promise<ProfileView[]> {
+    constructor(private repo = new ICustomerServerRepository()) {
+    }
+
+    async execute({withoutMembers = false}: { withoutMembers?: boolean }): Promise<ProfileView[]> {
         try {
             console.log("[GetAllCustomers] execute called with withoutMembers:", withoutMembers);
             if (withoutMembers) {

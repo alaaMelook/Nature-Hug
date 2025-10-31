@@ -1,10 +1,11 @@
-import { IProductRepository } from '@/data/repositories/iProductsRepository';
-import { Review } from '@/domain/entities/database/review';
+import {Review} from '@/domain/entities/database/review';
+import {IProductServerRepository} from "@/data/repositories/server/iProductsRepository";
 
 export class AddProductReview {
-    constructor(private repo = new IProductRepository()) { }
+    constructor(private repo = new IProductServerRepository()) {
+    }
 
-    async execute(review: Review): Promise<void> {
+    async execute(review: Partial<Review>): Promise<void> {
         try {
             console.log("[AddProductReview] execute called with review:", review);
             await this.repo.addReview(review);

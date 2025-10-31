@@ -1,8 +1,9 @@
-import { IAdminRepository } from "@/data/repositories/iAdminRepository";
-import { Material } from "@/domain/entities/database/material";
+import {IAdminServerRepository} from "@/data/repositories/server/iAdminRepository";
+import {Material} from "@/domain/entities/database/material";
 
 export class GetAllMaterials {
-    constructor(private repo = new IAdminRepository()) { }
+    constructor(private repo = new IAdminServerRepository()) {
+    }
 
     async execute(): Promise<Material[]> {
         try {
@@ -17,8 +18,10 @@ export class GetAllMaterials {
         }
     }
 }
+
 export class AddMaterial {
-    constructor(private repo = new IAdminRepository()) { }
+    constructor(private repo = new IAdminServerRepository()) {
+    }
 
     async execute(material: Material): Promise<void> {
         try {
@@ -32,8 +35,10 @@ export class AddMaterial {
         }
     }
 }
+
 export class DeleteMaterial {
-    constructor(private repo = new IAdminRepository()) { }
+    constructor(private repo = new IAdminServerRepository()) {
+    }
 
     async execute(id: number): Promise<void> {
         try {

@@ -3,10 +3,10 @@ import {ViewRecentProducts} from "@/domain/use-case/shop/viewRecentProducts";
 import {HomeScreen} from "@/ui/client-screens/(store)/home-screen";
 
 
-export default function HomePage() {
+export default async function HomePage() {
 
 
-    let initialProducts = new ViewRecentProducts().execute();
+    let initialProducts = await new ViewRecentProducts().execute();
 
     return (
         <HomeScreen initialProducts={initialProducts}/>

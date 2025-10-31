@@ -1,7 +1,8 @@
-import { IAdminRepository } from "@/data/repositories/iAdminRepository";
+import {IAdminServerRepository} from "@/data/repositories/server/iAdminRepository";
 
 export class getRecentOrders {
-    constructor(private repo = new IAdminRepository()) { }
+    constructor(private repo = new IAdminServerRepository()) {
+    }
 
     async execute() {
         try {

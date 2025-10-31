@@ -1,10 +1,10 @@
 // src/domain/entities/views/ProductDetailView.ts
 
-import { FAQs } from "../../database/faq";
+import {FAQs} from "../../database/faq";
 
 export interface ProductDetailView {
 
-    id: number;
+    product_id: number;
     variant_id?: number;
     name: string;
     description?: string | null;
@@ -41,9 +41,10 @@ export interface ProductReviewView {
     created_at: string;
     customer_name?: string | null;
 }
+
 /**
 
-/** Embedded materials objects from JSONB aggregation */
+ /** Embedded materials objects from JSONB aggregation */
 export interface ProductMaterialView {
     id: number;
     material_name: string;

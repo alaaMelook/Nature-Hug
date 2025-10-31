@@ -1,9 +1,9 @@
-import {ICustomerRepository} from "@/data/repositories/iCustomerRepository";
+import {ICustomerServerRepository} from "@/data/repositories/server/iCustomerRepository";
 import {ProfileView} from "@/domain/entities/views/shop/profileView";
 import {GetCurrentUser} from "@/domain/use-case/shop/getCurrentUser";
 
 export class ViewProfile {
-    constructor(private repo = new ICustomerRepository()) {
+    constructor(private repo = new ICustomerServerRepository()) {
     }
 
     async execute(): Promise<ProfileView | null> {

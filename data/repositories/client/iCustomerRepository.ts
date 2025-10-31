@@ -1,16 +1,18 @@
 import {Member} from "@/domain/entities/auth/member";
-import {Customer} from "@/domain/entities/auth/customer";
+import {Customer, CustomerAddress} from "@/domain/entities/auth/customer";
 import {CustomerRepository} from "@/domain/repositories/customerRepository";
 import {Session, User} from "@supabase/supabase-js";
 import {ProfileView} from "@/domain/entities/views/shop/profileView";
 import {MemberView} from "@/domain/entities/views/admin/memberView";
-import {createSupabaseServerClient} from "@/data/datasources/supabase/server";
+import {supabase} from "@/data/datasources/supabase/client";
+import {Governorate} from "@/domain/entities/database/governorate";
 
-export class ICustomerRepository implements CustomerRepository {
+export class ICustomerClientRepository implements CustomerRepository {
+
     async getSession(): Promise<Session | null> {
         try {
             console.log("[ICustomerRepository] getSession called.");
-            const {data} = await (await this.getClient()).auth.getSession();
+            const {data} = await supabase.auth.getSession();
             console.log("[ICustomerRepository] getSession result:", data.session);
             return data.session;
         } catch (error) {
@@ -22,7 +24,7 @@ export class ICustomerRepository implements CustomerRepository {
     async getCurrentUser(): Promise<User | null> {
         try {
             console.log("[ICustomerRepository] getCurrentUser called.");
-            const {data} = await (await this.getClient()).auth.getUser();
+            const {data} = await supabase.auth.getUser();
             console.log("[ICustomerRepository] getCurrentUser result:", data.user);
             return data.user;
         } catch (error) {
@@ -31,72 +33,14 @@ export class ICustomerRepository implements CustomerRepository {
         }
     }
 
-    async signInWithEmail(email: string, password: string): Promise<{ error?: string }> {
-        try {
-            console.log("[ICustomerRepository] signInWithEmail called with email:", email);
-            const {error} = await (await this.getClient()).auth.signInWithPassword({email, password});
-            if (error) throw error;
-            console.log("[ICustomerRepository] signInWithEmail completed.");
-            return {};
-        } catch (error) {
-            console.error("[ICustomerRepository] Error in signInWithEmail:", error);
-            throw error;
-        }
-    }
-
-    async signUpWithEmail(email: string, password: string, name?: string): Promise<{ error?: string }> {
-        try {
-            console.log("[ICustomerRepository] signUpWithEmail called with email:", email);
-            const {error} = await (await this.getClient()).auth.signUp({
-                email,
-                password,
-                options: {data: {name}},
-            });
-            if (error) throw error;
-            console.log("[ICustomerRepository] signUpWithEmail completed.");
-            return {};
-        } catch (error) {
-            console.error("[ICustomerRepository] Error in signUpWithEmail:", error);
-            throw error;
-        }
-    }
-
-    async signInWithGoogle(): Promise<{ error?: string }> {
-        try {
-            console.log("[ICustomerRepository] signInWithGoogle called.");
-            const {error} = await (await this.getClient()).auth.signInWithOAuth({
-                provider: "google",
-                options: {redirectTo: `${window.location.origin}/callback`},
-            });
-            if (error) throw error;
-            console.log("[ICustomerRepository] signInWithGoogle completed.");
-            return {};
-        } catch (error) {
-            console.error("[ICustomerRepository] Error in signInWithGoogle:", error);
-            throw error;
-        }
-    }
-
-    async signOut(): Promise<void> {
-        try {
-            console.log("[ICustomerRepository] signOut called.");
-            await (await this.getClient()).auth.signOut();
-            console.log("[ICustomerRepository] signOut completed.");
-        } catch (error) {
-            console.error("[ICustomerRepository] Error in signOut:", error);
-            throw error;
-        }
-    }
-
     async fetchCustomer(authUserId: string): Promise<Customer> {
         try {
             console.log("[ICustomerRepository] fetchCustomer called with authUserId:", authUserId);
-            const {data, error} = await (await this.getClient()).schema("store")
+            const {data} = await supabase.schema("store")
                 .from("customers")
                 .select("*")
                 .eq("auth_user_id", authUserId)
                 .maybeSingle();
-            if (error) throw error;
             console.log("[ICustomerRepository] fetchCustomer result:", data);
             return data;
         } catch (error) {
@@ -108,12 +52,11 @@ export class ICustomerRepository implements CustomerRepository {
     async fetchMember(customerId: number): Promise<Member | null> {
         try {
             console.log("[ICustomerRepository] fetchMember called with customerId:", customerId);
-            const {data, error} = await (await this.getClient()).schema("store")
+            const {data} = await supabase.schema("store")
                 .from("members")
                 .select("*")
                 .eq("user_id", customerId)
                 .maybeSingle();
-            if (error) return null;
             console.log("[ICustomerRepository] fetchMember result:", data);
             return data;
         } catch (error) {
@@ -125,12 +68,12 @@ export class ICustomerRepository implements CustomerRepository {
     async fetchAllMembers(): Promise<Member[]> {
         try {
             console.log("[ICustomerRepository] fetchAllMembers called.");
-            const {data, error} = await (await this.getClient()).schema("store")
+            const {data} = await supabase.schema("store")
                 .from("members")
                 .select("*");
-            if (error) throw error;
+
             console.log("[ICustomerRepository] fetchAllMembers result:", data);
-            return data;
+            return data || [];
         } catch (error) {
             console.error("[ICustomerRepository] Error in fetchAllMembers:", error);
             throw error;
@@ -142,9 +85,7 @@ export class ICustomerRepository implements CustomerRepository {
             console.log("[ICustomerRepository] viewProfile called with customerId:", customerId);
             const {
                 data,
-                error
-            } = await (await this.getClient()).schema('store').from('profile_view').select('*').eq('id', customerId).single();
-            if (error) throw error;
+            } = await supabase.schema('store').from('profile_view').select('*').eq('id', customerId).single();
             console.log("[ICustomerRepository] viewProfile result:", data);
             return data;
         } catch (error) {
@@ -156,10 +97,9 @@ export class ICustomerRepository implements CustomerRepository {
     async getAllCustomers(): Promise<ProfileView[]> {
         try {
             console.log("[ICustomerRepository] getAllCustomers called.");
-            const {data, error} = await (await this.getClient()).schema('store').from('profile_view').select('*');
-            if (error) throw error;
+            const {data} = await supabase.schema('store').from('profile_view').select('*');
             console.log("[ICustomerRepository] getAllCustomers result:", data);
-            return data;
+            return data || [];
         } catch (error) {
             console.error("[ICustomerRepository] Error in getAllCustomers:", error);
             throw error;
@@ -169,10 +109,9 @@ export class ICustomerRepository implements CustomerRepository {
     async getAllMembers(): Promise<MemberView[]> {
         try {
             console.log("[ICustomerRepository] getAllMembers called.");
-            const {data, error} = await (await this.getClient()).schema('admin').from('member_view').select('*');
-            if (error) throw error;
+            const {data} = await supabase.schema('admin').from('member_view').select('*');
             console.log("[ICustomerRepository] getAllMembers result:", data);
-            return data;
+            return data || [];
         } catch (error) {
             console.error("[ICustomerRepository] Error in getAllMembers:", error);
             throw error;
@@ -183,10 +122,8 @@ export class ICustomerRepository implements CustomerRepository {
         try {
             console.log("[ICustomerRepository] viewMember called with memberId:", memberId);
             const {
-                data,
-                error
-            } = await (await this.getClient()).schema('admin').from('member_view').select('*').eq('id', memberId).single();
-            if (error) throw error;
+                data
+            } = await supabase.schema('admin').from('member_view').select('*').eq('id', memberId).single();
             console.log("[ICustomerRepository] viewMember result:", data);
             return data;
         } catch (error) {
@@ -195,7 +132,48 @@ export class ICustomerRepository implements CustomerRepository {
         }
     }
 
-    private async getClient() {
-        return createSupabaseServerClient();
+    async fetchAllGovernorates(): Promise<Governorate[]> {
+        try {
+            console.log("[ICustomerRepository] fetchAllGovernorates called.");
+            const {data} = await supabase.schema('store').from('shipping_governorates').select('*');
+            console.log("[ICustomerRepository] fetchAllGovernorates result:", data);
+            return data || [];
+        } catch (error) {
+            console.error("[ICustomerRepository] Error in fetchAllGovernorates:", error);
+            throw error;
+        }
+    }
+
+    async updateCustomerData(data: Partial<Customer>): Promise<void> {
+        try {
+            console.log("[ICustomerRepository] updateCustomerData called with data:", data);
+            await supabase.schema('store').from('customers').update(data).eq('id', data.id);
+            console.log("[ICustomerRepository] Customer data updated successfully.");
+        } catch (error) {
+            console.error("[ICustomerRepository] Error in updateCustomerData:", error);
+            throw error;
+        }
+    }
+
+    async updateCustomerAddress(address: Partial<CustomerAddress>): Promise<void> {
+        try {
+            console.log("[ICustomerRepository] updateCustomerAddress called with address:", address);
+            await supabase.schema('store').from('customer_addresses').update(address).eq('id', address.id);
+            console.log("[ICustomerRepository] Customer address updated successfully.");
+        } catch (error) {
+            console.error("[ICustomerRepository] Error in updateCustomerAddress:", error);
+            throw error;
+        }
+    }
+
+    async addCustomerAddress(address: Partial<CustomerAddress>): Promise<void> {
+        try {
+            console.log("[ICustomerRepository] addCustomerAddress called with address:", address);
+            await supabase.schema('store').from('customer_addresses').insert(address);
+            console.log("[ICustomerRepository] Customer address added successfully.");
+        } catch (error) {
+            console.error("[ICustomerRepository] Error in addCustomerAddress:", error);
+            throw error;
+        }
     }
 }

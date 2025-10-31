@@ -6,9 +6,9 @@ import {GetCurrentUser} from "@/domain/use-case/shop/getCurrentUser";
 import {GetCurrentMember} from "@/domain/use-case/admin/getCurrentMember";
 
 
-export default function ShopLayout({children}: { children: React.ReactNode }) {
-    const user = new GetCurrentUser().execute();
-    const member = new GetCurrentMember().execute();
+export default async function ShopLayout({children}: { children: React.ReactNode }) {
+    const user = await new GetCurrentUser().execute();
+    const member = await new GetCurrentMember().execute();
     return (
         <div className="min-h-screen flex flex-col">
             <CartSyncer/>

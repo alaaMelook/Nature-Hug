@@ -1,14 +1,14 @@
 import {supabase} from "@/data/datasources/supabase/client";
-import {CustomerRepo} from "@/domain/repositories/customerRepository";
+import {ICustomerClientRepository} from "@/data/repositories/client/iCustomerRepository";
+import {useState} from "react";
+import {Customer} from "@/domain/entities/auth/customer";
+
+const CustomerRepoClient = new ICustomerClientRepository();
 
 export const useSupabase = () => {
-
+    const [user, setUser] = useState<Customer | null>()
     const getSession = async () => {
-        const {
-            data: {
-                session
-            }
-        } = await supabase.auth.getSession();
+        const session = await CustomerRepoClient.getSession();
         const {access_token, refresh_token}: any = session
         console.log(session)
         await setSession(access_token, refresh_token);
@@ -20,47 +20,35 @@ export const useSupabase = () => {
             access_token,
             refresh_token
         });
-        return true
+        if (data.session) return true
+        if (error) return false
+        return false
     }
     const getUser = async () => {
-        const {
-            data: {
-                user
-            }
-        } = await supabase.auth.getUser();
+        const user = await CustomerRepoClient.getCurrentUser();
         if (user) {
-            let customer = await CustomerRepo.fetchCustomer(user.id);
-
-            return customer;
+            const userNew = await CustomerRepoClient.fetchCustomer(user.id);
+            setUser(userNew)
+            return userNew;
         }
     }
     const getMember = async () => {
         const customer = await getUser();
         if (customer) {
-            let member = await CustomerRepo.fetchMember(customer.id);
-
-            return member;
+            return await CustomerRepoClient.fetchMember(customer.id);
         }
     }
-    const signInWithGoogle = async () => {
-        const {error} = await CustomerRepo.signInWithGoogle();
-        if (error) alert(error);
-    };
 
-    const signInWithEmail = (email: string, password: string) => CustomerRepo.signInWithEmail(email, password);
-    const signUpWithEmail = (email: string, password: string, name?: string) => CustomerRepo.signUpWithEmail(email, password, name);
     const signOut = async () => {
-        await CustomerRepo.signOut();
+        await supabase.auth.signOut();
     };
 
     return {
         setSession,
         getSession,
         getUser,
+        user,
         getMember,
-        signInWithGoogle,
-        signInWithEmail,
-        signUpWithEmail,
         signOut,
 
     }
