@@ -4,9 +4,10 @@ import Script from "next/script";
 
 
 import React from "react";
-import {TranslationProvider} from "@/ui/providers/TranslationProvider";
+import TranslationProvider from "@/ui/providers/TranslationProvider";
 import FontProvider from "@/ui/providers/FontProvider";
 import {Toaster} from "sonner";
+import LoadingIndicator from "@/ui/providers/loadingIndicator";
 
 export const metadata: Metadata = {
     title: "Hug Nature",
@@ -36,6 +37,7 @@ export default async function RootLayout({children}: Readonly<{ children: React.
 
         </head>
         <body className="bg-gray-50 min-h-screen color-text">
+
         {/* Google Tag Manager (noscript) */}
         <noscript>
             <iframe
@@ -45,6 +47,7 @@ export default async function RootLayout({children}: Readonly<{ children: React.
                 style={{display: "none", visibility: "hidden"}}
             ></iframe>
         </noscript>
+        <LoadingIndicator/>
         <TranslationProvider>
             <FontProvider>
 
@@ -52,6 +55,7 @@ export default async function RootLayout({children}: Readonly<{ children: React.
                 <Toaster position="top-center" richColors/>
             </FontProvider>
         </TranslationProvider>
+
         </body>
         </html>
     );

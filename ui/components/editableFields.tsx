@@ -5,6 +5,7 @@ import {PencilIcon, Trash2Icon} from "lucide-react";
 import {ConfirmDialog} from "@/ui/components/confirmDialog";
 import {Governorate} from "@/domain/entities/database/governorate";
 import {CustomerAddress} from "@/domain/entities/auth/customer";
+import {ViewAddress} from "@/domain/entities/views/shop/profileView";
 
 interface EditablePhoneFieldProps {
     label: string;
@@ -96,11 +97,11 @@ export function EditablePhoneField({
 
 interface EditableAddressFieldProps {
     label: string;
-    address: Partial<{ id?: number; address?: string; governorate_slug?: string }>;
+    address: Partial<CustomerAddress>;
     governorates: Governorate[];
     loading?: boolean;
     newItem?: boolean;
-    onChange: (value: Partial<{ address?: string; governorate_slug?: string }>) => void;
+    onChange: (value: Partial<CustomerAddress>) => void;
     onSave: () => void;
     onDelete?: () => void;
 }
@@ -183,17 +184,14 @@ export function EditableAddressItem({
                                         onSaveAction,
                                         onDeleteAction,
                                     }: {
-    address: Partial<CustomerAddress>;
+    address: Partial<ViewAddress>;
     governorates: Governorate[];
-    onSaveAction: (updated: Partial<CustomerAddress>) => Promise<void>;
+    onSaveAction: (updated: Partial<ViewAddress>) => Promise<void>;
     onDeleteAction: (id: number) => Promise<void>;
 }) {
     const [editing, setEditing] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState(false);
-    const [form, setForm] = useState({
-        address: address.address,
-        governorate_slug: address.governorate_slug,
-    });
+    const [form, setForm] = useState<Partial<ViewAddress>>(address);
 
     const handleSave = async () => {
         await onSaveAction({...address, ...form});
@@ -205,7 +203,7 @@ export function EditableAddressItem({
             {!editing ? (
                 <>
           <span>
-  {address.address}, {governorates.find(g => g.slug === (form.governorate_slug ?? address.governorate_slug))?.name_en}
+  {address.address}, {address.governorate?.name_en}
 </span>
 
                     <div className="flex gap-2">
@@ -244,9 +242,12 @@ export function EditableAddressItem({
                         className="flex-1 rounded border border-gray-300 p-1"
                     />
                     <select
-                        value={form.governorate_slug}
-                        onChange={(e) =>
-                            setForm({...form, governorate_slug: e.target.value})
+                        value={form.governorate?.slug}
+                        onChange={(e) => {
+                            if (e.target.value !== "Choose") {
+                                setForm({...form, governorate: {...form.governorate!, slug: e.target.value}})
+                            }
+                        }
                         }
                         className="flex-1 rounded border border-gray-300 p-1"
                     >

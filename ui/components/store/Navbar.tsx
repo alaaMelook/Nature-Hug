@@ -4,7 +4,7 @@ import {useCallback, useMemo, useState} from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {useRouter} from "next/navigation";
-import {FlaskConicalIcon, LogIn, LogOut, Menu, Settings, ShoppingCart, User, X,} from "lucide-react";
+import {FlaskConicalIcon, LogOut, Menu, Settings, ShoppingCart, User, X,} from "lucide-react";
 
 import {useSupabase} from "@/ui/hooks/useSupabase";
 import {useCart} from "@/ui/providers/CartProvider";
@@ -46,8 +46,8 @@ export default function Navbar({initialUser, initialMember}: {
         () => [
             {href: "/", label: "Home"},
             {href: "/products", label: "Shop"},
-            {href: "/about", label: "About"},
-            {href: "/contact", label: "Contact"},
+            {href: "/about-us", label: "About"},
+            {href: "/contact-us", label: "Contact"},
         ],
         []
     );
@@ -55,12 +55,13 @@ export default function Navbar({initialUser, initialMember}: {
     return (
         <nav className="bg-white pl-10 pr-10 sticky top-0 z-10 flex items-center justify-between shadow-md">
             {/* ---- Logo ---- */}
-            <div className="text-xl font-bold">
+            <div className="text-xl font-bold flex items-center space-x-4 ">
                 <Link href="/" className="flex items-center">
                     <Image
                         src="https://reqrsmboabgxshacmkst.supabase.co/storage/v1/object/sign/product-images/logo.jpg?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV85ZGU3NTY3OC0zMDRhLTQ3OTUtYjdhZC04M2IwMzM3ZDY2ZTUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9kdWN0LWltYWdlcy9sb2dvLmpwZyIsImlhdCI6MTc1NjM4MDIxNSwiZXhwIjo0OTA5OTgwMjE1fQ.D5eFaioyALpbvbK7LWj6Di0kI1-I3kAQKI0H-DVtiao"
                         width={100} height={100} priority={true} alt="Logo Hug Nature"/>
                 </Link>
+                <LanguageSwitcher/>
             </div>
 
             {/* ---- Desktop Menu ---- */}
@@ -78,18 +79,18 @@ export default function Navbar({initialUser, initialMember}: {
 
             {/* ---- Desktop Right Section ---- */}
             <div className="hidden md:flex items-center space-x-4">
-                <LanguageSwitcher/>
+
 
                 {/* Cart */}
                 <Link
                     href="/cart"
-                    className="relative flex items-center bg-primary-50 px-4 py-2 rounded-lg shadow-md hover:bg-primary-100 transition"
+                    className="relative flex items-center bg-primary-10 px-4 py-2 rounded-lg shadow-md hover:bg-primary-100 transition"
                 >
                     <ShoppingCart className="w-5 h-5 mr-2"/>
                     Cart
                     {count > 0 && (
                         <span
-                            className="absolute -right-2 -top-2 text-xs min-w-5 h-5 px-1 rounded-full text-white bg-primary-800 flex items-center justify-center">
+                            className="absolute -right-2 -top-2 text-xs min-w-5 h-5 px-1 rounded-full  font-semibold text-primary-950 bg-primary-50 flex items-center justify-center shadow-xs shadow-primary-300">
               {count}
             </span>
                     )}
@@ -100,7 +101,7 @@ export default function Navbar({initialUser, initialMember}: {
                     <div className="relative">
                         <button
                             onClick={toggleMobileMenu}
-                            className="cursor-pointer flex items-center px-3 py-2 bg-primary-800 rounded-lg text-white hover:bg-primary-700"
+                            className="cursor-pointer flex items-center px-3 py-2 bg-primary-10 text-primary-950 rounded-lg "
                         >
                             <Settings className="w-5 h-5"/>
                         </button>
@@ -138,10 +139,9 @@ export default function Navbar({initialUser, initialMember}: {
                 ) : (
                     <button
                         onClick={() => router.push("/login")}
-                        className="flex items-center px-4 py-2 text-sm bg-primary-800 text-white rounded-lg hover:bg-primary-700"
+                        className="flex items-center px-4 py-2 text-md bg-primary-10 text-primary-950 rounded-lg  border-primary-950 border-1"
                     >
-                        <LogIn className="w-4 h-4 mr-2"/>
-                        Login / Signup
+                        Login
                     </button>
                 )}
             </div>

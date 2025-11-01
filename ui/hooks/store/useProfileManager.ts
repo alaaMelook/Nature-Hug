@@ -4,13 +4,14 @@
 import {useState} from "react";
 import {toast} from "sonner";
 import {addAddress, deleteAddress, updateAddress, updateOrAddPhone,} from "@/ui/hooks/store/useProfileActions";
+import {CustomerAddress} from "@/domain/entities/auth/customer";
 
 export function useProfileManager(profile: any) {
     const [loading, setLoading] = useState(false);
-    const [newPhone, setNewPhone] = useState<any>(null);
-    const [editingPhone, setEditingPhone] = useState<any>(null);
-    const [newAddress, setNewAddress] = useState<any>(null);
-    const [editingAddress, setEditingAddress] = useState<any>(null);
+    const [newPhone, setNewPhone] = useState<Partial<{ index: number, phone: string }> | null>(null);
+    const [editingPhone, setEditingPhone] = useState<Partial<{ index: number, phone: string }> | null>(null);
+    const [newAddress, setNewAddress] = useState<Partial<CustomerAddress> | null>(null);
+    const [editingAddress, setEditingAddress] = useState<Partial<CustomerAddress> | null>(null);
 
     // ---- PHONE ----
     async function handlePhoneSave(phoneData: any) {

@@ -6,6 +6,7 @@ import {Customer, CustomerAddress} from "@/domain/entities/auth/customer";
 import {AddUpdatePhone} from "@/domain/use-case/shop/addUpdatePhone";
 import {AddUpdateAddress} from "@/domain/use-case/shop/addUpdateAddress";
 import {DeleteAddress} from "@/domain/use-case/shop/deleteAddress";
+import {ViewAddress} from "@/domain/entities/views/shop/profileView";
 
 
 export async function updateOrAddPhone(data: Partial<{ index: number, phone: string | null }>) {
@@ -28,13 +29,13 @@ export async function updateOrAddPhone(data: Partial<{ index: number, phone: str
     return {success: true};
 }
 
-export async function updateAddress(data: Partial<CustomerAddress>) {
+export async function updateAddress(data: Partial<ViewAddress>) {
     const user = await new GetCurrentUser().execute();
     if (!user) return {error: 'User not logged in'};
     let sentData: Partial<CustomerAddress> = {
         customer_id: user.id,
         address: data.address,
-        governorate_slug: data.governorate_slug,
+        governorate_slug: data.governorate?.slug,
     };
 
     await new AddUpdateAddress().update(sentData);
