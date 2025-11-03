@@ -22,10 +22,10 @@ export function HomeScreen({initialProducts}: { initialProducts: ProductView[] }
         refetch();
     }, [language]);
     return (
-        <div className="min-h-screen bg-gray-50 antialiased text-gray-800">
+        <div className="min-h-screen  antialiased text-gray-800">
             <main>
                 {/* Hero Section */}
-                <section className="bg-primary-100 py-12 md:py-20 lg:py-24">
+                <section className="bg-primary-50 py-12 md:py-20 lg:py-24">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
                         <h1 className="text-3xl sm:text-4xl lg:text-5xl text-default leading-tight ">
                             {t("heroTitle")}
@@ -42,7 +42,7 @@ export function HomeScreen({initialProducts}: { initialProducts: ProductView[] }
                             </Link>
                             <Link
                                 href="#"
-                                className="bg-primary-800 text-white font-semibold px-6 py-3 rounded-lg shadow-md hover:bg-primary-50 hover:text-primary-700  transition-colors duration-300 text-center"
+                                className=" font-semibold px-6 py-3 rounded-lg shadow-md hover:bg-primary-50 hover:text-primary-700  transition-colors duration-300 text-center  text-primary-900 border-1 border-primary-900 rounded-md"
                             >
                                 {t("learnMore")}
                             </Link>
@@ -51,7 +51,7 @@ export function HomeScreen({initialProducts}: { initialProducts: ProductView[] }
                 </section>
 
                 {/* Product Grid Section */}
-                <section className="bg-primary-50 py-12 md:py-16">
+                <section className="py-12 md:py-16">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 max-h-fit">
                         <h2 className="text-2xl md:text-3xl font-bold text-center mb-8 md:mb-12 text-default ">
                             {t("featuredProducts")}
@@ -62,7 +62,7 @@ export function HomeScreen({initialProducts}: { initialProducts: ProductView[] }
                 </section>
 
                 {/* Features Section */}
-                <section className="bg-primary-100 py-12 md:py-16">
+                <section className="bg-primary-50 py-12 md:py-16">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
                             {features.map(

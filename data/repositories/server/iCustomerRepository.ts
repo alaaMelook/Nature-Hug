@@ -6,6 +6,8 @@ import {ProfileView} from "@/domain/entities/views/shop/profileView";
 import {MemberView} from "@/domain/entities/views/admin/memberView";
 import {createSupabaseServerClient} from "@/data/datasources/supabase/server";
 import {Governorate} from "@/domain/entities/database/governorate";
+import {Order} from "@/domain/entities/database/order";
+import {OrderSummaryView} from "@/domain/entities/views/shop/orderSummaryView";
 
 export class ICustomerServerRepository implements CustomerRepository {
 
@@ -272,6 +274,71 @@ export class ICustomerServerRepository implements CustomerRepository {
             console.log("[ICustomerRepository] Customer address added successfully.");
         } catch (error) {
             console.error("[ICustomerRepository] Error in addCustomerAddress:", error);
+            throw error;
+        }
+    }
+
+    async createOrder(orderData: Partial<Order>): Promise<number> {
+        try {
+            console.log("[IProductRepository] createOrder called with orderData:", orderData);
+            const supabase = await createSupabaseServerClient();
+            const {
+                data: order_id, status,
+                error,
+                statusText
+            } = await supabase.schema('store').rpc('create_order', {order_data: orderData});
+            if (error) {
+                console.error("[IProductRepository] Supabase RPC error:", {
+                    message: error.message,
+                    details: error.details,
+                    hint: error.hint,
+                });
+            }
+            console.log("[IProductRepository] Order created successfully with ID:", order_id, 'status', status, 'statusText', statusText);
+            return order_id as number;
+        } catch (error) {
+            console.error("[IProductRepository] Error in createOrder:", error);
+            throw error;
+        }
+    }
+
+    async viewAllOrders(customerId: number): Promise<OrderSummaryView[]> {
+        try {
+            console.log("[ICustomerRepository] viewAllOrders called with customerId:", customerId);
+            const supabase = await createSupabaseServerClient();
+            const {
+                data,
+                error, status, statusText
+            } = await supabase.schema('store').from('order_summary').select('*').eq('customer_id', customerId);
+            if (error || status < 200 || status >= 300) {
+                console.error(`Failed to view all orders: ${error?.message || statusText}`);
+            }
+
+            console.log("[ICustomerRepository] viewAllOrders result:", data);
+            if (!data) return [];
+            return data;
+        } catch (error) {
+            console.error("[ICustomerRepository] Error in viewAllOrders:", error);
+            throw error;
+        }
+    }
+
+    async viewOrder(orderId: number, customerId: number): Promise<OrderSummaryView> {
+        try {
+            console.log("[ICustomerRepository] viewAllOrders called with orderId:", orderId);
+            const supabase = await createSupabaseServerClient();
+            const {
+                data,
+                error, status, statusText
+            } = await supabase.schema('store').from('order_summary').select('*').eq('order_id', orderId).eq('customer_id', customerId).maybeSingle();
+            if (error || status < 200 || status >= 300) {
+                console.error(`Failed to view all orders: ${error?.message || statusText}`);
+            }
+
+            console.log("[ICustomerRepository] viewAllOrders result:", data);
+            return data;
+        } catch (error) {
+            console.error("[ICustomerRepository] Error in viewAllOrders:", error);
             throw error;
         }
     }

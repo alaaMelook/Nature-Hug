@@ -5,7 +5,6 @@ import {ProductVariant} from "@/domain/entities/database/productVariant";
 import {ProductMaterial} from "@/domain/entities/database/productMaterials";
 import {Review} from "@/domain/entities/database/review";
 import {Category} from "../entities/database/category";
-import {Order} from "@/domain/entities/database/order";
 
 export interface ProductRepository {
     viewBySlug(slug: string): Promise<ProductDetailView>;
@@ -16,7 +15,6 @@ export interface ProductRepository {
 
     viewByCategory(categoryName: string): Promise<ProductView[]>;
 
-    createOrder(orderData: Order): Promise<void>;
 
     getAll(): Promise<Product[]>;
 
@@ -30,5 +28,4 @@ export interface ProductRepository {
 
     addReview(review: Review): Promise<void>;
 
-    uploadImage(file: File): Promise<string>;
 }

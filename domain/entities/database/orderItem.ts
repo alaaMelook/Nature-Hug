@@ -5,7 +5,7 @@ export interface OrderItem {
     variant_id: number;
     quantity: number;
     unit_price: number;
-    discount: number;
+    discount: number | null;
     total: number;
     created_at: string;
 }

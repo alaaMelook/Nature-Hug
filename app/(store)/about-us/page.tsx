@@ -1,157 +1,146 @@
-/**
- * Note: This file is a static content page, so we don't need 'use client',
- * useRouter, or any state hooks. We'll simplify it to a pure functional component.
- */
-
+'use client';
 import React from 'react';
+import {motion} from 'framer-motion';
+import {CheckCircle, Flower, Heart, Leaf, Smile, Sparkles, Target} from 'lucide-react';
 
-// Simplified AboutNatureHug Component (Focus on structure and readability)
-export default function About() {
-
-    // Helper for rendering a value item - now accepts 'children' for rich content
-    const ValueItem = ({icon, children}: { icon: string, children: React.ReactNode }) => (
-        <div className="flex items-start space-x-3 p-4 bg-gray-50 border border-gray-200 rounded-lg shadow-sm">
-            <div className="text-2xl text-gray-700">{icon}</div>
-            {/* Renders children, allowing bolding and other JSX formatting */}
-            <p className="text-primary-950 font-medium">{children}</p>
-        </div>
-    );
-
-    // Helper for rendering a goal item - now accepts 'children' for rich content
-    const GoalItem = ({icon, children}: { icon: string, children: React.ReactNode }) => (
-        <li className="flex items-start space-x-3 ">
-            <div className="text-xl text-primary-950 mt-0.5">{icon}</div>
-            {/* Renders children, allowing bolding and other JSX formatting */}
-            <p className="text-primary-950 font-medium">{children}</p>
-        </li>
-    );
-
+export default function AboutPage() {
     return (
-        // Maximize height and remove scrollability (h-screen and overflow-hidden)
-        <div className=" w-full bg-white p-6 md:p-10 lg:p-12 overflow-hidden">
-            <div className="max-w-7xl mx-auto h-full flex flex-col">
+        <main className="bg-white text-gray-800 overflow-x-hidden">
+            {/* ===== Hero Section ===== */}
+            <section className="text-center py-24 px-6">
+                <motion.h1
+                    initial={{opacity: 0, y: 10}}
+                    animate={{opacity: 1, y: 0}}
+                    transition={{duration: 0.6}}
+                    className="text-5xl font-light tracking-wide text-gray-900"
+                >
+                    NATURE HUG
+                </motion.h1>
+                <motion.p
+                    initial={{opacity: 0}}
+                    animate={{opacity: 1}}
+                    transition={{delay: 0.2, duration: 0.6}}
+                    className="mt-3 text-gray-500 italic"
+                >
+                    Therapeutic Care, <span className="text-green-700">Touched by Nature 🌿</span>
+                </motion.p>
+            </section>
 
-                {/* --- Header Section --- */}
-                <header className="text-center mb-6">
-                    <h1 className="text-5xl font-light tracking-tight text-gray-900 leading-none">
-                        NATURE HUG
-                    </h1>
-                    <p className="mt-1 text-lg text-gray-500 font-extralight italic">
-                        Therapeutic Care, Touched by Nature 🌿
-                    </p>
-                </header>
+            {/* ===== Story Section ===== */}
+            <section className="py-20 px-6 bg-gray-50">
+                <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-12 items-center">
+                    <motion.div
+                        initial={{opacity: 0, x: -20}}
+                        whileInView={{opacity: 1, x: 0}}
+                        transition={{duration: 0.6}}
+                    >
+                        <Flower className="w-6 h-6 text-green-600 mb-3"/>
+                        <h2 className="text-3xl font-semibold mb-4">Our Story</h2>
+                        <p className="leading-relaxed text-gray-700 mb-6">
+                            An <strong>Egyptian brand</strong> founded by a <strong>pharmacist</strong>.
+                            We blend medical-grade effectiveness with the gentleness of nature to restore skin
+                            confidence.
+                        </p>
+                        <p className="bg-white border border-gray-100 rounded-xl px-5 py-4 text-sm text-gray-800">
+                            <strong>KeraCalm:</strong> The first safe 40% urea cream in Egypt — treats stubborn issues
+                            and
+                            delivers visible results from the first use. 💖
+                        </p>
+                    </motion.div>
 
-                {/* --- Main Content Area (Uses flex-col to stack 2-column layout and Core Values) --- */}
-
-                {/* --- Middle Section: TWO-COLUMN LAYOUT (Our Goals | Story, Vision, KeraCalm) --- */}
-                {/* flex-grow allows this section to take up available height before the Values section */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 flex-grow  h-full pr-2">
-
-                    {/* ---------------------------------------------------- */}
-                    {/* --- NEW LEFT COLUMN: Our Goals (The List) --- */}
-                    {/* ---------------------------------------------------- */}
-                    <div className="flex flex-col space-y-2">
-
-                        <section className={' p-4 rounded-xl shadow-md border border-primary-600'}>
-                            <h2 className="text-2xl font-semibold text-gray-900 mb-2 ">
-                                <span className="text-gray-600 mr-2">🌸</span> Our Story
-                            </h2>
-                            <p className="text-base text-gray-700 leading-snug">
-                                An <span className="font-semibold">Egyptian brand</span> founded by a <span
-                                className="font-semibold">pharmacist</span>. We blend medical-grade effectiveness
-                                with the gentleness of nature to restore skin confidence.
-                            </p>
-                            <div className="bg-amber-50-50 p-3 rounded-xl shadow-md border border-amber-200">
-                                <p className="text-base font-semibold text-amber-800 leading-snug">
-                                    <span className="font-semibold">KeraCalm:</span> The first safe <span
-                                    className="font-semibold">40% urea cream</span> in Egypt. Treats stubborn issues;
-                                    delivers visible results from the first use. <span
-                                    className="font-semibold">💖</span>
-                                </p>
-                            </div>
-                        </section>
-
-                        {/* KeraCalm Highlight - Thematic block */}
-
-
-                        {/* Vision (Compact Text) */}
-                        <section className={' p-4 rounded-xl shadow-md border border-primary-600'}>
-                            <h2 className="text-2xl font-semibold text-gray-900 mb-2">
-                                <span className="text-gray-600 mr-2">🔮</span> Our Vision
-                            </h2>
-                            <p className="text-base text-gray-700 leading-snug">
-                                To be the #1 skincare choice for Arab women, redefining beauty care as a <span
-                                className="font-semibold">psychological
-                                    and emotional therapy</span>, not just a routine.
-                            </p>
-                        </section>
-                    </div>
-
-                    {/* ---------------------------------------------------- */}
-                    {/* --- RIGHT COLUMN: Story, KeraCalm, Vision (The Text Blocks) --- */}
-                    {/* ---------------------------------------------------- */}
-
-                    <div className="flex flex-col space-y-2">
-
-                        {/* Goals Section - MOVED FROM BOTTOM */}
-                        <section className={' p-6 rounded-xl shadow-md border border-primary-600'}>
-                            <h2 className="text-2xl font-semibold text-gray-900 mb-3">
-                                <span className="text-gray-600 mr-2">🎯</span> Our Goals
-                            </h2>
-                            {/* Tight list for goals - removed flex-wrap as it is now in a single column */}
-                            <ul className="space-y-2 list-none p-2">
-                                <GoalItem icon="🧪">
-                                    Develop safe, high-impact products with powerful natural ingredients.
-                                </GoalItem>
-                                <GoalItem icon="🌹">
-                                    Strengthen women’s self-confidence through visible, authentic results.
-                                </GoalItem>
-                                <GoalItem icon="🎨">
-                                    Create a transparent and emotionally rich brand experience.
-                                </GoalItem>
-                                <GoalItem icon="💬">
-                                    Inspire women to love their natural features and rise above stereotypes.
-                                </GoalItem>
-                                <GoalItem icon="🔍">
-                                    Maintain the highest quality standards and continuously innovate.
-                                </GoalItem>
-                            </ul>
-                        </section>
-                    </div>
-                    <section className="border-gray-100 flex-shrink-0 col-span-2">
-                        <h2 className="text-2xl font-semibold text-gray-900 mb-3">
-                            <span className="text-gray-600 mr-2">💫</span> Core Values
-                        </h2>
-                        {/* Values Grid - now full width, optimized for larger screens with 3 columns */}
-                        <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3">
-                            <ValueItem icon="✅">
-                                <span className="font-semibold">Transparency</span> in formulas.
-                            </ValueItem>
-                            <ValueItem icon="🌟">
-                                <span className="font-semibold">Excellence</span> in results.
-                            </ValueItem>
-                            <ValueItem icon="🍃">
-                                <span className="font-semibold">Nature</span> as inspiration.
-                            </ValueItem>
-                            <ValueItem icon="🎁">
-                                <span className="font-semibold">Love of detail</span> in design.
-                            </ValueItem>
-                            <ValueItem icon="💪">
-                                <span className="font-semibold">Empowerment</span> & confidence.
-                            </ValueItem>
-                            <ValueItem icon="🤍">
-                                <span className="font-semibold">Genuine care</span> from touch.
-                            </ValueItem>
-                        </div>
-                    </section>
+                    <motion.div
+                        initial={{opacity: 0, x: 20}}
+                        whileInView={{opacity: 1, x: 0}}
+                        transition={{duration: 0.6, delay: 0.1}}
+                        className="md:pl-8"
+                    >
+                        <Target className="w-6 h-6 text-green-600 mb-3"/>
+                        <h2 className="text-3xl font-semibold mb-4">Our Vision</h2>
+                        <p className="leading-relaxed text-gray-700">
+                            To be the #1 skincare choice for Arab women, redefining beauty care as a
+                            <strong> psychological and emotional therapy</strong>, not just a routine.
+                        </p>
+                    </motion.div>
                 </div>
+            </section>
 
-                {/* --- Bottom Section: Core Values (FULL WIDTH - MOVED FROM LEFT COLUMN) --- */}
-                {/* Added lg:grid-cols-3 to spread the values out nicely across the full width */}
+            {/* ===== Mission / Goals Section ===== */}
+            <section className="py-24 px-6">
+                <div className="max-w-4xl mx-auto text-center">
+                    <motion.div
+                        initial={{opacity: 0, y: 20}}
+                        whileInView={{opacity: 1, y: 0}}
+                        transition={{duration: 0.6}}
+                    >
+                        <Heart className="w-6 h-6 text-pink-500 mb-3 mx-auto"/>
+                        <h2 className="text-3xl font-semibold mb-6">Our Goals</h2>
+                        <ul className="space-y-4 text-gray-700 text-base text-left sm:text-center leading-relaxed">
+                            {[
+                                'Develop safe, high-impact products with powerful natural ingredients.',
+                                'Strengthen women’s self-confidence through visible, authentic results.',
+                                'Build a transparent and emotionally rich brand experience.',
+                                'Inspire women to embrace their natural features and rise above stereotypes.',
+                                'Maintain the highest quality standards and continuously innovate.',
+                            ].map((goal, i) => (
+                                <motion.li
+                                    key={i}
+                                    initial={{opacity: 0, y: 10}}
+                                    whileInView={{opacity: 1, y: 0}}
+                                    transition={{delay: i * 0.05}}
+                                    className="flex items-start justify-center gap-2"
+                                >
+                                    <CheckCircle className="w-5 h-5 text-green-600 mt-1 flex-shrink-0"/>
+                                    <span>{goal}</span>
+                                </motion.li>
+                            ))}
+                        </ul>
+                    </motion.div>
+                </div>
+            </section>
 
-            </div>
+            {/* ===== Core Values Section ===== */}
+            <section className="py-24 px-6 bg-gray-50">
+                <div className="max-w-6xl mx-auto">
+                    <motion.div
+                        initial={{opacity: 0, y: 20}}
+                        whileInView={{opacity: 1, y: 0}}
+                        transition={{duration: 0.6}}
+                        className="text-center mb-12"
+                    >
+                        <Sparkles className="w-6 h-6 text-yellow-500 mb-3 mx-auto"/>
+                        <h2 className="text-3xl font-semibold mb-4">Core Values</h2>
+                        <p className="text-gray-600 max-w-2xl mx-auto">
+                            Our foundation is built on care, transparency, and a love for natural beauty.
+                            Every product reflects our belief in gentle strength and authentic results.
+                        </p>
+                    </motion.div>
 
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8 text-left md:text-center">
+                        {[
+                            {icon: <Leaf className="text-green-600 w-5 h-5"/>, text: 'Nature as inspiration'},
+                            {icon: <Sparkles className="text-yellow-600 w-5 h-5"/>, text: 'Excellence in results'},
+                            {icon: <Smile className="text-orange-500 w-5 h-5"/>, text: 'Empowerment & confidence'},
+                            {icon: <Heart className="text-pink-500 w-5 h-5"/>, text: 'Genuine care from touch'},
+                            {icon: <CheckCircle className="text-green-600 w-5 h-5"/>, text: 'Transparency in formulas'},
+                            {icon: <Flower className="text-purple-500 w-5 h-5"/>, text: 'Love of detail in design'},
+                        ].map((v, i) => (
+                            <motion.div
+                                key={i}
+                                initial={{opacity: 0, y: 10}}
+                                whileInView={{opacity: 1, y: 0}}
+                                transition={{delay: i * 0.05}}
+                                className="flex items-center md:justify-center gap-3"
+                            >
+                                {v.icon}
+                                <p className="font-medium text-gray-700">{v.text}</p>
+                            </motion.div>
+                        ))}
+                    </div>
+                </div>
+            </section>
 
-        </div>
+            {/* ===== Footer ===== */}
+
+        </main>
     );
 }

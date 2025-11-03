@@ -39,7 +39,8 @@ export interface ProductReviewView {
     rating: number;
     comment?: string | null;
     created_at: string;
-    customer_name?: string | null;
+    customer_name: string | null;
+    customer_governorate: string | null;
 }
 
 /**

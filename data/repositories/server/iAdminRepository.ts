@@ -4,6 +4,7 @@ import {OrderDetailsView} from "@/domain/entities/views/admin/orderDetailsView";
 import {DashboardMetricsView} from "@/domain/entities/views/admin/dashboardMetricsView";
 import {Material} from "@/domain/entities/database/material";
 import {ProductAdminView} from "@/domain/entities/views/admin/productAdminView";
+import {supabase} from "@/data/datasources/supabase/client";
 
 export class IAdminServerRepository implements AdminRepository {
     async getOrderDetails(): Promise<OrderDetailsView[]> {
@@ -138,6 +139,33 @@ export class IAdminServerRepository implements AdminRepository {
             return data || [];
         } catch (error) {
             console.error("[IAdminRepository] Error in viewAllWithDetails:", error);
+            throw error;
+        }
+    }
+
+    async uploadImage(file: File): Promise<string> {
+        try {
+            console.log("[IProductRepository] uploadImage called with file:", file.name);
+            const fileExt = file.name.split(".").pop();
+            const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+
+            const {data, error} = await supabase.storage
+                .from("product-images")
+                .upload(fileName, file, {contentType: file.type});
+
+            if (data == null) {
+                console.error('[IProductRepository] no data returned from upload');
+                return '';
+            }
+            const {data: url} = supabase.storage
+                .from("product-images")
+                .getPublicUrl(data.path);
+
+            console.log("[IProductRepository] Image uploaded successfully, URL:", url.publicUrl);
+            return url.publicUrl;
+
+        } catch (error) {
+            console.error("[IProductRepository] Error in ImageUpload:", error);
             throw error;
         }
     }

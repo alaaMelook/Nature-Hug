@@ -6,6 +6,7 @@ import {ProfileView} from "@/domain/entities/views/shop/profileView";
 import {MemberView} from "@/domain/entities/views/admin/memberView";
 import {supabase} from "@/data/datasources/supabase/client";
 import {Governorate} from "@/domain/entities/database/governorate";
+import {Order} from "@/domain/entities/database/order";
 
 export class ICustomerClientRepository implements CustomerRepository {
 
@@ -173,6 +174,47 @@ export class ICustomerClientRepository implements CustomerRepository {
             console.log("[ICustomerRepository] Customer address added successfully.");
         } catch (error) {
             console.error("[ICustomerRepository] Error in addCustomerAddress:", error);
+            throw error;
+        }
+    }
+
+    async deleteCustomerAddress(addressId: number): Promise<void> {
+        try {
+            console.log("[ICustomerRepository] deleteCustomerAddress called with addressId", addressId);
+            const {
+                error,
+                status,
+                statusText
+            } = await supabase.schema('store').from('customer_addresses').delete().eq('id', addressId);
+            if (error || status < 200 || status >= 300) {
+                console.error(`Failed to delete customer address: ${error?.message || statusText}`);
+            } else console.log("[ICustomerRepository] Customer address deleted successfully.");
+        } catch (error) {
+            console.error("[ICustomerRepository] Error in deleteCustomerAddress:", error);
+            throw error;
+        }
+    }
+
+    async createOrder(orderData: Order): Promise<void> {
+        try {
+            console.log("[IProductRepository] createOrder called with orderData:", orderData);
+            await supabase.schema('store').rpc('create_full_order', {orderData: orderData});
+
+            console.log("[IProductRepository] Order created successfully.");
+        } catch (error) {
+            console.error("[IProductRepository] Error in createOrder:", error);
+            throw error;
+        }
+    }
+
+    async createOrder(orderData: Order): Promise<void> {
+        try {
+            console.log("[IProductRepository] createOrder called with orderData:", orderData);
+            await supabase.schema('store').rpc('create_guest_order', {orderData: orderData});
+
+            console.log("[IProductRepository] Order created successfully.");
+        } catch (error) {
+            console.error("[IProductRepository] Error in createOrder:", error);
             throw error;
         }
     }

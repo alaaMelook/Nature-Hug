@@ -124,4 +124,31 @@ export class IAdminClientRepository implements AdminRepository {
             throw error;
         }
     }
+
+    async uploadImage(file: File): Promise<string> {
+        try {
+            console.log("[IProductRepository] uploadImage called with file:", file.name);
+            const fileExt = file.name.split(".").pop();
+            const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+
+            const {data, error} = await supabase.storage
+                .from("product-images")
+                .upload(fileName, file, {contentType: file.type});
+
+            if (data == null) {
+                console.error('[IProductRepository] no data returned from upload');
+                return '';
+            }
+            const {data: url} = supabase.storage
+                .from("product-images")
+                .getPublicUrl(data.path);
+
+            console.log("[IProductRepository] Image uploaded successfully, URL:", url.publicUrl);
+            return url.publicUrl;
+
+        } catch (error) {
+            console.error("[IProductRepository] Error in ImageUpload:", error);
+            throw error;
+        }
+    }
 }

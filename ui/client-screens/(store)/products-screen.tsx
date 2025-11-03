@@ -70,7 +70,7 @@ export function ProductsScreen({initProducts, initCategories}: {
     return (
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col lg:flex-row gap-8">
             {/* Filters Column */}
-            <div className="w-full lg:w-1/4 lg:sticky lg:top-8 h-fit">
+            <div className="w-full lg:w-1/4 lg:sticky lg:top-30 h-fit">
                 <ProductFilters onFilterChangeAction={handleFilterChange} initCategories={initCategories}/>
             </div>
 

@@ -4,7 +4,7 @@ import {useCallback, useMemo, useState} from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {useRouter} from "next/navigation";
-import {FlaskConicalIcon, LogOut, Menu, Settings, ShoppingCart, User, X,} from "lucide-react";
+import {FlaskConicalIcon, History, LogOut, Menu, Settings, ShoppingCart, User, X} from "lucide-react";
 
 import {useSupabase} from "@/ui/hooks/useSupabase";
 import {useCart} from "@/ui/providers/CartProvider";
@@ -126,6 +126,14 @@ export default function Navbar({initialUser, initialMember}: {
                                         Panel
                                     </Link>
                                 )}
+                                <Link
+                                    href="/orders"
+                                    onClick={() => setIsOpen(false)}
+                                    className="flex items-center px-4 py-2 text-sm text-primary-900 hover:bg-gray-100"
+                                >
+                                    <History className="w-4 h-4 mr-2"/>
+                                    Order History
+                                </Link>
                                 <button
                                     onClick={handleLogout}
                                     className="w-full flex items-center px-4 py-2 text-sm text-primary-900 hover:bg-gray-100 cursor-pointer"

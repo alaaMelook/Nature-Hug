@@ -26,15 +26,14 @@ export function ReviewsSlider({product}: { product: ProductDetailView }) {
                                 className="flex-none w-full sm:w-80 p-4 ml-4 mb-3 border border-gray-100 rounded-lg bg-primary-50 shadow-sm"
                             >
                                 <StarRating rating={review.rating}/>
-                                <p className="font-semibold text-primary-800 mt-1">{review.customer_name}</p>
+                                <p className="font-semibold text-primary-800 mt-1">{review.customer_name}-{review.customer_governorate}</p>
                                 <p className="text-sm text-gray-600 mt-1">{review.comment}</p>
                             </div>
                         )))
                     }
                 </div>
                 <div className='flex justify-center'>
-                    <AddReview product={product} onReviewAdded={() => {
-                    }}/>
+                    <AddReview product={product}/>
 
                 </div>
 

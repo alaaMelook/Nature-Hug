@@ -1,6 +1,5 @@
-
 export interface OrderSummaryView {
-    id: number;
+    order_id: number;
     created_at: string;
     order_status: string;
     subtotal: number;
@@ -11,4 +10,14 @@ export interface OrderSummaryView {
     applied_promo_code?: string;
     promo_percentage?: number;
     payment_status: string;
+    item_count: number;
+    order_items: OrderSummaryItems[];
+}
+
+export interface OrderSummaryItems {
+    name_en: string;
+    quantity: number;
+    slug: string;
+    image: string | null;
+    price: number;
 }

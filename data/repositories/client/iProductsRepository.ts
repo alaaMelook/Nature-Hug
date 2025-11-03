@@ -7,7 +7,6 @@ import {ProductDetailView} from "@/domain/entities/views/shop/productDetailView"
 import {ProductView} from "@/domain/entities/views/shop/productView";
 import {ProductRepository} from "@/domain/repositories/productRepository";
 import {langStore} from "@/lib/i18n/langStore";
-import {Order} from "@/domain/entities/database/order";
 import {supabase} from "@/data/datasources/supabase/client";
 
 export class IProductClientRepository implements ProductRepository {
@@ -104,17 +103,6 @@ export class IProductClientRepository implements ProductRepository {
         }
     }
 
-    async createOrder(orderData: Order): Promise<void> {
-        try {
-            console.log("[IProductRepository] createOrder called with orderData:", orderData);
-            await supabase.schema('store').rpc('create_full_order', {orderData: orderData});
-
-            console.log("[IProductRepository] Order created successfully.");
-        } catch (error) {
-            console.error("[IProductRepository] Error in createOrder:", error);
-            throw error;
-        }
-    }
 
     // admin
 
@@ -173,33 +161,6 @@ export class IProductClientRepository implements ProductRepository {
             return data;
         } catch (error) {
             console.error("[IProductRepository] Error in getBySlug:", error);
-            throw error;
-        }
-    }
-
-    async uploadImage(file: File): Promise<string> {
-        try {
-            console.log("[IProductRepository] uploadImage called with file:", file.name);
-            const fileExt = file.name.split(".").pop();
-            const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
-
-            const {data, error} = await supabase.storage
-                .from("product-images")
-                .upload(fileName, file, {contentType: file.type});
-
-            if (data == null) {
-                console.error('[IProductRepository] no data returned from upload');
-                return '';
-            }
-            const {data: url} = supabase.storage
-                .from("product-images")
-                .getPublicUrl(data.path);
-
-            console.log("[IProductRepository] Image uploaded successfully, URL:", url.publicUrl);
-            return url.publicUrl;
-
-        } catch (error) {
-            console.error("[IProductRepository] Error in ImageUpload:", error);
             throw error;
         }
     }
