@@ -1,19 +1,19 @@
 'use client';
 
-import React, {useMemo, useState} from "react";
+import React, { useMemo, useState } from "react";
 import BuyNowButton from "./BuyNowButton";
 import AddToCartButton from "./CartButton";
-import {useTranslation} from "@/ui/providers/TranslationProvider";
-import {useRouter} from "next/navigation";
-import {ProductView} from "@/domain/entities/views/shop/productView";
+import { useTranslation } from "@/ui/providers/TranslationProvider";
+import { useRouter } from "next/navigation";
+import { ProductView } from "@/domain/entities/views/shop/productView";
 import Skeleton from "@mui/material/Skeleton";
-import {StarRating} from "./StarRating";
+import { StarRating } from "./StarRating";
 
 function ProductCard({
-                         product,
-                         t,
-                         compact = false,
-                     }: {
+    product,
+    t,
+    compact = false,
+}: {
     product: ProductView;
     t: (key: string) => string;
     compact?: boolean;
@@ -23,7 +23,7 @@ function ProductCard({
     return (
         <div
             className={`bg-white rounded-xl shadow-lg overflow-hidden flex flex-col transform transition-transform duration-300 hover:scale-105 cursor-pointer ${compact ? "p-3" : ""
-            }`}
+                }`}
             onClick={() => router.push(`/products/${product.slug}`)}
         >
             <div className={`relative ${compact ? "aspect-[4/3]" : "aspect-w-4 aspect-h-3"} block`}>
@@ -40,7 +40,7 @@ function ProductCard({
                 {product.discount != null && (
                     <div
                         className="absolute top-3 left-3 bg-red-600 text-white px-3 py-1 rounded-full text-sm font-semibold shadow-md">
-                        -{product.discount} EGP
+                        -{product.discount} {t("EGP")}
                     </div>
                 )}
 
@@ -57,25 +57,25 @@ function ProductCard({
                     <div className="flex items-center justify-between">
                         <h3
                             className={`${compact ? "text-lg mb-2" : "text-xl mb-5"
-                            } font-semibold text-gray-800`}
+                                } font-semibold text-gray-800`}
                         >
                             {product.name}
                         </h3>
-                        <StarRating rating={product.avg_rating}/>
+                        <StarRating rating={product.avg_rating} />
                     </div>
 
                     <div className="flex items-center content-center mb-2">
                         {!product.discount ? (
                             <p className={`${compact ? "text-md" : "text-lg"} font-normal text-primary-900`}>
-                                {product.price.toFixed(2)} EGP
+                                {product.price.toFixed(2)} {t("EGP")}
                             </p>
                         ) : (
                             <div className="flex flex-col items-baseline">
                                 <p className={`${compact ? "text-sm" : "text-md"} font-medium text-primary-900`}>
-                                    {(product.price - product.discount).toFixed(2)} EGP
+                                    {(product.price - product.discount).toFixed(2)} {t("EGP")}
                                 </p>
                                 <p className={`${compact ? "text-sm" : "text-lg"} text-gray-500 line-through`}>
-                                    {product.price.toFixed(2)} EGP
+                                    {product.price.toFixed(2)} {t("EGP")}
                                 </p>
                             </div>
                         )}
@@ -83,9 +83,9 @@ function ProductCard({
                 </div>
 
                 <div className="mt-3 space-y-2" onClick={(e) => e.stopPropagation()}>
-                    <AddToCartButton product={product} quantity={1}/>
+                    <AddToCartButton product={product} quantity={1} />
                     {product.stock != null && product.stock > 0 && (
-                        <BuyNowButton product={product} quantity={1}/>
+                        <BuyNowButton product={product} quantity={1} />
                     )}
                 </div>
             </div>
@@ -94,17 +94,17 @@ function ProductCard({
 }
 
 export default function ProductGrid({
-                                        products,
-                                        isLoading,
-                                        perPage = 6,
-                                        recent = false,
-                                    }: Readonly<{
+    products,
+    isLoading,
+    perPage = 6,
+    recent = false,
+}: Readonly<{
     isLoading: boolean;
     products?: ProductView[];
     perPage?: number;
     recent?: boolean;
 }>) {
-    const {t} = useTranslation();
+    const { t } = useTranslation();
     const [page, setPage] = useState(1);
 
     const totalPages = useMemo(() => {
@@ -122,7 +122,7 @@ export default function ProductGrid({
 
     const goToPage = (num: number) => {
         if (num >= 1 && num <= totalPages) setPage(num);
-        window.scrollTo({top: 0, behavior: "smooth"});
+        window.scrollTo({ top: 0, behavior: "smooth" });
     };
 
     const skeletonWidth = 283.6;
@@ -150,11 +150,11 @@ export default function ProductGrid({
                         className={`grid ${recent
                             ? "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3"
                             : "grid-cols-2 sm:grid-cols-3 xl:grid-cols-4"
-                        } gap-6`}
+                            } gap-6`}
                     >
                         {visibleProducts.map((product) => (
 
-                            <ProductCard key={product.slug} product={product} t={t} compact={!recent}/>
+                            <ProductCard key={product.slug} product={product} t={t} compact={!recent} />
                         ))}
                     </div>
 
@@ -167,7 +167,7 @@ export default function ProductGrid({
                                 className={`px-4 py-2 rounded-lg border ${page === 1
                                     ? "text-gray-400 border-gray-200 cursor-not-allowed"
                                     : "text-gray-700 hover:bg-gray-100 border-gray-300"
-                                }`}
+                                    }`}
                             >
                                 {t("prev") || "Prev"}
                             </button>
@@ -181,7 +181,7 @@ export default function ProductGrid({
                                         className={`px-4 py-2 rounded-lg border ${page === pageNumber
                                             ? "bg-primary-600 text-white border-primary-600"
                                             : "text-gray-700 border-gray-300 hover:bg-gray-100"
-                                        }`}
+                                            }`}
                                     >
                                         {pageNumber}
                                     </button>
@@ -194,7 +194,7 @@ export default function ProductGrid({
                                 className={`px-4 py-2 rounded-lg border ${page === totalPages
                                     ? "text-gray-400 border-gray-200 cursor-not-allowed"
                                     : "text-gray-700 hover:bg-gray-100 border-gray-300"
-                                }`}
+                                    }`}
                             >
                                 {t("next") || "Next"}
                             </button>

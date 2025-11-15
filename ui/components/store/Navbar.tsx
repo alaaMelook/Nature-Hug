@@ -6,6 +6,8 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { FlaskConicalIcon, History, LogOut, Menu, Settings, ShoppingCart, User, X } from "lucide-react";
 
+import { useTranslation } from "@/ui/providers/TranslationProvider";
+
 import { useSupabase } from "@/ui/hooks/useSupabase";
 import { useCart } from "@/ui/providers/CartProvider";
 import LanguageSwitcher from "./LanguageSwitcher";
@@ -24,6 +26,7 @@ export default function Navbar() {
 
     const router = useRouter();
     const { signOut } = useSupabase();
+    const { t, language } = useTranslation();
 
     // Toggle mobile menu
     const toggleMobileMenu = useCallback(() => {
@@ -41,10 +44,10 @@ export default function Navbar() {
 
     const navigationItems = useMemo(
         () => [
-            { href: "/", label: "Home" },
-            { href: "/products", label: "Shop" },
-            { href: "/about-us", label: "About" },
-            { href: "/contact-us", label: "Contact" },
+            { href: "/", key: "home" },
+            { href: "/products", key: "shop" },
+            { href: "/about-us", key: "about" },
+            { href: "/contact-us", key: "contact" },
         ],
         []
     );
@@ -69,7 +72,7 @@ export default function Navbar() {
                         href={item.href}
                         className="text-primary-950 hover:text-primary-300 transition-colors duration-300 text-lg"
                     >
-                        {item.label}
+                        {t(item.key)}
                     </Link>
                 ))}
             </div>
@@ -84,7 +87,7 @@ export default function Navbar() {
                     className="relative flex items-center bg-primary-10 px-4 py-2 rounded-lg shadow-md hover:bg-primary-100 transition"
                 >
                     <ShoppingCart className="w-5 h-5 mr-2" />
-                    Cart
+                    {t('cart')}
                     {count > 0 && (
                         <span
                             className="absolute -right-2 -top-2 text-xs min-w-5 h-5 px-1 rounded-full  font-semibold text-primary-950 bg-primary-50 flex items-center justify-center shadow-xs shadow-primary-300">
@@ -104,14 +107,14 @@ export default function Navbar() {
                         </button>
 
                         {isSettingsOpen && (
-                            <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border py-2 z-20">
+                            <div className={"absolute mt-2 w-48 bg-white rounded-lg shadow-lg border py-2 z-20" + (language == 'en' ? ' right-0' : ' left-0')}>
                                 <Link
                                     href="/profile"
                                     onClick={() => setIsSettingsOpen(false)}
                                     className="flex items-center px-4 py-2 text-sm text-primary-900 hover:bg-gray-100"
                                 >
                                     <User className="w-4 h-4 mr-2" />
-                                    Profile
+                                    {t('profile')}
                                 </Link>
                                 {member && (
                                     <Link
@@ -120,7 +123,7 @@ export default function Navbar() {
                                         className="flex items-center px-4 py-2 text-sm text-red-700 hover:bg-red-100"
                                     >
                                         <FlaskConicalIcon className="w-4 h-4 mr-2" />
-                                        Panel
+                                        {t('adminPanel')}
                                     </Link>
                                 )}
                                 <Link
@@ -129,14 +132,14 @@ export default function Navbar() {
                                     className="flex items-center px-4 py-2 text-sm text-primary-900 hover:bg-gray-100"
                                 >
                                     <History className="w-4 h-4 mr-2" />
-                                    Order History
+                                    {t('orderHistory')}
                                 </Link>
                                 <button
                                     onClick={handleLogout}
                                     className="w-full flex items-center px-4 py-2 text-sm text-primary-900 hover:bg-gray-100 cursor-pointer"
                                 >
                                     <LogOut className="w-4 h-4 mr-2" />
-                                    Logout
+                                    {t('logout')}
                                 </button>
                             </div>
                         )}
@@ -146,7 +149,7 @@ export default function Navbar() {
                         onClick={() => router.push("/login")}
                         className="flex items-center px-4 py-2 text-md bg-primary-10 text-primary-950 rounded-lg  border-primary-950 border-1"
                     >
-                        Login
+                        {t('login')}
                     </button>
                 )}
             </div>
@@ -173,21 +176,21 @@ export default function Navbar() {
                             className="text-primary-950 hover:text-primary-300 text-lg"
                             onClick={() => setIsOpen(false)}
                         >
-                            {item.label}
+                            {t(item.key)}
                         </Link>
                     ))}
 
 
                     {user ? (
 
-                        <CollapsibleSection id={""} title={"Settings"} content={(<>
+                        <CollapsibleSection id={""} title={t('settings')} content={(<>
                             <Link
                                 href="/profile"
                                 onClick={() => setIsSettingsOpen(false)}
                                 className="flex items-center text-lg text-primary-900 hover:text-primary-300"
                             >
                                 <User className="w-4 h-4 mr-2" />
-                                Profile
+                                {t('profile')}
                             </Link>
                             {member && (
                                 <Link
@@ -196,7 +199,7 @@ export default function Navbar() {
                                     className="flex items-center text-lg text-red-700 hover:text-red-400"
                                 >
                                     <FlaskConicalIcon className="w-4 h-4 mr-2" />
-                                    Panel
+                                    {t('adminPanel')}
                                 </Link>
                             )}
                             <Link
@@ -205,14 +208,14 @@ export default function Navbar() {
                                 className="flex items-center text-lg text-primary-900 hover:text-primary-300"
                             >
                                 <History className="w-4 h-4 mr-2" />
-                                Order History
+                                {t('orderHistory')}
                             </Link>
                             <button
                                 onClick={handleLogout}
                                 className="flex items-center text-lg text-primary-900 hover:text-primary-300"
                             >
                                 <LogOut className="w-4 h-4 mr-2" />
-                                Logout
+                                {t('logout')}
                             </button>
                         </>)} isOpen={isSettingsOpen} onToggleAction={toggleSettingsMenu}
                         ></CollapsibleSection>
@@ -221,7 +224,7 @@ export default function Navbar() {
                             onClick={() => router.push("/login")}
                             className="flex items-center text-lg bg-primary-10 text-primary-950 rounded-lg  border-primary-950 border-1"
                         >
-                            Login
+                            {t('login')}
                         </button>
                     )}
                     <Link
@@ -229,7 +232,7 @@ export default function Navbar() {
                         className="relative flex items-center bg-primary-10 px-4 py-2 rounded-lg shadow-md hover:bg-primary-50 transition"
                     >
                         <ShoppingCart className="w-5 h-5 mr-2" />
-                        Cart
+                        {t('cart')}
                         {count > 0 && (
                             <span
                                 className="absolute -right-2 -top-2 text-xs min-w-5 h-5 px-1 rounded-full  font-semibold text-primary-950 bg-primary-50 flex items-center justify-center shadow-xs shadow-primary-300">

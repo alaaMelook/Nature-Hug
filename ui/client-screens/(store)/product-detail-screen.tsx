@@ -12,6 +12,7 @@ import { CheckCircle, Info, Minus, ShoppingBag } from "lucide-react";
 import { ReviewsSlider } from "@/ui/components/store/ReviewsSlider";
 import Link from "next/link";
 import { ProductDetailView } from "@/domain/entities/views/shop/productDetailView";
+import { GetProductDetails } from "@/ui/hooks/store/useProductDetailData";
 
 
 export function ProductDetailScreen({ initProduct }: { initProduct: ProductDetailView | null }) {
@@ -26,36 +27,37 @@ export function ProductDetailScreen({ initProduct }: { initProduct: ProductDetai
         setActiveSection(activeSection === id ? null : id);
     }, [activeSection]);
 
-    if (loading) {
-        return <ProductDetailSkeleton />;
-    }
+
     useEffect(() => {
         async function refetch() {
             setLoading(true)
-
+            const prod = await new GetProductDetails().bySlug(initProduct?.slug || '');
+            setProduct(prod);
             setLoading(false)
         }
 
         refetch();
     }, [language]);
-
+    if (loading) {
+        return <ProductDetailSkeleton />;
+    }
     if (!product) {
-        return <div className="p-6 text-center text-red-600">Product not found.</div>;
+        return <div className="p-6 text-center text-red-600">{t('productNotFound')}</div>;
     }
     console.log(product);
     const sections = [
-        { id: 'description', title: 'Full Description', content: product.description, icon: Info },
+        { id: 'description', title: t('fullDescription'), content: product.description, icon: Info },
         {
             id: 'ingredients',
-            title: 'Materials/Ingredients',
+            title: t('materialsIngredients'),
             content: product.materials && product.materials.length > 0
                 ? product.materials.map((material, index) => <p key={index}
                     className="mb-1">{`${material.grams_used}g of ${material.material_name}`}</p>) // Added margin for spacing
-                : <p>No materials listed.</p>,
+                : <p>{t('noMaterialsListed')}</p>,
             icon: CheckCircle,
         },
-        { id: 'bestfor', title: 'Best For', content: product.highlight, icon: ShoppingBag },
-        { id: 'precautions', title: 'Precautions', content: product.description, icon: Minus },
+        { id: 'bestfor', title: t('bestFor'), content: product.highlight, icon: ShoppingBag },
+        { id: 'precautions', title: t('precautions'), content: product.description, icon: Minus },
 
     ];
     return (
@@ -84,7 +86,7 @@ export function ProductDetailScreen({ initProduct }: { initProduct: ProductDetai
                             <span
                                 className="text-lg font-semibold text-primary-600">{product.avg_rating?.toFixed(1) ?? 'N/A'}</span>
                             <span className="text-sm text-gray-500">
-                                {`(${product.reviews?.length ?? 0} reviews)`}
+                                {`(${product.reviews?.length ?? 0} ${t('reviews')})`}
                             </span>
                         </div>
                     </div>
@@ -92,7 +94,7 @@ export function ProductDetailScreen({ initProduct }: { initProduct: ProductDetai
                     {/* Price and Variant Selection */}
                     <div className="flex items-center justify-between mb-8">
                         <p className="text-4xl font-extrabold text-primary-900">
-                            {(product.price * quantity)?.toLocaleString('en-GB', { timeZone: 'Africa/Cairo', hour12: true }) ?? 'N/A'} EGP
+                            {(product.price * quantity)?.toLocaleString() ?? t('na')} {t("EGP")}
                         </p>
                         <div className="flex gap-2">
                             {product.variants?.map(variant => (
@@ -169,17 +171,17 @@ export function ProductDetailScreen({ initProduct }: { initProduct: ProductDetai
 
             {/* Fixed Bottom Bar - Made it wider and changed background */}
             <div className="w-full fixed bottom-0 left-0 bg-white border-t border-gray-200 shadow-xl z-20">
-                <div className="flex items-center justify-center text-gray-700 px-5 py-4 max-w-7xl mx-auto">
+                <div className={"flex items-center justify-center text-gray-700 px-5 py-4 w-full mx-auto" + { language }}>
                     {/* Price - Added here for the mobile/fixed view */}
                     <div className="flex-col mr-10 hidden sm:block">
                         <p className="text-xl font-black text-primary-900">
-                            {(product.price * quantity)?.toLocaleString('en-GB', { timeZone: 'Africa/Cairo', hour12: true }) ?? 'N/A'} EGP
+                            {(product.price * quantity)?.toLocaleString() ?? t('na')} {t("EGP")}
                         </p>
                         {quantity === product.stock &&
                             <p className='text-xs text-red-500 font-medium'>{t('maxAvailable')}</p>}
                     </div>
 
-                    <div className="flex items-center gap-5">
+                    <div className="flex items-center gap-5 flex-row">
                         <span className="text-lg font-medium hidden sm:block">{t('quantity')}:</span>
                         <Counter
                             quantity={quantity}
@@ -188,7 +190,7 @@ export function ProductDetailScreen({ initProduct }: { initProduct: ProductDetai
                         />
                     </div>
 
-                    <div className="flex gap-4 ml-10"> {/* Grouped action buttons */}
+                    <div className="flex gap-4 w-1/2 ml-2"> {/* Grouped action buttons */}
                         <AddToCartButton
                             product={product}
                             quantity={quantity}

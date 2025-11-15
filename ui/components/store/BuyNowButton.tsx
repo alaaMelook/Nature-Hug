@@ -5,11 +5,13 @@ import { useCart } from '@/ui/providers/CartProvider';
 import { useState } from 'react';
 import { ProductView } from '@/domain/entities/views/shop/productView';
 import { ProductDetailView } from '@/domain/entities/views/shop/productDetailView';
+import { useTranslation } from '@/ui/providers/TranslationProvider';
 
 export default function BuyNowButton({ product, quantity }: { product: ProductView | ProductDetailView, quantity: number }) {
     const router = useRouter();
     const { addToCart } = useCart();
     const [loading, setLoading] = useState(false);
+    const { t } = useTranslation();
     const isDisabled = product.stock === 0 || product.stock == null;
     const handleBuyNow = async () => {
         setLoading(true);
@@ -26,7 +28,7 @@ export default function BuyNowButton({ product, quantity }: { product: ProductVi
       disabled:opacity-50`}
             disabled={!product.stock}
         >
-            Buy Now
+            {t("BuyNow")}
         </button>
     );
 }

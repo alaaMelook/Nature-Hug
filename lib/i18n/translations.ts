@@ -9,6 +9,66 @@ export const translations: Record<
   }
 > = {
   en: {
+    // Pagination
+    prev: "Previous",
+    next: "Next",
+    // Filters / Product list
+    filters: "Filters",
+    category: "Category",
+    all: "All",
+    sortBy: "Sort by",
+    nameAsc: "Name (A → Z)",
+    nameDesc: "Name (Z → A)",
+    priceAsc: "Price (Low → High)",
+    priceDesc: "Price (High → Low)",
+    ratingDesc: "Top Rated",
+    inStockOnly: "In stock only",
+    onSaleOnly: "On sale only",
+
+    // Quantity controls
+    decreaseQuantity: "Decrease quantity",
+    increaseQuantity: "Increase quantity",
+
+    // Reviews
+    noReviews: "No reviews yet",
+    reviews: "Reviews",
+    // Product detail screen
+    productNotFound: "Product not found.",
+    fullDescription: "Full Description",
+    materialsIngredients: "Materials / Ingredients",
+    noMaterialsListed: "No materials listed.",
+    bestFor: "Best For",
+    precautions: "Precautions",
+    na: "N/A",
+    // reviews: "Reviews",
+    // Currency
+    EGP: "EGP",
+
+    // Stock / availability
+    only: "Only",
+    leftInStock: "left in stock",
+    inStock: "In stock",
+    maxAvailable: "Maximum available",
+
+    // Buy / Checkout actions
+    BuyNow: "Buy Now",
+
+    // Reviews / Add review
+    reviewAddedSuccessfully: "Review added successfully",
+    addYourReview: "Add your review",
+    yourRating: "Your rating",
+    yourComment: "Your comment",
+    writeYourReviewHere: "Write your review here",
+    submitting: "Submitting...",
+    submitReview: "Submit review",
+    loginToReview: "Login to review",
+    loginNow: "Login now",
+
+    // Confirmations
+    confirmDeleteProduct: "Are you sure you want to delete this product?",
+    // Navbar / auth
+    orderHistory: "Order History",
+    login: "Login",
     home: "Home",
     shop: "Shop",
     about: "About",
@@ -109,6 +169,66 @@ export const translations: Record<
     underConstruction: "This page is under construction",
   },
   ar: {
+    // Pagination
+    prev: "السابق",
+    next: "التالي",
+    // Filters / Product list
+    filters: "المرشحات",
+    category: "الفئة",
+    all: "الكل",
+    sortBy: "الترتيب حسب",
+    nameAsc: "الاسم (أ → ي)",
+    nameDesc: "الاسم (ي → أ)",
+    priceAsc: "السعر (من الأقل إلى الأعلى)",
+    priceDesc: "السعر (من الأعلى إلى الأقل)",
+    ratingDesc: "الأعلى تقييماً",
+    inStockOnly: "المتوفرة فقط",
+    onSaleOnly: "المخفضة فقط",
+
+    // Quantity controls
+    decreaseQuantity: "إنقاص الكمية",
+    increaseQuantity: "زيادة الكمية",
+
+    // Reviews
+    noReviews: "لا توجد تقييمات بعد",
+    reviews: "التقييمات",
+    // Product detail screen
+    productNotFound: "المنتج غير موجود.",
+    fullDescription: "الوصف الكامل",
+    materialsIngredients: "المواد / المكونات",
+    noMaterialsListed: "لا توجد مواد مدرجة.",
+    bestFor: "مناسب ل",
+    precautions: "الاحتياطات",
+    na: "غير متوفر",
+    // reviews: "التقييمات",
+    // Currency
+    EGP: "ج.م",
+
+    // Stock / availability
+    only: "فقط",
+    leftInStock: "متبقي في المخزون",
+    inStock: "متوفر",
+    maxAvailable: "الحد الأقصى المتاح",
+
+    // Buy / Checkout actions
+    BuyNow: "اشتري الآن",
+
+    // Reviews / Add review
+    reviewAddedSuccessfully: "تم إضافة التقييم بنجاح",
+    addYourReview: "أضف تقييمك",
+    yourRating: "تقييمك",
+    yourComment: "تعليقك",
+    writeYourReviewHere: "اكتب تقييمك هنا",
+    submitting: "جاري الإرسال...",
+    submitReview: "إرسال التقييم",
+    loginToReview: "سجّل الدخول لترك تقييم",
+    loginNow: "سجّل الدخول الآن",
+
+    // Confirmations
+    confirmDeleteProduct: "هل أنت متأكد أنك تريد حذف هذا المنتج؟",
+    // Navbar / auth
+    orderHistory: "سجل الطلبات",
+    login: "تسجيل الدخول",
     home: "الرئيسية",
     shop: "المتجر",
     about: "من نحن",

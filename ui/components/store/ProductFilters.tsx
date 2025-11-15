@@ -1,21 +1,20 @@
 'use client';
 
-import {Category} from "@/domain/entities/database/category";
-import {langStore} from "@/lib/i18n/langStore";
-import {useTranslation} from "@/ui/providers/TranslationProvider";
+import { Category } from "@/domain/entities/database/category";
+import { useTranslation } from "@/ui/providers/TranslationProvider";
 import React from "react";
 
-export default function ProductFilters({onFilterChangeAction, initCategories}: {
+export default function ProductFilters({ onFilterChangeAction, initCategories }: {
     onFilterChangeAction: (filters: any) => void,
     initCategories: Category[]
 }) {
-    const {t} = useTranslation();
+    const { t, language } = useTranslation();
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-        const {name, value, type} = e.target;
+        const { name, value, type } = e.target;
         const isCheckbox = type === 'checkbox';
         const checked = (e.target as HTMLInputElement).checked;
-        onFilterChangeAction({[name]: isCheckbox ? checked : value});
+        onFilterChangeAction({ [name]: isCheckbox ? checked : value });
     };
     let categories: Category[] = initCategories;
     console.log('Categories:', categories);
@@ -35,7 +34,7 @@ export default function ProductFilters({onFilterChangeAction, initCategories}: {
                 </div>
                 <div>
                     <label htmlFor="category"
-                           className="block text-sm font-medium text-gray-700">{t('category')}</label>
+                        className="block text-sm font-medium text-gray-700">{t('category')}</label>
                     <select
                         id="category"
                         name="category"
@@ -45,7 +44,7 @@ export default function ProductFilters({onFilterChangeAction, initCategories}: {
                         <option value="">{t('all')}</option>
                         {categories?.map(category => (
                             <option key={category.id}
-                                    value={langStore.get() === 'en' ? category.name_en : (category.name_ar ?? category.name_en)}> {langStore.get() === 'en' ? category.name_en : (category.name_ar ?? category.name_en)}</option>
+                                value={language === 'en' ? category.name_en : (category.name_ar ?? category.name_en)}> {language === 'en' ? category.name_en : (category.name_ar ?? category.name_en)}</option>
                         ))}
                     </select>
                 </div>
