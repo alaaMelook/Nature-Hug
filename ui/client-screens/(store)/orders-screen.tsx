@@ -45,7 +45,7 @@ export default function OrdersScreen({ orders }: { orders: OrderSummaryView[] })
                             </div>
 
                             <div className="text-right">
-                                <p className="text-lg font-semibold">{order.grand_total?.toLocaleString('en-GB', { timeZone: 'Africa/Cairo', hour12: true })} EGP</p>
+                                <p className="text-lg font-semibold">{order.grand_total?.toLocaleString()} EGP</p>
                                 <span className="text-sm text-primary-600 mt-2">View
                                     details</span>
                             </div>

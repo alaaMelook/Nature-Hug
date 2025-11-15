@@ -1,18 +1,18 @@
-import {supabase} from "@/data/datasources/supabase/client";
-import {AdminRepository} from "@/domain/repositories/adminRepository";
-import {OrderDetailsView} from "@/domain/entities/views/admin/orderDetailsView";
-import {DashboardMetricsView} from "@/domain/entities/views/admin/dashboardMetricsView";
-import {Material} from "@/domain/entities/database/material";
-import {ProductAdminView} from "@/domain/entities/views/admin/productAdminView";
+import { supabase } from "@/data/datasources/supabase/client";
+import { AdminRepository } from "@/domain/repositories/adminRepository";
+import { OrderDetailsView } from "@/domain/entities/views/admin/orderDetailsView";
+import { DashboardMetricsView } from "@/domain/entities/views/admin/dashboardMetricsView";
+import { Material } from "@/domain/entities/database/material";
+import { ProductAdminView } from "@/domain/entities/views/admin/productAdminView";
 
 export class IAdminClientRepository implements AdminRepository {
     async getOrderDetails(): Promise<OrderDetailsView[]> {
         console.log("[IAdminRepository] getOrderDetails called.");
-        const {data, status, statusText, error} = await supabase.schema('admin')
+        const { data, status, statusText, error } = await supabase.schema('admin')
             .from("order_details")
             .select('*')
-            .order("order_date", {ascending: false})
-        console.log("[IAdminRepository] getOrderDetails result:", {data, status, statusText});
+            .order("order_date", { ascending: false })
+        console.log("[IAdminRepository] getOrderDetails result:", { data, status, statusText });
         if (error) {
             console.error("[IAdminRepository] getOrderDetails error:", error);
             throw error;
@@ -22,11 +22,11 @@ export class IAdminClientRepository implements AdminRepository {
 
     async getDashboardMetrics(): Promise<DashboardMetricsView> {
         console.log("[IAdminRepository] getDashboardMetrics called.");
-        const {data, status, statusText, error} = await supabase.schema('admin')
+        const { data, status, statusText, error } = await supabase.schema('admin')
             .from("monthly_stats_view")
             .select('*')
             .single();
-        console.log("[IAdminRepository] getDashboardMetrics result:", {data, status, statusText});
+        console.log("[IAdminRepository] getDashboardMetrics result:", { data, status, statusText });
         if (error) {
             console.error("[IAdminRepository] getDashboardMetrics error:", error);
             throw error;
@@ -36,10 +36,10 @@ export class IAdminClientRepository implements AdminRepository {
 
     async getAllMaterials(): Promise<Material[]> {
         console.log("[IAdminRepository] getAllMaterials called.");
-        const {data, status, statusText, error} = await supabase.schema('admin')
+        const { data, status, statusText, error } = await supabase.schema('admin')
             .from("materials")
             .select('*');
-        console.log("[IAdminRepository] getAllMaterials result:", {data, status, statusText});
+        console.log("[IAdminRepository] getAllMaterials result:", { data, status, statusText });
         if (error) {
             console.error("[IAdminRepository] getAllMaterials error:", error);
             throw error;
@@ -49,23 +49,43 @@ export class IAdminClientRepository implements AdminRepository {
 
     async addMaterial(material: Material): Promise<void> {
         console.log("[IAdminRepository] addMaterial called with material:", material);
-        const {data, status, statusText, error} = await supabase.schema('admin')
+        const { data, status, statusText, error } = await supabase.schema('admin')
             .from("materials")
             .insert(material);
-        console.log("[IAdminRepository] addMaterial result:", {data, status, statusText});
+        console.log("[IAdminRepository] addMaterial result:", { data, status, statusText });
         if (error) {
             console.error("[IAdminRepository] addMaterial error:", error);
             throw error;
         }
     }
 
+    async updateMaterial(material: Partial<Material>): Promise<void> {
+        console.log("[IAdminRepository] updateMaterial called with material:", material);
+        const { id, ...updateData } = material as Partial<Material>;
+        if (!id) {
+            console.error("[IAdminRepository] updateMaterial error: material id is required");
+            throw new Error("material id is required");
+        }
+
+        const { data, status, statusText, error } = await supabase.schema('admin')
+            .from("materials")
+            .update(updateData)
+            .eq('id', id);
+
+        console.log("[IAdminRepository] updateMaterial result:", { data, status, statusText });
+        if (error) {
+            console.error("[IAdminRepository] updateMaterial error:", error);
+            throw error;
+        }
+    }
+
     async deleteMaterial(id: number): Promise<void> {
         console.log("[IAdminRepository] deleteMaterial called with id:", id);
-        const {data, status, statusText, error} = await supabase.schema('admin')
+        const { data, status, statusText, error } = await supabase.schema('admin')
             .from("materials")
             .delete()
             .eq('id', id);
-        console.log("[IAdminRepository] deleteMaterial result:", {data, status, statusText});
+        console.log("[IAdminRepository] deleteMaterial result:", { data, status, statusText });
         if (error) {
             console.error("[IAdminRepository] deleteMaterial error:", error);
             throw error;
@@ -79,8 +99,8 @@ export class IAdminClientRepository implements AdminRepository {
             status,
             statusText,
             error
-        } = await supabase.schema('admin').rpc('create_product', {product_data: product});
-        console.log("[IAdminRepository] createProduct result:", {data, status, statusText});
+        } = await supabase.schema('admin').rpc('create_product', { product_data: product });
+        console.log("[IAdminRepository] createProduct result:", { data, status, statusText });
         if (error) {
             console.error("[IAdminRepository] createProduct error:", error);
             throw error;
@@ -95,8 +115,8 @@ export class IAdminClientRepository implements AdminRepository {
             status,
             statusText,
             error
-        } = await supabase.schema('admin').rpc('update_product', {product_data: product});
-        console.log("[IAdminRepository] updateProduct result:", {data, status, statusText});
+        } = await supabase.schema('admin').rpc('update_product', { product_data: product });
+        console.log("[IAdminRepository] updateProduct result:", { data, status, statusText });
         if (error) {
             console.error("[IAdminRepository] updateProduct error:", error);
             throw error;
@@ -106,11 +126,11 @@ export class IAdminClientRepository implements AdminRepository {
 
     async deleteProduct(slug: string): Promise<void> {
         console.log("[IAdminRepository] deleteProduct called with slug:", slug);
-        const {data, status, statusText, error} = await supabase.schema('store')
+        const { data, status, statusText, error } = await supabase.schema('store')
             .from('products')
             .delete()
             .eq('slug', slug);
-        console.log("[IAdminRepository] deleteProduct result:", {data, status, statusText});
+        console.log("[IAdminRepository] deleteProduct result:", { data, status, statusText });
         if (error) {
             console.error("[IAdminRepository] deleteProduct error:", error);
             throw error;
@@ -119,8 +139,8 @@ export class IAdminClientRepository implements AdminRepository {
 
     async viewAllWithDetails(): Promise<ProductAdminView[]> {
         console.log("[IAdminRepository] viewAllWithDetails called.");
-        const {data, status, statusText, error} = await supabase.schema('store').from(`product_detail`).select('*');
-        console.log("[IAdminRepository] viewAllWithDetails result:", {data, status, statusText});
+        const { data, status, statusText, error } = await supabase.schema('store').from(`product_detail`).select('*');
+        console.log("[IAdminRepository] viewAllWithDetails result:", { data, status, statusText });
         if (error) {
             console.error("[IAdminRepository] viewAllWithDetails error:", error);
             throw error;
@@ -133,21 +153,21 @@ export class IAdminClientRepository implements AdminRepository {
         const fileExt = file.name.split(".").pop();
         const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
 
-        const {data, error} = await supabase.storage
+        const { data, error } = await supabase.storage
             .from("product-images")
-            .upload(fileName, file, {contentType: file.type});
+            .upload(fileName, file, { contentType: file.type });
 
-        console.log("[IProductRepository] uploadImage result:", {data});
+        console.log("[IProductRepository] uploadImage result:", { data });
         if (error) {
             console.error("[IProductRepository] uploadImage error:", error);
             throw error;
         }
 
-        const {data: urlData} = supabase.storage
+        const { data: urlData } = supabase.storage
             .from("product-images")
             .getPublicUrl((data as any).path);
 
-        console.log("[IProductRepository] getPublicUrl result:", {urlData});
+        console.log("[IProductRepository] getPublicUrl result:", { urlData });
         if (!urlData) {
             console.error("[IProductRepository] getPublicUrl error: Failed to get public url");
             throw new Error('Failed to get public url');
@@ -163,12 +183,46 @@ export class IAdminClientRepository implements AdminRepository {
             status,
             statusText,
             error,
-        } = await supabase.schema('store').from('orders').update({status: order.order_status}).eq('id', order.order_id);
+        } = await supabase.schema('store').from('orders').update({ status: order.order_status }).eq('id', order.order_id);
         if (error) {
             console.error("[IAdminRepository] updateOrder error:", error);
             throw error;
         }
-        console.log("[IAdminRepository] updateOrder result:", {data, status, statusText});
+        console.log("[IAdminRepository] updateOrder result:", { data, status, statusText });
 
+    }
+    async getAllImages(): Promise<{ image: any, url: string }[]> {
+        console.log('[IAdminRepository] getAllImages called.');
+
+        const { data, error } = await supabase.storage.from('product-images').list('');
+
+        console.log('[IAdminRepository] getAllImages result:', { data });
+        if (error) {
+            console.error('[IAdminRepository] getAllImages error:', error);
+            throw error;
+        }
+
+        const images: { image: any, url: string }[] = [];
+        if (data && Array.isArray(data)) {
+            for (const item of data) {
+                const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(item.name);
+                if (urlData?.publicUrl) {
+                    images.push({ image: item, url: urlData.publicUrl });
+                }
+            }
+        }
+
+        return images;
+    }
+    async deleteImage(imageName: string): Promise<void> {
+        console.log('[IAdminRepository] deleteImage called with imageName:', imageName);
+
+        const { data, error } = await supabase.storage.from('product-images').remove([imageName]);
+
+        console.log('[IAdminRepository] deleteImage result:', { data });
+        if (error) {
+            console.error('[IAdminRepository] deleteImage error:', error);
+            throw error;
+        }
     }
 }

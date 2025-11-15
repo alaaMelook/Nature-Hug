@@ -1,27 +1,49 @@
-import {Member} from "@/domain/entities/auth/member";
-import {Customer, CustomerAddress} from "@/domain/entities/auth/customer";
-import {CustomerRepository} from "@/domain/repositories/customerRepository";
-import {Session, User} from "@supabase/supabase-js";
-import {ProfileView} from "@/domain/entities/views/shop/profileView";
-import {MemberView} from "@/domain/entities/views/admin/memberView";
-import {supabase} from "@/data/datasources/supabase/client";
-import {Governorate} from "@/domain/entities/database/governorate";
-import {Order} from "@/domain/entities/database/order";
-import {OrderSummaryView} from "@/domain/entities/views/shop/orderSummaryView";
+import { Member } from "@/domain/entities/auth/member";
+import { Customer, CustomerAddress } from "@/domain/entities/auth/customer";
+import { CustomerRepository } from "@/domain/repositories/customerRepository";
+import { Session, User } from "@supabase/supabase-js";
+import { ProfileView } from "@/domain/entities/views/shop/profileView";
+import { MemberView } from "@/domain/entities/views/admin/memberView";
+import { supabase } from "@/data/datasources/supabase/client";
+import { Governorate } from "@/domain/entities/database/governorate";
+import { Order } from "@/domain/entities/database/order";
+import { OrderSummaryView } from "@/domain/entities/views/shop/orderSummaryView";
 
 export class ICustomerClientRepository implements CustomerRepository {
-    viewOrder(OrderId: number, customerId: number): Promise<OrderSummaryView> {
-        throw new Error("Method not implemented.");
+    async viewOrder(OrderId: number, customerId: number): Promise<OrderSummaryView> {
+        console.log("[ICustomerRepository] viewOrder called with OrderId:", OrderId, "customerId:", customerId);
+        const { data, error } = await supabase.schema('store')
+            .from('order_summary')
+            .select('*')
+            .eq('order_id', OrderId)
+            .eq('customer_id', customerId)
+            .maybeSingle();
+
+        if (error) {
+            console.error('[ICustomerRepository] viewOrder error:', error);
+            throw error;
+        }
+        return data as OrderSummaryView;
     }
 
-    viewAllOrders(customerId: number): Promise<OrderSummaryView[]> {
-        throw new Error("Method not implemented.");
+    async viewAllOrders(customerId: number): Promise<OrderSummaryView[]> {
+        console.log("[ICustomerRepository] viewAllOrders called with customerId:", customerId);
+        const { data, error } = await supabase.schema('store')
+            .from('order_summary')
+            .select('*')
+            .eq('customer_id', customerId);
+
+        if (error) {
+            console.error('[ICustomerRepository] viewAllOrders error:', error);
+            throw error;
+        }
+        return data || [];
     }
 
     async getSession(): Promise<Session | null> {
         console.log("[ICustomerRepository] getSession called.");
-        const {data, error} = await supabase.auth.getSession();
-        console.log("[ICustomerRepository] getSession result:", {data});
+        const { data, error } = await supabase.auth.getSession();
+        console.log("[ICustomerRepository] getSession result:", { data });
         if (error) {
             console.error("[ICustomerRepository] getSession error:", error);
             throw error;
@@ -31,8 +53,8 @@ export class ICustomerClientRepository implements CustomerRepository {
 
     async getCurrentUser(): Promise<User | null> {
         console.log("[ICustomerRepository] getCurrentUser called.");
-        const {data, error} = await supabase.auth.getUser();
-        console.log("[ICustomerRepository] getCurrentUser result:", {data});
+        const { data, error } = await supabase.auth.getUser();
+        console.log("[ICustomerRepository] getCurrentUser result:", { data });
         if (error) {
             console.error("[ICustomerRepository] getCurrentUser error:", error);
             throw error;
@@ -42,12 +64,12 @@ export class ICustomerClientRepository implements CustomerRepository {
 
     async fetchCustomer(authUserId: string): Promise<Customer> {
         console.log("[ICustomerRepository] fetchCustomer called with authUserId:", authUserId);
-        const {data, status, statusText, error} = await supabase.schema("store")
+        const { data, status, statusText, error } = await supabase.schema("store")
             .from("customers")
             .select("*")
             .eq("auth_user_id", authUserId)
             .maybeSingle();
-        console.log("[ICustomerRepository] fetchCustomer result:", {data, status, statusText});
+        console.log("[ICustomerRepository] fetchCustomer result:", { data, status, statusText });
         if (error) {
             console.error("[ICustomerRepository] fetchCustomer error:", error);
             throw error;
@@ -57,12 +79,12 @@ export class ICustomerClientRepository implements CustomerRepository {
 
     async fetchMember(customerId: number): Promise<Member | null> {
         console.log("[ICustomerRepository] fetchMember called with customerId:", customerId);
-        const {data, status, statusText, error} = await supabase.schema("store")
+        const { data, status, statusText, error } = await supabase.schema("store")
             .from("members")
             .select("*")
             .eq("user_id", customerId)
             .maybeSingle();
-        console.log("[ICustomerRepository] fetchMember result:", {data, status, statusText});
+        console.log("[ICustomerRepository] fetchMember result:", { data, status, statusText });
         if (error) {
             console.error("[ICustomerRepository] fetchMember error:", error);
             throw error;
@@ -72,11 +94,11 @@ export class ICustomerClientRepository implements CustomerRepository {
 
     async fetchAllMembers(): Promise<Member[]> {
         console.log("[ICustomerRepository] fetchAllMembers called.");
-        const {data, status, statusText, error} = await supabase.schema("store")
+        const { data, status, statusText, error } = await supabase.schema("store")
             .from("members")
             .select("*");
 
-        console.log("[ICustomerRepository] fetchAllMembers result:", {data, status, statusText});
+        console.log("[ICustomerRepository] fetchAllMembers result:", { data, status, statusText });
         if (error) {
             console.error("[ICustomerRepository] fetchAllMembers error:", error);
             throw error;
@@ -92,7 +114,7 @@ export class ICustomerClientRepository implements CustomerRepository {
             statusText,
             error
         } = await supabase.schema('store').from('profile_view').select('*').eq('id', customerId).single();
-        console.log("[ICustomerRepository] viewProfile result:", {data, status, statusText});
+        console.log("[ICustomerRepository] viewProfile result:", { data, status, statusText });
         if (error) {
             console.error("[ICustomerRepository] viewProfile error:", error);
             throw error;
@@ -102,8 +124,8 @@ export class ICustomerClientRepository implements CustomerRepository {
 
     async getAllCustomers(): Promise<ProfileView[]> {
         console.log("[ICustomerRepository] getAllCustomers called.");
-        const {data, status, statusText, error} = await supabase.schema('store').from('profile_view').select('*');
-        console.log("[ICustomerRepository] getAllCustomers result:", {data, status, statusText});
+        const { data, status, statusText, error } = await supabase.schema('store').from('profile_view').select('*');
+        console.log("[ICustomerRepository] getAllCustomers result:", { data, status, statusText });
         if (error) {
             console.error("[ICustomerRepository] getAllCustomers error:", error);
             throw error;
@@ -113,8 +135,8 @@ export class ICustomerClientRepository implements CustomerRepository {
 
     async getAllMembers(): Promise<MemberView[]> {
         console.log("[ICustomerRepository] getAllMembers called.");
-        const {data, status, statusText, error} = await supabase.schema('admin').from('member_view').select('*');
-        console.log("[ICustomerRepository] getAllMembers result:", {data, status, statusText});
+        const { data, status, statusText, error } = await supabase.schema('admin').from('member_view').select('*');
+        console.log("[ICustomerRepository] getAllMembers result:", { data, status, statusText });
         if (error) {
             console.error("[ICustomerRepository] getAllMembers error:", error);
             throw error;
@@ -130,7 +152,7 @@ export class ICustomerClientRepository implements CustomerRepository {
             statusText,
             error
         } = await supabase.schema('admin').from('member_view').select('*').eq('id', memberId).single();
-        console.log("[ICustomerRepository] viewMember result:", {data, status, statusText});
+        console.log("[ICustomerRepository] viewMember result:", { data, status, statusText });
         if (error) {
             console.error("[ICustomerRepository] viewMember error:", error);
             throw error;
@@ -146,7 +168,7 @@ export class ICustomerClientRepository implements CustomerRepository {
             statusText,
             error
         } = await supabase.schema('store').from('shipping_governorates').select('*');
-        console.log("[ICustomerRepository] fetchAllGovernorates result:", {data, status, statusText});
+        console.log("[ICustomerRepository] fetchAllGovernorates result:", { data, status, statusText });
         if (error) {
             console.error("[ICustomerRepository] fetchAllGovernorates error:", error);
             throw error;
@@ -162,7 +184,7 @@ export class ICustomerClientRepository implements CustomerRepository {
             statusText,
             error
         } = await supabase.schema('store').from('customers').update(data).eq('id', data.id);
-        console.log("[ICustomerRepository] updateCustomerData result:", {updated, status, statusText});
+        console.log("[ICustomerRepository] updateCustomerData result:", { updated, status, statusText });
         if (error) {
             console.error("[ICustomerRepository] updateCustomerData error:", error);
             throw error;
@@ -177,7 +199,7 @@ export class ICustomerClientRepository implements CustomerRepository {
             statusText,
             error
         } = await supabase.schema('store').from('customer_addresses').update(address).eq('id', address.id);
-        console.log("[ICustomerRepository] updateCustomerAddress result:", {data, status, statusText});
+        console.log("[ICustomerRepository] updateCustomerAddress result:", { data, status, statusText });
         if (error) {
             console.error("[ICustomerRepository] updateCustomerAddress error:", error);
             throw error;
@@ -192,7 +214,7 @@ export class ICustomerClientRepository implements CustomerRepository {
             statusText,
             error
         } = await supabase.schema('store').from('customer_addresses').insert(address);
-        console.log("[ICustomerRepository] addCustomerAddress result:", {data, status, statusText});
+        console.log("[ICustomerRepository] addCustomerAddress result:", { data, status, statusText });
         if (error) {
             console.error("[ICustomerRepository] addCustomerAddress error:", error);
             throw error;
@@ -207,7 +229,7 @@ export class ICustomerClientRepository implements CustomerRepository {
             statusText,
             error
         } = await supabase.schema('store').from('customer_addresses').delete().eq('id', addressId);
-        console.log("[ICustomerRepository] deleteCustomerAddress result:", {data, status, statusText});
+        console.log("[ICustomerRepository] deleteCustomerAddress result:", { data, status, statusText });
         if (error) {
             console.error("[ICustomerRepository] deleteCustomerAddress error:", error);
             throw error;
@@ -221,8 +243,8 @@ export class ICustomerClientRepository implements CustomerRepository {
             status,
             statusText,
             error
-        } = await supabase.schema('store').rpc('create_order', {order_data: orderData});
-        console.log("[ICustomerRepository] createOrder result:", {data, status, statusText});
+        } = await supabase.schema('store').rpc('create_order', { order_data: orderData });
+        console.log("[ICustomerRepository] createOrder result:", { data, status, statusText });
         if (error) {
             console.error("[ICustomerRepository] createOrder error:", error);
             throw error;
