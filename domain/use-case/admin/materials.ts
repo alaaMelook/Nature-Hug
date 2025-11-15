@@ -1,5 +1,5 @@
-import {IAdminServerRepository} from "@/data/repositories/server/iAdminRepository";
-import {Material} from "@/domain/entities/database/material";
+import { IAdminServerRepository } from "@/data/repositories/server/iAdminRepository";
+import { Material } from "@/domain/entities/database/material";
 
 export class GetAllMaterials {
     constructor(private repo = new IAdminServerRepository()) {
@@ -23,7 +23,7 @@ export class AddMaterial {
     constructor(private repo = new IAdminServerRepository()) {
     }
 
-    async execute(material: Material): Promise<void> {
+    async execute(material: Partial<Material>): Promise<void> {
         try {
             console.log("[AddMaterial] execute called with material:", material);
             console.log("[AddMaterial] Calling addMaterial.");
@@ -48,6 +48,20 @@ export class DeleteMaterial {
             console.log("[DeleteMaterial] deleteMaterial completed.");
         } catch (error) {
             console.error("[DeleteMaterial] Error in execute:", error);
+            throw error;
+        }
+    }
+}
+export class UpdateMaterial {
+    constructor(private repo = new IAdminServerRepository()) { }
+    async execute(material: Partial<Material>): Promise<void> {
+        try {
+            console.log("[UpdateMaterial] execute called with material:", material);
+            console.log("[UpdateMaterial] Calling updateMaterial.");
+            await this.repo.updateMaterial(material);
+            console.log("[UpdateMaterial] updateMaterial completed.");
+        } catch (error) {
+            console.error("[UpdateMaterial] Error in execute:", error);
             throw error;
         }
     }

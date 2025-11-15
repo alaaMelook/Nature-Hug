@@ -1,13 +1,12 @@
 'use client'
 
-import React, {useEffect, useState} from 'react'
+import React, {useState} from 'react'
 import {ChevronDown, ChevronUp, Star} from 'lucide-react' // Import icons for expansion
 import {useTranslation} from '@/ui/providers/TranslationProvider'
 import {toast} from 'sonner'
 import {ProductDetailView} from '@/domain/entities/views/shop/productDetailView'
 import Link from 'next/link'
 import {useSupabase} from "@/ui/hooks/useSupabase";
-import {Customer} from "@/domain/entities/auth/customer";
 import {postReview} from "@/ui/hooks/store/useAddReview";
 
 
@@ -19,15 +18,7 @@ export function AddReview({product}: { product: ProductDetailView }) {
     const [loading, setLoading] = useState(false)
     const [hoverRating, setHoverRating] = useState(0)
     const [isExpanded, setIsExpanded] = useState(false) // New state for expand/collapse
-    const {getUser} = useSupabase();
-    const [user, setUser] = useState<Customer | undefined>();
-
-    useEffect(() => {
-        getUser().then((result) => {
-                setUser(result);
-            }
-        )
-    }, []);
+    const {user} = useSupabase();
 
 
     async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {

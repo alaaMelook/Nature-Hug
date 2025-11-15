@@ -21,6 +21,7 @@ declare global {
         getCartNetTotal: () => number;
         getCartCount: () => number;
         totalDiscount: number;
+        loading: boolean;
     }
 
     type SupabaseAuthContextType = {
@@ -33,10 +34,14 @@ declare global {
         signUpWithEmail: (email: string, password: string, name?: string) => Promise<{ error?: string }>;
         signOut: () => Promise<void>;
     };
+    type StatCard = {
+        title: string;
+        value: string | number;
+        parValue: string | number;
+        icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+        change: number;
+    }
 
-    type FormEvent = React.FormEvent<HTMLFormElement>;
-    type InputChangeEvent = React.ChangeEvent<HTMLInputElement>;
-    type SelectChangeEvent = React.ChangeEvent<HTMLSelectElement>;
     type LangKey = 'en' | 'ar';
     type LangChangeListener = (lang: LangKey) => void;
     type MemberRole = 'admin' | 'moderator' | 'user';

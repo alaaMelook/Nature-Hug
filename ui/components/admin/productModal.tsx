@@ -1,689 +1,158 @@
 "use client";
+import React, { use, useEffect, useState } from "react";
+import { ProductAdminView, ProductVariantAdminView } from "@/domain/entities/views/admin/productAdminView";
+import { Material } from "@/domain/entities/database/material";
+import { Category } from "@/domain/entities/database/category";
+import { useUploadImage } from "@/ui/hooks/admin/useUploadImage";
+import { useAddProduct } from "@/ui/hooks/admin/useAddProduct";
+import { GetAllCategories } from "@/domain/use-case/shop/getAllCategories";
+import { useCategories } from "@/ui/hooks/admin/useCategories";
 
-import React, {useEffect, useRef, useState} from "react";
-import {AlertTriangle, Beaker, Calculator, Plus, Search, TrendingUp, Upload, X,} from "lucide-react";
-import {useProfitCalculator} from "@/ui/hooks/admin/useProfitCalculator";
-import {useMaterials} from "@/ui/hooks/admin/useMaterials";
-import {
-    ProductAdminView,
-    ProductMaterialAdminView,
-    ProductVariantAdminView
-} from "@/domain/entities/views/admin/productAdminView";
-import {useCategories} from "@/ui/hooks/store/useCategories";
-import {VariantItem} from './VariantItem';
-import {useUploadImage} from "@/ui/hooks/admin/useUploadImage";
-
-
-interface ProductModalProps {
+type Props = {
     onClose: () => void;
-    formData: Partial<ProductAdminView>;
-    setFormData: (data: Partial<ProductAdminView>) => void;
-    saveProduct: () => void;
-    saving: boolean;
-}
+    materials?: Material[];
+    initial?: Partial<ProductAdminView>;
+    onSaved?: (id: number) => void;
+};
 
-export function ProductModal({
-                                 onClose,
-                                 formData,
-                                 setFormData,
-                                 saveProduct,
-                                 saving,
-                             }: ProductModalProps) {
-    const {data: materials} = useMaterials();
-    const {totalCost, profit, profitMargin} = useProfitCalculator(formData, materials || []);
-    const {data: categories, isPending: isCategoriesPending, isError: isCategoriesError} = useCategories();
-    const [imageFile, setImageFile] = useState<File | null>(null);
-    const [uploading, setUploading] = useState(false);
-    const [loading, setLoading] = useState(false);
-    const [gallery, setGallery] = useState<File[]>([]);
-    const [materialSearch, setMaterialSearch] = useState("");
-    const [productMaterials, setProductMaterials] = useState<ProductMaterialAdminView[]>(formData.materials || []);
-    const [variants, setVariants] = useState<ProductVariantAdminView[]>(formData.variants || []);
-    const fileInputRef = useRef<HTMLInputElement>(null);
-    const uploadImage = useUploadImage();
+export function ProductModal({ onClose, materials = [], initial, onSaved }: Props) {
+    const [form, setForm] = useState<Partial<ProductAdminView>>(initial || {});
+    const [variants, setVariants] = useState<Partial<ProductVariantAdminView>[]>(initial?.variants || []);
+    const [saving, setSaving] = useState(false);
+    const [selectedCategoryId, setSelectedCategoryId] = useState<number | undefined>(initial?.category?.id || undefined);
+    const [categories, setCategories] = useState<Category[]>([]);
+
     useEffect(() => {
-        const syncToFormData = () => {
-            const mainSlug = generateSlug(formData.name_en || "");
-            const updatedData: Partial<ProductAdminView> = {
-                ...formData,
-                slug: mainSlug,
-                materials: productMaterials,
-                variants: variants,
-            };
-            setFormData(updatedData);
-        };
-
-        // Debounce the sync to avoid rapid updates
-        const timeoutId = setTimeout(syncToFormData, 100);
-        return () => clearTimeout(timeoutId);
-    }, [productMaterials, variants, formData.name_en]);
-
-    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, isGallery: boolean = false) => {
-        const files = e.target.files;
-        if (!files?.length) return;
-        setUploading(true);
-
-        if (isGallery) {
-            setGallery(prev => [...prev, ...files]);
-        } else {
-            const file = files[0];
-            setImageFile(file);
+        if (categories.length > 0) return;
+        async function loadCategories() {
+            const categories = await useCategories();
+            setCategories(categories);
         }
-        setUploading(false);
-    };
 
-    const handleVariantImageUpload = (variantId: number, e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = e.target.files;
-        if (!files?.length) return;
-        setUploading(true);
+        loadCategories();
 
+    }, []);
+
+    useEffect(() => {
+        if (initial?.category?.id) setSelectedCategoryId(initial.category.id);
+    }, [initial]);
+
+    const updateField = <K extends keyof ProductAdminView>(k: K, v: ProductAdminView[K]) => setForm(prev => ({ ...prev, [k]: v }));
+
+    const addVariant = () => setVariants(prev => ([...prev, { name_en: "", price: 0, stock: 0 }]));
+    const updateVariant = (i: number, patch: Partial<ProductVariantAdminView>) => setVariants(prev => prev.map((v, idx) => idx === i ? { ...v, ...patch } : v));
+    const removeVariant = (i: number) => setVariants(prev => prev.filter((_, idx) => idx !== i));
+
+    async function handleUploadFile(file?: File) {
+        if (!file) return '';
+        const url = await useUploadImage(file);
+        return url;
+
+    }
+
+    async function handleSave() {
+        setSaving(true);
         try {
-            const file = files[0];
-            uploadImage.mutate(file);
-            if (!uploadImage.data) return;
-            updateVariant(variantId, "image", uploadImage.data);
-        } catch (error) {
-            alert("Failed to upload image. Please try again.");
-        } finally {
-            setUploading(false);
-        }
-    };
-
-    const addMaterial = () => {
-        setProductMaterials(prev => [
-            ...prev,
-            {
-                id: Date.now(),
-                material_id: 0,
-                product_id: formData.id || 0,
-                grams_used: 0,
-                measurement_unit: 'gram',
-            },
-        ]);
-    };
-
-    const addVariant = () => {
-        setVariants(prev => [
-            ...prev,
-            {
-                id: Date.now(),
-                product_id: formData.id || 0,
-                name_en: '',
-                name_ar: '',
-                description_en: '',
-                description_ar: '',
-                price: 0,
-                stock: 0,
-                type: '',
-                discount: 0,
-                image: '',
-                gallery: [],
-                slug: '',
-                materials: [],
-            },
-        ]);
-    };
-
-    const generateSlug = (name: string) => {
-        return name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-    };
-
-    const checkSlugExists = (slug: string, currentId?: number) => {
-        return variants.some(v => v.slug === slug && v.id !== currentId);
-    };
-
-    const updateVariant = (id: number, field: string, value: any) => {
-        setVariants(prev =>
-            prev.map(v => {
-                if (v.id === id) {
-                    const updatedVariant = {...v, [field]: value};
-                    if (field === 'name_en' && value) {
-                        const newSlug = generateSlug(value);
-                        if (checkSlugExists(newSlug, id)) {
-                            alert('A variant with a similar name already exists. Please use a different name.');
-                            return v;
-                        }
-                        updatedVariant.slug = newSlug;
-                    }
-                    return updatedVariant;
-                }
-                return v;
-            })
-        );
-    };
-
-    const updateMaterial = (id: number, updates: Partial<ProductMaterialAdminView>) => {
-        setProductMaterials(prev =>
-            prev.map(m => (m.id === id ? {...m, ...updates} : m))
-        );
-    };
-
-    const handleSave = async () => {
-        try {
-            setLoading(true)
-            if (imageFile) {
-                uploadImage.mutate(imageFile);
-                if (!uploadImage.data) return;
-                setFormData({
-                    ...formData,
-                    image_url: uploadImage.data,
-                });
-            }
-            let galleryUrls: string[] = [];
-            if (gallery) {
-                gallery.map(img => {
-                    uploadImage.mutate(img);
-                    if (!uploadImage.data) return;
-                    galleryUrls?.push(uploadImage.data);
-                });
-                setFormData({...formData, gallery: galleryUrls});
-            }
-
-            const validMaterials = (formData.materials || []).filter(
-                m => m.material_id && m.grams_used > 0
-            );
-
-            setFormData({
-                ...formData,
-                materials: validMaterials,
-            });
-
-            saveProduct();
+            const payload: any = { ...form, variants };
+            if (selectedCategoryId) payload.category_id = selectedCategoryId;
+            const id = await useAddProduct(payload);
+            if (onSaved && id) onSaved(id as number);
             onClose();
-            setLoading(false)
-        } catch (error) {
-            console.error('Error saving product:', error);
-
-            alert('Failed to save product. Please try again.');
+        } catch (err) {
+            console.error(err);
         } finally {
-            setUploading(false);
-            setLoading(false)
+            setSaving(false);
         }
-    };
+    }
 
-    const renderMaterials = () =>
-        productMaterials.map((m) => (
-            <div
-                key={m.id}
-                className="flex items-center space-x-3 bg-white p-2 rounded border"
-            >
-                <select
-                    value={String(m.material_id ?? "")}
-                    onChange={(e) => {
-                        const materialId = Number(e.target.value);
-                        const selectedMaterial = materials?.find(mat => mat.id === materialId);
 
-                        const updates: Partial<ProductMaterialAdminView> = {material_id: materialId};
-                        if (selectedMaterial) updates.measurement_unit = selectedMaterial.unit || "gram";
-
-                        updateMaterial(m.id, updates);
-                    }}
-                >
-                    <option value="">Select Material</option>
-                    {materials?.map((mat) => (
-                        <option key={mat.id} value={String(mat.id)}>
-                            {mat.name} ({mat.price_per_gram} EGP/g)
-                        </option>
-                    ))}
-                </select>
-
-                <input
-                    type="number"
-                    placeholder="Grams"
-                    value={m.grams_used || ""}
-                    onChange={(e) => {
-                        const updates: Partial<ProductMaterialAdminView> = {grams_used: parseFloat(e.target.value) || 0};
-                        updateMaterial(m.id, updates);
-                    }}
-                    className="w-24 border border-gray-300 rounded-md text-sm px-2 py-1"
-                />
-                <button
-                    type="button"
-                    onClick={() => {
-                        setProductMaterials(prev =>
-                            prev.filter(material => material.id !== m.id)
-                        );
-                    }}
-                    className="p-1 text-red-500 hover:text-red-700 rounded-full hover:bg-red-50"
-                >
-                    <X className="h-4 w-4"/>
-                </button>
-            </div>
-        ));
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg w-full max-w-5xl shadow-xl relative max-h-[95vh] overflow-y-auto">
-                {/* Header */}
-                <div
-                    className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
-                    <h2 className="text-xl font-bold text-gray-900">
-                        {formData.id ? "Edit Product" : "Add Product"}
-                    </h2>
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="text-gray-400 hover:text-gray-600 transition-colors"
-                    >
-                        <X className="h-6 w-6"/>
-                    </button>
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
+            <div className="bg-white w-[900px] max-w-full p-6 rounded shadow-lg overflow-auto max-h-[90vh]">
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xl font-semibold">Add / Edit Product</h3>
+                    <button onClick={onClose} className="text-gray-500">Close</button>
                 </div>
 
-                {/* Content */}
-                <div className="p-6 grid grid-cols-1 xl:grid-cols-2 gap-6">
-                    {/* Left Column */}
-                    <div className="space-y-4">
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                            <h3 className="text-lg font-semibold mb-4 text-gray-800">
-                                Basic Information
-                            </h3>
+                <div className="grid grid-cols-2 gap-6">
+                    <div>
+                        <label className="block text-sm font-medium mb-1">Name (EN)</label>
+                        <input className="w-full border rounded p-2 text-sm" value={form.name_en || ''} onChange={(e) => updateField('name_en', e.target.value as any)} />
 
-                            {/* Names */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Name (English) *
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={formData.name_en || ""}
-                                        onChange={(e) =>
-                                            setFormData({...formData, name_en: e.target.value})
-                                        }
-                                        className="w-full border px-3 py-2 rounded-md text-sm"
-                                        required
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Name (Arabic)
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={formData.name_ar || ""}
-                                        onChange={(e) =>
-                                            setFormData({...formData, name_ar: e.target.value})
-                                        }
-                                        className="w-full border px-3 py-2 rounded-md text-sm"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Description */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-                                <textarea
-                                    placeholder="Description (EN)"
-                                    value={formData.description_en || ""}
-                                    onChange={(e) =>
-                                        setFormData({...formData, description_en: e.target.value})
-                                    }
-                                    className="w-full border px-3 py-2 rounded-md text-sm h-20 resize-none"
-                                />
-                                <textarea
-                                    placeholder="Description (AR)"
-                                    value={formData.description_ar || ""}
-                                    onChange={(e) =>
-                                        setFormData({...formData, description_ar: e.target.value})
-                                    }
-                                    className="w-full border px-3 py-2 rounded-md text-sm h-20 resize-none"
-                                />
-                            </div>
-
-                            {/* Price & Stock */}
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                                <input
-                                    type="number"
-                                    placeholder="Price"
-                                    value={formData.price || ""}
-                                    onChange={(e) =>
-                                        setFormData({...formData, price: parseFloat(e.target.value) || 0})
-                                    }
-                                    className="w-full border px-3 py-2 rounded-md text-sm"
-                                />
-                                <input
-                                    type="number"
-                                    placeholder="Stock"
-                                    value={formData.stock || ""}
-                                    onChange={(e) =>
-                                        setFormData({...formData, stock: parseInt(e.target.value) || 0})
-                                    }
-                                    className="w-full border px-3 py-2 rounded-md text-sm"
-                                />
-                                <input
-                                    type="number"
-                                    placeholder="Discount"
-                                    value={formData.discount || ""}
-                                    onChange={(e) =>
-                                        setFormData({...formData, discount: parseFloat(e.target.value) || 0})
-                                    }
-                                    className="w-full border px-3 py-2 rounded-md text-sm"
-                                />
-                                <input
-                                    placeholder="Slug"
-                                    value={formData.slug || ""}
-                                    onChange={(e) =>
-                                        setFormData({...formData, slug: e.target.value || ''})
-                                    }
-                                    className="w-full border px-3 py-2 rounded-md text-sm"
-                                />
-
-                            </div>
-
-                            {/* Category Select */}
-                            <select
-                                value={formData.category?.name_en ?? ""}
-                                onChange={(e) => {
-                                    const selectedCategory = categories?.find(c => c.name_en === e.target.value);
-                                    setFormData({
-                                        ...formData,
-                                        category: selectedCategory
-                                    });
-                                }}
-                                className="w-full border px-3 py-2 rounded-md text-sm mb-4"
-                            >
-                                <option value="">Select Category</option>
-                                {isCategoriesPending && <option disabled value="loading">Loading...</option>}
-                                {isCategoriesError && <option disabled value="error">Error loading categories</option>}
-                                {categories?.map((c) => (
-                                    <option key={c.id} value={c.name_en}>
-                                        {c.name_en}
-                                    </option>
-                                ))}
-                            </select>
-
-                            {/* Image Upload */}
-                            <div className="mb-4">
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Product Image
-                                </label>
-                                <div className="flex items-start space-x-4">
-                                    <div className="flex-shrink-0">
-                                        {imageFile ? (
-                                            <img
-                                                src={URL.createObjectURL(imageFile)}
-                                                alt="Preview"
-                                                className="h-20 w-20 object-cover rounded-lg border"
-                                            />
-                                        ) : formData.image_url ? (
-                                            <img
-                                                src={formData.image_url}
-                                                alt="Preview"
-                                                className="h-20 w-20 object-cover rounded-lg border"
-                                            />
-                                        ) : (
-                                            <div
-                                                className="h-20 w-20 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center">
-                                                <Upload className="h-6 w-6 text-gray-400"/>
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="flex-1">
-                                        <input
-                                            ref={fileInputRef}
-                                            type="file"
-                                            accept="image/*"
-                                            onChange={handleImageUpload}
-                                            className="hidden"
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => fileInputRef.current?.click()}
-                                            className="flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50"
-                                        >
-                                            <Upload className="h-4 w-4 mr-2"/> Choose Image
-                                        </button>
-                                        {uploading && (
-                                            <span className="text-xs text-gray-500 ml-2">
-                                                Uploading...
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Gallery Images */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Gallery Images
-                                </label>
-                                <div className="space-y-3">
-                                    <div className="flex flex-wrap gap-2">
-                                        {formData.gallery?.map((img, index) => (
-                                            <div key={index} className="relative">
-                                                <img
-                                                    src={img}
-                                                    alt={`Gallery ${index + 1}`}
-                                                    className="h-16 w-16 object-cover rounded-lg border"
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        const newGallery = formData.gallery?.filter((_, i) => i !== index);
-                                                        setFormData({...formData, gallery: newGallery});
-                                                    }}
-                                                    className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5"
-                                                >
-                                                    <X className="h-3 w-3"/>
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <div>
-                                        <input
-                                            type="file"
-                                            accept="image/*"
-                                            multiple
-                                            onChange={(e) => handleImageUpload(e, true)}
-                                            className="hidden"
-                                            id={`variant-gallery-${formData.slug}`}
-                                        />
-                                        <label
-                                            htmlFor={`gallery-${formData.slug}`}
-                                            className="cursor-pointer inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50"
-                                        >
-                                            <Upload className="h-4 w-4 mr-2"/> Add Gallery Images
-                                        </label>
-                                        {uploading && (
-                                            <span className="text-xs text-gray-500 ml-2">
-                                                Uploading...
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Materials Section */}
-                        <div className="bg-blue-50 p-4 rounded-lg">
-                            <h3 className="text-lg font-semibold mb-4 text-blue-800 flex items-center">
-                                <Beaker className="h-5 w-5 mr-2"/> Materials & Cost Analysis
-                            </h3>
-
-                            <div className="mb-3">
-                                <div className="flex justify-between items-center mb-3">
-                                    <label className="text-sm font-medium text-gray-700">
-                                        Materials Used
-                                    </label>
-                                    <button
-                                        type="button"
-                                        onClick={addMaterial}
-                                        className="flex items-center px-3 py-1.5 text-sm bg-green-600 text-white rounded-md hover:bg-green-700"
-                                    >
-                                        <Plus className="h-4 w-4 mr-1"/> Add
-                                    </button>
-                                </div>
-                                <div className="relative mb-2">
-                                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400"/>
-                                    <input
-                                        type="text"
-                                        placeholder="Search materials..."
-                                        value={materialSearch}
-                                        onChange={(e) => setMaterialSearch(e.target.value)}
-                                        className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-md text-sm"
-                                    />
-                                </div>
-                                <div className="space-y-2 max-h-64 overflow-y-auto">
-                                    {productMaterials.length > 0 ? (
-                                        renderMaterials()
-                                    ) : (
-                                        <div
-                                            className="text-center py-6 text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed">
-                                            <Beaker className="h-6 w-6 mx-auto mb-2 text-gray-400"/>
-                                            <p className="text-sm">No materials added yet</p>
-                                            <p className="text-xs text-gray-400">
-                                                Click "Add" to get started
-                                            </p>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
+                        <label className="block text-sm font-medium mt-3 mb-1">Description</label>
+                        <textarea className="w-full border rounded p-2 text-sm" rows={6} value={form.description_en || ''} onChange={(e) => updateField('description_en', e.target.value as any)} />
                     </div>
+                    <div>
+                        <label className="block text-sm font-medium mb-1">Price</label>
+                        <input className="w-full border rounded p-2 text-sm" type="number" value={form.price || 0} onChange={(e) => updateField('price', Number(e.target.value) as any)} />
 
-                    {/* Right Column */}
-                    <div className="space-y-4">
-                        {/* Variants Section */}
-                        <div className="bg-purple-50 p-4 rounded-lg mb-4">
-                            <div className="flex justify-between items-center mb-4">
-                                <h3 className="text-lg font-semibold text-purple-800 flex items-center">
-                                    <TrendingUp className="h-5 w-5 mr-2"/>
-                                    Product Variants
-                                </h3>
-                                <button
-                                    type="button"
-                                    onClick={addVariant}
-                                    className="flex items-center px-3 py-1.5 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700"
-                                >
-                                    <Plus className="h-4 w-4 mr-1"/>
-                                    Add Variant
-                                </button>
-                            </div>
+                        <label className="block text-sm font-medium mt-3 mb-1">Stock</label>
+                        <input className="w-full border rounded p-2 text-sm" type="number" value={form.stock || 0} onChange={(e) => updateField('stock', Number(e.target.value) as any)} />
 
-                            <div className="space-y-4 max-h-[calc(100vh-300px)] overflow-y-auto">
-                                {variants.length === 0 ? (
-                                    <div
-                                        className="text-center py-6 text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed">
-                                        <TrendingUp className="h-6 w-6 mx-auto mb-2 text-gray-400"/>
-                                        <p className="text-sm">No variants added yet</p>
-                                        <p className="text-xs text-gray-400">
-                                            Click "Add Variant" to get started
-                                        </p>
-                                    </div>
-                                ) : (
-                                    variants.map(variant => (
-                                        <VariantItem
-                                            key={variant.id}
-                                            variant={variant}
-                                            onUpdate={updateVariant}
-                                            onDelete={(id) => {
-                                                setVariants(prev =>
-                                                    prev.filter(v => v.id !== id)
-                                                );
-                                            }}
-                                            materials={materials || []}
-                                            uploading={uploading}
-                                            handleVariantImageUpload={handleVariantImageUpload}
-                                        />
-                                    ))
-                                )}
-                            </div>
-                        </div>
+                        <label className="block text-sm font-medium mt-3 mb-1">Category</label>
+                        <select className="w-full border rounded p-2 text-sm" value={selectedCategoryId || ''} onChange={(e) => setSelectedCategoryId(e.target.value ? Number(e.target.value) : undefined)}>
+                            <option value="">Select a category</option>
+                            {categories.map(c => (
+                                <option key={c.id} value={c.id}>{c.name_en}</option>
+                            ))}
+                        </select>
 
-                        {/* Cost Analysis Section */}
-                        <div className="bg-green-50 p-4 rounded-lg">
-                            <h3 className="text-lg font-semibold mb-4 text-green-800 flex items-center">
-                                <Calculator className="h-5 w-5 mr-2"/> Cost Analysis & Profit
-                            </h3>
-                            <div className="bg-white p-4 rounded-lg border space-y-3">
-                                <div className="text-center mb-2">
-                                    <h4 className="text-md font-semibold text-gray-800">
-                                        Cost Summary
-                                    </h4>
-                                </div>
-                                <div className="flex justify-between p-2 bg-gray-50 rounded-md">
-                                    <span className="font-medium text-gray-700 text-sm">
-                                        Material Cost:
-                                    </span>
-                                    <span className="text-red-600 font-bold">
-                                        {totalCost.toFixed(2)} EGP
-                                    </span>
-                                </div>
-                                <div className="flex justify-between p-2 bg-gray-50 rounded-md">
-                                    <span className="font-medium text-gray-700 text-sm">
-                                        Selling Price:
-                                    </span>
-                                    <span className="text-gray-900 font-bold">
-                                        {Number(formData.price || 0).toFixed(2)} EGP
-                                    </span>
-                                </div>
-                                <div className="border-t border-gray-200 pt-2">
-                                    <div
-                                        className={`flex justify-between items-center p-2 rounded-md mb-1 ${profit >= 0
-                                            ? "bg-green-50 text-green-700"
-                                            : "bg-red-50 text-red-700"
-                                        }`}
-                                    >
-                                        <span className="font-semibold text-sm">Net Profit:</span>
-                                        <span className="font-bold text-lg">
-                                            {profit.toFixed(2)} EGP
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between items-center p-1 bg-gray-100 rounded text-xs">
-                                        <span className="font-medium text-gray-600">
-                                            Profit Margin:
-                                        </span>
-                                        <span
-                                            className={`font-bold ${profitMargin >= 0
-                                                ? "text-green-600"
-                                                : "text-red-600"
-                                            }`}
-                                        >
-                                            {profitMargin.toFixed(1)}%
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {profit < 0 && (
-                                <div className="bg-red-50 border-l-4 border-red-400 p-2 mt-3 rounded-r-md">
-                                    <div className="flex items-center">
-                                        <AlertTriangle className="h-4 w-4 text-red-400 mr-1"/>
-                                        <div>
-                                            <p className="text-xs font-medium text-red-800">
-                                                Price Below Cost
-                                            </p>
-                                            <p className="text-xs text-red-600">
-                                                Increase by {Math.abs(profit).toFixed(2)} EGP
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
+                        <label className="block text-sm font-medium mt-3 mb-1">Main Image</label>
+                        <input className="w-full" type="file" accept="image/*" onChange={async (e) => {
+                            const f = e.target.files?.[0];
+                            if (!f) return;
+                            const url = await handleUploadFile(f);
+                            setForm(prev => ({ ...prev, image_url: url }));
+                        }} />
                     </div>
                 </div>
 
-                {/* Footer */}
-                <div
-                    className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex justify-end space-x-3 z-10">
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="px-4 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50"
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        type="button"
-                        onClick={handleSave}
-                        disabled={saving || loading || uploading}
-                        className="px-5 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 disabled:opacity-50"
-                    >
-                        {uploading ? 'Uploading...' : saving || loading ? "Saving..." : "Save Product"}
-                    </button>
+                <div className="mt-6">
+                    <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-semibold">Variants</h4>
+                        <button onClick={addVariant} className="text-sm px-2 py-1 bg-green-600 text-white rounded">Add Variant</button>
+                    </div>
+                    <div className="space-y-3">
+                        {variants.map((v, idx) => (
+                            <div key={idx} className="border rounded p-3">
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="text-sm font-medium">Variant {idx + 1}</div>
+                                    <div className="space-x-2">
+                                        <button onClick={() => removeVariant(idx)} className="text-red-600 text-sm">Remove</button>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2">
+                                    <input className="border p-2 text-sm" placeholder="Name (en)" value={v.name_en || ''} onChange={(e) => updateVariant(idx, { name_en: e.target.value } as any)} />
+                                    <input className="border p-2 text-sm" placeholder="Price" type="number" value={v.price || 0} onChange={(e) => updateVariant(idx, { price: Number(e.target.value) } as any)} />
+                                    <input className="border p-2 text-sm" placeholder="Stock" type="number" value={v.stock || 0} onChange={(e) => updateVariant(idx, { stock: Number(e.target.value) } as any)} />
+                                </div>
+                                <div className="mt-2">
+                                    <label className="block text-xs text-gray-600 mb-1">Variant Image</label>
+                                    <input type="file" accept="image/*" className="text-sm" onChange={async (e) => {
+                                        const f = e.target.files?.[0];
+                                        if (!f) return;
+                                        const url = await handleUploadFile(f);
+                                        updateVariant(idx, { image: url } as any);
+                                    }} />
+                                    {v.image ? (
+                                        <img src={v.image} alt={`variant-${idx}-img`} className="mt-2 w-24 h-24 object-cover rounded" />
+                                    ) : null}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="mt-6 flex justify-end space-x-2">
+                    <button onClick={onClose} className="px-4 py-2 border rounded">Cancel</button>
+                    <button onClick={handleSave} className="px-4 py-2 bg-blue-600 text-white rounded" disabled={saving}>{saving ? 'Saving...' : 'Save Product'}</button>
                 </div>
             </div>
         </div>
     );
 }
+
+export default ProductModal;
+
 

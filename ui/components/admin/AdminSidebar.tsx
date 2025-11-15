@@ -10,6 +10,7 @@ import {
   ShoppingCart,
   BarChart3,
   FileText,
+  Image,
   ChevronDown,
   Users2,
   Factory,
@@ -20,7 +21,6 @@ import {
   List,
   Tag,
   UserCheck,
-  ShipIcon,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -30,11 +30,12 @@ const navigation = [
   { name: "Materials", href: "/admin/materials", icon: BrickWall }, // dropdown
   { name: "Products", href: "/admin/products", icon: Package }, // dropdown
   { name: "Orders", href: "/admin/orders", icon: ShoppingCart }, // dropdown
-  { name: "Analytics", href: "/admin/analytics", icon: BarChart3 },
-  { name: "People", href: "/admin/people", icon: Users2 }, // dropdown
-  { name: "Finance", href: "/admin/finance", icon: DollarSign }, // ✅ dropdown جديد
-  { name: "Reports", href: "/admin/reports", icon: FileText },
-  { name: "Shipping", href: "/admin/shipping", icon: ShipIcon },
+  // { name: "Analytics", href: "/admin/analytics", icon: BarChart3 },
+  // { name: "People", href: "/admin/people", icon: Users2 }, // dropdown
+  // { name: "Finance", href: "/admin/finance", icon: DollarSign }, // ✅ dropdown جديد
+  // { name: "Reports", href: "/admin/reports", icon: FileText },
+  { name: "Shipping", href: "/admin/shipping", icon: Package },
+  { name: "Gallery", href: "/admin/gallery", icon: Image },
 
 ];
 
@@ -54,120 +55,120 @@ export default function AdminSidebar() {
           {navigation.map((item) => {
             const isActive = pathname === item.href;
 
-            // ✅ Materials Dropdown
-            if (item.name === "Materials") {
-              return (
-                <div key={item.name} className="mb-1">
-                  <button
-                    onClick={() => setOpenMaterials(!openMaterials)}
-                    className={`group flex items-center justify-between w-full px-3 py-2 text-sm font-medium rounded-md transition-colors ${pathname.startsWith("/admin/materials")
-                      ? "bg-primary-100 text-primary-700 border-r-2 border-primary-500"
-                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                      }`}
-                  >
-                    <span className="flex items-center">
-                      <item.icon
-                        className={`mr-3 h-5 w-5 ${pathname.startsWith("/admin/materials")
-                          ? "text-primary-500"
-                          : "text-gray-400 group-hover:text-gray-500"
-                          }`}
-                      />
-                      {item.name}
-                    </span>
-                    <ChevronDown
-                      className={`h-4 w-4 transition-transform ${openMaterials ? "rotate-180" : ""
-                        }`}
-                    />
-                  </button>
+            // // ✅ Materials Dropdown
+            // if (item.name === "Materials") {
+            //   return (
+            //     <div key={item.name} className="mb-1">
+            //       <button
+            //         onClick={() => setOpenMaterials(!openMaterials)}
+            //         className={`group flex items-center justify-between w-full px-3 py-2 text-sm font-medium rounded-md transition-colors ${pathname.startsWith("/admin/materials")
+            //           ? "bg-primary-100 text-primary-700 border-r-2 border-primary-500"
+            //           : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+            //           }`}
+            //       >
+            //         <span className="flex items-center">
+            //           <item.icon
+            //             className={`mr-3 h-5 w-5 ${pathname.startsWith("/admin/materials")
+            //               ? "text-primary-500"
+            //               : "text-gray-400 group-hover:text-gray-500"
+            //               }`}
+            //           />
+            //           {item.name}
+            //         </span>
+            //         <ChevronDown
+            //           className={`h-4 w-4 transition-transform ${openMaterials ? "rotate-180" : ""
+            //             }`}
+            //         />
+            //       </button>
 
-                  {openMaterials && (
-                    <div className="ml-8 mt-1 space-y-1">
-                      <Link
-                        href="/admin/materials"
-                        className={`flex items-center px-2 py-1 text-sm rounded-md ${pathname === "/admin/materials"
-                          ? "bg-primary-50 text-primary-700"
-                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                          }`}
-                      >
-                        <BrickWall className="h-4 w-4 mr-2" />
-                        Materials
-                      </Link>
-                      <Link
-                        href="/admin/materials/bom"
-                        className={`flex items-center px-2 py-1 text-sm rounded-md ${pathname === "/admin/materials/bom"
-                          ? "bg-primary-50 text-primary-700"
-                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                          }`}
-                      >
-                        <List className="h-4 w-4 mr-2" />
-                        BOM
-                      </Link>
-                      <Link
-                        href="/admin/materials/inventory"
-                        className={`flex items-center px-2 py-1 text-sm rounded-md ${pathname === "/admin/materials/inventory"
-                          ? "bg-primary-50 text-primary-700"
-                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                          }`}
-                      >
-                        <Package className="h-4 w-4 mr-2" />
-                        Inventory
-                      </Link>
-                      <Link
-                        href="/admin/materials/production"
-                        className={`flex items-center px-2 py-1 text-sm rounded-md ${pathname === "/admin/materials/production"
-                          ? "bg-primary-50 text-primary-700"
-                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                          }`}
-                      >
-                        <Factory className="h-4 w-4 mr-2" />
-                        Production
-                      </Link>
-                      <Link
-                        href="/admin/materials/movements"
-                        className={`flex items-center px-2 py-1 text-sm rounded-md ${pathname === "/admin/materials/movements"
-                          ? "bg-primary-50 text-primary-700"
-                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                          }`}
-                      >
-                        <Repeat className="h-4 w-4 mr-2" />
-                        Movements
-                      </Link>
-                      <Link
-                        href="/admin/materials/reports"
-                        className={`flex items-center px-2 py-1 text-sm rounded-md ${pathname === "/admin/materials/reports"
-                          ? "bg-primary-50 text-primary-700"
-                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                          }`}
-                      >
-                        <ClipboardList className="h-4 w-4 mr-2" />
-                        Reports
-                      </Link>
-                      <Link
-                        href="/admin/materials/suppliers"
-                        className={`flex items-center px-2 py-1 text-sm rounded-md ${pathname === "/admin/materials/suppliers"
-                          ? "bg-primary-50 text-primary-700"
-                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                          }`}
-                      >
-                        <Truck className="h-4 w-4 mr-2" />
-                        Suppliers
-                      </Link>
+            //       {openMaterials && (
+            //         <div className="ml-8 mt-1 space-y-1">
+            //           <Link
+            //             href="/admin/materials"
+            //             className={`flex items-center px-2 py-1 text-sm rounded-md ${pathname === "/admin/materials"
+            //               ? "bg-primary-50 text-primary-700"
+            //               : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+            //               }`}
+            //           >
+            //             <BrickWall className="h-4 w-4 mr-2" />
+            //             Materials
+            //           </Link>
+            //           <Link
+            //             href="/admin/materials/bom"
+            //             className={`flex items-center px-2 py-1 text-sm rounded-md ${pathname === "/admin/materials/bom"
+            //               ? "bg-primary-50 text-primary-700"
+            //               : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+            //               }`}
+            //           >
+            //             <List className="h-4 w-4 mr-2" />
+            //             BOM
+            //           </Link>
+            //           <Link
+            //             href="/admin/materials/inventory"
+            //             className={`flex items-center px-2 py-1 text-sm rounded-md ${pathname === "/admin/materials/inventory"
+            //               ? "bg-primary-50 text-primary-700"
+            //               : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+            //               }`}
+            //           >
+            //             <Package className="h-4 w-4 mr-2" />
+            //             Inventory
+            //           </Link>
+            //           <Link
+            //             href="/admin/materials/production"
+            //             className={`flex items-center px-2 py-1 text-sm rounded-md ${pathname === "/admin/materials/production"
+            //               ? "bg-primary-50 text-primary-700"
+            //               : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+            //               }`}
+            //           >
+            //             <Factory className="h-4 w-4 mr-2" />
+            //             Production
+            //           </Link>
+            //           <Link
+            //             href="/admin/materials/movements"
+            //             className={`flex items-center px-2 py-1 text-sm rounded-md ${pathname === "/admin/materials/movements"
+            //               ? "bg-primary-50 text-primary-700"
+            //               : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+            //               }`}
+            //           >
+            //             <Repeat className="h-4 w-4 mr-2" />
+            //             Movements
+            //           </Link>
+            //           <Link
+            //             href="/admin/materials/reports"
+            //             className={`flex items-center px-2 py-1 text-sm rounded-md ${pathname === "/admin/materials/reports"
+            //               ? "bg-primary-50 text-primary-700"
+            //               : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+            //               }`}
+            //           >
+            //             <ClipboardList className="h-4 w-4 mr-2" />
+            //             Reports
+            //           </Link>
+            //           <Link
+            //             href="/admin/materials/suppliers"
+            //             className={`flex items-center px-2 py-1 text-sm rounded-md ${pathname === "/admin/materials/suppliers"
+            //               ? "bg-primary-50 text-primary-700"
+            //               : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+            //               }`}
+            //           >
+            //             <Truck className="h-4 w-4 mr-2" />
+            //             Suppliers
+            //           </Link>
 
-                      <Link
-                        href="/admin/materials/missing-items"
-                        className={`flex items-center px-2 py-1 text-sm rounded-md ${pathname === "/admin/materials/missing-items"
-                          ? "bg-primary-50 text-primary-700"
-                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                          }`}
-                      >
-                        <DollarSign className="h-4 w-4 mr-2" />
-                        Missing-items
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              );
-            }
+            //           <Link
+            //             href="/admin/materials/missing-items"
+            //             className={`flex items-center px-2 py-1 text-sm rounded-md ${pathname === "/admin/materials/missing-items"
+            //               ? "bg-primary-50 text-primary-700"
+            //               : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+            //               }`}
+            //           >
+            //             <DollarSign className="h-4 w-4 mr-2" />
+            //             Missing-items
+            //           </Link>
+            //         </div>
+            //       )}
+            //     </div>
+            //   );
+            // }
 
             // ✅ Finance Dropdown
             if (item.name === "Finance") {
@@ -244,74 +245,74 @@ export default function AdminSidebar() {
             }
 
             // ✅ Orders Dropdown
-            if (item.name === "Orders") {
-              return (
-                <div key={item.name} className="mb-1">
-                  <button
-                    onClick={() => setOpenOrders(!openOrders)}
-                    className={`group flex items-center justify-between w-full px-3 py-2 text-sm font-medium rounded-md transition-colors ${pathname.startsWith("/admin/orders")
-                      ? "bg-primary-100 text-primary-700 border-r-2 border-primary-500"
-                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                      }`}
-                  >
-                    <span className="flex items-center">
-                      <item.icon
-                        className={`mr-3 h-5 w-5 ${pathname.startsWith("/admin/orders")
-                          ? "text-primary-500"
-                          : "text-gray-400 group-hover:text-gray-500"
-                          }`}
-                      />
-                      {item.name}
-                    </span>
-                    <ChevronDown
-                      className={`h-4 w-4 transition-transform ${openOrders ? "rotate-180" : ""
-                        }`}
-                    />
-                  </button>
+            // if (item.name === "Orders") {
+            //   return (
+            //     <div key={item.name} className="mb-1">
+            //       <button
+            //         onClick={() => setOpenOrders(!openOrders)}
+            //         className={`group flex items-center justify-between w-full px-3 py-2 text-sm font-medium rounded-md transition-colors ${pathname.startsWith("/admin/orders")
+            //           ? "bg-primary-100 text-primary-700 border-r-2 border-primary-500"
+            //           : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+            //           }`}
+            //       >
+            //         <span className="flex items-center">
+            //           <item.icon
+            //             className={`mr-3 h-5 w-5 ${pathname.startsWith("/admin/orders")
+            //               ? "text-primary-500"
+            //               : "text-gray-400 group-hover:text-gray-500"
+            //               }`}
+            //           />
+            //           {item.name}
+            //         </span>
+            //         <ChevronDown
+            //           className={`h-4 w-4 transition-transform ${openOrders ? "rotate-180" : ""
+            //             }`}
+            //         />
+            //       </button>
 
-                  {openOrders && (
-                    <div className="ml-8 mt-1 space-y-1">
-                      <Link
-                        href="/admin/orders"
-                        className={`block px-2 py-1 text-sm rounded-md ${pathname === "/admin/orders"
-                          ? "bg-primary-50 text-primary-700"
-                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                          }`}
-                      >
-                        All Orders
-                      </Link>
-                      <Link
-                        href="/admin/orders/missed"
-                        className={`block px-2 py-1 text-sm rounded-md ${pathname === "/admin/orders/missed"
-                          ? "bg-primary-50 text-primary-700"
-                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                          }`}
-                      >
-                        Missed Orders
-                      </Link>
-                      <Link
-                        href="/admin/orders/blocked"
-                        className={`block px-2 py-1 text-sm rounded-md ${pathname === "/admin/orders/blocked"
-                          ? "bg-primary-50 text-primary-700"
-                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                          }`}
-                      >
-                        Blocked Numbers
-                      </Link>
-                      <Link
-                        href="/admin/orders/blocked-otp"
-                        className={`block px-2 py-1 text-sm rounded-md ${pathname === "/admin/orders/blocked-otp"
-                          ? "bg-primary-50 text-primary-700"
-                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                          }`}
-                      >
-                        Blocked OTP Numbers
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              );
-            }
+            //       {openOrders && (
+            //         <div className="ml-8 mt-1 space-y-1">
+            //           <Link
+            //             href="/admin/orders"
+            //             className={`block px-2 py-1 text-sm rounded-md ${pathname === "/admin/orders"
+            //               ? "bg-primary-50 text-primary-700"
+            //               : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+            //               }`}
+            //           >
+            //             All Orders
+            //           </Link>
+            //           <Link
+            //             href="/admin/orders/missed"
+            //             className={`block px-2 py-1 text-sm rounded-md ${pathname === "/admin/orders/missed"
+            //               ? "bg-primary-50 text-primary-700"
+            //               : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+            //               }`}
+            //           >
+            //             Missed Orders
+            //           </Link>
+            //           <Link
+            //             href="/admin/orders/blocked"
+            //             className={`block px-2 py-1 text-sm rounded-md ${pathname === "/admin/orders/blocked"
+            //               ? "bg-primary-50 text-primary-700"
+            //               : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+            //               }`}
+            //           >
+            //             Blocked Numbers
+            //           </Link>
+            //           <Link
+            //             href="/admin/orders/blocked-otp"
+            //             className={`block px-2 py-1 text-sm rounded-md ${pathname === "/admin/orders/blocked-otp"
+            //               ? "bg-primary-50 text-primary-700"
+            //               : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+            //               }`}
+            //           >
+            //             Blocked OTP Numbers
+            //           </Link>
+            //         </div>
+            //       )}
+            //     </div>
+            //   );
+            // }
 
             // ✅ Products Dropdown
             if (item.name === "Products") {
@@ -435,46 +436,46 @@ export default function AdminSidebar() {
               );
             }
 
-            if (item.name === "Shipping") {
-              return (
-                <div key={item.name} className="mb-1">
-                  <button
-                    onClick={() => setOpenShipmentDashboard(!openShipmentDashboard)}
-                    className={`group flex items-center justify-between w-full px-3 py-2 text-sm font-medium rounded-md transition-colors ${pathname.startsWith("/admin/shipping")
-                      ? "bg-primary-100 text-primary-700 border-r-2 border-primary-500"
-                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                      }`}
-                  >
-                    <span className="flex items-center">
-                      <item.icon
-                        className={`mr-3 h-5 w-5 ${pathname.startsWith("/admin/shipping")
-                          ? "text-primary-500"
-                          : "text-gray-400 group-hover:text-gray-500"
-                          }`}
-                      />
-                      {item.name}
-                    </span>
-                    <ChevronDown
-                      className={`h-4 w-4 transition-transform ${openShipmentDashboard ? "rotate-180" : ""
-                        }`}
-                    />
-                  </button>
-                  {openShipmentDashboard && (
-                    <div className="ml-8 mt-1 space-y-1">
-                      <Link
-                        href="/admin/shipping/dashboard"
-                        className={`block px-2 py-1 text-sm rounded-md ${pathname === "/admin/shipping/dashboard"
-                          ? "bg-primary-50 text-primary-700"
-                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                          }`}
-                      >
-                        Dashboard
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              );
-            }
+            // if (item.name === "Shipping") {
+            //   return (
+            //     <div key={item.name} className="mb-1">
+            //       <button
+            //         onClick={() => setOpenShipmentDashboard(!openShipmentDashboard)}
+            //         className={`group flex items-center justify-between w-full px-3 py-2 text-sm font-medium rounded-md transition-colors ${pathname.startsWith("/admin/shipping")
+            //           ? "bg-primary-100 text-primary-700 border-r-2 border-primary-500"
+            //           : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+            //           }`}
+            //       >
+            //         <span className="flex items-center">
+            //           <item.icon
+            //             className={`mr-3 h-5 w-5 ${pathname.startsWith("/admin/shipping")
+            //               ? "text-primary-500"
+            //               : "text-gray-400 group-hover:text-gray-500"
+            //               }`}
+            //           />
+            //           {item.name}
+            //         </span>
+            //         <ChevronDown
+            //           className={`h-4 w-4 transition-transform ${openShipmentDashboard ? "rotate-180" : ""
+            //             }`}
+            //         />
+            //       </button>
+            //       {openShipmentDashboard && (
+            //         <div className="ml-8 mt-1 space-y-1">
+            //           <Link
+            //             href="/admin/shipping/dashboard"
+            //             className={`block px-2 py-1 text-sm rounded-md ${pathname === "/admin/shipping/dashboard"
+            //               ? "bg-primary-50 text-primary-700"
+            //               : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+            //               }`}
+            //           >
+            //             Dashboard
+            //           </Link>
+            //         </div>
+            //       )}
+            //     </div>
+            //   );
+            // }
             return (
               <Link
                 key={item.name}

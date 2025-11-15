@@ -1,4 +1,4 @@
-import {Governorate} from "@/domain/entities/database/governorate";
+import { Governorate } from "@/domain/entities/database/governorate";
 
 export interface ProfileView {
     id: number;
@@ -7,6 +7,7 @@ export interface ProfileView {
     email: string;
     address?: ViewAddress[];
     created_at: string;
+    role: string | null;
 
 }
 

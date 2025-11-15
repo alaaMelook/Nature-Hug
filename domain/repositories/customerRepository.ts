@@ -32,6 +32,6 @@ export interface CustomerRepository {
 
     viewOrder(OrderId: number, customerId: number): Promise<OrderSummaryView>; // Should move to a new OrderRepository
     viewAllOrders(customerId: number): Promise<OrderSummaryView[]>; // Should move to a new OrderRepository
-    createOrder(orderData: Partial<Order>): Promise<number>;
+    createOrder(orderData: Partial<Order>): Promise<{ order_id: number, customer_id: number }>;
 }
 

@@ -3,12 +3,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/data/datasources/supabase/client";
 import { Plus, Trash2 } from "lucide-react";
-
-type Category = {
-  id: number;
-  name_english: string;
-  name_arabic: string | null;
-};
+import { Category } from "@/domain/entities/database/category";
 
 export default function CategoriesPage() {
 
@@ -93,9 +88,9 @@ export default function CategoriesPage() {
               className="flex items-center justify-between px-4 py-2"
             >
               <div>
-                <p className="font-medium">{c.name_english}</p>
-                {c.name_arabic && (
-                  <p className="text-sm text-gray-500">{c.name_arabic}</p>
+                <p className="font-medium">{c.name_en}</p>
+                {c.name_ar && (
+                  <p className="text-sm text-gray-500">{c.name_ar}</p>
                 )}
               </div>
               <button

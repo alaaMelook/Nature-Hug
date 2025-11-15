@@ -5,32 +5,22 @@ import { useRouter } from "next/navigation";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
 import { Plus, Edit, Trash2, Upload, Download, Layers } from "lucide-react";
 import * as XLSX from "xlsx";
-import type { Material, Unit, Supplier, Product, MaterialFormData } from "./types";
+import { Material, Unit } from "@/domain/entities/database/material";
+import { units } from "@/lib/utils/units";
+import { deleteMaterial, insertMaterials, updateMaterial } from "@/ui/hooks/admin/useMaterials";
+import { toast } from "sonner";
 
-export default function MaterialsTable({
+export function MaterialsTable({
   initialMaterials,
-  units,
-  suppliers,
-  products,
+
 }: {
   initialMaterials: Material[];
-  units: Unit[];
-  suppliers: Supplier[];
-  products: Product[];
+
 }) {
-  const [materials] = useState<Material[]>(initialMaterials || []);
+  const [materials, setMaterials] = useState<Material[]>(initialMaterials || []);
   const [showModal, setShowModal] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
-  const [formData, setFormData] = useState<MaterialFormData>({
-    name: "",
-    price_per_gram: "",
-    stock_grams: "",
-    supplier_id: "",
-    unit_id: "",
-    low_stock_threshold: "",
-    material_type: "normal",
-    products: [],
-  });
+  const [formData, setFormData] = useState<Partial<Material>>({});
 
   const router = useRouter();
 
@@ -40,31 +30,13 @@ export default function MaterialsTable({
   const openAddModal = () => {
     setEditingMaterial(null);
     setFormData({
-      name: "",
-      price_per_gram: "",
-      stock_grams: "",
-      supplier_id: "",
-      unit_id: "",
-      low_stock_threshold: "",
-      material_type: "normal",
-      products: [],
     });
     setShowModal(true);
   };
 
   const openEditModal = (material: Material) => {
     setEditingMaterial(material);
-    setFormData({
-      name: material.name,
-      price_per_gram: String(material.price_per_gram),
-      stock_grams: String(material.stock_grams),
-      supplier_id: material.supplier_id?.toString() || "",
-      unit_id: material.unit_id?.toString() || "",
-      low_stock_threshold: material.low_stock_threshold?.toString() || "",
-      material_type:
-        (material.material_type as MaterialFormData["material_type"]) || "normal",
-      products: material.products?.map((p: any) => p.product?.id || p.id) || [],
-    });
+    setFormData(material);
     setShowModal(true);
   };
 
@@ -72,46 +44,29 @@ export default function MaterialsTable({
    * 💾 Save Material
    * ─────────────────────────────── */
   const handleSave = async () => {
-    try {
-      const materialData = {
-        name: formData.name,
-        price_per_gram: Number(formData.price_per_gram || 0),
-        stock_grams: Number(formData.stock_grams || 0),
-        supplier_id: formData.supplier_id ? Number(formData.supplier_id) : null,
-        unit_id: formData.unit_id ? Number(formData.unit_id) : null,
-        low_stock_threshold: formData.low_stock_threshold
-          ? Number(formData.low_stock_threshold)
-          : null,
-        material_type: formData.material_type,
-        products: formData.products,
-      };
+    if (editingMaterial) {
+      try {
+        // Update existing material
+        const res = await updateMaterial(formData);
+        if (res.error) {
+          toast.error("Update failed: " + res.error);
+          return;
+        }
+        toast.success("Update successful");
+        setMaterials((prev) =>
+          prev.map((m) =>
+            m.id === editingMaterial.id ? { ...m, ...formData } as Material : m
+          )
+        );
 
-      let res: Response;
-      if (editingMaterial) {
-        res = await fetch("/api/admin/materials", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: editingMaterial.id, ...materialData }),
-        });
-      } else {
-        res = await fetch("/api/admin/materials", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(materialData),
-        });
+        setEditingMaterial(null);
+        setFormData({});
+        setShowModal(false);
+
+      } catch (err) {
+        console.error("handleSave error:", err);
+        alert("Save failed");
       }
-
-      if (!res.ok) {
-        const err = await res.json();
-        alert(err.error || "Save failed");
-        return;
-      }
-
-      setShowModal(false);
-      router.refresh();
-    } catch (err) {
-      console.error("handleSave error:", err);
-      alert("Save failed");
     }
   };
 
@@ -121,16 +76,8 @@ export default function MaterialsTable({
   const handleDelete = async (id: number) => {
     if (!confirm("Are you sure you want to delete this material?")) return;
     try {
-      const res = await fetch("/api/admin/materials", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id }),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        alert(err.error || "Delete failed");
-        return;
-      }
+      await deleteMaterial(id);
+      alert("Delete successful");
       router.refresh();
     } catch (err) {
       console.error("handleDelete error:", err);
@@ -147,10 +94,10 @@ export default function MaterialsTable({
       price_per_gram: m.price_per_gram,
       stock_grams: m.stock_grams,
       supplier_id: m.supplier_id,
-      unit_id: m.unit_id,
+      unit_id: m.unit,
       low_stock_threshold: m.low_stock_threshold,
       material_type: m.material_type || "normal",
-      products: m.products?.map((p) => p.product.id).join(",") || "",
+
     }));
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
@@ -171,34 +118,21 @@ export default function MaterialsTable({
       const sheet = workbook.Sheets[sheetName];
       const rows: any[] = XLSX.utils.sheet_to_json(sheet);
 
-      const formatted = rows.map((r) => ({
+      const formatted: Partial<Material>[] = rows.map((r) => ({
         name: r.name,
         price_per_gram: Number(r.price_per_gram || 0),
         stock_grams: Number(r.stock_grams || 0),
-        supplier_id: r.supplier_id ? Number(r.supplier_id) : null,
-        unit_id: r.unit_id ? Number(r.unit_id) : null,
+        supplier_id: Number(r.supplier_id) || null,
+        unit: r.unit as Unit || null,
         low_stock_threshold: r.low_stock_threshold
           ? Number(r.low_stock_threshold)
           : null,
-        material_type: (r.material_type as MaterialFormData["material_type"]) || "normal",
-        products: r.products
-          ? String(r.products)
-              .split(",")
-              .map((id) => Number(id))
-          : [],
+        material_type: r.material_type || "normal",
+
       }));
 
-      const res = await fetch("/api/admin/materials", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formatted),
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        alert(err.error || "Import failed");
-        return;
-      }
+      await insertMaterials(formatted);
+      alert("Import successful");
       router.refresh();
     } catch (err) {
       console.error("handleImport error:", err);
@@ -217,20 +151,7 @@ export default function MaterialsTable({
       field: "unit",
       headerName: "Unit",
       flex: 1,
-      renderCell: (params) => params.row.unit?.name || "-",
-    },
-    {
-      field: "supplier",
-      headerName: "Supplier",
-      flex: 1,
-      renderCell: (params) => params.row.supplier?.name || "-",
-    },
-    {
-      field: "products",
-      headerName: "Products",
-      flex: 1.5,
-      renderCell: (params) =>
-        params.row.products?.map((p: any) => p.product?.name_english || p.product?.name_arabic).join(", ") || "-",
+      renderCell: (params) => params.row.unit || "-",
     },
     { field: "price_per_gram", headerName: "Price/g", flex: 1 },
     { field: "stock_grams", headerName: "Stock", flex: 1 },
@@ -285,19 +206,19 @@ export default function MaterialsTable({
   return (
     <div style={{ height: 700, width: "100%" }}>
       <div className="flex flex-wrap gap-2 mb-4">
-        <button
+        {/* <button
           onClick={openAddModal}
           className="px-3 py-2 bg-amber-700 text-white rounded flex items-center gap-1"
         >
           <Plus className="h-4 w-4" /> Add Material
-        </button>
+        </button> */}
 
-        <button
+        {/* <button
           onClick={() => router.push("/admin/materials/units")}
           className="px-3 py-2 bg-gray-600 text-white rounded flex items-center gap-1"
         >
           <Layers className="h-4 w-4" /> Manage Units
-        </button>
+        </button> */}
 
         <button
           onClick={handleExport}
@@ -340,6 +261,9 @@ export default function MaterialsTable({
 
             <div className="space-y-3">
               {/* Name */}
+              <label className="block text-sm font-medium mb-1">
+                Material Name
+              </label>
               <input
                 type="text"
                 placeholder="Material Name"
@@ -351,74 +275,89 @@ export default function MaterialsTable({
               />
 
               {/* Price */}
+              <label className="block text-sm font-medium mb-1">
+                Price per gram
+              </label>
               <input
                 type="number"
                 placeholder="Price per gram"
                 className="border w-full p-2 rounded"
                 value={formData.price_per_gram}
                 onChange={(e) =>
-                  setFormData({ ...formData, price_per_gram: e.target.value })
+                  setFormData({ ...formData, price_per_gram: Number(e.target.value) })
                 }
               />
 
               {/* Stock */}
+              <label className="block text-sm font-medium mb-1">
+                Stock (grams)
+              </label>
               <input
                 type="number"
                 placeholder="Stock in grams"
                 className="border w-full p-2 rounded"
                 value={formData.stock_grams}
                 onChange={(e) =>
-                  setFormData({ ...formData, stock_grams: e.target.value })
+                  setFormData({ ...formData, stock_grams: Number(e.target.value) })
                 }
               />
 
               {/* Unit */}
+              <label className="block text-sm font-medium mb-1">
+                Unit
+              </label>
               <select
                 className="border w-full p-2 rounded"
-                value={formData.unit_id}
+                value={formData.unit ?? ''}
                 onChange={(e) =>
-                  setFormData({ ...formData, unit_id: e.target.value })
+                  setFormData({ ...formData, unit: e.target.value as Unit })
                 }
               >
                 <option value="">Select Unit</option>
                 {units.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name}
+                  <option key={u} value={u}>
+                    {u}
                   </option>
                 ))}
               </select>
 
-              {/* Supplier */}
+              {/* Supplier
               <select
                 className="border w-full p-2 rounded"
-                value={formData.supplier_id}
+                value={formData.supplier_id ?? ''}
                 onChange={(e) =>
-                  setFormData({ ...formData, supplier_id: e.target.value })
+                  setFormData({ ...formData, supplier_id: Number(e.target.value) })
                 }
               >
                 <option value="">Select Supplier</option>
-                {suppliers.map((s) => (
+                 {suppliers.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
                   </option>
-                ))}
-              </select>
+                ))} 
+              </select> */}
 
               {/* Low stock */}
+              <label className="block text-sm font-medium mb-1">
+                Low Stock Threshold
+              </label>
               <input
                 type="number"
                 placeholder="Low Stock Threshold"
                 className="border w-full p-2 rounded"
-                value={formData.low_stock_threshold}
+                value={formData.low_stock_threshold ?? 0}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    low_stock_threshold: e.target.value,
+                    low_stock_threshold: Number(e.target.value),
                   })
                 }
               />
 
               {/* Material Type */}
+              <label className="block text-sm font-medium mb-1">
+                Material Type
+              </label>
               <select
                 className="border w-full p-2 rounded"
                 value={formData.material_type}
@@ -437,7 +376,7 @@ export default function MaterialsTable({
                 <option value="other">Other</option>
               </select>
 
-              {/* ✅ Products Checkboxes */}
+              {/* ✅ Products Checkboxes
               <div>
                 <label className="block text-sm font-medium mb-1">
                   Select Products
@@ -454,8 +393,8 @@ export default function MaterialsTable({
                             const updated = e.target.checked
                               ? [...formData.products, Number(p.id)]
                               : formData.products.filter(
-                                  (id) => id !== Number(p.id)
-                                );
+                                (id) => id !== Number(p.id)
+                              );
                             setFormData({ ...formData, products: updated });
                           }}
                         />
@@ -464,7 +403,7 @@ export default function MaterialsTable({
                     );
                   })}
                 </div>
-              </div>
+              </div> */}
             </div>
 
             {/* Buttons */}

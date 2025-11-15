@@ -17,9 +17,9 @@
 //   constraint materials_stock_grams_check check ((stock_grams >= (0)::numeric))
 // ) TABLESPACE pg_default;
 
-// create index IF not exists idx_materials_name on admin.materials using btree (name) TABLESPACE pg_default;
+export type Unit = 'gm' | 'ml';
 
-
+// Supplier
 export interface Material {
     id: number;
     name: string;
@@ -29,9 +29,8 @@ export interface Material {
     updated_at: string;
     sku?: string;
     barcode?: string;
-    supplier_id?: number;
-    low_stock_threshold?: number;
+    supplier_id?: number | null;
+    low_stock_threshold: number | null;
     material_type?: string;
-    unit: 'gm' | 'ml';
-
+    unit: Unit | null;
 }

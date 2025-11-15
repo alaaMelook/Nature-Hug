@@ -5,12 +5,12 @@ export class CreateOrder {
     constructor(private repo = new ICustomerServerRepository()) {
     }
 
-    async execute(order: Partial<Order>): Promise<number> {
+    async execute(order: Partial<Order>): Promise<{ order_id: number, customer_id: number }> {
         try {
             console.log("[CreateOrder] execute called with order:", order);
-            const id = await this.repo.createOrder(order);
+            const data = await this.repo.createOrder(order);
             console.log("[CreateOrder] createOrder completed.");
-            return id;
+            return data;
         } catch (error) {
             console.error("[CreateOrder] Error in execute:", error);
             throw error;

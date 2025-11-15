@@ -28,6 +28,7 @@ export default function CartPage() {
                 <button
                     className="flex items-center space-x-2 px-8 py-4 hover:bg-primary-50 hover:text-primary-700 transition-colors cursor-pointer bg-primary-800 text-primary-50 font-semibold rounded-full shadow-lg duration-300"
                     onClick={() => {
+                        router.push("/products");
                     }}
                 >
                     <ArrowRightIcon className="h-5 w-5"/>

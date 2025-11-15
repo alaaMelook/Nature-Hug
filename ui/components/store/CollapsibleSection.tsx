@@ -24,7 +24,7 @@ export const CollapsibleSection = ({
     const { t } = useTranslation();
 
     return (
-        <div className="border-b border-gray-200 last:border-b-0 font-semibold text-primary-800 uppercase text-sm tracking-widest">
+        <div className="border-b border-gray-200 last:border-b-0  text-primary-800 tracking-widest">
             <button
                 className="flex justify-between items-center w-full py-4 text-left font-semibold text-sm text-primary-800 hover:bg-primary-50 transition duration-150"
                 onClick={() => onToggleAction(id)}
@@ -54,7 +54,7 @@ export const CollapsibleSection = ({
                 aria-hidden={!isOpen}
             >
                 <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                    {typeof content === 'string' ? <p>{t(content)}</p> : content}
+                    {typeof content === 'string' ? <p>{t(content)}</p> : isOpen && content}
                 </div>
             </div>
         </div>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CopilotDiffPersistence">
+    <option name="pendingDiffs">
+      <map>
+        <entry key="$PROJECT_DIR$/app/api/admin/orders/update/route.ts">
+          <value>
+            <PendingDiffInfo>
+              <option name="filePath" value="$PROJECT_DIR$/app/api/admin/orders/update/route.ts" />
+              <option name="originalContent" value="&#10;" />
+              <option name="updatedContent" value="import {NextResponse} from 'next/server'&#10;import { updateOrder } from '@/ui/hooks/store/useUpdateOrderActions'&#10;&#10;export async function POST(req: Request) {&#10;    try {&#10;        const body = await req.json()&#10;        // basic validation&#10;        if (!body || typeof body.order_id === 'undefined' || typeof body.order_status === 'undefined') {&#10;            return NextResponse.json({error: 'Invalid payload'}, {status: 400})&#10;        }&#10;&#10;        const result = await updateOrder(body)&#10;&#10;        if (result?.error) {&#10;            return NextResponse.json({error: result.error}, {status: 500})&#10;        }&#10;&#10;        return NextResponse.json({ok: true})&#10;    } catch (err: any) {&#10;        console.error('[api/admin/orders/update] Error:', err)&#10;        return NextResponse.json({error: err?.message ?? 'Internal error'}, {status: 500})&#10;    }&#10;}" />
+            </PendingDiffInfo>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+</project>

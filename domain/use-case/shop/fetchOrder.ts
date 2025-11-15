@@ -6,11 +6,17 @@ export class FetchOrder {
     constructor(private repo = new ICustomerServerRepository()) {
     }
 
-    async execute(orderId: number): Promise<OrderSummaryView | null> {
-        const user = await new GetCurrentUser().execute();
-        if (!user) {
-            throw new Error("User not authenticated");
+    async execute(orderId: number, customerId: number | null): Promise<OrderSummaryView | null> {
+        let userId = customerId;
+        if (!userId) {
+            const user = await new GetCurrentUser().execute();
+            if (!user) {
+                throw new Error("User not authenticated");
+            }
+            userId = user.id;
         }
-        return this.repo.viewOrder(orderId, user.id);
+
+        return this.repo.viewOrder(orderId, userId);
+
     }
 }

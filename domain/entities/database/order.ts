@@ -4,8 +4,8 @@ import {CustomerAddress} from "@/domain/entities/auth/customer";
 export type OrderStatus = 'pending' | 'processing' | 'completed' | 'cancelled' | 'refunded' | 'failed';
 
 export interface Order {
+    // Common
     id: number;
-    customer_id: number | null;
     status: OrderStatus;
     note: string | null;
     updated_at?: string;
@@ -18,11 +18,16 @@ export interface Order {
     promo_code_id?: number;
     payment_method?: string;
     payment_status?: string;
-    shipping_address_id?: number | null;
     items: Partial<OrderItem>[];
+
+    // For Users
+    shipping_address_id?: number | null;
+    customer_id: number | null;
+
+    // For Guests
     guest_name: string;
     guest_email: string;
     guest_phone: string;
     guest_phone2: string | null;
-    guest_address: Partial<CustomerAddress>;
+    guest_address: Partial<CustomerAddress>; // -> can be for users adding new address in checkout
 }

@@ -1,7 +1,6 @@
 'use client';
 
 import {Governorate} from "@/domain/entities/database/governorate";
-import {ProfileView} from "@/domain/entities/views/shop/profileView";
 import Link from "next/link";
 import {useEffect, useState} from "react";
 import {CheckoutCart} from "@/ui/components/store/CheckoutCart";
@@ -10,20 +9,36 @@ import {useCart} from "@/ui/providers/CartProvider";
 import {toast} from "sonner";
 import {useForm} from "react-hook-form";
 import {createOrder} from "@/ui/hooks/store/useCreateOrderActions";
+import {useRouter} from "next/navigation";
+import {Loader2} from "lucide-react";
+
 
 type FormValues = Partial<Order> & {
     termsAccepted?: boolean;
 };
 
-export function CheckoutGuestScreen({governorates, user}: { governorates: Governorate[], user: ProfileView | null }) {
-    const [selectedGovernorate, setSelectedGovernorate] = useState<Governorate | null>(user?.address?.[0]?.governorate || null);
-    const {cart, getCartNetTotal, getCartTotal, clearCart} = useCart();
+export function CheckoutGuestScreen({governorates}: { governorates: Governorate[] }) {
+    const [selectedGovernorate, setSelectedGovernorate] = useState<Governorate | null>(null);
+    const {cart, loading: fetching, getCartNetTotal, getCartTotal, clearCart, totalDiscount} = useCart();
+    const [loading, setLoading] = useState(false);
     const [selectedPayment, setSelectedPayment] = useState<'cod' | 'paymob'>('cod');
-    const {register, handleSubmit, formState: {errors}, setValue, setError, reset} = useForm<FormValues>({
+    const {register, handleSubmit, formState: {errors}, setValue, setError} = useForm<FormValues>({
         defaultValues: {
             guest_address: {}
         }
     });
+    const router = useRouter();
+
+
+    console.log('cart length ,' + cart.length)
+    useEffect(() => {
+        if (!fetching && cart.length === 0) {
+            // Only redirect if not currently submitting an order
+            if (!loading) {
+                router.push('/'); // ✅ safe here
+            }
+        }
+    }, [cart, router, fetching, loading]);
 
     useEffect(() => {
         // keep governorate slug in the form in sync with selectedGovernorate
@@ -43,36 +58,36 @@ export function CheckoutGuestScreen({governorates, user}: { governorates: Govern
             toast.error('You must accept the Terms and Conditions.');
             return;
         }
-
+        setLoading(true);
         const {termsAccepted, ...restData} = data;
         const orderPayload: Partial<Order> = {
             ...restData,
             guest_phone2: data.guest_phone2 ? data.guest_phone2.length > 0 ? data.guest_phone2 : null : null,
             status: 'pending',
             subtotal: getCartTotal(),
-            discount_total: getCartNetTotal() - getCartTotal(),
+            discount_total: totalDiscount,
             shipping_total: selectedGovernorate?.fees ?? 0,
             tax_total: 0.00,
             payment_method: selectedPayment === 'cod' ? 'Cash on Delivery' : 'unpaid',
             grand_total: getCartNetTotal() + (selectedGovernorate?.fees ?? 0),
             guest_address: {...(data.guest_address || {}), governorate_slug: selectedGovernorate?.slug}
         };
-        try {
-            const result = await createOrder(orderPayload, cart);
-            if (result && (result as any).error) {
-                const err = (result as any).error || 'Failed to create order.';
-                toast.error(String(err));
-                return;
-            }
-
-            // await clearCart();
+        const result = await createOrder(orderPayload, cart);
+        if (result.error) {
+            toast.error(result.error);
+            setLoading(false);
+            return;
+        } else if (result.order_id) {
             toast.success('Order created successfully!');
-        } catch (err) {
-            console.error('createOrderAsGuest error', err);
-            toast.error('An unexpected error occurred while creating your order.');
+            // navigate first then clear cart to avoid any cart-empty watchers redirecting away
+            router.push(`/orders/${result.order_id}`);
+            await clearCart();
         }
     };
-
+    if (loading) return (<main className="min-h-screen flex justify-center items-center flex-col gap-5">
+        <Loader2 className=" w-10 h-10 inline-block animate-spin mr-2" size={16}/>
+        <p>Processing your Order...</p>
+    </main>)
     return (
         <main className="min-h-screen flex flex-col md:flex-row">
 
@@ -82,9 +97,8 @@ export function CheckoutGuestScreen({governorates, user}: { governorates: Govern
 
                 <span className={'flex justify-start mb-8 gap-3 items-end'}>
                 <h2 className="text-lg font-semibold self-end">Shipping Information</h2>
-                    {!user && (
                         <span className={'text-sm self-end'}> Make it easier and <Link
-                            href={'/login'} className={'text-teal-950 font-semibold'}>Login Here!</Link> </span>)}
+                            href={'/login'} className={'text-teal-950 font-semibold'}>Login Here!</Link> </span>
              </span>
 
                 {/* Delivery / Pickup Toggle */}

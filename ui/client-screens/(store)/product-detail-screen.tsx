@@ -1,21 +1,21 @@
 "use client"
-import {useCallback, useEffect, useState} from "react";
+import { useCallback, useEffect, useState } from "react";
 import Skeleton from "@mui/material/Skeleton";
-import {useTranslation} from "@/ui/providers/TranslationProvider";
+import { useTranslation } from "@/ui/providers/TranslationProvider";
 import BuyNowButton from "@/ui/components/store/BuyNowButton";
 import AddToCartButton from "@/ui/components/store/CartButton";
-import {CollapsibleSection} from "@/ui/components/store/CollapsibleSection";
+import { CollapsibleSection } from "@/ui/components/store/CollapsibleSection";
 import Counter from "@/ui/components/store/Counter";
 import ImageCarousel from "@/ui/components/store/ImageCarousel";
-import {StarRating} from "@/ui/components/store/StarRating";
-import {CheckCircle, Info, Minus, ShoppingBag} from "lucide-react";
-import {ReviewsSlider} from "@/ui/components/store/ReviewsSlider";
+import { StarRating } from "@/ui/components/store/StarRating";
+import { CheckCircle, Info, Minus, ShoppingBag } from "lucide-react";
+import { ReviewsSlider } from "@/ui/components/store/ReviewsSlider";
 import Link from "next/link";
-import {ProductDetailView} from "@/domain/entities/views/shop/productDetailView";
+import { ProductDetailView } from "@/domain/entities/views/shop/productDetailView";
 
 
-export function ProductDetailScreen({initProduct}: { initProduct: ProductDetailView | null }) {
-    const {t, language} = useTranslation();
+export function ProductDetailScreen({ initProduct }: { initProduct: ProductDetailView | null }) {
+    const { t, language } = useTranslation();
     const [activeSection, setActiveSection] = useState<String | null>(null);
     const [quantity, setQuantity] = useState<number>(1);
     const [loading, setLoading] = useState<boolean>(false)
@@ -27,7 +27,7 @@ export function ProductDetailScreen({initProduct}: { initProduct: ProductDetailV
     }, [activeSection]);
 
     if (loading) {
-        return <ProductDetailSkeleton/>;
+        return <ProductDetailSkeleton />;
     }
     useEffect(() => {
         async function refetch() {
@@ -44,18 +44,18 @@ export function ProductDetailScreen({initProduct}: { initProduct: ProductDetailV
     }
     console.log(product);
     const sections = [
-        {id: 'description', title: 'Full Description', content: product.description, icon: Info},
+        { id: 'description', title: 'Full Description', content: product.description, icon: Info },
         {
             id: 'ingredients',
             title: 'Materials/Ingredients',
             content: product.materials && product.materials.length > 0
                 ? product.materials.map((material, index) => <p key={index}
-                                                                className="mb-1">{`${material.grams_used}g of ${material.material_name}`}</p>) // Added margin for spacing
+                    className="mb-1">{`${material.grams_used}g of ${material.material_name}`}</p>) // Added margin for spacing
                 : <p>No materials listed.</p>,
             icon: CheckCircle,
         },
-        {id: 'bestfor', title: 'Best For', content: product.highlight, icon: ShoppingBag},
-        {id: 'precautions', title: 'Precautions', content: product.description, icon: Minus},
+        { id: 'bestfor', title: 'Best For', content: product.highlight, icon: ShoppingBag },
+        { id: 'precautions', title: 'Precautions', content: product.description, icon: Minus },
 
     ];
     return (
@@ -65,7 +65,7 @@ export function ProductDetailScreen({initProduct}: { initProduct: ProductDetailV
                 className={`lg:flex lg:space-x-16 px-6 p-10 max-w-7xl w-full`}> {/* Increased horizontal space and padding */}
                 <div className="lg:w-1/2 flex flex-col items-center mb-6 lg:mb-0 p-4">
                     <div className="w-full max-w-md h-96 relative">
-                        <ImageCarousel images={[product.image ?? '', ...(product.gallery || [])]}/>
+                        <ImageCarousel images={[product.image ?? '', ...(product.gallery || [])]} />
                     </div>
                 </div>
 
@@ -80,19 +80,19 @@ export function ProductDetailScreen({initProduct}: { initProduct: ProductDetailV
 
                     <div className="mb-8 border-t border-b border-gray-200 py-4"> {/* Added horizontal dividers */}
                         <div className="flex items-center gap-2">
-                            <StarRating rating={product.avg_rating ?? 0}/>
+                            <StarRating rating={product.avg_rating ?? 0} />
                             <span
                                 className="text-lg font-semibold text-primary-600">{product.avg_rating?.toFixed(1) ?? 'N/A'}</span>
                             <span className="text-sm text-gray-500">
-                {`(${product.reviews?.length ?? 0} reviews)`}
-              </span>
+                                {`(${product.reviews?.length ?? 0} reviews)`}
+                            </span>
                         </div>
                     </div>
 
                     {/* Price and Variant Selection */}
                     <div className="flex items-center justify-between mb-8">
                         <p className="text-4xl font-extrabold text-primary-900">
-                            {(product.price * quantity)?.toLocaleString() ?? 'N/A'} EGP
+                            {(product.price * quantity)?.toLocaleString('en-GB', { timeZone: 'Africa/Cairo', hour12: true }) ?? 'N/A'} EGP
                         </p>
                         <div className="flex gap-2">
                             {product.variants?.map(variant => (
@@ -115,12 +115,12 @@ export function ProductDetailScreen({initProduct}: { initProduct: ProductDetailV
                         <AddToCartButton
                             product={product}
                             quantity={quantity}
-                            // className="w-full py-4 text-xl font-bold bg-primary-800 hover:bg-primary-900 text-white rounded-md shadow-lg transition duration-200" // Styled for "ADD TO BAG"
+                        // className="w-full py-4 text-xl font-bold bg-primary-800 hover:bg-primary-900 text-white rounded-md shadow-lg transition duration-200" // Styled for "ADD TO BAG"
                         />
                         <BuyNowButton
                             product={product}
                             quantity={quantity}
-                            // className="w-full py-4 text-xl font-bold bg-white hover:bg-gray-100 text-primary-800 border border-primary-800 rounded-md shadow-sm transition duration-200" // Styled for "BUY NOW"
+                        // className="w-full py-4 text-xl font-bold bg-white hover:bg-gray-100 text-primary-800 border border-primary-800 rounded-md shadow-sm transition duration-200" // Styled for "BUY NOW"
                         />
                     </div>
 
@@ -136,21 +136,21 @@ export function ProductDetailScreen({initProduct}: { initProduct: ProductDetailV
                                 icon={section.icon}
                                 isOpen={activeSection === section.id}
                                 onToggleAction={toggleSection}
-                                // iconColor="text-primary-800" // Styling for icons
-                                // titleClass="font-semibold text-primary-800 uppercase text-sm tracking-widest" // Styling for titles
+                            // iconColor="text-primary-800" // Styling for icons
+                            // titleClass="font-semibold text-primary-800 uppercase text-sm tracking-widest" // Styling for titles
                             />
                         ))}
                     </div>
 
                     {/* Stock Info - Moved to a less prominent location */}
                     <div className="mt-4">
-            <span
-                className={`text-sm font-semibold px-4 py-1.5 rounded-full ${(product.stock ?? 0) === 0 ? 'bg-red-100 text-red-700' :
-                    (product.stock ?? 0) <= 3 ? 'bg-yellow-100 text-yellow-700' :
-                        'text-green-700' // Default text for plenty of stock
-                }`}>
-              {(product.stock ?? 0) === 0 ? t('outOfStock') : (product.stock ?? 0) <= 3 ? `${t('only')} ${product.stock} ${t('leftInStock')}` : t('inStock')}
-            </span>
+                        <span
+                            className={`text-sm font-semibold px-4 py-1.5 rounded-full ${(product.stock ?? 0) === 0 ? 'bg-red-100 text-red-700' :
+                                (product.stock ?? 0) <= 3 ? 'bg-yellow-100 text-yellow-700' :
+                                    'text-green-700' // Default text for plenty of stock
+                                }`}>
+                            {(product.stock ?? 0) === 0 ? t('outOfStock') : (product.stock ?? 0) <= 3 ? `${t('only')} ${product.stock} ${t('leftInStock')}` : t('inStock')}
+                        </span>
                     </div>
 
                 </div>
@@ -163,7 +163,7 @@ export function ProductDetailScreen({initProduct}: { initProduct: ProductDetailV
                     {t('reviews').toUpperCase()}
                 </h2>
                 <div className="w-full max-w-7xl mx-auto px-6">
-                    <ReviewsSlider product={product}/>
+                    <ReviewsSlider product={product} />
                 </div>
             </div>
 
@@ -173,7 +173,7 @@ export function ProductDetailScreen({initProduct}: { initProduct: ProductDetailV
                     {/* Price - Added here for the mobile/fixed view */}
                     <div className="flex-col mr-10 hidden sm:block">
                         <p className="text-xl font-black text-primary-900">
-                            {(product.price * quantity)?.toLocaleString() ?? 'N/A'} EGP
+                            {(product.price * quantity)?.toLocaleString('en-GB', { timeZone: 'Africa/Cairo', hour12: true }) ?? 'N/A'} EGP
                         </p>
                         {quantity === product.stock &&
                             <p className='text-xs text-red-500 font-medium'>{t('maxAvailable')}</p>}
@@ -192,12 +192,12 @@ export function ProductDetailScreen({initProduct}: { initProduct: ProductDetailV
                         <AddToCartButton
                             product={product}
                             quantity={quantity}
-                            // className="px-8 py-3 bg-primary-800 hover:bg-primary-900 text-white rounded-full transition duration-200 font-semibold"
+                        // className="px-8 py-3 bg-primary-800 hover:bg-primary-900 text-white rounded-full transition duration-200 font-semibold"
                         />
                         <BuyNowButton
                             product={product}
                             quantity={quantity}
-                            // className="px-8 py-3 bg-white hover:bg-gray-100 text-primary-800 border border-primary-800 rounded-full transition duration-200 font-semibold"
+                        // className="px-8 py-3 bg-white hover:bg-gray-100 text-primary-800 border border-primary-800 rounded-full transition duration-200 font-semibold"
                         />
                     </div>
                 </div>
@@ -213,36 +213,36 @@ function ProductDetailSkeleton() {
             <div className="lg:flex lg:space-x-16 max-w-7xl w-full">
                 {/* Image Section Skeleton */}
                 <div className="lg:w-1/2 flex flex-col items-center mb-6 lg:mb-0 p-4">
-                    <Skeleton variant="rounded" width="100%" height={384} className="max-w-md"/>
+                    <Skeleton variant="rounded" width="100%" height={384} className="max-w-md" />
                 </div>
 
                 {/* Details Section Skeleton */}
                 <div className="lg:w-1/2 flex flex-col justify-start pt-4 lg:pt-0">
-                    <Skeleton variant="text" width="20%" height={20} className="mb-2"/> {/* For PERFUME label */}
-                    <Skeleton variant="text" width="80%" height={60}/>
+                    <Skeleton variant="text" width="20%" height={20} className="mb-2" /> {/* For PERFUME label */}
+                    <Skeleton variant="text" width="80%" height={60} />
                     <Skeleton variant="text" width="60%" height={20}
-                              className="my-2"/> {/* For highlight/short description */}
+                        className="my-2" /> {/* For highlight/short description */}
 
                     {/* Price and Variants Skeleton */}
                     <div className="flex items-center justify-between py-4 mb-8 border-t border-b border-gray-200">
-                        <Skeleton variant="text" width="30%" height={50}/>
+                        <Skeleton variant="text" width="30%" height={50} />
                         <div className="flex gap-2">
-                            <Skeleton variant="rounded" width={80} height={30}/>
-                            <Skeleton variant="rounded" width={80} height={30}/>
+                            <Skeleton variant="rounded" width={80} height={30} />
+                            <Skeleton variant="rounded" width={80} height={30} />
                         </div>
                     </div>
 
                     {/* Action Buttons Skeleton */}
                     <div className="flex flex-col sm:flex-row gap-4 mb-8">
-                        <Skeleton variant="rounded" width="100%" height={56}/>
-                        <Skeleton variant="rounded" width="100%" height={56}/>
+                        <Skeleton variant="rounded" width="100%" height={56} />
+                        <Skeleton variant="rounded" width="100%" height={56} />
                     </div>
 
                     {/* Collapsible Sections Skeleton */}
                     <div className="divide-y divide-gray-200 border-t border-b border-gray-200">
                         {[...Array(4)].map((_, i) => (
                             <div key={i} className="py-4">
-                                <Skeleton variant="text" width="60%" height={24}/>
+                                <Skeleton variant="text" width="60%" height={24} />
                             </div>
                         ))}
                     </div>
@@ -252,11 +252,11 @@ function ProductDetailSkeleton() {
             {/* Fixed Bottom Bar Skeleton */}
             <div className="w-full fixed bottom-0 left-0 bg-white border-t border-gray-200 shadow-xl z-20">
                 <div className="flex items-center justify-center py-4 max-w-7xl mx-auto">
-                    <Skeleton variant="text" width="10%" height={24} className="mr-10 hidden sm:block"/>
-                    <Skeleton variant="rounded" width={100} height={40}/>
+                    <Skeleton variant="text" width="10%" height={24} className="mr-10 hidden sm:block" />
+                    <Skeleton variant="rounded" width={100} height={40} />
                     <div className="flex gap-4 ml-10">
-                        <Skeleton variant="rounded" width={150} height={48}/>
-                        <Skeleton variant="rounded" width={150} height={48}/>
+                        <Skeleton variant="rounded" width={150} height={48} />
+                        <Skeleton variant="rounded" width={150} height={48} />
                     </div>
                 </div>
             </div>

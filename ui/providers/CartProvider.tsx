@@ -114,6 +114,7 @@ export function CartProvider({children}: Readonly<{ children: ReactNode }>) {
             getCartTotal,
             getCartCount,
             getCartNetTotal,
+            loading,
         }),
         [cart, loading]
     );

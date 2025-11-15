@@ -68,7 +68,7 @@ export default function AdminReviewsTable() {
                 <td className="px-4 py-2">{r.customers?.name || r.customer_id}</td>
                 <td className="px-4 py-2">{r.rating} <span style={{ color: "#e2b007" }}>★</span></td>
                 <td className="px-4 py-2">{r.comment}</td>
-                <td className="px-4 py-2">{new Date(r.created_at).toLocaleString()}</td>
+                <td className="px-4 py-2">{new Date(r.created_at).toLocaleString('en-GB', { timeZone: 'Africa/Cairo', hour12: true })}</td>
                 <td className="px-4 py-2 text-center">
                   <select
                     value={r.status}

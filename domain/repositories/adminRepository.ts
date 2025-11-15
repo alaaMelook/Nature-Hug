@@ -1,7 +1,7 @@
-import {Material} from "@/domain/entities/database/material";
-import {DashboardMetricsView} from "@/domain/entities/views/admin/dashboardMetricsView";
-import {OrderDetailsView} from "@/domain/entities/views/admin/orderDetailsView";
-import {ProductAdminView} from "@/domain/entities/views/admin/productAdminView";
+import { Material } from "@/domain/entities/database/material";
+import { DashboardMetricsView } from "@/domain/entities/views/admin/dashboardMetricsView";
+import { OrderDetailsView } from "@/domain/entities/views/admin/orderDetailsView";
+import { ProductAdminView } from "@/domain/entities/views/admin/productAdminView";
 
 export interface AdminRepository {
     getOrderDetails(): Promise<OrderDetailsView[]>;
@@ -12,6 +12,8 @@ export interface AdminRepository {
 
     addMaterial(material: Material): Promise<void>;
 
+    updateMaterial(material: Partial<Material>): Promise<void>;
+
     deleteMaterial(id: number): Promise<void>;
 
     createProduct(product: ProductAdminView): Promise<number>;
@@ -21,4 +23,10 @@ export interface AdminRepository {
     deleteProduct(slug: string): Promise<void>;
 
     uploadImage(file: File): Promise<string>;
+
+    updateOrder(order: OrderDetailsView): Promise<void>;
+
+    getAllImages(): Promise<{ image: any, url: string }[]>;
+
+    deleteImage(imageName: string): Promise<void>;
 }

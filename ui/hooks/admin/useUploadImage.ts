@@ -1,11 +1,9 @@
-import { UploadImage } from "@/domain/use-case/admin/uploadImage";
+'use server'
+import { UploadImage } from "@/domain/use-case/admin/images";
 import { useMutation } from "@tanstack/react-query";
 
 
-export function useUploadImage() {
-    return useMutation({
-        mutationKey: ["upload-image"],
-        mutationFn: async (file: File) =>
-            await new UploadImage().execute(file)
-    });
+export async function useUploadImage(file: File) {
+    let url = await new UploadImage().execute(file);
+    return url;
 }

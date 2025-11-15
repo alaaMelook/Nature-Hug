@@ -1,11 +1,14 @@
 // uploadExcelFile.ts
-import { ShipmentRepository } from "@/domain/repositories/shipmentRepository";
+import {ShipmentRepository} from "@/domain/repositories/shipmentRepository";
+
 export class GetDashboardLink {
-    constructor(private repo = ShipmentRepository) { }
-    async execute() {
+    constructor(private repo = ShipmentRepository) {
+    }
+
+    execute() {
         try {
             console.log("[GetDashboardLink] execute called.");
-            const result = await this.repo.getPowerBiLink();
+            const result = this.repo.getPowerBiLink();
             console.log("[GetDashboardLink] getPowerBiLink result:", result);
             return result;
         } catch (error) {

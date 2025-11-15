@@ -1,53 +1,50 @@
 "use client";
 
-import {useCallback, useMemo, useState} from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import {useRouter} from "next/navigation";
-import {FlaskConicalIcon, History, LogOut, Menu, Settings, ShoppingCart, User, X} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { FlaskConicalIcon, History, LogOut, Menu, Settings, ShoppingCart, User, X } from "lucide-react";
 
-import {useSupabase} from "@/ui/hooks/useSupabase";
-import {useCart} from "@/ui/providers/CartProvider";
+import { useSupabase } from "@/ui/hooks/useSupabase";
+import { useCart } from "@/ui/providers/CartProvider";
 import LanguageSwitcher from "./LanguageSwitcher";
-import {Customer} from "@/domain/entities/auth/customer";
-import {Member} from "@/domain/entities/auth/member";
+import { CollapsibleSection } from "./CollapsibleSection";
 
 
-export default function Navbar({initialUser, initialMember}: {
-    initialUser: Customer | null,
-    initialMember: Member | null
-}) {
+export default function Navbar() {
     const [isOpen, setIsOpen] = useState(false);
-    const [user, setUser] = useState(initialUser);
-    const [member, setMember] = useState(initialMember);
-    const {cart} = useCart();
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const { user, member } = useSupabase();
+    const { cart } = useCart();
     const count = useMemo(
         () => cart.reduce((s, i) => s + i.quantity, 0),
         [cart]
     );
 
     const router = useRouter();
-    const {signOut} = useSupabase();
+    const { signOut } = useSupabase();
 
     // Toggle mobile menu
     const toggleMobileMenu = useCallback(() => {
         setIsOpen((prev) => !prev);
+    }, []);
+    const toggleSettingsMenu = useCallback(() => {
+        setIsSettingsOpen((prev) => !prev);
     }, []);
 
     // Logout
     const handleLogout = useCallback(async () => {
         await signOut();
         router.push("/");
-        setUser(null);
-        setMember(null);
     }, [signOut, router]);
 
     const navigationItems = useMemo(
         () => [
-            {href: "/", label: "Home"},
-            {href: "/products", label: "Shop"},
-            {href: "/about-us", label: "About"},
-            {href: "/contact-us", label: "Contact"},
+            { href: "/", label: "Home" },
+            { href: "/products", label: "Shop" },
+            { href: "/about-us", label: "About" },
+            { href: "/contact-us", label: "Contact" },
         ],
         []
     );
@@ -59,9 +56,9 @@ export default function Navbar({initialUser, initialMember}: {
                 <Link href="/" className="flex items-center">
                     <Image
                         src="https://reqrsmboabgxshacmkst.supabase.co/storage/v1/object/sign/product-images/logo.jpg?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV85ZGU3NTY3OC0zMDRhLTQ3OTUtYjdhZC04M2IwMzM3ZDY2ZTUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9kdWN0LWltYWdlcy9sb2dvLmpwZyIsImlhdCI6MTc1NjM4MDIxNSwiZXhwIjo0OTA5OTgwMjE1fQ.D5eFaioyALpbvbK7LWj6Di0kI1-I3kAQKI0H-DVtiao"
-                        width={100} height={100} priority={true} alt="Logo Hug Nature"/>
+                        width={100} height={100} priority={true} alt="Logo Hug Nature" />
                 </Link>
-                <LanguageSwitcher/>
+                <LanguageSwitcher />
             </div>
 
             {/* ---- Desktop Menu ---- */}
@@ -86,13 +83,13 @@ export default function Navbar({initialUser, initialMember}: {
                     href="/cart"
                     className="relative flex items-center bg-primary-10 px-4 py-2 rounded-lg shadow-md hover:bg-primary-100 transition"
                 >
-                    <ShoppingCart className="w-5 h-5 mr-2"/>
+                    <ShoppingCart className="w-5 h-5 mr-2" />
                     Cart
                     {count > 0 && (
                         <span
                             className="absolute -right-2 -top-2 text-xs min-w-5 h-5 px-1 rounded-full  font-semibold text-primary-950 bg-primary-50 flex items-center justify-center shadow-xs shadow-primary-300">
-              {count}
-            </span>
+                            {count}
+                        </span>
                     )}
                 </Link>
 
@@ -100,45 +97,45 @@ export default function Navbar({initialUser, initialMember}: {
                 {user ? (
                     <div className="relative">
                         <button
-                            onClick={toggleMobileMenu}
+                            onClick={toggleSettingsMenu}
                             className="cursor-pointer flex items-center px-3 py-2 bg-primary-10 text-primary-950 rounded-lg "
                         >
-                            <Settings className="w-5 h-5"/>
+                            <Settings className="w-5 h-5" />
                         </button>
 
-                        {isOpen && (
+                        {isSettingsOpen && (
                             <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border py-2 z-20">
                                 <Link
                                     href="/profile"
-                                    onClick={() => setIsOpen(false)}
+                                    onClick={() => setIsSettingsOpen(false)}
                                     className="flex items-center px-4 py-2 text-sm text-primary-900 hover:bg-gray-100"
                                 >
-                                    <User className="w-4 h-4 mr-2"/>
+                                    <User className="w-4 h-4 mr-2" />
                                     Profile
                                 </Link>
                                 {member && (
                                     <Link
                                         href="/admin"
-                                        onClick={() => setIsOpen(false)}
+                                        onClick={() => setIsSettingsOpen(false)}
                                         className="flex items-center px-4 py-2 text-sm text-red-700 hover:bg-red-100"
                                     >
-                                        <FlaskConicalIcon className="w-4 h-4 mr-2"/>
+                                        <FlaskConicalIcon className="w-4 h-4 mr-2" />
                                         Panel
                                     </Link>
                                 )}
                                 <Link
                                     href="/orders"
-                                    onClick={() => setIsOpen(false)}
+                                    onClick={() => setIsSettingsOpen(false)}
                                     className="flex items-center px-4 py-2 text-sm text-primary-900 hover:bg-gray-100"
                                 >
-                                    <History className="w-4 h-4 mr-2"/>
+                                    <History className="w-4 h-4 mr-2" />
                                     Order History
                                 </Link>
                                 <button
                                     onClick={handleLogout}
                                     className="w-full flex items-center px-4 py-2 text-sm text-primary-900 hover:bg-gray-100 cursor-pointer"
                                 >
-                                    <LogOut className="w-4 h-4 mr-2"/>
+                                    <LogOut className="w-4 h-4 mr-2" />
                                     Logout
                                 </button>
                             </div>
@@ -158,9 +155,9 @@ export default function Navbar({initialUser, initialMember}: {
             <div className="md:hidden">
                 <button onClick={toggleMobileMenu}>
                     {isOpen ? (
-                        <X className="w-6 h-6 text-primary-900"/>
+                        <X className="w-6 h-6 text-primary-900" />
                     ) : (
-                        <Menu className="w-6 h-6 text-primary-900"/>
+                        <Menu className="w-6 h-6 text-primary-900" />
                     )}
                 </button>
             </div>
@@ -180,63 +177,66 @@ export default function Navbar({initialUser, initialMember}: {
                         </Link>
                     ))}
 
-                    <Link
-                        href="/cart"
-                        className="flex flex-row text-primary-950 hover:text-primary-300 text-lg"
-                        onClick={() => setIsOpen(false)}
-                    >
-                        <ShoppingCart className="w-5 h-5 mr-2"/>
-                        Cart
-                        {count > 0 && (
-                            <span
-                                className="text-xs w-5 h-5 rounded-full ml-2 bg-primary-800 text-white flex items-center justify-center">
-                {count}
-              </span>
-                        )}
-                    </Link>
-
-                    <LanguageSwitcher/>
 
                     {user ? (
-                        <>
+
+                        <CollapsibleSection id={""} title={"Settings"} content={(<>
                             <Link
                                 href="/profile"
-                                className="bg-primary-50 px-4 py-2 rounded shadow-md border hover:bg-primary-100"
-                                onClick={() => setIsOpen(false)}
+                                onClick={() => setIsSettingsOpen(false)}
+                                className="flex items-center text-lg text-primary-900 hover:text-primary-300"
                             >
-                                My Profile
+                                <User className="w-4 h-4 mr-2" />
+                                Profile
                             </Link>
                             {member && (
                                 <Link
                                     href="/admin"
-                                    onClick={() => setIsOpen(false)}
-                                    className="flex items-center px-4 py-2 text-sm text-red-700 hover:bg-red-100"
+                                    onClick={() => setIsSettingsOpen(false)}
+                                    className="flex items-center text-lg text-red-700 hover:text-red-400"
                                 >
-                                    <FlaskConicalIcon className="w-4 h-4 mr-2"/>
+                                    <FlaskConicalIcon className="w-4 h-4 mr-2" />
                                     Panel
                                 </Link>
                             )}
-                            <button
-                                onClick={() => {
-                                    handleLogout();
-                                    setIsOpen(false);
-                                }}
-                                className="bg-primary-800 text-white px-4 py-2 rounded hover:bg-primary-700"
+                            <Link
+                                href="/orders"
+                                onClick={() => setIsSettingsOpen(false)}
+                                className="flex items-center text-lg text-primary-900 hover:text-primary-300"
                             >
+                                <History className="w-4 h-4 mr-2" />
+                                Order History
+                            </Link>
+                            <button
+                                onClick={handleLogout}
+                                className="flex items-center text-lg text-primary-900 hover:text-primary-300"
+                            >
+                                <LogOut className="w-4 h-4 mr-2" />
                                 Logout
                             </button>
-                        </>
+                        </>)} isOpen={isSettingsOpen} onToggleAction={toggleSettingsMenu}
+                        ></CollapsibleSection>
                     ) : (
                         <button
-                            onClick={() => {
-                                router.push("/login");
-                                setIsOpen(false);
-                            }}
-                            className="bg-primary-800 text-white px-4 py-2 rounded hover:bg-primary-700"
+                            onClick={() => router.push("/login")}
+                            className="flex items-center text-lg bg-primary-10 text-primary-950 rounded-lg  border-primary-950 border-1"
                         >
-                            Login / Signup
+                            Login
                         </button>
                     )}
+                    <Link
+                        href="/cart"
+                        className="relative flex items-center bg-primary-10 px-4 py-2 rounded-lg shadow-md hover:bg-primary-50 transition"
+                    >
+                        <ShoppingCart className="w-5 h-5 mr-2" />
+                        Cart
+                        {count > 0 && (
+                            <span
+                                className="absolute -right-2 -top-2 text-xs min-w-5 h-5 px-1 rounded-full  font-semibold text-primary-950 bg-primary-50 flex items-center justify-center shadow-xs shadow-primary-300">
+                                {count}
+                            </span>
+                        )}
+                    </Link>
                 </div>
             )}
         </nav>

@@ -2,31 +2,8 @@
 
 import {revalidatePath} from 'next/cache'
 import {redirect} from 'next/navigation'
-
-import {toast} from "sonner";
 import {createSupabaseServerClient} from "@/data/datasources/supabase/server";
-
-export async function login(formData: FormData) {
-    const supabase = await createSupabaseServerClient();
-
-
-    // type-casting here for convenience
-    // in practice, you should validate your inputs
-    const data = {
-        email: formData.get('email') as string,
-        password: formData.get('password') as string,
-    }
-
-    const {error} = await supabase.auth.signInWithPassword(data);
-
-    if (error) {
-        toast.error('failed to sign up')
-        redirect('/login')
-    }
-
-    revalidatePath('/', 'layout')
-    redirect('/')
-}
+import {cookies} from "next/headers";
 
 export async function signup(formData: FormData) {
     const supabase = await createSupabaseServerClient();
@@ -36,17 +13,21 @@ export async function signup(formData: FormData) {
     const data = {
         email: formData.get('email') as string,
         password: formData.get('password') as string,
-    }
+        options: {
+            data: {full_name: formData.get('fullName'), phone: formData.get('phone')},
+            emailRedirectTo: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/signup/auth`,
+        }
 
+    }
     const {error} = await supabase.auth.signUp(data);
 
     if (error) {
-        toast.error('failed to sign up')
         redirect('/login')
     }
+    (await cookies()).set('email', data.email, {httpOnly: true, path: '/', maxAge: 60 * 60 * 24 * 2});
 
     revalidatePath('/', 'layout')
-    redirect('/')
+    redirect('/verification')
 }
 
 export async function googleLogin() {
