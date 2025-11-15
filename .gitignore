@@ -42,3 +42,14 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .env*.local
+
+# not in production yet
+app/admin/analytics
+app/admin/finance
+app/admin/people
+app/admin/reports
+app/admin/settings
+app/admin/materials/*
+!app/admin/materials/*.ts*
+app/admin/orders/*
+!app/admin/orders/*.ts*
