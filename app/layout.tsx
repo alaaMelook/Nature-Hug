@@ -8,7 +8,6 @@ import TranslationProvider from "@/ui/providers/TranslationProvider";
 import FontProvider from "@/ui/providers/FontProvider";
 import { Toaster } from "sonner";
 import LoadingIndicator from "@/ui/providers/loadingIndicator";
-import { langStore } from "@/lib/i18n/langStore";
 import { getCurrentLanguageServer } from "@/lib/i18n/getLangServer";
 
 export const metadata: Metadata = {
