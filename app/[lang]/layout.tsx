@@ -21,7 +21,8 @@ export default async function RootLayoutRootLayout({
     children: React.ReactNode;
     params: { lang: Lang };
 }) {
-    const lang = languages.includes(params.lang) ? params.lang : "ar";
+    const paramsResult = await params;
+    const lang = languages.includes(paramsResult.lang) ? paramsResult.lang : "ar";
     const dir = lang === "ar" ? "rtl" : "ltr";
 
     return (

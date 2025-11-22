@@ -1,4 +1,6 @@
-import { Heart, Rocket, Box, Zap } from "lucide-react";
+import { log } from "console";
+import { sign } from "crypto";
+import { Heart, Rocket, Box, Zap, CheckCircle, Flower, Leaf, Smile, Sparkles } from "lucide-react";
 
 export const resources: Record<string, any> = {
   en: {
@@ -166,15 +168,71 @@ export const resources: Record<string, any> = {
       aboutUsTitle: "From Nature's Hug <br/> to Your Skin",
       aboutUsDescription: "Therapeutic Care, <span>Touched by Nature 🌿</span>",
 
-      // cart
-      addedtoCart: '{{product}} added to cart'
+      // aliases to match camelCase keys used in components
+      ourStory: "Our Story",
+      ourVision: "Our Vision",
+      ourGoals: "Our Goals",
 
+      // cart
+      addedtoCart: '{{product}} added to cart',
+
+      // login
+      emailRequired: "Email is required",
+      enterValidEmail: "Enter a valid email",
+      passwordRequired: "Password is required",
+      passwordMinLength: "Password must be at least 6 characters",
+      loggingIn: "Logging in...",
+      signup: "Sign Up",
+      continueWithGoogle: "Continue with Google",
+      unexpectedError: "An unexpected error occurred. Please try again.",
+
+      // sign up
+      fullnameRequired: "Full name is required",
+      enterValidFullName: "Enter a valid full name",
+      phoneRequired: "Phone number is required",
+      enterValidPhone: "Enter a valid phone number",
+      signingUp: "Signing up...",
+      fullname: "Full Name",
+      phone: "Phone Number",
+      password: "Password",
+      confirmPassword: "Confirm Password",
+      passwordsMustMatch: "Passwords must match",
+      email: "Email",
+      alreadyHaveAccount: "Already have an account? Login here.",
+      failedToSubmit: "Failed to submit. Please try again.",
+
+      // about us
+      // keep original lowercase keys for compatibility
+      ourstory: "Our Story",
+      ourvision: "Our Vision",
+      corevalues: "Core Values",
+      ourgoals: "Our Goals",
+      goals: [
+        'Develop safe, high-impact products with powerful natural ingredients.',
+        'Strengthen women’s self-confidence through visible, authentic results.',
+        'Build a transparent and emotionally rich brand experience.',
+        'Inspire women to embrace their natural features and rise above stereotypes.',
+        'Maintain the highest quality standards and continuously innovate.',
+      ],
+      egyptianBrand: " An <strong>Egyptian brand</strong> founded by a <strong>pharmacist</strong>. We blend medical- grade effectiveness with the gentleness of nature to restore skin confidence.",
+      keracalm: "<strong>KeraCalm:</strong> The first safe 40% urea cream in Egypt — treats stubborn issues and delivers visible results from the first use. 💖",
+      foundation: "Our foundation is built on care, transparency, and a love for natural beauty.<br/> Every product reflects our belief in gentle strength and authentic results.",
+      vision: "To be the #1 skincare choice for Arab women, redefining beauty care as a <strong> psychological and emotional therapy </strong>, not just a routine.",
+      cores: [
+        { icon: 'Leaf', color: 'green', text: 'Nature as inspiration' },
+        { icon: 'Sparkles', color: 'yellow', text: 'Excellence in results' },
+        { icon: 'Smile', color: 'orange', text: 'Empowerment & confidence' },
+        { icon: 'Heart', color: 'pink', text: 'Genuine care from touch' },
+        { icon: 'CheckCircle', color: 'green', text: 'Transparency in formulas' },
+        { icon: 'Flower', color: 'purple', text: 'Love of detail in design' },
+      ]
     }
   },
   ar: {
     translation: {
       // Pagination
       prev: "السابق",
+      or: "أو",
       next: "التالي",
       // Filters / Product list
       filters: "الفلاتر",
@@ -337,7 +395,58 @@ export const resources: Record<string, any> = {
       aboutUsDescription: "رعاية علاجية، <span>ملامسة من الطبيعة 🌿</span>",
 
       // cart
-      addedtoCart: 'تم إضافة {{product}} إلى العربة'
+      addedtoCart: 'تم إضافة {{product}} إلى العربة',
+
+      // login
+      emailRequired: "البريد الإلكتروني مطلوب",
+      enterValidEmail: "أدخل بريد إلكتروني صالح",
+      passwordRequired: "كلمة المرور مطلوبة",
+      passwordMinLength: "يجب أن تكون كلمة المرور 6 أحرف على الأقل",
+      loggingIn: "جارٍ تسجيل الدخول...",
+      signup: "إنشاء حساب",
+      continueWithGoogle: "المتابعة عبر جوجل",
+      unexpectedError: "حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.",
+
+      // sign up
+      fullnameRequired: "الاسم الكامل مطلوب",
+      enterValidFullName: "أدخل اسمًا كاملاً صالحًا",
+      phoneRequired: "رقم الهاتف مطلوب",
+      enterValidPhone: "أدخل رقم هاتف صالح",
+      signingUp: "جارٍ إنشاء الحساب...",
+      fullname: "الاسم الكامل",
+      phone: "رقم الهاتف",
+      password: "كلمة المرور",
+      confirmPassword: "تأكيد كلمة المرور",
+      passwordsMustMatch: "يجب أن تتطابق كلمتا المرور",
+      email: "البريد الإلكتروني",
+      alreadyHaveAccount: "هل لديك حساب؟ سجّل الدخول هنا.",
+      failedToSubmit: "فشل في الإرسال. يرجى المحاولة مرة أخرى.",
+
+      // about us
+      ourstory: "قصتنا",
+      ourvision: "رؤيتنا",
+      corevalues: "القيم الأساسية",
+      ourgoals: "أهدافنا",
+      goals: [
+        'تطوير منتجات آمنة وعالية التأثير بمكونات طبيعية قوية.',
+        'تعزيز ثقة النساء بأنفسهن من خلال نتائج مرئية وأصيلة.',
+        'بناء تجربة علامة تجارية شفافة وعاطفية.',
+        'إلهام النساء لاحتضان ملامحهن الطبيعية والتغلب على الصور النمطية.',
+        'الحفاظ على أعلى معايير الجودة والابتكار المستمر.',
+      ],
+      egyptianBrand: " علامة تجارية <strong>مصرية</strong> تأسست على يد <strong>صيدلانية</strong>. نحن نمزج بين الفعالية الطبية واللطف الطبيعي لاستعادة ثقة البشرة.",
+      keracalm: "<strong>KeraCalm:</strong> أول كريم يوريا آمن بتركيز 40% في مصر — يعالج المشكلات المستعصية ويوفر نتائج مرئية من الاستخدام الأول. 💖",
+      foundation: "أساسنا مبني على الرعاية والشفافية وحب الجمال الطبيعي.<br/> كل منتج يعكس إيماننا بالقوة اللطيفة والنتائج الأصيلة.",
+      cores: [
+        { icon: 'Leaf', color: 'green', text: 'الطبيعة كمصدر إلهام' },
+        { icon: 'Sparkles', color: 'yellow', text: 'التميز في النتائج' },
+        { icon: 'Smile', color: 'orange', text: 'التمكين والثقة' },
+        { icon: 'Heart', color: 'pink', text: 'رعاية حقيقية من اللمسة' },
+        { icon: 'CheckCircle', color: 'green', text: 'الشفافية في الصيغ' },
+        { icon: 'Flower', color: 'purple', text: 'حب التفاصيل في التصميم' },
+      ],
+      vision: "أن نكون الخيار الأول للعناية بالبشرة للنساء العربيات، معيدين تعريف العناية بالجمال كعلاج نفسي وعاطفي، وليس مجرد روتين.",
+
 
     }
   }

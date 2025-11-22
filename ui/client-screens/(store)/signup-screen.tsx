@@ -1,23 +1,25 @@
 "use client";
-import {useRef, useState} from "react";
-import {FcGoogle} from "react-icons/fc";
-import {googleLogin, signup} from "@/ui/hooks/store/useLoginActions";
-import {useForm} from 'react-hook-form';
+import { useRef, useState } from "react";
+import { FcGoogle } from "react-icons/fc";
+import { googleLogin, signup } from "@/ui/hooks/store/useLoginActions";
+import { useForm } from 'react-hook-form';
+import { useTranslation } from "react-i18next";
 
 export function SignupScreen() {
     const [googleLoading, setGoogleLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState("");
+    const { t } = useTranslation();
     const [loading, setLoading] = useState(false);
 
     const formRef = useRef<HTMLFormElement | null>(null);
 
-    const {register, handleSubmit, formState: {errors}} = useForm<{
+    const { register, handleSubmit, formState: { errors } } = useForm<{
         fullName: string,
         phone: string,
         email: string,
         password: string
     }>({
-        defaultValues: {fullName: '', phone: '', email: '', password: ''}
+        defaultValues: { fullName: '', phone: '', email: '', password: '' }
     });
 
     // called after react-hook-form validation succeeds
@@ -28,7 +30,7 @@ export function SignupScreen() {
             formRef.current?.requestSubmit();
         } catch (err) {
             setLoading(false);
-            setErrorMsg('Failed to submit form.');
+            setErrorMsg(t('failedToSubmit'));
         }
     }
 
@@ -40,10 +42,10 @@ export function SignupScreen() {
             {/* native form posts to server action `signup` */}
             <form ref={formRef} action={signup} className="space-y-4">
                 <input
-                    {...register('fullName', {required: 'Full name is required'})}
+                    {...register('fullName', { required: t('fullnameRequired') })}
                     type="text"
                     name="fullName"
-                    placeholder="Full Name"
+                    placeholder={t('fullname')}
                     className="w-full border px-3 py-2 rounded"
                     disabled={loading}
                 />
@@ -51,12 +53,12 @@ export function SignupScreen() {
 
                 <input
                     {...register('phone', {
-                        required: 'Phone is required',
-                        minLength: {value: 6, message: 'Enter a valid phone'}
+                        required: t('phoneRequired'),
+                        minLength: { value: 6, message: t('enterValidPhone') }
                     })}
                     type="text"
                     name="phone"
-                    placeholder="Phone Number"
+                    placeholder={t('phone')}
                     className="w-full border px-3 py-2 rounded"
                     disabled={loading}
                 />
@@ -64,12 +66,12 @@ export function SignupScreen() {
 
                 <input
                     {...register('email', {
-                        required: 'Email is required',
-                        pattern: {value: /^\S+@\S+\.\S+$/, message: 'Enter a valid email'}
+                        required: t('emailRequired'),
+                        pattern: { value: /^\S+@\S+\.\S+$/, message: t('enterValidEmail') }
                     })}
                     type="email"
                     name="email"
-                    placeholder="Email"
+                    placeholder={t('email')}
                     className="w-full border px-3 py-2 rounded"
                     disabled={loading}
                 />
@@ -77,12 +79,12 @@ export function SignupScreen() {
 
                 <input
                     {...register('password', {
-                        required: 'Password is required',
-                        minLength: {value: 6, message: 'Password must be at least 6 characters'}
+                        required: t('passwordRequired'),
+                        minLength: { value: 6, message: t('passwordMinLength') }
                     })}
                     type="password"
                     name="password"
-                    placeholder="Password"
+                    placeholder={t('password')}
                     className="w-full border px-3 py-2 rounded"
                     disabled={loading}
                 />
@@ -94,7 +96,7 @@ export function SignupScreen() {
                     onClick={() => handleSubmit(onValidated)()}
                     disabled={loading}
                 >
-                    {loading ? 'Signing up...' : 'Sign Up'}
+                    {loading ? t('signingUp') : t('signup')}
                 </button>
             </form>
 
@@ -113,8 +115,8 @@ export function SignupScreen() {
                 disabled={googleLoading}
                 className="cursor-pointer flex items-center justify-center w-full border border-gray-200 gap-3 px-15 py-3 rounded-md bg-white shadow-sm hover:bg-gray-50 transition disabled:opacity-60 disabled:cursor-not-allowed"
             >
-                <FcGoogle className="text-xl"/>
-                {googleLoading ? "Signing in..." : "Continue with Google"}
+                <FcGoogle className="text-xl" />
+                {googleLoading ? t('loggingIn') : t('continueWithGoogle')}
             </button>
 
             {errorMsg && (
