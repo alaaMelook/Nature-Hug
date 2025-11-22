@@ -5,7 +5,6 @@ import { DashboardMetricsView } from "@/domain/entities/views/admin/dashboardMet
 import { Material } from "@/domain/entities/database/material";
 import { ProductAdminView } from "@/domain/entities/views/admin/productAdminView";
 import { supabase } from "@/data/datasources/supabase/client";
-import { url } from "inspector";
 
 export class IAdminServerRepository implements AdminRepository {
     async getOrderDetails(): Promise<OrderDetailsView[]> {

@@ -8,7 +8,7 @@ import Link from "next/link";
 import { updateOrder } from '@/ui/hooks/store/useUpdateOrderActions'
 import { orderStatus } from "@/lib/utils/status";
 import { toTitleCase } from "@/lib/utils/titleCase";
-
+import { useTranslation } from "react-i18next";
 function assignStatCards(dashboard: DashboardMetricsView): StatCard[] {
 
     console.log('transformed', dashboard);
@@ -48,6 +48,7 @@ export function AdminDashboardScreen({ recentOrders, dashboard }: {
     recentOrders: OrderDetailsView[];
     dashboard: DashboardMetricsView;
 }) {
+    const { t } = useTranslation();
     const statCards = assignStatCards(dashboard)
     const [orders, setOrders] = useState<OrderDetailsView[]>(recentOrders ?? [])
     // track which orders are being updated so we can disable buttons
@@ -260,11 +261,14 @@ export function AdminDashboardScreen({ recentOrders, dashboard }: {
 
                                             </select></td>
                                         <td className="px-4 py-2">{order.final_order_total} EGP</td>
-                                        <td className="px-4 py-2 text-right">{new Date(order.order_date).toLocaleString('en-GB', {
+                                        <td className="px-4 py-2 text-right">
+                                            {t('{{date, datetime}}', { date: new Date(order.order_date) })}
+                                            {/* {new Date(order.order_date).toLocaleString('en-GB', {
                                             timeZone: 'Africa/Cairo', hour12: true
                                         }).split(',').map((info, ind) =>
                                             <div key={ind}>{info}</div>
-                                        )}</td>
+                                        )} */}
+                                        </td>
                                         <td className="py-4 whitespace-nowrap px-4">
 
                                         </td>

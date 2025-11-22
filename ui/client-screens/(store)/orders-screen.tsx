@@ -4,11 +4,12 @@ import React, { useState } from 'react';
 import { OrderSummaryView } from '@/domain/entities/views/shop/orderSummaryView';
 import Link from 'next/link';
 import { statusColor } from "@/lib/utils/statusColors";
+import { useTranslation } from "react-i18next";
 
 export default function OrdersScreen({ orders }: { orders: OrderSummaryView[] }) {
     const growBy = 5;
     const [visibleCount, setVisibleCount] = useState<number>(growBy);
-
+    const { t } = useTranslation();
 
     const visibleOrders = orders.slice(0, visibleCount);
     return (
@@ -39,13 +40,13 @@ export default function OrdersScreen({ orders }: { orders: OrderSummaryView[] })
                                         {order.order_status}
                                     </div>
                                 </div>
-                                <p className="text-sm text-gray-500">Placed {new Date(order.created_at).toLocaleString('en-GB', { timeZone: 'Africa/Cairo', hour12: true })}</p>
+                                <p className="text-sm text-gray-500">Placed {t('{{date, datetime}}', { date: new Date(order.created_at) })}</p>
                                 <p className="text-sm text-gray-600 mt-1">{order.item_count} items
                                     • {order.payment_status}</p>
                             </div>
 
                             <div className="text-right">
-                                <p className="text-lg font-semibold">{order.grand_total?.toLocaleString()} EGP</p>
+                                <p className="text-lg font-semibold">{t("{{price, currency}}", { price: order.grand_total })}</p>
                                 <span className="text-sm text-primary-600 mt-2">View
                                     details</span>
                             </div>

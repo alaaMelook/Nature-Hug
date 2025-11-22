@@ -6,18 +6,20 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { statusColor } from "@/lib/utils/statusColors";
 import { useSupabase } from "@/ui/hooks/useSupabase";
+import { useTranslation } from "react-i18next";
 
 export default function OrderDetailScreen({ order, fromCheckout }: {
     order: OrderSummaryView | null,
     fromCheckout?: boolean | string | null
 }) {
+    const { t } = useTranslation();
     const { user } = useSupabase();
     const [formatted, setFormatted] = useState('');
 
     useEffect(() => {
         if (order && order.created_at) {
             const date = new Date(order.created_at);
-            setFormatted(date.toLocaleString('en-GB', { timeZone: 'Africa/Cairo', hour12: true }));
+            setFormatted(t('{{date, datetime}}', { date: date }));
         }
     }, []);
     // If order is null, show a friendly fallback UI. If `fromCheckout` is true, still show thank-you banner.
@@ -91,7 +93,7 @@ export default function OrderDetailScreen({ order, fromCheckout }: {
                                             <p className="text-xs text-gray-500 mt-1">Qty: {it.quantity} </p>
                                         </div>
                                         <div>
-                                            <p className="text-md font-semibold text-gray-700">{it.quantity} x {it.price.toLocaleString()} EGP</p>
+                                            <p className="text-md font-semibold text-gray-700">{it.quantity} x {t('{{price, currency}}', { price: it.price })}</p>
                                         </div>
                                     </div>
                                 ))}
@@ -106,23 +108,23 @@ export default function OrderDetailScreen({ order, fromCheckout }: {
                             <dl className="text-sm text-gray-700 space-y-2">
                                 <div className="flex justify-between">
                                     <dt>Subtotal</dt>
-                                    <dd>{order.subtotal?.toLocaleString()} EGP</dd>
+                                    <dd>{t("{{price, currency}}", { price: order.subtotal })}</dd>
                                 </div>
                                 <div className="flex justify-between">
                                     <dt>Discount</dt>
-                                    <dd>-{order.discount_total?.toLocaleString()} EGP</dd>
+                                    <dd>-{t("{{price, currency}}", { price: order.discount_total })}</dd>
                                 </div>
                                 <div className="flex justify-between">
                                     <dt>Shipping</dt>
-                                    <dd>{order.shipping_total?.toLocaleString()} EGP</dd>
+                                    <dd>{t("{{price, currency}}", { price: order.shipping_total })}</dd>
                                 </div>
                                 <div className="flex justify-between">
                                     <dt>Tax</dt>
-                                    <dd>{order.tax_total?.toLocaleString()} EGP</dd>
+                                    <dd>{t("{{price, currency}}", { price: order.tax_total })}</dd>
                                 </div>
                                 <div className="flex justify-between font-semibold text-lg">
                                     <dt>Total</dt>
-                                    <dd>{order.grand_total?.toLocaleString()} EGP</dd>
+                                    <dd>{t("{{price, currency}}", { price: order.grand_total })}</dd>
                                 </div>
                             </dl>
 
@@ -144,7 +146,7 @@ export default function OrderDetailScreen({ order, fromCheckout }: {
                             </div>
                             <div className="text-right">
                                 <p className="text-sm text-gray-500">Grand total</p>
-                                <p className="text-2xl font-extrabold">{order.grand_total?.toLocaleString()} EGP</p>
+                                <p className="text-2xl font-extrabold">{t("{{price, currency}}", { price: order.grand_total })}</p>
                             </div>
                         </div>
                     </div>

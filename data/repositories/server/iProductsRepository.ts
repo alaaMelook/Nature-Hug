@@ -7,13 +7,12 @@ import { Review } from "@/domain/entities/database/review";
 import { ProductDetailView } from "@/domain/entities/views/shop/productDetailView";
 import { ProductView } from "@/domain/entities/views/shop/productView";
 import { ProductRepository } from "@/domain/repositories/productRepository";
-import { getCurrentLanguage } from "@/lib/i18n/getCurrentLang";
 
 
 export class IProductServerRepository implements ProductRepository {
 
 
-    private currentLanguage = async () => await getCurrentLanguage();
+    constructor(private lang: LangKey = 'ar') { }
 
 
     async viewAll(): Promise<ProductView[]> {
@@ -24,7 +23,7 @@ export class IProductServerRepository implements ProductRepository {
             status,
             statusText,
             error
-        } = await supabase.schema('store').from(`products_view_${await this.currentLanguage()}`).select('*');
+        } = await supabase.schema('store').from(`products_view_${this.lang}`).select('*');
 
         console.log("[IProductRepository] viewAll result:", { data, status, statusText });
         if (error) {
@@ -42,7 +41,7 @@ export class IProductServerRepository implements ProductRepository {
             status,
             statusText,
             error
-        } = await supabase.schema('store').from(`products_view_${await this.currentLanguage()}`).select('*').order('created_at', { ascending: false }).limit(count);
+        } = await supabase.schema('store').from(`products_view_${this.lang}`).select('*').order('created_at', { ascending: false }).limit(count);
 
         console.log("[IProductRepository] viewRecent result:", { data, status, statusText });
         if (error) {
@@ -51,13 +50,30 @@ export class IProductServerRepository implements ProductRepository {
         }
         return data || [];
     }
-
-    async viewBySlug(slug: string): Promise<ProductDetailView> {
+    async viewBySlug(slug: string): Promise<ProductView> {
         console.log("[IProductRepository] viewBySlug called with slug:", slug);
         const supabase = await createSupabaseServerClient();
         const { data, status, statusText, error } = await supabase
             .schema('store')
-            .rpc(`get_product_detail_${await this.currentLanguage()}`, { slug })
+            .from(`products_view_${this.lang}`)
+            .select('*')
+            .eq('slug', slug)
+            .single();
+        console.log("[IProductRepository] viewBySlug result:", { data, status, statusText });
+        if (error) {
+            console.error("[IProductRepository] viewBySlug error:", error);
+            throw error;
+        }
+        return data;
+    }
+
+
+    async viewDetailedBySlug(slug: string): Promise<ProductDetailView> {
+        console.log("[IProductRepository] viewBySlug called with slug:", slug);
+        const supabase = await createSupabaseServerClient();
+        const { data, status, statusText, error } = await supabase
+            .schema('store')
+            .rpc(`get_product_detail_${this.lang}`, { slug })
             .single();
 
         console.log("[IProductRepository] viewBySlug result:", { data, status, statusText });
@@ -76,7 +92,7 @@ export class IProductServerRepository implements ProductRepository {
             status,
             statusText,
             error
-        } = await supabase.schema('store').from(`products_view_${await this.currentLanguage()}`).select('*').eq('category_name', categoryName);
+        } = await supabase.schema('store').from(`products_view_${this.lang}`).select('*').eq('category_name', categoryName);
         console.log("[IProductRepository] viewByCategory result:", { data, status, statusText });
         if (error) {
             console.error("[IProductRepository] viewByCategory error:", error);

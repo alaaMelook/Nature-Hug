@@ -1,8 +1,8 @@
-import {Review} from '@/domain/entities/database/review';
-import {IProductServerRepository} from "@/data/repositories/server/iProductsRepository";
+import { Review } from '@/domain/entities/database/review';
+import { IProductServerRepository } from "@/data/repositories/server/iProductsRepository";
 
 export class AddProductReview {
-    constructor(private repo = new IProductServerRepository()) {
+    constructor(private lang: LangKey = 'ar', private repo = new IProductServerRepository(lang)) {
     }
 
     async execute(review: Partial<Review>): Promise<void> {

@@ -1,9 +1,9 @@
-import {IProductServerRepository} from '@/data/repositories/server/iProductsRepository';
-import {ProductView} from '@/domain/entities/views/shop/productView';
+import { IProductServerRepository } from '@/data/repositories/server/iProductsRepository';
+import { ProductView } from '@/domain/entities/views/shop/productView';
 
 
 export class ViewRecentProducts {
-    constructor(private repo = new IProductServerRepository()) {
+    constructor(private lang: LangKey = 'ar', private repo = new IProductServerRepository(lang)) {
     }
 
     async execute(count: number = 4): Promise<ProductView[]> {

@@ -1,28 +1,28 @@
 'use client';
 
-import {Governorate} from "@/domain/entities/database/governorate";
+import { Governorate } from "@/domain/entities/database/governorate";
 import Link from "next/link";
-import {useEffect, useState} from "react";
-import {CheckoutCart} from "@/ui/components/store/CheckoutCart";
-import {Order} from "@/domain/entities/database/order";
-import {useCart} from "@/ui/providers/CartProvider";
-import {toast} from "sonner";
-import {useForm} from "react-hook-form";
-import {createOrder} from "@/ui/hooks/store/useCreateOrderActions";
-import {useRouter} from "next/navigation";
-import {Loader2} from "lucide-react";
+import { useEffect, useState } from "react";
+import { CheckoutCart } from "@/ui/components/store/CheckoutCart";
+import { Order } from "@/domain/entities/database/order";
+import { useCart } from "@/ui/providers/CartProvider";
+import { toast } from "sonner";
+import { useForm } from "react-hook-form";
+import { createOrder } from "@/ui/hooks/store/useCreateOrderActions";
+import { useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
 
 
 type FormValues = Partial<Order> & {
     termsAccepted?: boolean;
 };
 
-export function CheckoutGuestScreen({governorates}: { governorates: Governorate[] }) {
+export function CheckoutGuestScreen({ governorates }: { governorates: Governorate[] }) {
     const [selectedGovernorate, setSelectedGovernorate] = useState<Governorate | null>(null);
-    const {cart, loading: fetching, getCartNetTotal, getCartTotal, clearCart, totalDiscount} = useCart();
+    const { cart, loading: fetching, getCartTotal } = useCart();
     const [loading, setLoading] = useState(false);
     const [selectedPayment, setSelectedPayment] = useState<'cod' | 'paymob'>('cod');
-    const {register, handleSubmit, formState: {errors}, setValue, setError} = useForm<FormValues>({
+    const { register, handleSubmit, formState: { errors }, setValue, setError } = useForm<FormValues>({
         defaultValues: {
             guest_address: {}
         }
@@ -30,9 +30,9 @@ export function CheckoutGuestScreen({governorates}: { governorates: Governorate[
     const router = useRouter();
 
 
-    console.log('cart length ,' + cart.length)
+    console.log('cart length ,' + cart.items.length)
     useEffect(() => {
-        if (!fetching && cart.length === 0) {
+        if (!fetching && cart.items.length === 0) {
             // Only redirect if not currently submitting an order
             if (!loading) {
                 router.push('/'); // ✅ safe here
@@ -48,44 +48,44 @@ export function CheckoutGuestScreen({governorates}: { governorates: Governorate[
     const onSubmit = async (data: FormValues) => {
         // extra validation: governorate
         if (!selectedGovernorate) {
-            setError('guest_address', {type: 'manual', message: 'Please select a governorate.'} as any);
+            setError('guest_address', { type: 'manual', message: 'Please select a governorate.' } as any);
             toast.error('Please select a governorate.');
             return;
         }
 
         if (!data.termsAccepted) {
-            setError('termsAccepted', {type: 'manual', message: 'You must accept the Terms and Conditions.'});
+            setError('termsAccepted', { type: 'manual', message: 'You must accept the Terms and Conditions.' });
             toast.error('You must accept the Terms and Conditions.');
             return;
         }
         setLoading(true);
-        const {termsAccepted, ...restData} = data;
+        const { termsAccepted, ...restData } = data;
         const orderPayload: Partial<Order> = {
             ...restData,
             guest_phone2: data.guest_phone2 ? data.guest_phone2.length > 0 ? data.guest_phone2 : null : null,
             status: 'pending',
-            subtotal: getCartTotal(),
-            discount_total: totalDiscount,
+            subtotal: cart.netTotal,
+            discount_total: cart.discount,
             shipping_total: selectedGovernorate?.fees ?? 0,
             tax_total: 0.00,
             payment_method: selectedPayment === 'cod' ? 'Cash on Delivery' : 'unpaid',
-            grand_total: getCartNetTotal() + (selectedGovernorate?.fees ?? 0),
-            guest_address: {...(data.guest_address || {}), governorate_slug: selectedGovernorate?.slug}
+            grand_total: getCartTotal(selectedGovernorate?.fees ?? 0),
+            guest_address: { ...(data.guest_address || {}), governorate_slug: selectedGovernorate?.slug }
         };
-        const result = await createOrder(orderPayload, cart);
-        if (result.error) {
-            toast.error(result.error);
-            setLoading(false);
-            return;
-        } else if (result.order_id) {
-            toast.success('Order created successfully!');
-            // navigate first then clear cart to avoid any cart-empty watchers redirecting away
-            router.push(`/orders/${result.order_id}`);
-            await clearCart();
-        }
+        // const result = await createOrder(orderPayload, cart);
+        // if (result.error) {
+        //     toast.error(result.error);
+        //     setLoading(false);
+        //     return;
+        // } else if (result.order_id) {
+        //     toast.success('Order created successfully!');
+        //     // navigate first then clear cart to avoid any cart-empty watchers redirecting away
+        //     router.push(`/orders/${result.order_id}`);
+        //     await clearCart();
+        // }
     };
     if (loading) return (<main className="min-h-screen flex justify-center items-center flex-col gap-5">
-        <Loader2 className=" w-10 h-10 inline-block animate-spin mr-2" size={16}/>
+        <Loader2 className=" w-10 h-10 inline-block animate-spin mr-2" size={16} />
         <p>Processing your Order...</p>
     </main>)
     return (
@@ -96,10 +96,10 @@ export function CheckoutGuestScreen({governorates}: { governorates: Governorate[
 
 
                 <span className={'flex justify-start mb-8 gap-3 items-end'}>
-                <h2 className="text-lg font-semibold self-end">Shipping Information</h2>
-                        <span className={'text-sm self-end'}> Make it easier and <Link
-                            href={'/login'} className={'text-teal-950 font-semibold'}>Login Here!</Link> </span>
-             </span>
+                    <h2 className="text-lg font-semibold self-end">Shipping Information</h2>
+                    <span className={'text-sm self-end'}> Make it easier and <Link
+                        href={'/login'} className={'text-teal-950 font-semibold'}>Login Here!</Link> </span>
+                </span>
 
                 {/* Delivery / Pickup Toggle */}
 
@@ -110,7 +110,7 @@ export function CheckoutGuestScreen({governorates}: { governorates: Governorate[
                         Full name
 
                         <input
-                            {...register('guest_name', {required: 'Full name is required'})}
+                            {...register('guest_name', { required: 'Full name is required' })}
                             type="text"
                             placeholder="Enter full name"
                             className="w-full border border-gray-200 rounded-md px-3 py-2 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none"
@@ -126,7 +126,7 @@ export function CheckoutGuestScreen({governorates}: { governorates: Governorate[
                         <input
                             {...register('guest_email', {
                                 required: 'Email is required',
-                                pattern: {value: /^\S+@\S+\.\S+$/, message: 'Enter a valid email'}
+                                pattern: { value: /^\S+@\S+\.\S+$/, message: 'Enter a valid email' }
                             })}
                             type="email"
                             placeholder="Enter email address"
@@ -146,7 +146,7 @@ export function CheckoutGuestScreen({governorates}: { governorates: Governorate[
                             <input
                                 {...register('guest_phone', {
                                     required: 'Phone number is required',
-                                    minLength: {value: 6, message: 'Enter a valid phone'}
+                                    minLength: { value: 6, message: 'Enter a valid phone' }
                                 })}
                                 type="tel"
                                 placeholder="Enter phone number"
@@ -174,7 +174,7 @@ export function CheckoutGuestScreen({governorates}: { governorates: Governorate[
                         <label className="block text-sm font-medium text-gray-700 mb-1 flex-grow">
                             Address
                             <input
-                                {...register('guest_address.address', {required: 'Address is required'})}
+                                {...register('guest_address.address', { required: 'Address is required' })}
                                 type="text"
                                 placeholder="Enter Your Address"
                                 className="w-full border border-gray-200 rounded-md px-3 py-2 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none"
@@ -231,7 +231,7 @@ export function CheckoutGuestScreen({governorates}: { governorates: Governorate[
                     </div>
                     <div className="flex items-center gap-2 mt-4">
                         <input
-                            {...register('termsAccepted', {required: 'You must accept the Terms and Conditions'})}
+                            {...register('termsAccepted', { required: 'You must accept the Terms and Conditions' })}
                             type="checkbox"
                             className="w-4 h-4 border-gray-300 rounded"
                         />
@@ -249,7 +249,7 @@ export function CheckoutGuestScreen({governorates}: { governorates: Governorate[
             <CheckoutCart selectedGovernorate={selectedGovernorate} onPurchase={async () => {
                 // trigger form submission via react-hook-form
                 await handleSubmit(onSubmit)();
-            }}/>
+            }} />
         </main>
     );
 }

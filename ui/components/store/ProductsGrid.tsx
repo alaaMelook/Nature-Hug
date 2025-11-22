@@ -3,23 +3,21 @@
 import React, { useMemo, useState } from "react";
 import BuyNowButton from "./BuyNowButton";
 import AddToCartButton from "./CartButton";
-import { useTranslation } from "@/ui/providers/TranslationProvider";
 import { useRouter } from "next/navigation";
 import { ProductView } from "@/domain/entities/views/shop/productView";
 import Skeleton from "@mui/material/Skeleton";
 import { StarRating } from "./StarRating";
+import { useTranslation } from "react-i18next";
 
 function ProductCard({
     product,
-    t,
     compact = false,
 }: {
     product: ProductView;
-    t: (key: string) => string;
     compact?: boolean;
 }) {
     const router = useRouter();
-
+    const { t } = useTranslation();
     return (
         <div
             className={`bg-white rounded-xl shadow-lg overflow-hidden flex flex-col transform transition-transform duration-300 hover:scale-105 cursor-pointer ${compact ? "p-3" : ""
@@ -40,7 +38,7 @@ function ProductCard({
                 {product.discount != null && (
                     <div
                         className="absolute top-3 left-3 bg-red-600 text-white px-3 py-1 rounded-full text-sm font-semibold shadow-md">
-                        -{product.discount} {t("EGP")}
+                        {t("{{price, currency}}", { price: (product.discount * -1) })}
                     </div>
                 )}
 
@@ -54,9 +52,9 @@ function ProductCard({
 
             <div className={`p-${compact ? "3" : "5"} flex flex-col justify-between flex-grow`}>
                 <div>
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col ">
                         <h3
-                            className={`${compact ? "text-lg mb-2" : "text-xl mb-5"
+                            className={`${compact ? "text-sm sm:text-lg sm:mb-2" : "text-md sm:text-xl sm:mb-2"
                                 } font-semibold text-gray-800`}
                         >
                             {product.name}
@@ -66,16 +64,16 @@ function ProductCard({
 
                     <div className="flex items-center content-center mb-2">
                         {!product.discount ? (
-                            <p className={`${compact ? "text-md" : "text-lg"} font-normal text-primary-900`}>
-                                {product.price.toFixed(2)} {t("EGP")}
+                            <p className={`${compact ? "text-md sm:text-lg" : "text-sm sm:text-lg"} font-normal text-primary-900`}>
+                                {t('{{price, currency}}', { price: product.price })}
                             </p>
                         ) : (
-                            <div className="flex flex-col items-baseline">
-                                <p className={`${compact ? "text-sm" : "text-md"} font-medium text-primary-900`}>
-                                    {(product.price - product.discount).toFixed(2)} {t("EGP")}
+                            <div className="flex flex-col sm:flex-row sm:gap-5 items-baseline">
+                                <p className={`${compact ? "text-lg" : "text-lg"} text-gray-500 line-through`}>
+                                    {t('{{price, currency}}', { price: product.price })}
                                 </p>
-                                <p className={`${compact ? "text-sm" : "text-lg"} text-gray-500 line-through`}>
-                                    {product.price.toFixed(2)} {t("EGP")}
+                                <p className={`${compact ? "text-md" : "text-md"} font-medium text-primary-900`}>
+                                    {t('{{price, currency}}', { price: (product.price - product.discount) })}
                                 </p>
                             </div>
                         )}
@@ -124,23 +122,23 @@ export default function ProductGrid({
         if (num >= 1 && num <= totalPages) setPage(num);
         window.scrollTo({ top: 0, behavior: "smooth" });
     };
-
-    const skeletonWidth = 283.6;
-    const skeletonHeight = 460;
     const skeletonAnimation = "wave";
     const variant = "rounded";
 
     return (
         <>
             {isLoading ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {[...Array(perPage)].map((_, i) => (
+                <div className={`grid ${recent ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2 sm:grid-cols-3"} gap-6`}>
+                    {[...Array(recent ? 4 : perPage)].map((_, i) => (
                         <Skeleton
                             key={i}
                             variant={variant}
-                            width={skeletonWidth}
-                            height={skeletonHeight}
+                            width={"100%"}
+                            height={"100%"}
                             animation={skeletonAnimation}
+                            className={recent
+                                ? "h-72 sm:h-80 md:h-96"
+                                : "h-64 sm:h-72 md:h-80"}
                         />
                     ))}
                 </div>
@@ -148,13 +146,12 @@ export default function ProductGrid({
                 <>
                     <div
                         className={`grid ${recent
-                            ? "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3"
-                            : "grid-cols-2 sm:grid-cols-3 xl:grid-cols-4"
+                            ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4"
+                            : "grid-cols-2 sm:grid-cols-2 md:grid-cols-3"
                             } gap-6`}
                     >
                         {visibleProducts.map((product) => (
-
-                            <ProductCard key={product.slug} product={product} t={t} compact={!recent} />
+                            <ProductCard key={product.slug} product={product} compact={!recent} />
                         ))}
                     </div>
 

@@ -4,8 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/data/datasources/supabase/client";
 import { LogOut, User, Settings } from "lucide-react";
-import { useTranslation } from "@/ui/providers/TranslationProvider";
-import LanguageSwitcher from "@/ui/components/store/LanguageSwitcher";
+import { useTranslation } from "react-i18next";
+import LanguageSwitcher from "@/ui/components/LanguageSwitcher";
 import { MemberView } from "@/domain/entities/views/admin/memberView";
 
 

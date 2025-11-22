@@ -22,7 +22,7 @@ export function CheckoutUserScreen({ governorates, user }: { governorates: Gover
     const [selectedGovernorate, setSelectedGovernorate] = useState<Governorate | null>(user?.address?.[0]?.governorate ?? null);
     // index of selected saved address, or 'new' to create another
     const [selectedAddressIndex, setSelectedAddressIndex] = useState<number | 'new'>(user?.address && user.address.length > 0 ? 0 : 'new');
-    const { cart, loading: fetching, getCartNetTotal, getCartTotal, clearCart, totalDiscount } = useCart();
+    const { cart, loading: fetching, getCartTotal, clearCart } = useCart();
     const [loading, setLoading] = useState(false);
     const [selectedPayment, setSelectedPayment] = useState<'cod' | 'paymob'>('cod');
     const { register, handleSubmit, formState: { errors }, setValue, setError } = useForm<FormValues>({
@@ -33,9 +33,9 @@ export function CheckoutUserScreen({ governorates, user }: { governorates: Gover
     const router = useRouter();
 
 
-    console.log('cart length ,' + cart.length)
+    console.log('cart length ,' + cart.items.length)
     useEffect(() => {
-        if (!fetching && cart.length === 0) {
+        if (!fetching && cart.items.length === 0) {
             // Only redirect if not currently submitting an order
             if (!loading) {
                 router.push('/'); // ✅ safe here
@@ -93,25 +93,25 @@ export function CheckoutUserScreen({ governorates, user }: { governorates: Gover
             guest_name: data.guest_name,
             guest_phone: data.guest_phone,
             guest_phone2: data.guest_phone2 ?? null,
-            subtotal: getCartTotal(),
-            discount_total: totalDiscount,
+            subtotal: cart.netTotal,
+            discount_total: cart.discount,
             shipping_total: selectedGovernorate?.fees ?? 0,
             tax_total: 0.00,
             payment_method: selectedPayment === 'cod' ? 'Cash on Delivery' : 'unpaid',
-            grand_total: getCartNetTotal() + (selectedGovernorate?.fees ?? 0),
+            grand_total: getCartTotal(selectedGovernorate?.fees ?? 0),
         };
-        const result = await createOrder(payload, cart);
-        if (result.error) {
-            toast.error(result.error);
-            setLoading(false);
-            return;
-        } else if (result.order_id) {
-            toast.success('Order created successfully!');
-            // navigate first, then clear the cart to avoid in-place redirect from cart-empty watchers
-            router.push(`/orders/${result.order_id}`);
-            await clearCart();
+        // const result = await createOrder(payload, cart);
+        // if (result.error) {
+        //     toast.error(result.error);
+        //     setLoading(false);
+        //     return;
+        // } else if (result.order_id) {
+        //     toast.success('Order created successfully!');
+        //     // navigate first, then clear the cart to avoid in-place redirect from cart-empty watchers
+        //     router.push(`/orders/${result.order_id}`);
+        //     await clearCart();
 
-        }
+        // }
     };
     if (loading) return (<main className="min-h-screen flex justify-center items-center flex-col gap-5">
         <Loader2 className=" w-10 h-10 inline-block animate-spin mr-2" size={16} />

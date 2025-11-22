@@ -1,6 +1,6 @@
 import React from "react";
 
-export {};
+export { };
 
 declare global {
 
@@ -10,17 +10,22 @@ declare global {
         error?: string;
         success: boolean;
     }
+    interface Cart {
+        promoCode: string | null;
+        discount: number;
+        total: number;
+        netTotal: number;
+        items: { slug: string, quantity: number }[];
 
+    }
     interface CartContextType {
-        cart: CartItem[];
+        cart: Cart;
         addToCart: (product: Product, quantity: number) => Promise<void>;
         removeFromCart: (product: Product) => Promise<void>;
         updateQuantity: (product: Product, quantity: number) => Promise<void>;
         clearCart: () => Promise<void>;
-        getCartTotal: () => number;
-        getCartNetTotal: () => number;
+        getCartTotal: (shipping: number) => number;
         getCartCount: () => number;
-        totalDiscount: number;
         loading: boolean;
     }
 

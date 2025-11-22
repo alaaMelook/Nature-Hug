@@ -1,6 +1,6 @@
 'use client'
 import React from "react";
-import { useTranslation } from "@/ui/providers/TranslationProvider";
+import { useTranslation } from "react-i18next";
 
 export function Footer() {
     const { t } = useTranslation()
@@ -8,7 +8,7 @@ export function Footer() {
         <footer className=" bg-primary-50 font-semibold text-gray-700 py-8 md:py-12">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
                 <p className="text-sm md:text-base">
-                    &copy; 2025 Hug Nature.{" "}
+                    &copy; Nature Hug 2025.{" "}
                     {t("allRightsReserved")}
                 </p>
             </div>

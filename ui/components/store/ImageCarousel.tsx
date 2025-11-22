@@ -13,15 +13,15 @@ const ImageCarousel = ({ images }: { images: (string | null)[] }) => {
     };
 
     return (
-        <div className="flex-grow flex-shrink rounded-xl group flex flex-col md:flex-row gap-x-4">
+        <div className="flex-grow flex-shrink rounded-xl group flex flex-col sm:flex-row gap-x-4">
             {/* Thumbnails (Left Side - now top for mobile) */}
-            <div className="flex flex-row md:flex-col gap-2 overflow-x-auto  md:overflow-y-auto w-full md:w-20 pb-2 md:pb-0">
+            <div className="flex flex-row sm:flex-col gap-2 overflow-x-auto  sm:overflow-y-auto w-full sm:w-20 pb-1 sm:pb-0">
                 {images.map((_, index) => (
                     <button
                         key={index}
                         onClick={() => setActiveIndex(index)}
-                        className={`relative w-20 h-20 rounded-lg overflow-hidden border-2 transition duration-300 ${index === activeIndex
-                            ? 'border-primary-600 shadow-md'
+                        className={`relative sm:w-20 sm:h-20 w-15 h-15 rounded-lg overflow-hidden border-2 transition duration-300 ${index === activeIndex
+                            ? 'border-primary-600 shadow-sm'
                             : 'border-transparent hover:border-primary-300 '
                             } flex-shrink-0`}
                     >
@@ -41,7 +41,7 @@ const ImageCarousel = ({ images }: { images: (string | null)[] }) => {
             </div>
 
             {/* Main Image and Pagination (Right Column - now main area) */}
-            <div className="relative flex-1 h-full w-full rounded-xl overflow-hidden  flex flex-col">
+            <div className="sm:relative flex-1 h-full w-full rounded-xl overflow-hidden  flex flex-col">
 
                 <img
                     src={images[activeIndex] || 'https://placehold.co/600x600/94A3B8/ffffff?text=?'}
@@ -62,7 +62,7 @@ const ImageCarousel = ({ images }: { images: (string | null)[] }) => {
                         <button
                             key={index}
                             onClick={() => setActiveIndex(index)}
-                            className={`w-3 h-3 rounded-full transition-colors duration-600 ${index === activeIndex
+                            className={`sm:w-3 sm:h-3 w-1 h-1 rounded-full transition-colors duration-600 ${index === activeIndex
                                 ? 'bg-primary-600 scale-110'
                                 : 'bg-gray-300 hover:bg-gray-400'
                                 }`}

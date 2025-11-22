@@ -1,5 +1,5 @@
 import { IProductClientRepository } from "@/data/repositories/client/iProductsRepository";
 
-export async function useCategories() {
-    return await new IProductClientRepository().getAllCategories();
+export async function useCategories(lang: LangKey = 'ar') {
+    return await new IProductClientRepository(lang).getAllCategories();
 }

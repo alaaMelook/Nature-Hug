@@ -1,7 +1,7 @@
 "use client";
 
 import { Construction } from "lucide-react";
-import { useTranslation } from "@/ui/providers/TranslationProvider";
+import { useTranslation } from "react-i18next";
 
 export default function NotImplemented() {
     const { t } = useTranslation();

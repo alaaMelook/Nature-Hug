@@ -1,24 +1,24 @@
 'use client'
 
-import React, {useState} from 'react'
-import {ChevronDown, ChevronUp, Star} from 'lucide-react' // Import icons for expansion
-import {useTranslation} from '@/ui/providers/TranslationProvider'
-import {toast} from 'sonner'
-import {ProductDetailView} from '@/domain/entities/views/shop/productDetailView'
+import React, { useState } from 'react'
+import { ChevronDown, ChevronUp, Star } from 'lucide-react' // Import icons for expansion
+import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
+import { ProductDetailView } from '@/domain/entities/views/shop/productDetailView'
 import Link from 'next/link'
-import {useSupabase} from "@/ui/hooks/useSupabase";
-import {postReview} from "@/ui/hooks/store/useAddReview";
+import { useSupabase } from "@/ui/hooks/useSupabase";
+import { postReview } from "@/ui/hooks/store/useAddReview";
 
 
-export function AddReview({product}: { product: ProductDetailView }) {
+export function AddReview({ product }: { product: ProductDetailView }) {
 
-    const {t} = useTranslation()
+    const { t } = useTranslation()
     const [rating, setRating] = useState(0)
     const [comment, setComment] = useState('')
     const [loading, setLoading] = useState(false)
     const [hoverRating, setHoverRating] = useState(0)
     const [isExpanded, setIsExpanded] = useState(false) // New state for expand/collapse
-    const {user} = useSupabase();
+    const { user } = useSupabase();
 
 
     async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -59,10 +59,10 @@ export function AddReview({product}: { product: ProductDetailView }) {
             {/* The Expand/Collapse Button */}
             <button
                 onClick={toggleExpansion}
-                className="w-full flex items-center justify-between px-6 py-4 bg-primary-800 text-white rounded-lg shadow-lg hover:bg-primary-700 transition-colors duration-300 focus:outline-none focus:ring-4 focus:ring-primary-300"
+                className="w-full flex items-center justify-center gap-5 px-6 py-4 bg-primary-800 text-white rounded-lg shadow-lg hover:bg-primary-700 transition-colors duration-300 focus:outline-none focus:ring-4 focus:ring-primary-300"
             >
-                <span className="text-xl font-semibold">{t('addYourReview')}</span>
-                {isExpanded ? <ChevronUp size={24}/> : <ChevronDown size={24}/>}
+                <span className="text-sm sm:text-lg md:text-xl font-semibold text-center">{t('addYourReview')}</span>
+                {isExpanded ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
             </button>
 
             {/* The Review Form Content, shown only when isExpanded is true */}
@@ -92,7 +92,7 @@ export function AddReview({product}: { product: ProductDetailView }) {
                                             className={`cursor-pointer transition-colors duration-200 ${index < (hoverRating || rating)
                                                 ? 'text-yellow-400 fill-yellow-400'
                                                 : 'text-gray-300'
-                                            }`}
+                                                }`}
                                             onClick={() => handleStarClick(index)}
                                             onMouseEnter={() => setHoverRating(index + 1)}
                                             onMouseLeave={() => setHoverRating(0)}

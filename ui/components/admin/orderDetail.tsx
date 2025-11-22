@@ -1,5 +1,8 @@
+'use client';
+
 import { OrderDetailsView } from "@/domain/entities/views/admin/orderDetailsView";
 import { orderStatus } from "@/lib/utils/status";
+import { useTranslation } from "react-i18next";
 
 export function OrderDetailsModal({
     order,
@@ -8,6 +11,7 @@ export function OrderDetailsModal({
     order: OrderDetailsView | null;
     onClose: () => void;
 }) {
+    const { t } = useTranslation();
     if (!order) return null;
     return (
         <div className="fixed inset-0 z-50 flex items-start justify-center p-6">
@@ -33,10 +37,11 @@ export function OrderDetailsModal({
                         <strong>Total:</strong> {order.final_order_total ?? "0.00"}
                     </p>
 
-                    <strong>Created:</strong>{" "}
-                    {order ? new Date(order.order_date).toLocaleString('en-GB', { timeZone: 'Africa/Cairo', hour12: true }).split(',').map((info, ind) =>
+                    <strong>Created:</strong>
+                    {t("{{date,datetime}}", { date: new Date(order.order_date) })}
+                    {/* {order ? new Date(order.order_date).toLocaleString('en-GB', { timeZone: 'Africa/Cairo', hour12: true }).split(',').map((info, ind) =>
                         <div key={ind}>{info}</div>
-                    ) : "-"}
+                    ) : "-"} */}
 
                     <p>
                         {/*<strong>Admin:</strong> {order.created_by_admin ?? "-"}*/}

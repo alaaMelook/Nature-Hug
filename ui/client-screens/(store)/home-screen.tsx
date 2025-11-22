@@ -1,26 +1,16 @@
 "use client"
-import React, {useEffect, useState} from "react";
-import {useFeatures, useTranslation} from "@/ui/providers/TranslationProvider";
+import React, { useEffect, useState } from "react";
+import { Trans, useTranslation } from "react-i18next";
 import ProductGrid from "@/ui/components/store/ProductsGrid";
 import Link from "next/link";
-import {ProductView} from "@/domain/entities/views/shop/productView";
-import {GetProductsData} from "@/ui/hooks/store/useProductsData";
+import { ProductView } from "@/domain/entities/views/shop/productView";
+import { GetProductsData } from "@/ui/hooks/store/useProductsData";
+import { useFeatures } from "@/ui/hooks/store/useFeatures";
+import { useCurrentLanguage } from "@/ui/hooks/useCurrentLanguage";
 
-export function HomeScreen({initialProducts}: { initialProducts: ProductView[] }) {
-    const {t, language} = useTranslation();
+export function HomeScreen({ initialProducts: products }: { initialProducts: ProductView[] }) {
+    const { t } = useTranslation();
     const features = useFeatures();
-    const [products, setProducts] = useState(initialProducts);
-    const [loading, setLoading] = useState(false);
-    useEffect(() => {
-        async function refetch() {
-            setLoading(true);
-            const updated = await new GetProductsData().recent();
-            setProducts(updated);
-            setLoading(false);
-        }
-
-        refetch();
-    }, [language]);
     return (
         <div className="min-h-screen  antialiased text-gray-800">
             <main>
@@ -36,13 +26,13 @@ export function HomeScreen({initialProducts}: { initialProducts: ProductView[] }
                         <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
                             <Link
                                 href="/products"
-                                className="bg-primary-800 text-white font-semibold px-6 py-3 rounded-lg shadow-md hover:bg-primary-50 hover:text-primary-700 transition-colors duration-300 text-center"
+                                className="bg-primary-800 w-1/2 sm:w-fit text-white font-semibold px-6 py-3 rounded-lg shadow-md hover:bg-primary-50 hover:text-primary-700 transition-colors duration-300 text-center"
                             >
                                 {t("shopNow")}
                             </Link>
                             <Link
-                                href="#"
-                                className=" font-semibold px-6 py-3 rounded-lg shadow-md hover:bg-primary-50 hover:text-primary-700  transition-colors duration-300 text-center  text-primary-900 border-1 border-primary-900 rounded-md"
+                                href="/about-us"
+                                className=" font-semibold w-1/2 sm:w-fit px-6 py-3 rounded-lg shadow-md hover:bg-primary-50 hover:text-primary-700  transition-colors duration-300 text-center  text-primary-900 border-1 border-primary-900"
                             >
                                 {t("learnMore")}
                             </Link>
@@ -52,19 +42,19 @@ export function HomeScreen({initialProducts}: { initialProducts: ProductView[] }
 
                 {/* Product Grid Section */}
                 <section className="py-12 md:py-16">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 max-h-fit">
-                        <h2 className="text-2xl md:text-3xl font-bold text-center mb-8 md:mb-12 text-default ">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6max-h-fit">
+                        <h2 className="text-2xl md:text-3xl font-extrabold text-center mb-8 md:mb-12 text-default ">
                             {t("featuredProducts")}
                         </h2>
 
-                        <ProductGrid products={products} isLoading={loading}/>
+                        <ProductGrid products={products} isLoading={false} recent={true} />
                     </div>
                 </section>
 
                 {/* Features Section */}
-                <section className="bg-primary-50 py-12 md:py-16">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
+                <section className="bg-primary-50 py-12 ">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6">
+                        <div className="grid grid-cols-2 sm:grid-cols-2 gap-2">
                             {features.map(
                                 (feature: {
                                     title: string;
@@ -76,12 +66,14 @@ export function HomeScreen({initialProducts}: { initialProducts: ProductView[] }
                                         className="bg-white p-6 rounded-xl transform transition-transform duration-300 hover:scale-105 text-primary  text-center shadow-md"
                                     >
                                         <div className="flex justify-center mb-4">
-                                            <feature.icon className="w-10 h-10 text-[#8B4513]"/>
+                                            <feature.icon className="w-8 h-8 sm:w-10 sm:h-10 text-[#8B4513]" />
                                         </div>
-                                        <h3 className={`text-lg text-default `}>{feature.title}</h3>
-                                        <p className={`text-gray-800 text-sm`}>
-                                            {feature.description}
-                                        </p>
+
+                                        <h3 className={` text-sm sm:text-lg text-default font-bold `}>{feature.title}</h3>
+                                        <Trans components={{ b: <span className="font-semibold text-green-800" /> }}>
+                                            <p className={`text-gray-800 text-xs sm:text-sm font-semibold mt-2`}>
+                                                {feature.description}
+                                            </p> </Trans>
                                     </div>
                                 )
                             )}

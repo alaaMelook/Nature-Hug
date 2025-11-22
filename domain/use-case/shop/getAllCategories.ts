@@ -1,8 +1,8 @@
-import {IProductServerRepository} from "@/data/repositories/server/iProductsRepository";
-import {Category} from "@/domain/entities/database/category";
+import { IProductServerRepository } from "@/data/repositories/server/iProductsRepository";
+import { Category } from "@/domain/entities/database/category";
 
 export class GetAllCategories {
-    constructor(private repo = new IProductServerRepository()) {
+    constructor(private lang: LangKey = 'ar', private repo = new IProductServerRepository(lang)) {
     }
 
     async execute(): Promise<Category[]> {

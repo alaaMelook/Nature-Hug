@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslation } from "@/ui/providers/TranslationProvider";
+import { useTranslation } from "react-i18next";
 import { Minus, Plus } from "lucide-react";
 export default function Counter({
   quantity,
@@ -13,21 +13,21 @@ export default function Counter({
 }>) {
   const { t } = useTranslation();
   return (
-    <div className="flex items-center justify-center space-x-4 bg-gray-100 rounded-full px-3 py-1.5 w-30">
+    <div className="flex items-center justify-center sm:space-x-4 space-x-2 bg-gray-100 rounded-full px-3 py-1.5 sm:w-30 w-20">
       <button
         onClick={quantity < 1 ? undefined : onDecrease}
         className="text-gray-600 hover:text-gray-900 transition-colors duration-200 p-1"
         aria-label={t("decreaseQuantity")}
       >
-        <Minus className="w-4 h-4" />
+        <Minus className="sm:w-4 sm:h-4 w-3 h-3" />
       </button>
-      <span className="text-gray-800 font-medium text-lg">{quantity}</span>
+      <span className="text-gray-800 font-medium md:text-lg text-sm ">{quantity}</span>
       <button
         onClick={onIncrease}
         className="text-gray-600 hover:text-gray-900 transition-colors duration-200 p-1"
         aria-label={t("increaseQuantity")}
       >
-        <Plus className="w-4 h-4" />
+        <Plus className="sm:w-4 sm:h-4 w-3 h-3" />
       </button>
     </div>
   );
