@@ -1,8 +1,6 @@
-import { log } from "console";
-import { sign } from "crypto";
 import { Heart, Rocket, Box, Zap, CheckCircle, Flower, Leaf, Smile, Sparkles } from "lucide-react";
 
-export const resources: Record<string, any> = {
+export const resources = {
   en: {
     translation: {
       // Pagination
@@ -20,6 +18,7 @@ export const resources: Record<string, any> = {
       ratingDesc: "Top Rated",
       inStockOnly: "In stock only",
       onSaleOnly: "On sale only",
+      or: "or",
 
       // Quantity controls
       decreaseQuantity: "Decrease quantity",
@@ -36,7 +35,6 @@ export const resources: Record<string, any> = {
       bestFor: "Best For",
       precautions: "Precautions",
       na: "N/A",
-      // reviews: "Reviews",
       // Currency
       EGP: "EGP",
 
@@ -171,10 +169,33 @@ export const resources: Record<string, any> = {
       // aliases to match camelCase keys used in components
       ourStory: "Our Story",
       ourVision: "Our Vision",
+      corevalues: "Core Values", // Fixed casing for consistency
       ourGoals: "Our Goals",
 
       // cart
       addedtoCart: '{{product}} added to cart',
+
+      // Contact page
+      contactFaqTitle: "Frequently Asked Questions",
+      contactFaqIntro: "Find quick answers to common questions about our products, orders, and services.",
+      faq1Title: "What makes Nature Hug products unique?",
+      faq1Content: "Our products are crafted with 100% natural and organic ingredients, ethically sourced, and free from harmful chemicals. We believe in harnessing nature's power for your skin's well-being.",
+      faq2Title: "Are your products suitable for all skin types?",
+      faq2Content: "Yes, we offer a diverse range of products designed to cater to various skin types, including sensitive, oily, dry, and combination skin. Each product description provides detailed information to help you choose the best fit.",
+      faq3Title: "How can I track my order?",
+      faq3Content: "Once your order is shipped, you will receive an email with a tracking number and a link to monitor its delivery status. You can also log in to your account on our website to view your order history and tracking information.",
+      faq4Title: "What is your return policy?",
+      faq4Content: "We offer a 30-day satisfaction guarantee. If you are not completely happy with your purchase, you can return it within 30 days for a full refund or exchange. Please refer to our 'Returns & Refunds' page for detailed instructions.",
+      faq6Title: "Can I change or cancel my order after it's been placed?",
+      faq6Content: "We process orders quickly to ensure prompt delivery. If you need to change or cancel your order, please contact our customer service team as soon as possible. We'll do our best to accommodate your request, but changes may not be possible if the order has already been shipped.",
+
+      contactHeader: "Have other concerns? We'd love to hear from you!",
+      contactIntro: "Your journey with us doesn't end with your order... We're always here to listen to you, help you, and care for your true beauty 🌿",
+
+      contactMethodSupport: "Contact support immediately",
+      contactMethodReply: "We will reply within 24 hours",
+      contactMethodFollow: "Follow us for latest offers",
+      contactMethodShare: "Share your opinion with us",
 
       // login
       emailRequired: "Email is required",
@@ -201,12 +222,7 @@ export const resources: Record<string, any> = {
       alreadyHaveAccount: "Already have an account? Login here.",
       failedToSubmit: "Failed to submit. Please try again.",
 
-      // about us
-      // keep original lowercase keys for compatibility
-      ourstory: "Our Story",
-      ourvision: "Our Vision",
-      corevalues: "Core Values",
-      ourgoals: "Our Goals",
+      // about us content
       goals: [
         'Develop safe, high-impact products with powerful natural ingredients.',
         'Strengthen women’s self-confidence through visible, authentic results.',
@@ -215,24 +231,51 @@ export const resources: Record<string, any> = {
         'Maintain the highest quality standards and continuously innovate.',
       ],
       egyptianBrand: " An <strong>Egyptian brand</strong> founded by a <strong>pharmacist</strong>. We blend medical- grade effectiveness with the gentleness of nature to restore skin confidence.",
-      keracalm: "<strong>KeraCalm:</strong> The first safe 40% urea cream in Egypt — treats stubborn issues and delivers visible results from the first use. 💖",
+      keracalm: "<strong>Introducing the Keracalm Cream:</strong> <br/> The <b>first safe 40% urea cream in Egypt</b> — treats stubborn issues and delivers visible results from the first use. 💖",
       foundation: "Our foundation is built on care, transparency, and a love for natural beauty.<br/> Every product reflects our belief in gentle strength and authentic results.",
       vision: "To be the #1 skincare choice for Arab women, redefining beauty care as a <strong> psychological and emotional therapy </strong>, not just a routine.",
       cores: [
         { icon: 'Leaf', color: 'green', text: 'Nature as inspiration' },
         { icon: 'Sparkles', color: 'yellow', text: 'Excellence in results' },
-        { icon: 'Smile', color: 'orange', text: 'Empowerment & confidence' },
-        { icon: 'Heart', color: 'pink', text: 'Genuine care from touch' },
+        { icon: 'Smile', color: 'orange', text: 'Empowerment and confidence' },
+        { icon: 'Heart', color: 'pink', text: 'Genuine care from the touch' },
         { icon: 'CheckCircle', color: 'green', text: 'Transparency in formulas' },
-        { icon: 'Flower', color: 'purple', text: 'Love of detail in design' },
-      ]
+      ],
+      // Admin Product Creation
+      productCreated: "Product created successfully",
+      errorCreatingProduct: "Error creating product",
+      imageUploaded: "Image uploaded successfully",
+      errorUploadingImage: "Error uploading image",
+      createProduct: "Create product",
+      nameEn: "Name (English)",
+      nameAr: "Name (Arabic)",
+      price: "Price",
+      stock: "Stock",
+      slug: "Slug",
+      descriptionEn: "Description (English)",
+      descriptionAr: "Description (Arabic)",
+      images: "Images",
+      variants: "Variants",
+      variantNameEn: "Variant Name (English)",
+      removeVariant: "Remove Variant",
+      addVariant: "Add Variant",
+      selectFromGallery: "Select from Gallery",
+      uploadNewImage: "Upload New Image",
+      gallery: "Gallery",
+      selectImage: "Select Image",
+      cancelSelection: "Cancel Selection",
+      variantNameAr: "Variant Name (Arabic)",
+      basicInformation: "Basic Information",
+      saveProduct: "Save Product",
+      addMaterial: "Add Material",
+      add: "Add",
+      variantDescriptionOverride: "Variant Description Override",
     }
   },
   ar: {
     translation: {
       // Pagination
       prev: "السابق",
-      or: "أو",
       next: "التالي",
       // Filters / Product list
       filters: "الفلاتر",
@@ -246,6 +289,7 @@ export const resources: Record<string, any> = {
       ratingDesc: "الأعلى تقييماً",
       inStockOnly: "المتوفرة فقط",
       onSaleOnly: "المخفضة فقط",
+      or: "أو",
 
       // Quantity controls
       decreaseQuantity: "إنقاص الكمية",
@@ -262,7 +306,6 @@ export const resources: Record<string, any> = {
       bestFor: "مناسب ل",
       precautions: "الاحتياطات",
       na: "غير متوفر",
-      // reviews: "التقييمات",
       // Currency
       EGP: "ج.م",
 
@@ -298,7 +341,7 @@ export const resources: Record<string, any> = {
       cart: "السلة",
       emptyCart: "عربتك فارغة!",
       startAdding: "ابدأ بإضافة المنتجات إلى عربتك لتراها هنا.",
-
+      shopNow: "تسوق الآن",
       quantity: "الكمية",
       each: "لكل",
       subtotal: "الإجمالي",
@@ -313,7 +356,6 @@ export const resources: Record<string, any> = {
       outOfStock: "غير متوفر",
       addToCart: "أضف إلى السلة",
       featuredProducts: "المنتجات المميزة",
-      shopNow: "تسوق الآن",
       learnMore: "اعرف المزيد",
       allRightsReserved: "جميع الحقوق محفوظة.",
       heroTitle: "حيث كل مكون هو وعد.",
@@ -391,11 +433,39 @@ export const resources: Record<string, any> = {
       underConstruction: "هذه الصفحة قيد الإنشاء",
 
       //about us
-      aboutUsTitle: "من حضن الطبيعة  <br/> إلى بشرتك",
+      aboutUsTitle: "من حضن الطبيعة  <br/> إلى بشرتك",
       aboutUsDescription: "رعاية علاجية، <span>ملامسة من الطبيعة 🌿</span>",
+
+      // aliases to match camelCase keys used in components (Arabic)
+      ourStory: "قصتنا",
+      ourVision: "رؤيتنا",
+      corevalues: "القيم الأساسية",
+      ourGoals: "أهدافنا",
 
       // cart
       addedtoCart: 'تم إضافة {{product}} إلى العربة',
+
+      // Contact page
+      contactFaqTitle: "الأسئلة المتكررة",
+      contactFaqIntro: "اعثر على إجابات سريعة للأسئلة الشائعة حول منتجاتنا وطلباتك وخدماتنا.",
+      faq1Title: "ما الذي يميّز منتجات Nature Hug؟",
+      faq1Content: "منتجاتنا مصنوعة من مكونات طبيعية وعضوية 100٪، مصدرها أخلاقي وخالية من المواد الكيميائية الضارة. نؤمن بقوة الطبيعة في دعم صحة بشرتك.",
+      faq2Title: "هل منتجاتكم مناسبة لكل أنواع البشرة؟",
+      faq2Content: "نعم، نقدم مجموعة متنوعة من المنتجات التي تناسب أنواع البشرة المختلفة، بما في ذلك الحساسة والدهنية والجافة والمختلطة. يحتوي وصف كل منتج على معلومات تفصيلية لمساعدتك على الاختيار.",
+      faq3Title: "كيف يمكنني تتبع طلبى؟",
+      faq3Content: "بمجرد شحن طلبك، ستتلقى رسالة بريد إلكتروني تحتوي على رقم تتبع ورابط لمتابعة حالة التسليم. يمكنك أيضًا تسجيل الدخول إلى حسابك على موقعنا لمراجعة محفوظات الطلبات ومعلومات التتبع.",
+      faq4Title: "ما هي سياسة الاسترجاع لديكم؟",
+      faq4Content: "نقدم ضمان رضا لمدة 30 يومًا. إذا لم تكن راضيًا تمامًا عن مشترياتك، يمكنك إرجاعها خلال 30 يومًا لاسترداد كامل المبلغ أو استبدالها. راجع صفحة 'الاسترجاع والاسترداد' لمزيد من التعليمات.",
+      faq6Title: "هل يمكنني تعديل أو إلغاء طلبي بعد إرساله؟",
+      faq6Content: "نعالج الطلبات بسرعة لضمان التسليم الفوري. إذا احتجت إلى تعديل أو إلغاء طلب، يرجى الاتصال بخدمة العملاء في أقرب وقت ممكن. سنبذل قصارى جهدنا للمساعدة، لكن قد لا يكون التغيير ممكنًا إذا تم شحن الطلب بالفعل.",
+
+      contactHeader: "هل لديك استفسارات أخرى؟ يسعدنا سماعك!",
+      contactIntro: "رحلتك معنا لا تنتهي عند الطلب... نحن دائمًا هنا للاستماع ومساعدتك والعناية بجمالك الحقيقي 🌿",
+
+      contactMethodSupport: "اتصل بالدعم فورًا",
+      contactMethodReply: "سوف نرد خلال 24 ساعة",
+      contactMethodFollow: "تابعنا لأحدث العروض",
+      contactMethodShare: "شاركنا رأيك",
 
       // login
       emailRequired: "البريد الإلكتروني مطلوب",
@@ -422,11 +492,7 @@ export const resources: Record<string, any> = {
       alreadyHaveAccount: "هل لديك حساب؟ سجّل الدخول هنا.",
       failedToSubmit: "فشل في الإرسال. يرجى المحاولة مرة أخرى.",
 
-      // about us
-      ourstory: "قصتنا",
-      ourvision: "رؤيتنا",
-      corevalues: "القيم الأساسية",
-      ourgoals: "أهدافنا",
+      // about us content (Arabic)
       goals: [
         'تطوير منتجات آمنة وعالية التأثير بمكونات طبيعية قوية.',
         'تعزيز ثقة النساء بأنفسهن من خلال نتائج مرئية وأصيلة.',
@@ -435,19 +501,45 @@ export const resources: Record<string, any> = {
         'الحفاظ على أعلى معايير الجودة والابتكار المستمر.',
       ],
       egyptianBrand: " علامة تجارية <strong>مصرية</strong> تأسست على يد <strong>صيدلانية</strong>. نحن نمزج بين الفعالية الطبية واللطف الطبيعي لاستعادة ثقة البشرة.",
-      keracalm: "<strong>KeraCalm:</strong> أول كريم يوريا آمن بتركيز 40% في مصر — يعالج المشكلات المستعصية ويوفر نتائج مرئية من الاستخدام الأول. 💖",
+      keracalm: "<strong>نقدم لكم كريم كيراكالم:</strong> <br/> أول <b>كريم يوريا 40٪ آمن في مصر</b> — يعالج المشكلات المستعصية ويقدم نتائج مرئية من الاستخدام الأول. 💖",
       foundation: "أساسنا مبني على الرعاية والشفافية وحب الجمال الطبيعي.<br/> كل منتج يعكس إيماننا بالقوة اللطيفة والنتائج الأصيلة.",
+      vision: "أن نكون الخيار الأول للعناية بالبشرة للنساء العربيات، معيدين تعريف العناية بالجمال كعلاج نفسي وعاطفي، وليس مجرد روتين.",
       cores: [
         { icon: 'Leaf', color: 'green', text: 'الطبيعة كمصدر إلهام' },
         { icon: 'Sparkles', color: 'yellow', text: 'التميز في النتائج' },
         { icon: 'Smile', color: 'orange', text: 'التمكين والثقة' },
         { icon: 'Heart', color: 'pink', text: 'رعاية حقيقية من اللمسة' },
         { icon: 'CheckCircle', color: 'green', text: 'الشفافية في الصيغ' },
-        { icon: 'Flower', color: 'purple', text: 'حب التفاصيل في التصميم' },
       ],
-      vision: "أن نكون الخيار الأول للعناية بالبشرة للنساء العربيات، معيدين تعريف العناية بالجمال كعلاج نفسي وعاطفي، وليس مجرد روتين.",
-
-
+      // Admin Product Creation
+      productCreated: "تم إنشاء المنتج بنجاح",
+      errorCreatingProduct: "خطأ في إنشاء المنتج",
+      imageUploaded: "تم رفع الصورة بنجاح",
+      errorUploadingImage: "خطأ في رفع الصورة",
+      createProduct: "إنشاء منتج",
+      nameEn: "الاسم (إنجليزي)",
+      nameAr: "الاسم (عربي)",
+      price: "السعر",
+      stock: "المخزون",
+      slug: "الرابط (Slug)",
+      descriptionEn: "الوصف (إنجليزي)",
+      descriptionAr: "الوصف (عربي)",
+      images: "الصور",
+      variants: "الخيارات",
+      variantNameEn: "اسم الخيار (إنجليزي)",
+      removeVariant: "إزالة الخيار",
+      addVariant: "إضافة خيار",
+      selectFromGallery: "اختر من المعرض",
+      uploadNewImage: "رفع صورة جديدة",
+      gallery: "المعرض",
+      selectImage: "اختر صورة",
+      cancelSelection: "إلغاء الاختيار",
+      variantNameAr: "اسم الخيار (عربي)",
+      basicInformation: "المعلومات الأساسية",
+      saveProduct: "حفظ المنتج",
+      addMaterial: "إضافة مادة",
+      add: "إضافة",
+      variantDescriptionOverride: "تجاوز وصف الخيار",
     }
   }
 };

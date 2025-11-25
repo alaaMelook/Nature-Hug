@@ -1,7 +1,8 @@
 'use client';
 import React from 'react';
+import Image from "next/image";
 import { motion } from 'framer-motion';
-import { CheckCircle, Flower, Heart, Leaf, Smile, Sparkles, Target, Rocket, Box, Zap } from 'lucide-react';
+import { CheckCircle, Flower, Heart, Leaf, Smile, Sparkles, Target, Rocket, Box, Zap, Eye } from 'lucide-react';
 import { useTranslation, Trans } from 'react-i18next';
 
 export default function AboutPage() {
@@ -43,39 +44,23 @@ export default function AboutPage() {
 
             {/* ===== Story Section ===== */}
             <section className="py-20 px-6 bg-gray-50">
-                <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-12 items-center">
+                <div className="max-w-5xl mx-auto grid md:grid-cols-2 md:gap-30 gap-15 items-center text-lg md:text-sm">
                     <motion.div
                         initial={{ opacity: 0, x: -20 }}
                         whileInView={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.6 }}
                     >
-                        <span className="flex items-center gap-3">
+                        <span className="flex items-center gap-3 mb-5">
 
-                            <Flower className="w-6 h-6 text-green-600 mb-3" />
-                            <h2 className="text-3xl font-semibold mb-4">{t("ourStory")}</h2>
+                            <Flower className="w-6 h-6 text-green-600" />
+                            <h2 className="text-3xl font-semibold ">{t("ourStory")}</h2>
                         </span>
-                        <p className="leading-relaxed text-gray-700 mb-6">
+                        <p className="leading-relaxed text-gray-700 md:text-lg">
 
                             <Trans i18nKey="egyptianBrand" components={{ strong: <strong /> }} />
                         </p>
-                        <p className="bg-white border border-gray-100 rounded-xl px-5 py-4 text-sm text-gray-800">
-                            <Trans i18nKey="keracalm" components={{ strong: <strong /> }} />
-                        </p>
-                        <p className="bg-white border border-gray-100 rounded-xl px-5 py-4 text-sm text-gray-800">
-                            <Trans i18nKey="keracalm" components={{ strong: <strong /> }} />
-                        </p>
-                        <p className="bg-white border border-gray-100 rounded-xl px-5 py-4 text-sm text-gray-800">
-                            <Trans i18nKey="foundation" components={{ br: <br /> }} />
-                        </p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
 
-                            {/* {(t("cores", { returnObjects: true }) as any[]).map((core, i) => (
-                                <div key={i} className="flex items-center gap-3">
-                                    <core.icon className={`w-6 h-6 text-${core.color}-600`} />
-                                    <p className="text-gray-700">{core.text}</p>
-                                </div>
-                            ))} */}
-                        </div>
+
                     </motion.div>
 
                     <motion.div
@@ -84,37 +69,55 @@ export default function AboutPage() {
                         transition={{ duration: 0.6, delay: 0.1 }}
                         className="md:pl-8"
                     >
-                        <span className="flex items-center gap-3">
-                            <Target className="w-6 h-6 text-green-600 mb-3" />
-                            <h2 className="text-3xl font-semibold mb-4">{t("ourVision")}</h2>
+                        <span className="flex items-center gap-3 mb-5">
+                            <Eye className="w-6 h-6 text-primary-600" />
+                            <h2 className="text-3xl font-semibold">{t("ourVision")}</h2>
                         </span>
-                        <p className="leading-relaxed text-gray-700">
+                        <p className="leading-relaxed text-gray-700 md:text-lg">
                             <Trans i18nKey="vision" components={{ strong: <strong /> }} />
                         </p>
                     </motion.div>
                 </div>
             </section>
+            <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6 }}
+            >
 
+                <div className="bg-primary-100 border border-gray-100 rounded-xl px-10 md:px-15 py-10 text-sm text-gray-800 flex flex-col md:flex-row md:gap-30 items-center justify-center gap-10">
+                    <Image src="https://reqrsmboabgxshacmkst.supabase.co/storage/v1/object/public/product-images/kera-photo.png" alt="Kera Photo"
+                        width={200} height={200}
+                        style={{ objectFit: 'cover' }}
+                        className="rounded-full border-5 border-primary-900 " >
+                    </Image>
+                    <span className='w-full md:w-2/5 text-center md:text-start text-lg'>
+
+                        <Trans i18nKey="keracalm" components={{ strong: <strong />, br: <br />, b: <b className='font-semibold italic' /> }} />
+                    </span>
+
+                </div>
+            </motion.div>
             {/* ===== Mission / Goals Section ===== */}
-            <section className="py-24 px-6">
-                <div className="max-w-4xl mx-auto text-center">
+            <section className="py-20 px-6 bg-gray-50">
+                <div className="max-w-5xl mx-auto grid md:grid-cols-2 md:gap-30 gap-15 text-lg md:text-sm">
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.6 }}
                     >
-                        <span className="flex items-center gap-3 mb-3 justify-center">
-                            <Heart className="w-6 h-6 text-pink-500" />
+                        <span className="flex items-center gap-3 mb-8 ">
+                            <Target className="w-6 h-6 text-green-600 " />
                             <h2 className="text-3xl font-semibold">{t("ourGoals")}</h2>
                         </span>
-                        <ul className="space-y-4 text-gray-700 text-base text-left sm:text-center leading-relaxed">
+                        <ul className="space-y-2 text-gray-700 text-base text-start">
                             {(t("goals", { returnObjects: true }) as any[]).map((goal, i) => (
                                 <motion.li
                                     key={i}
                                     initial={{ opacity: 0, y: 10 }}
                                     whileInView={{ opacity: 1, y: 0 }}
                                     transition={{ delay: i * 0.05 }}
-                                    className="flex items-start justify-center gap-2"
+                                    className="flex items-start justify-start text-start flex-start gap-2"
                                 >
                                     <CheckCircle className="w-5 h-5 text-green-600 mt-1 flex-shrink-0" />
                                     <span>{goal}</span>
@@ -122,47 +125,43 @@ export default function AboutPage() {
                             ))}
                         </ul>
                     </motion.div>
-                </div>
-            </section>
 
-            {/* ===== Core Values Section ===== */}
-            <section className="py-24 px-6 bg-gray-50">
-                <div className="max-w-6xl mx-auto">
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6 }}
-                        className="text-center mb-12"
-                    >
-                        <span className="flex items-center gap-3 mb-3 justify-center">
-                            <Sparkles className="w-6 h-6 text-yellow-500 " />
-                            <h2 className="text-3xl font-semibold">{t("corevalues")}</h2>
-                        </span>
-                        <p className="text-gray-600 max-w-2xl mx-auto">
-                            <Trans i18nKey="foundation" components={{ br: <br /> }} />
-                        </p>
-                    </motion.div>
+                    <div className="w-full">
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.6 }}
+                            className="font-semibold"
+                        >
+                            <span className="flex gap-3 mb-2 items-center">
+                                <Sparkles className="w-6 h-6 text-yellow-500 " />
+                                <h2 className="text-3xl font-semibold">{t("corevalues")}</h2>
+                            </span>
+                            <p className="text-gray-600 md:text-sm text-md w-full mb-8">
+                                <Trans i18nKey="foundation" components={{ br: <br /> }} />
+                            </p>
+                        </motion.div>
 
-                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8 text-left md:text-center">
-                        {(t("cores", { returnObjects: true }) as any[]).map((v, i) => {
-                            const Icon = typeof v.icon === 'string' ? ICONS[v.icon] ?? Leaf : v.icon;
-                            return (
-                                <motion.div
-                                    key={i}
-                                    initial={{ opacity: 0, y: 10 }}
-                                    whileInView={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: i * 0.05 }}
-                                    className="flex items-center md:justify-center gap-3"
-                                >
-                                    <Icon className={`w-8 h-8 text-${v.color}-600 flex-shrink-0`} />
-                                    <p className="font-medium text-gray-700">{v.text}</p>
-                                </motion.div>
-                            );
-                        })}
+                        <div className="grid grid-cols-2  md:gap-10 gap-5 text-start mx-10">
+                            {(t("cores", { returnObjects: true }) as any[]).map((v: any, i) => {
+                                const Icon = typeof v.icon === 'string' ? ICONS[v.icon] ?? Leaf : v.icon;
+                                return (
+                                    <motion.div
+                                        key={i}
+                                        initial={{ opacity: 0, y: 10 }}
+                                        whileInView={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: i * 0.05 }}
+                                        className="flex text-start gap-3"
+                                    >
+                                        <Icon className={`w-6 h-6 text-${v.color}-500 `} />
+                                        <p className="font-medium text-gray-700 text-sm">{v.text}</p>
+                                    </motion.div>
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
             </section>
-
             {/* ===== Footer ===== */}
 
         </main>

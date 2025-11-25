@@ -1,46 +1,91 @@
 "use client";
 import { ArrowRightIcon, Handbag, Trash2Icon, X } from "lucide-react";
-
 import { useTranslation } from "react-i18next";
 import { useCart } from "@/ui/providers/CartProvider";
 import { Tooltip } from "flowbite-react";
 import Counter from "@/ui/components/store/Counter";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { ProductView } from "@/domain/entities/views/shop/productView";
+import { usePathname, useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+
+// Import CartItem and ProductView types
+import { CartItem } from "@/domain/entities/views/shop/productView";
 import { GetProductsData } from "@/ui/hooks/store/useProductsData";
-
-
+// Removed import { Router } from "next/router";
 export default function CartPage() {
+    const pathname = usePathname();
     const router = useRouter();
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const { cart, removeFromCart, clearCart, updateQuantity } = useCart();
-    const [products, setProducts] = useState<{ product: ProductView, quantity: number }[]>([]);
+    const [holder, setHolder] = useState(cart.items);
+
+    const [products, setProducts] = useState<CartItem[]>([]);
+    const [loadingProducts, setLoadingProducts] = useState(true);
 
 
-    useEffect(() => {
-        async function loadProducts() {
-            for (const item of cart.items) {
-                let existing = products.findIndex(p => p.product.slug === item.slug);
-                if (existing !== -1) {
-                    if (products[existing].quantity !== item.quantity) {
-                        setProducts((prev) => {
-                            const updated = [...prev];
-                            updated[existing].quantity = item.quantity;
-                            return updated;
-                        });
-                    }
-                    continue;
-                }
-                else {
-                    let prod = await new GetProductsData().bySlug(item.slug);
-                    if (!prod) continue;
-                    setProducts((prev) => [...prev, { product: prod, quantity: item.quantity }]);
-                }
+
+    // --- DATA FETCHING AND SYNC LOGIC --- 
+
+
+    // 1. loadProducts: Fetches product details based on cart items.
+    const loadProducts = useCallback(async () => {
+
+
+        if (holder.length === 0) {
+            setProducts([]);
+            setLoadingProducts(false);
+            return;
+        }
+
+        setLoadingProducts(true);
+        const productSlugsInCart = holder.map(item => item.slug);
+        const productsData: CartItem[] = []; // Prepare to hold complete CartItem objects
+
+        for (const slug of productSlugsInCart) {
+            // Assume GetProductsData is defined as LangKey
+            const prodView = await new GetProductsData(i18n.language as LangKey).bySlug(slug);
+            const cartItemData = holder.find(ci => ci.slug === slug);
+
+            if (prodView && cartItemData) {
+                // 💡 MAPPING: Combine fetched ProductView with the current quantity
+                const completeCartItem: CartItem = {
+                    ...prodView,
+                    quantity: cartItemData.quantity
+                };
+                productsData.push(completeCartItem);
             }
         }
-        loadProducts();
-    }, [cart])
+
+        setProducts(productsData);
+        setLoadingProducts(false);
+        // Dependency only on language. Removed Router.events.
+    }, [i18n.language]);
+
+    useEffect(() => {
+        if (holder.length > 0) {
+            loadProducts();
+        }
+    }, [loadProducts, cart.items.length]);
+
+
+    // 3. useEffect (Quantity Sync): Runs on *every* cart change (including quantity).
+    useEffect(() => {
+        if (!loadingProducts) {
+            setProducts(prevProducts => {
+                const cartQuantities = new Map(cart.items.map(item => [item.slug, item.quantity]));
+
+                return prevProducts
+                    .map(p => {
+                        const newQuantity = cartQuantities.get(p.slug);
+                        // If the item exists in the cart, update its quantity.
+                        return newQuantity !== undefined ? { ...p, quantity: newQuantity } : p;
+                    })
+                    // Filter out any products that no longer exist in the cart.
+                    .filter(p => cartQuantities.has(p.slug));
+            });
+        }
+    }, [cart.items, loadingProducts]); // Runs whenever the cart structure OR quantities change.
+
+    // --- RENDER LOGIC ---
 
     if (cart.items.length === 0) {
         return (
@@ -65,7 +110,7 @@ export default function CartPage() {
             </div>
         );
     }
-    if (cart.items.length > 0 && products.length === 0) {
+    if (loadingProducts) {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen bg-white p-8 text-center transition-colors duration-300 ">
                 <Handbag className="h-20 w-20 text-primary-200 mb-6 animate-spin-slow" />
@@ -87,7 +132,8 @@ export default function CartPage() {
                     <div className="lg:col-span-2 space-y-6">
                         {products.map((item) => (
                             <div
-                                key={item.product.slug}
+                                // key now uses the item.slug, which is unique and available
+                                key={item.slug}
                                 className="bg-white rounded-3xl shadow-xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between transform transition-all duration-300 hover:scale-[1.01] hover:shadow-2xl border border-slate-100 "
                             >
                                 <div className="flex items-center gap-6 w-full">
@@ -95,42 +141,54 @@ export default function CartPage() {
                                         className="flex-shrink-0 relative w-24 h-24 rounded-2xl overflow-hidden shadow-inner">
                                         <img
                                             src={
-                                                item.product.image ||
+                                                item.image ||
                                                 "https://placehold.co/100x100/E2E8F0/FFF?text=No+Image"
                                             }
-                                            alt={item.product.name}
+                                            alt={item.name}
                                             className="w-full h-full object-cover"
                                         />
                                     </div>
                                     <div className="flex-grow">
                                         <h3 className="text-lg text-primary-950 font-semibold mb-5">
-                                            {item.product.name}
+                                            {item.name}
                                         </h3>
 
                                         <Counter
-                                            quantity={item.quantity}
-                                            onIncrease={() =>
-                                                updateQuantity(item, item.quantity + 1)
-                                            }
-                                            onDecrease={() =>
-                                                updateQuantity(item, item.quantity - 1)
-                                            }
+                                            quantity={item.quantity} // Use item.quantity (no need for ?? 0 since it's a CartItem)
+                                            onIncrease={() => {
+                                                // Optimistically update local products list for instant UI feedback
+                                                setProducts(prev => prev.map(p => p.slug === item.slug ? { ...p, quantity: p.quantity + 1 } : p));
+                                                // Pass the CartItem object for update
+                                                updateQuantity(item, item.quantity + 1);
+                                            }}
+                                            onDecrease={() => {
+                                                const newQty = item.quantity - 1;
+                                                // Optimistically update or remove locally to keep UI seamless
+                                                setProducts(prev => {
+                                                    if (newQty <= 0) {
+                                                        return prev.filter(p => p.slug !== item.slug);
+                                                    }
+                                                    return prev.map(p => p.slug === item.slug ? { ...p, quantity: newQty } : p);
+                                                });
+                                                // Pass the CartItem object for update
+                                                updateQuantity(item, newQty);
+                                            }}
                                         />
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-6 mt-4 sm:mt-0 sm:ml-auto">
-                                    {item.product.discount ? (
+                                    {item.discount ? (
                                         <div className="flex flex-col items-end gap-2">
                                             <p className="text-sm text-natural-500 line-through text-normal">
-                                                EGP {(item.quantity * (item.product.price || 0)).toFixed(2)}
+                                                {t("{{price, currency}}", { price: item.price })}
                                             </p>
                                             <p className="text-xl text-primary-900 w-28 text-right text-semibold">
-                                                EGP {(item.quantity * ((item.product.price || 0) - item.product.discount)).toFixed(2)}
+                                                {t("{{price, currency}}", { price: item.quantity * ((item.price || 0) - item.discount) })}
                                             </p>
                                         </div>
                                     ) : (
                                         <p className="text-xl text-primary-900 w-28 text-right text-semibold">
-                                            EGP {(item.quantity * (item.product.price || 0)).toFixed(2)}
+                                            {t("{{price, currency}}", { price: item.quantity * (item.price || 0) })}
                                         </p>
                                     )}
                                     <Tooltip

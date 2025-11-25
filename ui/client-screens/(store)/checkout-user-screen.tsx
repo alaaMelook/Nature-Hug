@@ -2,15 +2,17 @@
 
 import { Governorate } from "@/domain/entities/database/governorate";
 import { ProfileView } from "@/domain/entities/views/shop/profileView";
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { CheckoutCart } from "@/ui/components/store/CheckoutCart";
 import { Order } from "@/domain/entities/database/order";
 import { useCart } from "@/ui/providers/CartProvider";
 import { toast } from "sonner";
-import { useForm } from "react-hook-form";
+import { set, useForm } from "react-hook-form";
 import { createOrder } from "@/ui/hooks/store/useCreateOrderActions";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
+import { CartItem } from "@/domain/entities/views/shop/productView";
+import { GetProductsData } from "@/ui/hooks/store/useProductsData";
 
 
 type FormValues = Partial<Order> & {
@@ -22,7 +24,8 @@ export function CheckoutUserScreen({ governorates, user }: { governorates: Gover
     const [selectedGovernorate, setSelectedGovernorate] = useState<Governorate | null>(user?.address?.[0]?.governorate ?? null);
     // index of selected saved address, or 'new' to create another
     const [selectedAddressIndex, setSelectedAddressIndex] = useState<number | 'new'>(user?.address && user.address.length > 0 ? 0 : 'new');
-    const { cart, loading: fetching, getCartTotal, clearCart } = useCart();
+    const { cart, getCartTotal } = useCart();
+    const [cartItems, setCartItems] = useState<Partial<CartItem>[]>([]);
     const [loading, setLoading] = useState(false);
     const [selectedPayment, setSelectedPayment] = useState<'cod' | 'paymob'>('cod');
     const { register, handleSubmit, formState: { errors }, setValue, setError } = useForm<FormValues>({
@@ -32,16 +35,29 @@ export function CheckoutUserScreen({ governorates, user }: { governorates: Gover
     });
     const router = useRouter();
 
+    useEffect(() => {
+        async function fetchItems() {
+
+            let checkout = []
+            for (const item of cart.items) {
+                let found = await new GetProductsData().bySlug(item.slug);
+                if (found) {
+                    checkout.push({ found, quantity: item.quantity ?? 0 });
+                }
+            }
+            setCartItems(checkout);
+        }
+        fetchItems();
+    }, [cart.items.length]);
 
     console.log('cart length ,' + cart.items.length)
     useEffect(() => {
-        if (!fetching && cart.items.length === 0) {
-            // Only redirect if not currently submitting an order
+        if (cart.items.length === 0) {
             if (!loading) {
                 router.push('/'); // ✅ safe here
             }
         }
-    }, [cart, router, fetching, loading]);
+    }, [cart, router, loading]);
 
 
     useEffect(() => {
@@ -348,7 +364,7 @@ export function CheckoutUserScreen({ governorates, user }: { governorates: Gover
             </section>
 
             {/* Right: Cart Summary */}
-            <CheckoutCart selectedGovernorate={selectedGovernorate} onPurchase={async () => {
+            <CheckoutCart selectedGovernorate={selectedGovernorate} items={cartItems} onPurchase={async () => {
                 // trigger form submission via react-hook-form
                 await handleSubmit(onSubmit)();
             }} />

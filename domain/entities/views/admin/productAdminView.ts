@@ -10,19 +10,21 @@ export interface ProductAdminView {
     price: number;
     discount: number;
     image_url: string;
-    category: Category;
+    category_id?: number;
+    category?: Category;
     skin_type: string;
     slug: string;
     stock: number;
     product_type: string;
     highlight_en: string;
     highlight_ar: string;
-    faq_en: FAQs;
-    faq_ar: FAQs;
+    faq_en: any;
+    faq_ar: any;
     gallery: (string | undefined)[];
     variants: ProductVariantAdminView[];
     materials: ProductMaterialAdminView[];
 }
+
 export interface ProductVariantAdminView {
     id: number;
     product_id: number;
@@ -39,13 +41,19 @@ export interface ProductVariantAdminView {
     slug: string;
     materials: ProductMaterialAdminView[];
 }
+
 export interface ProductMaterialAdminView {
-    id: number;
-    product_id: number;
+    id?: number;
+    product_id?: number;
     variant_id?: number;
     material_id: number;
-    grams_used: number;
-    measurement_unit: string;
+    amount: number;
+    measurement_unit?: string;
+    grams_used?: number; // Keep for compatibility if needed
+    // UI helper fields
+    material_name?: string;
+    material_price?: number;
+    material_unit?: string;
 }
 
 /**

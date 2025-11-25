@@ -11,6 +11,8 @@ import { useForm } from "react-hook-form";
 import { createOrder } from "@/ui/hooks/store/useCreateOrderActions";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
+import { CartItem } from "@/domain/entities/views/shop/productView";
+import { GetProductsData } from "@/ui/hooks/store/useProductsData";
 
 
 type FormValues = Partial<Order> & {
@@ -19,6 +21,7 @@ type FormValues = Partial<Order> & {
 
 export function CheckoutGuestScreen({ governorates }: { governorates: Governorate[] }) {
     const [selectedGovernorate, setSelectedGovernorate] = useState<Governorate | null>(null);
+    const [cartItems, setCartItems] = useState<Partial<CartItem>[]>([]);
     const { cart, loading: fetching, getCartTotal } = useCart();
     const [loading, setLoading] = useState(false);
     const [selectedPayment, setSelectedPayment] = useState<'cod' | 'paymob'>('cod');
@@ -29,6 +32,20 @@ export function CheckoutGuestScreen({ governorates }: { governorates: Governorat
     });
     const router = useRouter();
 
+    useEffect(() => {
+        async function fetchItems() {
+
+            let checkout = []
+            for (const item of cart.items) {
+                let found = await new GetProductsData().bySlug(item.slug);
+                if (found) {
+                    checkout.push({ found, quantity: item.quantity ?? 0 });
+                }
+            }
+            setCartItems(checkout);
+        }
+        fetchItems();
+    }, [cart.items.length]);
 
     console.log('cart length ,' + cart.items.length)
     useEffect(() => {
@@ -246,7 +263,7 @@ export function CheckoutGuestScreen({ governorates }: { governorates: Governorat
             </section>
 
             {/* Right: Cart Summary */}
-            <CheckoutCart selectedGovernorate={selectedGovernorate} onPurchase={async () => {
+            <CheckoutCart selectedGovernorate={selectedGovernorate} items={cartItems} onPurchase={async () => {
                 // trigger form submission via react-hook-form
                 await handleSubmit(onSubmit)();
             }} />

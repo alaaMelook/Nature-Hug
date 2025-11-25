@@ -60,26 +60,23 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
 
     const addToCart = async (product: ProductView, quantity: number) => {
         setCart(prevCart => {
-            const existingItemIndex = prevCart.items.findIndex(
+            const existingItem = prevCart.items.find(
                 (item) => item.slug === product.slug
             );
 
             let newItems: { slug: string, quantity: number }[];
 
-            if (existingItemIndex >= 0) {
+            if (existingItem) {
                 // Item exists: update quantity
-                newItems = prevCart.items.map((item, index) =>
-                    index === existingItemIndex
-                        ? { ...item, quantity: item.quantity + quantity }
-                        : item
-                );
+                updateQuantity(product, existingItem.quantity + quantity);
+                return prevCart; // Early return as updateQuantity already updates the state
             } else {
                 // Item is new: add to cart
                 newItems = [...prevCart.items, { slug: product.slug, quantity: quantity }];
             }
 
             // ONLY update items; totals (discount, total, netTotal) are left untouched
-            return { ...prevCart, items: newItems };
+            return { ...prevCart, items: newItems, netTotal: prevCart.netTotal + (product.price || 0) * quantity };
         });
 
         toast.success(t('addedtoCart', { product: product.name }), { duration: 2000 });
@@ -93,7 +90,7 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
             );
 
             // ONLY update items
-            return { ...prevCart, items: newItems };
+            return { ...prevCart, items: newItems, netTotal: prevCart.netTotal - (product.price || 0) * (prevCart.items.find(item => item.slug === product.slug)?.quantity || 0) };
         });
     };
 
@@ -109,7 +106,7 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
             );
 
             // ONLY update items
-            return { ...prevCart, items: newItems };
+            return { ...prevCart, items: newItems, netTotal: prevCart.netTotal + (product.price || 0) * (quantity - (prevCart.items.find(item => item.slug === product.slug)?.quantity || 0)) };
         });
     };
 

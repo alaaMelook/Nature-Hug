@@ -1,8 +1,13 @@
 'use client';
 
 import { OrderDetailsView } from "@/domain/entities/views/admin/orderDetailsView";
-import { orderStatus } from "@/lib/utils/status";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
+import { useEffect, useState } from "react";
+import { Shipment } from "@/domain/entities/shipment/shipment";
+import { City } from "@/domain/entities/shipment/city";
+import { updateOrderAction, createShipmentAction, getCitiesAction } from "@/app/actions/admin/orders";
+import { User, MapPin, Phone, Package, Calendar, DollarSign, X } from "lucide-react";
 
 export function OrderDetailsModal({
     order,
@@ -12,91 +17,229 @@ export function OrderDetailsModal({
     onClose: () => void;
 }) {
     const { t } = useTranslation();
-    if (!order) return null;
-    return (
-        <div className="fixed inset-0 z-50 flex items-start justify-center p-6">
-            <div
-                className="absolute inset-0 bg-black/50"
-                onClick={onClose}
-                aria-hidden
-            />
-            <div className="relative bg-white rounded-lg max-w-3xl w-full shadow-lg overflow-auto max-h-[90vh] p-6">
-                <button
-                    onClick={onClose}
-                    className="absolute top-3 right-3 text-gray-600 hover:text-gray-900"
-                >
-                    ✕
-                </button>
+    const [updating, setUpdating] = useState(false);
+    const [cities, setCities] = useState<City[]>([]);
 
-                <h2 className="text-lg font-semibold mb-2">Order #{order.order_id}</h2>
-                <div className="mb-4">
-                    <p>
-                        <strong>Status:</strong> {order.order_status ?? "-"}
-                    </p>
-                    <p>
-                        <strong>Total:</strong> {order.final_order_total ?? "0.00"}
-                    </p>
-
-                    <strong>Created:</strong>
-                    {t("{{date,datetime}}", { date: new Date(order.order_date) })}
-                    {/* {order ? new Date(order.order_date).toLocaleString('en-GB', { timeZone: 'Africa/Cairo', hour12: true }).split(',').map((info, ind) =>
-                        <div key={ind}>{info}</div>
-                    ) : "-"} */}
-
-                    <p>
-                        {/*<strong>Admin:</strong> {order.created_by_admin ?? "-"}*/}
-                    </p>
-                </div>
-                <div className="border-t pt-4 flex justify-between pr-5">
-
-                    <div className="mb-4">
-                        <h3 className="font-semibold">Customer</h3>
-                        <p>{order.customer_name ?? "-"}</p>
-                        <p className="text-sm text-gray-600">{order.phone_numbers.toString() ?? "-"}</p>
-                        <p className="text-sm text-gray-600">{order.shipping_street_address ?? "-"}</p>
-                        <p className="text-sm text-gray-600">
-                            Governorate: {order.shipping_governorate ?? "-"}
-                        </p>
-                    </div>
-                    <div className=" mb-4">
-                        <h3 className="font-semibold">Items</h3>
-                        <ul className="list-disc pl-3">
-                            {order.items.length > 0 ? (
-                                order.items.map((item, index) => (
-                                    <li key={index} className="text-sm"> {item.quantity}x {item.item_name} </li>
-                                ))
-                            ) : (
-                                <li>No items found.</li>
-                            )}
-                        </ul>
-                    </div>
-                </div>
-                {order.order_status !== 'completed' &&
-                    <button
-                        onClick={onClose //change status
-                        }
-                        className=" border-1 rounded-md px-4 py-2 border-primary-950 text-primary-950"
-                    >
-                        {order.order_status === 'processing' ? 'Ready to ship' : 'Accept Order'}
-                    </button>
+    useEffect(() => {
+        if (order) {
+            getCitiesAction().then(result => {
+                if (result.success && result.cities) {
+                    setCities(result.cities);
+                } else {
+                    console.error("Failed to fetch cities:", result.error);
                 }
+            });
+        }
+    }, [order]);
+
+    if (!order) return null;
+
+    const handleStatusChange = async (newStatus: string) => {
+        setUpdating(true);
+        try {
+            // Update order status in DB
+            const updateResult = await updateOrderAction({ ...order, order_status: newStatus });
+            if (!updateResult.success) throw new Error(updateResult.error);
+
+            toast.success(`Order status updated to ${newStatus}`);
+
+            // If status is 'processing', create shipment
+            if (newStatus === 'processing') {
+                try {
+                    const city = cities.find(c => c.cityName.toLowerCase().includes(order.shipping_governorate.toLowerCase()) || order.shipping_governorate.toLowerCase().includes(c.cityName.toLowerCase()));
+                    const cityId = city ? city.cityId : 1; // Default to 1 or handle error
+
+                    const shipmentData: Shipment = {
+                        clientName: order.customer_name,
+                        cityId: cityId,
+                        address: order.shipping_street_address,
+                        phone: order.phone_numbers[0] || "",
+                        codAmount: order.final_order_total,
+                        weight: 1, // Default weight
+                    };
+
+                    const shipmentResult = await createShipmentAction(shipmentData, order.shipping_governorate);
+                    if (shipmentResult.skipped) {
+                        toast.info("Shipment creation skipped for Damanhour");
+                    } else if (shipmentResult.success) {
+                        toast.success("Shipment request sent successfully");
+                    } else {
+                        throw new Error(shipmentResult.error);
+                    }
+                } catch (shipmentError) {
+                    console.error("Shipment creation failed:", shipmentError);
+                    toast.error("Failed to create shipment request");
+                }
+            }
+
+            onClose();
+        } catch (error) {
+            console.error("Failed to update order:", error);
+            toast.error("Failed to update order status");
+        } finally {
+            setUpdating(false);
+        }
+    };
+
+    const actions = orderActions({ status: order.order_status });
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+                {/* Header */}
+                <div className="bg-gray-50 px-6 py-4 border-b flex justify-between items-center">
+                    <div className="flex items-center gap-3">
+                        <h2 className="text-xl font-bold text-gray-800">Order #{order.order_id}</h2>
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium uppercase tracking-wide ${getStatusColor(order.order_status)}`}>
+                            {order.order_status}
+                        </span>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-full hover:bg-gray-200"
+                    >
+                        <X size={20} />
+                    </button>
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 overflow-y-auto p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        {/* Left Column: Customer & Shipping */}
+                        <div className="space-y-6">
+                            <section>
+                                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                                    <User size={14} /> Customer Details
+                                </h3>
+                                <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-lg">
+                                            {order.customer_name?.charAt(0).toUpperCase()}
+                                        </div>
+                                        <div>
+                                            <p className="font-medium text-gray-900">{order.customer_name}</p>
+                                            <div className="flex items-center gap-2 text-sm text-gray-500">
+                                                <Phone size={12} />
+                                                {order.phone_numbers[0] || "No phone"}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section>
+                                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                                    <MapPin size={14} /> Shipping Address
+                                </h3>
+                                <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-700 space-y-1">
+                                    <p className="font-medium">{order.shipping_street_address}</p>
+                                    <p>{order.shipping_governorate}</p>
+                                </div>
+                            </section>
+
+                            <section>
+                                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                                    <Calendar size={14} /> Order Info
+                                </h3>
+                                <div className="text-sm text-gray-600">
+                                    Placed on {new Date(order.order_date).toLocaleDateString()} at {new Date(order.order_date).toLocaleTimeString()}
+                                </div>
+                            </section>
+                        </div>
+
+                        {/* Right Column: Order Items & Summary */}
+                        <div className="flex flex-col h-full">
+                            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                                <Package size={14} /> Order Items
+                            </h3>
+                            <div className="bg-gray-50 rounded-lg flex-1 flex flex-col">
+                                <div className="flex-1 overflow-y-auto p-2">
+                                    <table className="w-full text-sm text-left">
+                                        <thead className="text-xs text-gray-500 uppercase border-b">
+                                            <tr>
+                                                <th className="px-4 py-2 font-medium">Item</th>
+                                                <th className="px-4 py-2 font-medium text-right">Qty</th>
+                                                <th className="px-4 py-2 font-medium text-right">Price</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                            {order.items.map((item, index) => (
+                                                <tr key={index}>
+                                                    <td className="px-4 py-3 font-medium text-gray-900">{item.item_name}</td>
+                                                    <td className="px-4 py-3 text-right text-gray-600">{item.quantity}</td>
+                                                    <td className="px-4 py-3 text-right text-gray-600">{item.unit_price}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div className="p-4 border-t bg-gray-100 rounded-b-lg">
+                                    <div className="flex justify-between items-center">
+                                        <span className="font-medium text-gray-700">Total Amount</span>
+                                        <span className="text-xl font-bold text-gray-900 flex items-center">
+                                            {order.final_order_total} <span className="text-sm font-normal text-gray-500 ml-1">EGP</span>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Footer Actions */}
+                <div className="bg-gray-50 px-6 py-4 border-t flex justify-end gap-3">
+                    <button
+                        onClick={onClose}
+                        className="px-4 py-2 text-gray-600 hover:bg-gray-200 rounded-lg font-medium transition-colors"
+                    >
+                        Close
+                    </button>
+                    {actions.neg && (
+                        <button
+                            onClick={() => handleStatusChange(actions.status_neg)}
+                            disabled={updating}
+                            className="px-4 py-2 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg font-medium transition-colors disabled:opacity-50"
+                        >
+                            {actions.neg}
+                        </button>
+                    )}
+                    {actions.pos && (
+                        <button
+                            onClick={() => handleStatusChange(actions.status_pos)}
+                            disabled={updating}
+                            className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-medium transition-colors disabled:opacity-50 shadow-sm"
+                        >
+                            {actions.pos}
+                        </button>
+                    )}
+                </div>
             </div>
         </div>
     );
 }
+
+function getStatusColor(status: string) {
+    switch (status) {
+        case 'pending': return 'bg-yellow-100 text-yellow-800';
+        case 'processing': return 'bg-blue-100 text-blue-800';
+        case 'shipped': return 'bg-purple-100 text-purple-800';
+        case 'delivered': return 'bg-green-100 text-green-800';
+        case 'cancelled': return 'bg-red-100 text-red-800';
+        default: return 'bg-gray-100 text-gray-800';
+    }
+}
+
 function orderActions({ status }: { status: string }) {
     switch (status) {
         case 'pending':
             return { pos: 'Accept Order', neg: 'Reject Order', status_pos: 'processing', status_neg: 'declined' };
         case 'processing':
-            return { pos: 'Mark as Out for delivery', neg: 'Cancel Order', status_pos: 'out for delivery', status_neg: 'declined' };
+            return { pos: 'Mark as Out for delivery', neg: 'Cancel Order', status_pos: 'out for delivery', status_neg: 'cancelled' };
         case 'out for delivery':
-            return { pos: 'Mark as Shipped', neg: 'Cancel Order', status_pos: 'shipped', status_neg: 'declined' };
+            return { pos: 'Mark as Shipped', neg: 'Cancel Order', status_pos: 'shipped', status_neg: 'cancelled' };
         case 'shipped':
             return { pos: 'Mark as Delivered', neg: 'Return Order', status_pos: 'completed', status_neg: 'returned' };
         default:
-            return [];
+            return { pos: null, neg: null, status_pos: '', status_neg: '' };
     }
-
-
 }

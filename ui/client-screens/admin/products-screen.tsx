@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { ProductAdminView } from "@/domain/entities/views/admin/productAdminView";
 import { ProductModal } from "@/ui/components/admin/productModal";
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 
 // import { useProductForm } from "@/ui/hooks/admin/useProductsForm";
 import { useProfitCalculator } from "@/ui/hooks/admin/useProfitCalculator";
@@ -21,6 +21,8 @@ export function ProductsScreen({ materials, initProducts }: { materials: Materia
     const [showModal, setShowModal] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const router = useRouter();
+    const params = useParams();
+    const lang = params.lang as string;
 
     const openAddModal = () => {
         setIsEditing(false);
@@ -67,7 +69,7 @@ export function ProductsScreen({ materials, initProducts }: { materials: Materia
             <div className="flex items-center justify-between mb-5">
                 <h1 className="text-2xl font-semibold text-gray-800">Products</h1>
                 <button
-                    onClick={() => openAddModal()}
+                    onClick={() => router.push(`/${lang}/admin/products/create`)}
                     className="flex items-center px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
                 >
                     <Plus className="w-4 h-4 mr-1" /> Add Product
