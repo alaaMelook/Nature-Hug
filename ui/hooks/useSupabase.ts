@@ -1,10 +1,10 @@
 'use client';
 
-import {supabase} from "@/data/datasources/supabase/client";
-import {ICustomerClientRepository} from "@/data/repositories/client/iCustomerRepository";
-import {useEffect, useState} from "react";
-import {Customer} from "@/domain/entities/auth/customer";
-import {Member} from "@/domain/entities/auth/member";
+import { supabase } from "@/data/datasources/supabase/client";
+import { ICustomerClientRepository } from "@/data/repositories/client/iCustomerRepository";
+import { useEffect, useState } from "react";
+import { Customer } from "@/domain/entities/auth/customer";
+import { Member } from "@/domain/entities/auth/member";
 
 const CustomerRepoClient = new ICustomerClientRepository();
 
@@ -42,18 +42,28 @@ export const useSupabase = () => {
         };
 
         initSession();
-
+    }, []);
+    useEffect(() => {
         // ✅ 2. Subscribe to session changes
         const {
-            data: {subscription},
-        } = supabase.auth.onAuthStateChange((_event, session) => {
+            data: { subscription },
+        } = supabase.auth.onAuthStateChange(async (_event, session) => {
             if (!session) {
                 setUser(null);
+                setMember(null);
             } else {
                 // Optionally refresh user info if you need it here
-                CustomerRepoClient.getCurrentUser()
-                    .then(u => u && CustomerRepoClient.fetchCustomer(u.id))
-                    .then(fetched => setUser(fetched ?? null));
+                const u = await CustomerRepoClient.getCurrentUser();
+                if (u) {
+                    const fetched = await CustomerRepoClient.fetchCustomer(u.id);
+                    setUser(fetched ?? null);
+                    if (fetched) {
+                        const m = await CustomerRepoClient.fetchMember(fetched.id);
+                        setMember(m);
+                    } else {
+                        setMember(null);
+                    }
+                }
             }
         });
 
@@ -74,7 +84,7 @@ export const useSupabase = () => {
     const login = async (email: string, password: string) => {
         setLoading(true);
         try {
-            const {data} = await supabase.auth.signInWithPassword({
+            const { data } = await supabase.auth.signInWithPassword({
                 email,
                 password,
             });

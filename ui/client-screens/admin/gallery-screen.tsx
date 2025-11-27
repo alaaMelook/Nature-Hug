@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Upload, Trash2, Loader2 } from 'lucide-react';
-import { uploadImageAction, deleteImageAction } from '@/app/actions/admin/gallery';
+import { uploadImageAction, deleteImageAction } from '@/ui/hooks/admin/gallery';
 import { toast } from 'sonner';
 
 export function GalleryScreen({ images }: { images: { image: any, url: string }[] }) {

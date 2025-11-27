@@ -5,5 +5,5 @@ import { GetAllProductsWithDetails } from "@/domain/use-case/admin/products";
 export default async function ProductsPage() {
     const materials = await new GetAllMaterials().execute();
     const products = await new GetAllProductsWithDetails().execute();
-    return (<ProductsScreen materials={materials} initProducts={products} />);
+    return (<ProductsScreen materials={materials} products={products} />);
 }

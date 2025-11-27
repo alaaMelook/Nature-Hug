@@ -1,6 +1,6 @@
 'use client';
 import { OrderDetailsView } from "@/domain/entities/views/admin/orderDetailsView";
-import { DollarSign, Package, ShoppingCart, TrendingDown, TrendingUp, TrendingUpDown, Users } from "lucide-react";
+import { DollarSign, Package, ShoppingCart, TrendingDown, TrendingUp, TrendingUpDown, Users, Clock, CheckCircle, XCircle } from "lucide-react";
 import { DashboardMetricsView } from "@/domain/entities/views/admin/dashboardMetricsView";
 import React, { useEffect, useState, useTransition } from "react";
 import { toast } from 'sonner';
@@ -9,39 +9,13 @@ import { updateOrder } from '@/ui/hooks/store/useUpdateOrderActions'
 import { orderStatus } from "@/lib/utils/status";
 import { toTitleCase } from "@/lib/utils/titleCase";
 import { useTranslation } from "react-i18next";
-function assignStatCards(dashboard: DashboardMetricsView): StatCard[] {
 
-    console.log('transformed', dashboard);
-    return [
-        {
-            title: "Total Customers",
-            value: dashboard?.total_customers,
-            parValue: dashboard?.current_month_customers,
-            icon: Users,
-            change: dashboard?.customers_change,
-        },
-        {
-            title: "Total Products",
-            value: dashboard?.total_product,
-            parValue: dashboard?.current_month_products,
-            icon: Package,
-            change: dashboard?.products_change,
-        },
-        {
-            title: "Total Orders",
-            value: dashboard?.total_orders,
-            parValue: dashboard?.current_month_orders,
-            icon: ShoppingCart,
-            change: dashboard?.orders_change,
-        },
-        {
-            title: "Total Revenue",
-            value: dashboard?.total_revenue,
-            parValue: dashboard?.current_month_revenue,
-            icon: DollarSign,
-            change: dashboard?.revenue_change,
-        },
-    ];
+interface StatCard {
+    title: string;
+    value: number | string;
+    parValue: number | string;
+    icon: any;
+    change: number;
 }
 
 export function AdminDashboardScreen({ recentOrders, dashboard }: {
@@ -49,16 +23,44 @@ export function AdminDashboardScreen({ recentOrders, dashboard }: {
     dashboard: DashboardMetricsView;
 }) {
     const { t } = useTranslation();
-    const statCards = assignStatCards(dashboard)
+
+    const statCards: StatCard[] = [
+        {
+            title: t("totalCustomers"),
+            value: dashboard?.total_customers,
+            parValue: dashboard?.current_month_customers,
+            icon: Users,
+            change: dashboard?.customers_change,
+        },
+        {
+            title: t("totalProducts"),
+            value: dashboard?.total_product,
+            parValue: dashboard?.current_month_products,
+            icon: Package,
+            change: dashboard?.products_change,
+        },
+        {
+            title: t("totalOrders"),
+            value: dashboard?.total_orders,
+            parValue: dashboard?.current_month_orders,
+            icon: ShoppingCart,
+            change: dashboard?.orders_change,
+        },
+        {
+            title: t("totalRevenue"),
+            value: dashboard?.total_revenue,
+            parValue: dashboard?.current_month_revenue,
+            icon: DollarSign,
+            change: dashboard?.revenue_change,
+        },
+    ];
+
     const [orders, setOrders] = useState<OrderDetailsView[]>(recentOrders ?? [])
-    // track which orders are being updated so we can disable buttons
-    // store updating ids as strings to avoid type mismatch when comparing
     const [updatingIds, setUpdatingIds] = useState<string[]>([])
     const [, startTransition] = useTransition();
 
 
     useEffect(() => {
-        // convert incoming order_date to Date objects safely and guard phone numbers
         const newOrders: OrderDetailsView[] = (recentOrders || []).map((order) => ({
             ...order,
             order_date: order.order_date ? new Date(order.order_date) as any : new Date(),
@@ -71,19 +73,15 @@ export function AdminDashboardScreen({ recentOrders, dashboard }: {
         const orderIdStr = String(order.order_id);
         if (updatingIds.includes(orderIdStr)) return;
 
-        // show skeleton for this row only
         setUpdatingIds((s) => [...s, orderIdStr]);
 
         try {
-            // prepare payload matching server use-case
             const payload = {
                 order_id: order.order_id,
                 order_status: newStatus.toLowerCase(),
             };
 
-            // call server action via startTransition so React can prioritize UI updates
             startTransition(() => {
-                // call the server action exported from ui/hooks/store
                 void (async () => {
                     try {
                         const result = await updateOrder(payload as any)
@@ -91,7 +89,6 @@ export function AdminDashboardScreen({ recentOrders, dashboard }: {
                             console.error('updateOrder server action returned error', result.error)
                             toast.error(`Failed to update order #${orderIdStr}: ${result.error}`)
                         } else {
-                            // update local state after success
                             setOrders((s) => s.map(o => String(o.order_id) === orderIdStr ? {
                                 ...o,
                                 order_status: newStatus
@@ -106,218 +103,165 @@ export function AdminDashboardScreen({ recentOrders, dashboard }: {
                     }
                 })()
             })
-
-            return; // exit early because cleanup handled in transition
+            return;
         } catch (err: any) {
             console.error('Failed to start update transition', err);
             toast.error(`Failed to update order #${orderIdStr}: ${err?.message ?? 'unknown error'}`);
             setUpdatingIds((s) => s.filter(id => id !== orderIdStr));
         }
-
-    }
-
-    async function updateAllOrderStatus(newStatus: string) {
-        const orderIdStr = orders.map(order => String(order.order_id));
-
-        // show skeleton for this row only
-        setUpdatingIds((s) => orderIdStr);
-        orders.map((order: OrderDetailsView) => {
-            try {
-                // prepare payload matching server use-case
-
-                const payload = {
-                    order_id: order.order_id,
-                    order_status: newStatus.toLowerCase(),
-                };
-
-                // call server action via startTransition so React can prioritize UI updates
-                startTransition(() => {
-                    // call the server action exported from ui/hooks/store
-                    void (async () => {
-                        try {
-                            const result = await updateOrder(payload as any)
-                            if (result?.error) {
-                                console.error('updateOrder server action returned error', result.error)
-                                // toast.error(`Failed to update order #${orderIdStr}: ${result.error}`)
-                            } else {
-                                // update local state after success
-                                setOrders((s) => s.map(o => String(o.order_id) === updatingIds.find(id => id === String(order.order_id)) ? {
-                                    ...o,
-                                    order_status: newStatus
-                                } : o));
-                                // toast.success(`Order #${orderIdStr} updated to ${newStatus}`);
-                            }
-                        } catch (err: any) {
-                            console.error('Failed to update order via server action', err);
-                            // toast.error(`Failed to update order #${orderIdStr}: ${err?.message ?? 'unknown error'}`);
-                        } finally {
-                            setUpdatingIds((s) => s.filter(id => id !== String(order.order_id)));
-                        }
-                    })()
-
-                })
-
-                return; // exit early because cleanup handled in transition
-            } catch (err: any) {
-                console.error('Failed to start update transition', err);
-                // toast.error(`Failed to update order #${orderIdStr}: ${err?.message ?? 'unknown error'}`);
-                setUpdatingIds((s) => s.filter(id => id !== String(order.order_id)));
-            }
-        })
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-8">
             <div>
-                <h2 className="text-3xl font-bold text-gray-900">Dashboard</h2>
-                <p className="text-gray-600">Welcome to your admin dashboard</p>
+                <h2 className="text-3xl font-bold text-gray-900 tracking-tight">{t("dashboard")}</h2>
+                <p className="text-gray-500 mt-1">{t("dashboardOverview")}</p>
             </div>
 
-            {/*Stat Cards*/}
+            {/* Stat Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {statCards.map((stat) => (
-                    <div key={stat.title} className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                                <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                            </div>
-                            <div className="p-3 bg-primary-100 rounded-full">
+                    <div key={stat.title} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-200">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="p-2 bg-primary-50 rounded-lg">
                                 <stat.icon className="h-6 w-6 text-primary-600" />
                             </div>
+                            <div className={`flex items-center text-sm font-medium ${stat.change > 0 ? "text-green-600 bg-green-50 px-2 py-0.5 rounded-full" :
+                                stat.change < 0 ? "text-red-600 bg-red-50 px-2 py-0.5 rounded-full" :
+                                    "text-gray-600 bg-gray-50 px-2 py-0.5 rounded-full"
+                                }`}>
+                                {stat.change > 0 ? <TrendingUp className="h-3 w-3 mr-1" /> :
+                                    stat.change < 0 ? <TrendingDown className="h-3 w-3 mr-1" /> :
+                                        <TrendingUpDown className="h-3 w-3 mr-1" />}
+                                {Math.abs(stat.change)}%
+                            </div>
                         </div>
-
-                        <div className=" mt-4 flex items-center">
-                            {stat.change && stat.change > 0 ? (
-                                <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
-                            ) : stat.change && stat.change < 0 ? (
-                                <TrendingDown className="h-4 w-4 text-red-500 mr-1" />
-                            ) : <TrendingUpDown className="h-4 w-4  text-gray-600 mr-1"></TrendingUpDown>}
-                            <span
-                                className={`text-sm font-medium ${stat.change && stat.change > 0 ? "text-green-600" : stat.change && stat.change < 0 ? "text-red-600" : "text-gray-600"
-                                    }`}>
-                                {stat.change}
-                            </span>
-                            <span className="text-sm text-gray-500 ml-1">from last month</span>
+                        <div>
+                            <p className="text-sm font-medium text-gray-500">{stat.title}</p>
+                            <h3 className="text-2xl font-bold text-gray-900 mt-1">{stat.value}</h3>
                         </div>
-                        <div className={'mt-1 text-sm text-gray-600'}>
-                            This month: <span className={'font-medium'}>
-                                {stat.parValue}
-
-                            </span>
+                        <div className="mt-4 pt-4 border-t border-gray-50 flex items-center justify-between text-xs text-gray-500">
+                            <span>{t("currentMonth")}</span>
+                            <span className="font-medium text-gray-700">{stat.parValue}</span>
                         </div>
                     </div>
                 ))}
             </div>
 
-            {/*Recent Orders*/}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-                <div className="px-6 py-4 border-gray-200">
-                    <h3 className="text-lg font-medium text-gray-900">Orders to Accept</h3>
+            {/* Recent Orders */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div className="px-6 py-5 border-b border-gray-200 flex items-center justify-between bg-gray-50/50">
+                    <h3 className="text-lg font-semibold text-gray-900">{t("recentOrders")}</h3>
+                    <Link href="/admin/orders" className="text-sm font-medium text-primary-600 hover:text-primary-700 hover:underline">
+                        {t("viewAllOrders")}
+                    </Link>
                 </div>
-                <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50 ">
-                            <tr>
-                                <th className="px-4 py-2 text-left">ID</th>
-                                <th className="px-4 py-2 text-left">Customer Name</th>
-                                <th className="px-4 py-2 text-left">Phone(s)</th>
-                                <th className="px-4 py-2 text-left">Payment Method</th>
-                                <th className="px-4 py-2 text-left">Payment Status</th>
-                                <th className="px-4 py-2 text-left">Address</th>
-                                <th className="px-4 py-2 text-left">Status</th>
-                                <th className="px-4 py-2 text-left">Total</th>
-                                <th className="px-4 py-2 text-right">Created At</th>
 
+                {/* Desktop Table */}
+                <div className="hidden md:block overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                            <tr>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t("orderId")}</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t("customer")}</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t("status")}</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t("total")}</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t("date")}</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">{t("actions")}</th>
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
                             {orders.length === 0 ? (
                                 <tr>
-                                    <td colSpan={9}
-                                        className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
-                                        No valid orders to accept.
+                                    <td colSpan={6} className="px-6 py-10 text-center text-gray-500">
+                                        {t("noRecentOrders")}
                                     </td>
                                 </tr>
-                            ) :
-                                orders?.map((order: OrderDetailsView) => (
-                                    <tr key={order.order_id}>
-                                        <td className="px-4 py-2">{order.order_id}</td>
-                                        <td className="px-4 py-2">{order.customer_name}</td>
-                                        <td className="px-4 py-2 text-wrap">{order.phone_numbers.toString().split(',').map((phone, index) =>
-                                            <div key={index}>{phone}</div>)}</td>
-                                        <td className="px-4 py-2">{order.payment_method}</td>
-                                        <td className="px-4 py-2">{order.payment_status}</td>
-                                        <td className="px-4 py-2">{order.shipping_street_address}, <br /><span>{order.shipping_governorate}</span>
-                                        </td>
-                                        <td className="px-2 py-1">
-                                            <select
-                                                onChange={(e) => updateOrderStatus(order, e.target.value)}
-                                                className={'px-4 py-1 border rounded border-gray-500 '}
-
-                                                value={toTitleCase(order.order_status)}>
-                                                {orderStatus.map((status, index) => (
-                                                    <option key={index} value={status}>{status}</option>))}
-
-                                            </select></td>
-                                        <td className="px-4 py-2">{order.final_order_total} EGP</td>
-                                        <td className="px-4 py-2 text-right">
-                                            {t('{{date, datetime}}', { date: new Date(order.order_date) })}
-                                            {/* {new Date(order.order_date).toLocaleString('en-GB', {
-                                            timeZone: 'Africa/Cairo', hour12: true
-                                        }).split(',').map((info, ind) =>
-                                            <div key={ind}>{info}</div>
-                                        )} */}
-                                        </td>
-                                        <td className="py-4 whitespace-nowrap px-4">
-
-                                        </td>
-                                    </tr>
-                                ))}
-                            <tr>
-                                <td colSpan={9}
-                                    className="px-6 py-4 whitespace-nowrap text-sm underline text-center">
-                                    <Link className={'flex justify-end'} href={"/admin/orders"}> View All </Link>
-                                </td>
-                            </tr>
+                            ) : orders.map((order) => (
+                                <tr key={order.order_id} className="hover:bg-gray-50 transition-colors">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">#{order.order_id}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        <div className="font-medium text-gray-900">{order.customer_name}</div>
+                                        <div className="text-xs text-gray-400">{order.phone_numbers[0]}</div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <select
+                                            onChange={(e) => updateOrderStatus(order, e.target.value)}
+                                            value={toTitleCase(order.order_status)}
+                                            disabled={updatingIds.includes(String(order.order_id))}
+                                            className={`text-xs font-semibold px-2.5 py-1 rounded-full border-0 ring-1 ring-inset cursor-pointer focus:ring-2 focus:ring-primary-500 outline-none
+                                                ${order.order_status.toLowerCase() === 'delivered' ? 'bg-green-50 text-green-700 ring-green-600/20' :
+                                                    order.order_status.toLowerCase() === 'cancelled' ? 'bg-red-50 text-red-700 ring-red-600/20' :
+                                                        order.order_status.toLowerCase() === 'processing' ? 'bg-blue-50 text-blue-700 ring-blue-600/20' :
+                                                            'bg-yellow-50 text-yellow-800 ring-yellow-600/20'}`}
+                                        >
+                                            {orderStatus.map((status) => (
+                                                <option key={status} value={status}>{status}</option>
+                                            ))}
+                                        </select>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                        {order.final_order_total} {t("EGP")}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {t('{{date, datetime}}', { date: new Date(order.order_date) })}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                        <Link href={`/admin/orders/${order.order_id}`} className="text-primary-600 hover:text-primary-900">
+                                            {t("viewDetails")}
+                                        </Link>
+                                    </td>
+                                </tr>
+                            ))}
                         </tbody>
                     </table>
-
                 </div>
 
+                {/* Mobile Cards */}
+                <div className="md:hidden divide-y divide-gray-200">
+                    {orders.length === 0 ? (
+                        <div className="px-6 py-10 text-center text-gray-500">
+                            {t("noRecentOrders")}
+                        </div>
+                    ) : orders.map((order) => (
+                        <div key={order.order_id} className="p-4 space-y-3">
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <span className="text-sm font-bold text-gray-900">#{order.order_id}</span>
+                                    <div className="text-sm text-gray-600">{order.customer_name}</div>
+                                </div>
+                                <span className="text-sm font-bold text-gray-900">{order.final_order_total} {t("EGP")}</span>
+                            </div>
+
+                            <div className="flex justify-between items-center">
+                                <select
+                                    onChange={(e) => updateOrderStatus(order, e.target.value)}
+                                    value={toTitleCase(order.order_status)}
+                                    disabled={updatingIds.includes(String(order.order_id))}
+                                    className={`text-xs font-semibold px-2.5 py-1 rounded-full border-0 ring-1 ring-inset cursor-pointer focus:ring-2 focus:ring-primary-500 outline-none
+                                        ${order.order_status.toLowerCase() === 'delivered' ? 'bg-green-50 text-green-700 ring-green-600/20' :
+                                            order.order_status.toLowerCase() === 'cancelled' ? 'bg-red-50 text-red-700 ring-red-600/20' :
+                                                order.order_status.toLowerCase() === 'processing' ? 'bg-blue-50 text-blue-700 ring-blue-600/20' :
+                                                    'bg-yellow-50 text-yellow-800 ring-yellow-600/20'}`}
+                                >
+                                    {orderStatus.map((status) => (
+                                        <option key={status} value={status}>{status}</option>
+                                    ))}
+                                </select>
+                                <span className="text-xs text-gray-500">
+                                    {t('{{date, datetime}}', { date: new Date(order.order_date) })}
+                                </span>
+                            </div>
+
+                            <div className="pt-2">
+                                <Link href={`/admin/orders/${order.order_id}`} className="block w-full text-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                    {t("viewDetails")}
+                                </Link>
+                            </div>
+                        </div>
+                    ))}
+                </div>
             </div>
-            {/*           <div
-                className={'flex justify-end gap-5'}>
-
-
-                <button
-                    type="button"
-                    data-test-id={`decline-all`}
-                    onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        updateAllOrderStatus('declined')
-                    }}
-                    className="px-3 py-1 bg-red-600 text-white text-sm rounded disabled:opacity-50 pointer-events-auto"
-                >
-                    Decline All
-                </button>
-                <button
-                    type="button"
-                    data-test-id={`accept-all`}
-                    onClick={
-                        (e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            updateAllOrderStatus('processing')
-                        }
-                    }
-                    className="px-3 py-1 bg-green-600 text-white text-sm rounded disabled:opacity-50 pointer-events-auto">
-                    Accept All
-
-                </button>
-            </div>*/}
         </div>
     );
-
 }

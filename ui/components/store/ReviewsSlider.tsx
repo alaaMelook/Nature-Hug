@@ -13,8 +13,8 @@ export function ReviewsSlider({ product }: { product: ProductDetailView }) {
     const { t } = useTranslation()
 
     return (
-        <div className="relative w-full mx-auto bg-opacity-50 backdrop-blur-3xl py-20">
-            {product.reviews.length === 0 && (<div className='text-center mb-10'>{t('noReviews')}</div>)}
+        <div className="relative w-full mx-auto bg-opacity-50 backdrop-blur-3xl ">
+            {product.reviews.length === 0 && (<div className='text-center pb-5'>{t('noReviews')}</div>)}
             <div
                 className="overflow-hidden w-full"
                 ref={emblaRef}

@@ -34,6 +34,8 @@ export const resources = {
       noMaterialsListed: "No materials listed.",
       bestFor: "Best For",
       precautions: "Precautions",
+      noBestFor: "No best for listed.",
+      noPrecautions: "No precautions listed.",
       na: "N/A",
       // Currency
       EGP: "EGP",
@@ -137,281 +139,27 @@ export const resources = {
       search: "Search",
       status: "Status",
       actions: "Actions",
+      allProducts: "All Products",
+      categories: "Categories",
+      allOrders: "All Orders",
+      shipping: "Shipping",
 
-      // Materials
-      inventory: "Inventory",
-      suppliers: "Suppliers",
-      production: "Production",
-      bom: "Bill of Materials",
-      costing: "Costing",
-      movements: "Movements",
+      // Dashboard
+      totalCustomers: "Total Customers",
+      totalProducts: "Total Products",
+      totalOrders: "Total Orders",
+      totalRevenue: "Total Revenue",
+      currentMonth: "Current Month",
+      dashboardOverview: "Overview of your store's performance.",
+      recentOrders: "Recent Orders",
+      viewAllOrders: "View All Orders",
+      orderId: "Order ID",
+      customer: "Customer",
+      total: "Total",
+      date: "Date",
+      noRecentOrders: "No recent orders found.",
+      viewDetails: "View Details",
 
-      // Orders
-      newOrders: "New Orders",
-      processing: "Processing",
-      shipped: "Shipped",
-      delivered: "Delivered",
-      cancelled: "Cancelled",
-
-      // People
-      teamMembers: "Team Members",
-      couriers: "Couriers",
-
-      // Not implemented
-      notImplemented: "Not Implemented Yet",
-      comingSoon: "Coming Soon",
-      underConstruction: "This page is under construction",
-
-      //about us
-      aboutUsTitle: "From Nature's Hug <br/> to Your Skin",
-      aboutUsDescription: "Therapeutic Care, <span>Touched by Nature 🌿</span>",
-
-      // aliases to match camelCase keys used in components
-      ourStory: "Our Story",
-      ourVision: "Our Vision",
-      corevalues: "Core Values", // Fixed casing for consistency
-      ourGoals: "Our Goals",
-
-      // cart
-      addedtoCart: '{{product}} added to cart',
-
-      // Contact page
-      contactFaqTitle: "Frequently Asked Questions",
-      contactFaqIntro: "Find quick answers to common questions about our products, orders, and services.",
-      faq1Title: "What makes Nature Hug products unique?",
-      faq1Content: "Our products are crafted with 100% natural and organic ingredients, ethically sourced, and free from harmful chemicals. We believe in harnessing nature's power for your skin's well-being.",
-      faq2Title: "Are your products suitable for all skin types?",
-      faq2Content: "Yes, we offer a diverse range of products designed to cater to various skin types, including sensitive, oily, dry, and combination skin. Each product description provides detailed information to help you choose the best fit.",
-      faq3Title: "How can I track my order?",
-      faq3Content: "Once your order is shipped, you will receive an email with a tracking number and a link to monitor its delivery status. You can also log in to your account on our website to view your order history and tracking information.",
-      faq4Title: "What is your return policy?",
-      faq4Content: "We offer a 30-day satisfaction guarantee. If you are not completely happy with your purchase, you can return it within 30 days for a full refund or exchange. Please refer to our 'Returns & Refunds' page for detailed instructions.",
-      faq6Title: "Can I change or cancel my order after it's been placed?",
-      faq6Content: "We process orders quickly to ensure prompt delivery. If you need to change or cancel your order, please contact our customer service team as soon as possible. We'll do our best to accommodate your request, but changes may not be possible if the order has already been shipped.",
-
-      contactHeader: "Have other concerns? We'd love to hear from you!",
-      contactIntro: "Your journey with us doesn't end with your order... We're always here to listen to you, help you, and care for your true beauty 🌿",
-
-      contactMethodSupport: "Contact support immediately",
-      contactMethodReply: "We will reply within 24 hours",
-      contactMethodFollow: "Follow us for latest offers",
-      contactMethodShare: "Share your opinion with us",
-
-      // login
-      emailRequired: "Email is required",
-      enterValidEmail: "Enter a valid email",
-      passwordRequired: "Password is required",
-      passwordMinLength: "Password must be at least 6 characters",
-      loggingIn: "Logging in...",
-      signup: "Sign Up",
-      continueWithGoogle: "Continue with Google",
-      unexpectedError: "An unexpected error occurred. Please try again.",
-
-      // sign up
-      fullnameRequired: "Full name is required",
-      enterValidFullName: "Enter a valid full name",
-      phoneRequired: "Phone number is required",
-      enterValidPhone: "Enter a valid phone number",
-      signingUp: "Signing up...",
-      fullname: "Full Name",
-      phone: "Phone Number",
-      password: "Password",
-      confirmPassword: "Confirm Password",
-      passwordsMustMatch: "Passwords must match",
-      email: "Email",
-      alreadyHaveAccount: "Already have an account? Login here.",
-      failedToSubmit: "Failed to submit. Please try again.",
-
-      // about us content
-      goals: [
-        'Develop safe, high-impact products with powerful natural ingredients.',
-        'Strengthen women’s self-confidence through visible, authentic results.',
-        'Build a transparent and emotionally rich brand experience.',
-        'Inspire women to embrace their natural features and rise above stereotypes.',
-        'Maintain the highest quality standards and continuously innovate.',
-      ],
-      egyptianBrand: " An <strong>Egyptian brand</strong> founded by a <strong>pharmacist</strong>. We blend medical- grade effectiveness with the gentleness of nature to restore skin confidence.",
-      keracalm: "<strong>Introducing the Keracalm Cream:</strong> <br/> The <b>first safe 40% urea cream in Egypt</b> — treats stubborn issues and delivers visible results from the first use. 💖",
-      foundation: "Our foundation is built on care, transparency, and a love for natural beauty.<br/> Every product reflects our belief in gentle strength and authentic results.",
-      vision: "To be the #1 skincare choice for Arab women, redefining beauty care as a <strong> psychological and emotional therapy </strong>, not just a routine.",
-      cores: [
-        { icon: 'Leaf', color: 'green', text: 'Nature as inspiration' },
-        { icon: 'Sparkles', color: 'yellow', text: 'Excellence in results' },
-        { icon: 'Smile', color: 'orange', text: 'Empowerment and confidence' },
-        { icon: 'Heart', color: 'pink', text: 'Genuine care from the touch' },
-        { icon: 'CheckCircle', color: 'green', text: 'Transparency in formulas' },
-      ],
-      // Admin Product Creation
-      productCreated: "Product created successfully",
-      errorCreatingProduct: "Error creating product",
-      imageUploaded: "Image uploaded successfully",
-      errorUploadingImage: "Error uploading image",
-      createProduct: "Create product",
-      nameEn: "Name (English)",
-      nameAr: "Name (Arabic)",
-      price: "Price",
-      stock: "Stock",
-      slug: "Slug",
-      descriptionEn: "Description (English)",
-      descriptionAr: "Description (Arabic)",
-      images: "Images",
-      variants: "Variants",
-      variantNameEn: "Variant Name (English)",
-      removeVariant: "Remove Variant",
-      addVariant: "Add Variant",
-      selectFromGallery: "Select from Gallery",
-      uploadNewImage: "Upload New Image",
-      gallery: "Gallery",
-      selectImage: "Select Image",
-      cancelSelection: "Cancel Selection",
-      variantNameAr: "Variant Name (Arabic)",
-      basicInformation: "Basic Information",
-      saveProduct: "Save Product",
-      addMaterial: "Add Material",
-      add: "Add",
-      variantDescriptionOverride: "Variant Description Override",
-    }
-  },
-  ar: {
-    translation: {
-      // Pagination
-      prev: "السابق",
-      next: "التالي",
-      // Filters / Product list
-      filters: "الفلاتر",
-      category: "الفئة",
-      all: "الكل",
-      sortBy: "الترتيب حسب",
-      nameAsc: "الاسم (أ → ي)",
-      nameDesc: "الاسم (ي → أ)",
-      priceAsc: "السعر (من الأقل إلى الأعلى)",
-      priceDesc: "السعر (من الأعلى إلى الأقل)",
-      ratingDesc: "الأعلى تقييماً",
-      inStockOnly: "المتوفرة فقط",
-      onSaleOnly: "المخفضة فقط",
-      or: "أو",
-
-      // Quantity controls
-      decreaseQuantity: "إنقاص الكمية",
-      increaseQuantity: "زيادة الكمية",
-
-      // Reviews
-      noReviews: "لا توجد تقييمات بعد",
-      reviews: "التقييمات",
-      // Product detail screen
-      productNotFound: "المنتج غير موجود.",
-      fullDescription: "الوصف الكامل",
-      materialsIngredients: "المواد / المكونات",
-      noMaterialsListed: "لا توجد مواد مدرجة.",
-      bestFor: "مناسب ل",
-      precautions: "الاحتياطات",
-      na: "غير متوفر",
-      // Currency
-      EGP: "ج.م",
-
-      // Stock / availability
-      only: "فقط",
-      leftInStock: "متبقي في المخزون",
-      inStock: "متوفر",
-      maxAvailable: "الحد الأقصى المتاح",
-
-      // Buy / Checkout actions
-      BuyNow: "اشتري الآن",
-
-      // Reviews / Add review
-      reviewAddedSuccessfully: "تم إضافة التقييم بنجاح",
-      addYourReview: "أضف تقييمك",
-      yourRating: "تقييمك",
-      yourComment: "تعليقك",
-      writeYourReviewHere: "اكتب تقييمك هنا",
-      submitting: "جاري الإرسال...",
-      submitReview: "إرسال التقييم",
-      loginToReview: "سجّل الدخول لترك تقييم",
-      loginNow: "سجّل الدخول الآن",
-
-      // Confirmations
-      confirmDeleteProduct: "هل أنت متأكد أنك تريد حذف هذا المنتج؟",
-      // Navbar / auth
-      orderHistory: "سجل الطلبات",
-      login: "تسجيل الدخول",
-      home: "الرئيسية",
-      shop: "المتجر",
-      about: "من نحن",
-      contact: "اتصل بنا",
-      cart: "السلة",
-      emptyCart: "عربتك فارغة!",
-      startAdding: "ابدأ بإضافة المنتجات إلى عربتك لتراها هنا.",
-      shopNow: "تسوق الآن",
-      quantity: "الكمية",
-      each: "لكل",
-      subtotal: "الإجمالي",
-      checkoutInfo: "سيتم احتساب الضرائب والشحن عند الدفع.",
-      proceedToCheckout: "الانتقال إلى الدفع",
-      loadingCart: "يتم تحميل عربتك...",
-      remove: "إزالة العنصر",
-      backToShop: "العودة للتسوق",
-      error: "خطأ في تحميل المنتجات",
-      noProd: "لا توجد منتجات متاحة",
-      noImg: "لا توجد صورة",
-      outOfStock: "غير متوفر",
-      addToCart: "أضف إلى السلة",
-      featuredProducts: "المنتجات المميزة",
-      learnMore: "اعرف المزيد",
-      allRightsReserved: "جميع الحقوق محفوظة.",
-      heroTitle: "حيث كل مكون هو وعد.",
-      heroDescription: "عناق لطيف لبشرتك من الطبيعة نفسها.",
-      addedLocal: "اتضافت في سلة الضيف (سجّل دخول علشان تتزامن).",
-      addedServer: "تم إضافة المنتج لعربة التسوق!",
-      features: [
-        {
-          icon: Heart,
-          title: "المنتجات المميزة",
-          description: "منتجات مختارة <b>بعناية للجودة والأناقة</b>.",
-        },
-        {
-          icon: Rocket,
-          title: "توصيل سريع",
-          description: "يتم شحن طلبك خلال <b>24 ساعة</b>.",
-        },
-        {
-          icon: Box,
-          title: "تغليف آمن",
-          description: "يتم تغليف المنتجات <b>بشكل آمن ومحمي</b>.",
-        },
-        {
-          icon: Zap,
-          title: "عروض حصرية",
-          description: "الوصول إلى <b>عروض وتخفيضات خاصة</b>.",
-        },
-      ],
-      dashboard: "لوحة التحكم",
-      customers: "العملاء",
-      materials: "المواد",
-      products: "المنتجات",
-      orders: "الطلبات",
-      analytics: "التحليلات",
-      people: "الأشخاص",
-      finance: "المالية",
-      reports: "التقارير",
-      settings: "الإعدادات",
-      profile: "الملف الشخصي",
-      logout: "تسجيل الخروج",
-      backToSite: "العودة للموقع",
-      welcomeBack: "مرحباً بعودتك",
-      adminPanel: "لوحة الإدارة",
-      save: "حفظ",
-      cancel: "إلغاء",
-      delete: "حذف",
-      edit: "تعديل",
-      create: "إنشاء",
-      search: "بحث",
-      status: "الحالة",
-      actions: "الإجراءات",
-
-      // Materials
-      inventory: "المخزون",
-      suppliers: "الموردين",
-      production: "الإنتاج",
       bom: "قائمة المواد",
       costing: "التكاليف",
       movements: "الحركات",
@@ -540,6 +288,7 @@ export const resources = {
       addMaterial: "إضافة مادة",
       add: "إضافة",
       variantDescriptionOverride: "تجاوز وصف الخيار",
+      youMightAlsoLike: "منتجات أخرى قد تعجبك",
     }
   }
 };

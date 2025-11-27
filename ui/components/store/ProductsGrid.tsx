@@ -9,7 +9,7 @@ import Skeleton from "@mui/material/Skeleton";
 import { StarRating } from "./StarRating";
 import { useTranslation } from "react-i18next";
 
-function ProductCard({
+export function ProductCard({
     product,
     compact = false,
 }: {
@@ -35,7 +35,7 @@ function ProductCard({
                     }}
                 />
 
-                {product.discount != null && (
+                {product.discount != null && product.discount > 0 && (
                     <div
                         className="absolute top-3 left-3 bg-red-600 text-white px-3 py-1 rounded-full text-sm font-semibold shadow-md">
                         {t("{{price, currency}}", { price: (product.discount * -1) })}
@@ -54,7 +54,7 @@ function ProductCard({
                 <div>
                     <div className="flex flex-col ">
                         <h3
-                            className={`${compact ? "text-sm sm:text-lg sm:mb-2" : "text-md sm:text-xl sm:mb-2"
+                            className={`${compact ? "text-sm sm:text-md sm:mb-2" : "text-md sm:text-xl sm:mb-2"
                                 } font-semibold text-gray-800`}
                         >
                             {product.name}

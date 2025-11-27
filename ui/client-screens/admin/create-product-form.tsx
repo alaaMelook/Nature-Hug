@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { ProductAdminView } from "@/domain/entities/views/admin/productAdminView";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { createProductAction } from "@/app/actions/admin/products";
+import { createProductAction } from "@/ui/hooks/admin/products";
 import { ImageSelector } from "@/ui/components/admin/imageSelector";
 import { MaterialSelector } from "@/ui/components/admin/materialSelector";
 import { Material } from "@/domain/entities/database/material";
@@ -113,8 +113,8 @@ export function CreateProductForm({ initialImages }: CreateProductFormProps) {
         if (activeImageField === 'main') {
             const currentGallery = watch("gallery") || [];
             setValue("gallery", [...currentGallery, url]);
-            if (!watch("image_url")) {
-                setValue("image_url", url);
+            if (!watch("image")) {
+                setValue("image", url);
             }
         } else if (typeof activeImageField === 'number') {
             // Variant image logic
@@ -161,10 +161,10 @@ export function CreateProductForm({ initialImages }: CreateProductFormProps) {
     return (
         <div className="max-w-7xl mx-auto p-4">
             <div className="flex justify-between items-center mb-6">
-                <h1 className="text-3xl font-bold text-gray-800">{t("createProduct")}</h1>
+                <h1 className=" text-xl md:text-3xl font-bold text-gray-800">{t("createProduct")}</h1>
                 <button
                     onClick={handleSubmit(onSubmit)}
-                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md font-medium"
+                    className="fixed bottom-10 right-10 z-50 md:flex md:max-w-7xl  p-4 md:px-6 md:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md font-medium"
                 >
                     {t("saveProduct")}
                 </button>
@@ -175,11 +175,12 @@ export function CreateProductForm({ initialImages }: CreateProductFormProps) {
                 <div className="space-y-6">
                     {/* Basic Info Card */}
                     <div className="bg-white rounded-xl shadow-sm border p-6">
-                        <h2 className="text-xl font-semibold mb-4 text-gray-800">{t("basicInformation")}</h2>
+                        <h2 className="text-lg md:text-xl font-semibold mb-4 text-gray-800">{t("basicInformation")}</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">{t("nameEn")}</label>
+                                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">{t("nameEn")}</label>
                                 <input
+
                                     {...register("name_en", {
                                         required: true,
                                         onChange: (e) => setValue("slug", generateSlug(e.target.value))
@@ -188,30 +189,63 @@ export function CreateProductForm({ initialImages }: CreateProductFormProps) {
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">{t("nameAr")}</label>
+                                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">{t("nameAr")}</label>
                                 <input {...register("name_ar")} className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">{t("slug")}</label>
-                                <input {...register("slug", { required: true })} className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" />
+                                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">{t("slug")}</label>
+                                <input placeholder="Auto-generated" {...register("slug", { required: true })} className="text-sm w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">{t("category")}</label>
-                                <input type="number" {...register("category_id")} className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" placeholder="ID" />
+                                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">{t("category")}</label>
+                                <input type="number" {...register("category_id")} className="text-sm w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" placeholder="ID" />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Skin Type</label>
-                                <input {...register("skin_type")} className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" placeholder="e.g. Oily, Dry" />
+                                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">Skin Type</label>
+                                <input {...register("skin_type")} className="text-sm w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" placeholder="e.g. Oily, Dry" />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Product Type</label>
-                                <input {...register("product_type")} className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" placeholder="e.g. Cream, Serum" />
+                                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">Product Type</label>
+                                <input {...register("product_type")} className="text-sm w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" placeholder="e.g. Cream, Serum" />
                             </div>
                         </div>
+
                     </div>
 
+                    {/* Media */}
+                    <div className="bg-white rounded-xl shadow-sm border p-6">
+                        <h2 className="text-lg md:text-xl font-semibold mb-4 text-gray-800 flex items-center gap-2">
+                            <ImageIcon size={18} /> Media
+                        </h2>
+                        <div className="grid grid-cols-3 gap-2">
+                            {watch("gallery")?.map((url, index) => (
+                                <div key={index} className="relative aspect-square rounded-lg overflow-hidden border group">
+                                    <img src={url} alt="Product" className="w-full h-full object-cover" />
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const newGallery = watch("gallery").filter((_, i) => i !== index);
+                                            setValue("gallery", newGallery);
+                                            if (watch("image") === url) setValue("image", newGallery[0] || "");
+                                        }}
+                                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    >
+                                        <Trash2 size={12} />
+                                    </button>
+                                </div>
+                            ))}
+                            <button
+                                type="button"
+                                onClick={() => { setActiveImageField('main'); setShowImageSelector(true); }}
+                                className="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50 transition-colors"
+                            >
+                                <Plus size={24} />
+                                <span className="text-xs mt-1">{t("add")}</span>
+                            </button>
+                        </div>
+                    </div>
                     {/* Collapsible Sections for Details */}
-                    <div className="space-y-4">
+                    <>
                         <CollapsibleSection title={t("fullDescription")} defaultOpen>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
@@ -238,6 +272,36 @@ export function CreateProductForm({ initialImages }: CreateProductFormProps) {
                             </div>
                         </CollapsibleSection>
 
+
+                    </>
+
+
+
+                </div>
+
+                {/* Right Column: Pricing, Stock, Media (1/2 width) */}
+                <div className="space-y-6">
+                    {/* Pricing & Stock */}
+                    <div className="bg-white rounded-xl shadow-sm border p-6">
+                        <h2 className="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2">
+                            <Box size={18} /> Inventory & Pricing
+                        </h2>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">{t("price")} (EGP)</label>
+                                <input type="number" {...register("price")} className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">{t("stock")}</label>
+                                <input type="number" {...register("stock")} className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Discount (%)</label>
+                                <input type="number" {...register("discount")} className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" />
+                            </div>
+                        </div>
+                    </div>
+                    <>
                         <CollapsibleSection title={t("materialsIngredients")}>
                             <div className="space-y-4">
                                 <div className="flex justify-between items-center">
@@ -313,8 +377,7 @@ export function CreateProductForm({ initialImages }: CreateProductFormProps) {
                                 <textarea {...register("faq_ar.precautions")} placeholder="Arabic..." rows={3} className="w-full border-gray-300 rounded-lg shadow-sm p-2 border" />
                             </div>
                         </CollapsibleSection>
-                    </div>
-
+                    </>
                     {/* Variants Section */}
                     <div className="bg-white rounded-xl shadow-sm border p-6">
                         <div className="flex justify-between items-center mb-4">
@@ -381,8 +444,8 @@ export function CreateProductForm({ initialImages }: CreateProductFormProps) {
                                             <input type="number" {...register(`variants.${index}.discount` as const)} className="w-full border-gray-300 rounded shadow-sm p-1.5 border text-sm" />
                                         </div>
                                         <div>
-                                            <label className="text-xs font-medium text-gray-500 uppercase">Type</label>
-                                            <input {...register(`variants.${index}.type` as const)} className="w-full border-gray-300 rounded shadow-sm p-1.5 border text-sm" placeholder="e.g. Size, Color" />
+                                            <label className="text-xs font-medium text-gray-500 uppercase">Distinguisher</label>
+                                            <input {...register(`variants.${index}.type` as const)} className="w-full border-gray-300 rounded shadow-sm p-1.5 border text-sm" placeholder="e.g. blue, small, 50 ml, ..." />
                                         </div>
                                     </div>
 
@@ -467,63 +530,6 @@ export function CreateProductForm({ initialImages }: CreateProductFormProps) {
                                     No variants added. Main product details will be used.
                                 </p>
                             )}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Right Column: Pricing, Stock, Media (1/2 width) */}
-                <div className="space-y-6">
-                    {/* Pricing & Stock */}
-                    <div className="bg-white rounded-xl shadow-sm border p-6">
-                        <h2 className="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2">
-                            <Box size={18} /> Inventory & Pricing
-                        </h2>
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">{t("price")} (EGP)</label>
-                                <input type="number" {...register("price")} className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">{t("stock")}</label>
-                                <input type="number" {...register("stock")} className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Discount (%)</label>
-                                <input type="number" {...register("discount")} className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Media */}
-                    <div className="bg-white rounded-xl shadow-sm border p-6">
-                        <h2 className="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2">
-                            <ImageIcon size={18} /> Media
-                        </h2>
-                        <div className="grid grid-cols-3 gap-2">
-                            {watch("gallery")?.map((url, index) => (
-                                <div key={index} className="relative aspect-square rounded-lg overflow-hidden border group">
-                                    <img src={url} alt="Product" className="w-full h-full object-cover" />
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            const newGallery = watch("gallery").filter((_, i) => i !== index);
-                                            setValue("gallery", newGallery);
-                                            if (watch("image_url") === url) setValue("image_url", newGallery[0] || "");
-                                        }}
-                                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                                    >
-                                        <Trash2 size={12} />
-                                    </button>
-                                </div>
-                            ))}
-                            <button
-                                type="button"
-                                onClick={() => { setActiveImageField('main'); setShowImageSelector(true); }}
-                                className="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50 transition-colors"
-                            >
-                                <Plus size={24} />
-                                <span className="text-xs mt-1">{t("add")}</span>
-                            </button>
                         </div>
                     </div>
                 </div>

@@ -12,10 +12,11 @@ import { CheckCircle, Info, Minus, ShoppingBag } from "lucide-react";
 import { ReviewsSlider } from "@/ui/components/store/ReviewsSlider";
 import Link from "next/link";
 import { ProductDetailView } from "@/domain/entities/views/shop/productDetailView";
+import { ProductView } from "@/domain/entities/views/shop/productView";
+import SimilarProductsScroll from "@/ui/components/store/SimilarProductsScroll";
 
 
-
-export function ProductDetailScreen({ initProduct: product }: { initProduct: ProductDetailView | null }) {
+export function ProductDetailScreen({ initProduct: product, similarProducts = [] }: { initProduct: ProductDetailView | null, similarProducts?: ProductView[] }) {
     const { t } = useTranslation();
     const [activeSection, setActiveSection] = useState<String | null>(null);
     const [quantity, setQuantity] = useState<number>(1);
@@ -41,8 +42,8 @@ export function ProductDetailScreen({ initProduct: product }: { initProduct: Pro
                 : <p>{t('noMaterialsListed')}</p>,
             icon: CheckCircle,
         },
-        { id: 'bestfor', title: t('bestFor'), content: product.highlight, icon: ShoppingBag },
-        { id: 'precautions', title: t('precautions'), content: product.description, icon: Minus },
+        { id: 'bestfor', title: t('bestFor'), content: (product.faq?.best_for.length ?? 0) > 0 ? product.faq?.best_for : t('noBestFor'), icon: ShoppingBag },
+        { id: 'precautions', title: t('precautions'), content: (product.faq?.precautions.length ?? 0) > 0 ? product.faq?.precautions : t('noPrecautions'), icon: Minus },
 
     ];
     return (
@@ -154,6 +155,18 @@ export function ProductDetailScreen({ initProduct: product }: { initProduct: Pro
                 </div>
             </div>
 
+            {/* Similar Products Section */}
+            {similarProducts.length > 0 && (
+                <div className="w-full py-10 bg-gray-50 flex flex-col ">
+                    <h2 className="font-bold text-start text-3xl mb-8 text-primary-900 mx-15">
+                        {t('youMightAlsoLike')}
+                    </h2>
+                    <div className="w-full px-10 scrollbar-hide">
+                        <SimilarProductsScroll products={similarProducts} />
+                    </div>
+                </div>
+            )}
+
             {/* Fixed Bottom Bar - Made it wider and changed background */}
             <div className="w-full fixed bottom-0 left-0 bg-white border-t border-gray-200 shadow-xl z-20">
                 <div className={"flex items-center justify-between text-gray-700 px-5 py-4 w-full"}>
@@ -186,7 +199,6 @@ export function ProductDetailScreen({ initProduct: product }: { initProduct: Pro
 }
 
 function ProductDetailSkeleton() {
-    // ... (The skeleton remains mostly the same, as the changes are aesthetic)
     return (
         <div className="flex flex-col items-center px-6 p-10 w-full bg-white font-sans animate-pulse">
             <div className="lg:flex lg:space-x-16 max-w-7xl w-full">

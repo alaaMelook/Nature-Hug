@@ -23,9 +23,8 @@ export default function Navbar() {
         () => getCartCount(),
         [cart]
     );
-    const { user, member } = useSupabase();
+    const { user, member, signOut, loading } = useSupabase();
     const router = useRouter();
-    const { signOut } = useSupabase();
     const { t } = useTranslation();
     const language = useCurrentLanguage();
     // Toggle mobile menu
@@ -101,7 +100,11 @@ export default function Navbar() {
                 </Link>
 
                 {/* Auth Buttons */}
-                {user ? (
+                {loading ? (
+                    <div className="animate-pulse flex space-x-4">
+                        <div className="rounded-full bg-slate-200 h-10 w-10"></div>
+                    </div>
+                ) : user ? (
                     <div className="relative">
                         <button
                             onClick={toggleSettingsMenu}

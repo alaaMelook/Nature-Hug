@@ -1,4 +1,4 @@
 export interface FAQs {
-    question: string;
-    answer: string;
+    best_for: string;
+    precautions: string;
 }

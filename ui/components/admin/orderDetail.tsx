@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { Shipment } from "@/domain/entities/shipment/shipment";
 import { City } from "@/domain/entities/shipment/city";
-import { updateOrderAction, createShipmentAction, getCitiesAction } from "@/app/actions/admin/orders";
+import { updateOrderAction, createShipmentAction, getCitiesAction } from "@/ui/hooks/admin/orders";
 import { User, MapPin, Phone, Package, Calendar, DollarSign, X } from "lucide-react";
 
 export function OrderDetailsModal({

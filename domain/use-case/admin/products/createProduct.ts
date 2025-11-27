@@ -4,11 +4,12 @@ import { IAdminServerRepository } from "@/data/repositories/server/iAdminReposit
 export class CreateProduct {
     constructor(private repo = new IAdminServerRepository()) { }
 
-    async execute(product: ProductAdminView): Promise<void> {
+    async execute(product: ProductAdminView): Promise<number> {
         try {
             console.log("[CreateProduct] execute called with:", product);
-            await this.repo.createProduct(product);
+            const id = await this.repo.createProduct(product);
             console.log("[CreateProduct] Product created successfully.");
+            return id;
         } catch (error) {
             console.error("[CreateProduct] Error creating product:", error);
             throw error;

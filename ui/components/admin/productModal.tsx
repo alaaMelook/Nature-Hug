@@ -4,7 +4,7 @@ import { ProductAdminView, ProductVariantAdminView } from "@/domain/entities/vie
 import { Material } from "@/domain/entities/database/material";
 import { Category } from "@/domain/entities/database/category";
 import { useUploadImage } from "@/ui/hooks/admin/useUploadImage";
-import { useAddProduct } from "@/ui/hooks/admin/useAddProduct";
+import { createProductAction } from "@/ui/hooks/admin/products";
 import { GetAllCategories } from "@/domain/use-case/shop/getAllCategories";
 import { useCategories } from "@/ui/hooks/admin/useCategories";
 
@@ -55,9 +55,14 @@ export function ProductModal({ onClose, materials = [], initial, onSaved }: Prop
         try {
             const payload: any = { ...form, variants };
             if (selectedCategoryId) payload.category_id = selectedCategoryId;
-            const id = await useAddProduct(payload);
-            if (onSaved && id) onSaved(id as number);
-            onClose();
+            const data = await createProductAction(payload);
+            if (data.success) {
+                if (onSaved && data.id) onSaved(data.id);
+                onClose();
+            }
+            else {
+                console.error(data.error);
+            }
         } catch (err) {
             console.error(err);
         } finally {

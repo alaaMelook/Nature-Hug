@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Material } from '@/domain/entities/database/material';
-import { getMaterialsAction, addMaterialAction } from '@/app/actions/admin/materials';
+import { getMaterialsAction, addMaterialAction } from '@/ui/hooks/admin/materials';
 import { toast } from 'sonner';
 import { Plus, Search, X, Check, Loader2 } from 'lucide-react';
 

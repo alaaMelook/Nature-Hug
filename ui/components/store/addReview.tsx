@@ -55,7 +55,7 @@ export function AddReview({ product }: { product: ProductDetailView }) {
     };
 
     return (
-        <div className="my-10 mx-40 w-1/2">
+        <div className="my-5 mx-auto w-1/2">
             {/* The Expand/Collapse Button */}
             <button
                 onClick={toggleExpansion}

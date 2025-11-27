@@ -9,8 +9,10 @@ export interface ProductAdminView {
     description_ar: string;
     price: number;
     discount: number;
-    image_url: string;
+    image: string;
     category_id?: number;
+    category_name_en?: string;
+    category_name_ar?: string;
     category?: Category;
     skin_type: string;
     slug: string;

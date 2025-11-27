@@ -33,7 +33,7 @@ export function LoginScreen() {
     };
 
     return (
-        <div className="flex flex-col items-center align-items-center justify-center max-h-screen space-y-6 mt-10">
+        <div className="flex flex-col items-center align-items-center justify-center max-h-screen space-y-6 my-10">
             <h1 className="text-2xl font-bold ">{t("login")}</h1>
 
             <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col space-y-4 w-72">
