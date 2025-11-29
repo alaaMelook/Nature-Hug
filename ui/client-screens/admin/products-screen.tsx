@@ -9,12 +9,14 @@ import { toast } from "sonner";
 import Image from "next/image";
 import { useTranslation } from "react-i18next";
 import { Material } from "@/domain/entities/database/material";
+import { useRouter } from "next/navigation";
 
 export function ProductsScreen({ products, materials }: { products: ProductAdminView[], materials: Material[] }) {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const [searchTerm, setSearchTerm] = useState("");
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [selectedProduct, setSelectedProduct] = useState<ProductAdminView | undefined>(undefined);
+    // const [isModalOpen, setIsModalOpen] = useState(false);
+    // const [selectedProduct, setSelectedProduct] = useState<ProductAdminView | undefined>(undefined);
+    const router = useRouter();
 
     const filteredProducts = (products || []).filter((product) =>
         product.name_en.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -28,19 +30,20 @@ export function ProductsScreen({ products, materials }: { products: ProductAdmin
                 toast.error(result.error);
             } else {
                 toast.success(t("productDeletedSuccessfully") || "Product deleted successfully");
+                router.refresh();
             }
         }
     };
 
-    const handleEdit = (product: ProductAdminView) => {
-        setSelectedProduct(product);
-        setIsModalOpen(true);
-    };
+    // const handleEdit = (product: ProductAdminView) => {
+    //     setSelectedProduct(product);
+    //     setIsModalOpen(true);
+    // };
 
-    const handleCloseModal = () => {
-        setIsModalOpen(false);
-        setSelectedProduct(undefined);
-    };
+    // const handleCloseModal = () => {
+    //     setIsModalOpen(false);
+    //     setSelectedProduct(undefined);
+    // };
 
     return (
         <div className="space-y-6">
@@ -51,12 +54,11 @@ export function ProductsScreen({ products, materials }: { products: ProductAdmin
                 </div>
                 <button
                     onClick={() => {
-                        setSelectedProduct(undefined);
-                        setIsModalOpen(true);
+                        router.push("/admin/products/create");
                     }}
                     className="flex items-center justify-center px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 focus:ring-4 focus:ring-primary-100 transition-all w-full sm:w-auto"
                 >
-                    <Plus className="w-4 h-4 mr-2" />
+                    <Plus className="w-4 h-4 mx-2" />
                     {t("addProduct")}
                 </button>
             </div>
@@ -75,7 +77,7 @@ export function ProductsScreen({ products, materials }: { products: ProductAdmin
                 </div>
                 <div className="flex items-center gap-2 w-full sm:w-auto">
                     <button className="flex items-center justify-center px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors w-full sm:w-auto">
-                        <Filter className="w-4 h-4 mr-2 text-gray-500" />
+                        <Filter className="w-4 h-4 mx-2 text-gray-500" />
                         {t("filter")}
                     </button>
                 </div>
@@ -103,10 +105,10 @@ export function ProductsScreen({ products, materials }: { products: ProductAdmin
                                     </td>
                                 </tr>
                             ) : filteredProducts.map((product) => (
-                                <tr key={product.id} className="hover:bg-gray-50 transition-colors group">
+                                <tr key={product.slug} className="hover:bg-gray-50 transition-colors group">
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="flex items-center">
-                                            <div className="h-10 w-10 flex-shrink-0 relative rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
+                                            <div className="h-10 w-10 flex-shrink-0 relative rounded-lg overflow-hidden bg-gray-100 border border-gray-200 mx-5">
                                                 {product.image ? (
                                                     <Image
                                                         src={product.image}
@@ -121,14 +123,14 @@ export function ProductsScreen({ products, materials }: { products: ProductAdmin
                                                 )}
                                             </div>
                                             <div className="ml-4">
-                                                <div className="text-sm font-medium text-gray-900">{product.name_en}</div>
-                                                <div className="text-xs text-gray-500 truncate max-w-[200px]">{product.description_en}</div>
+                                                <div className="text-sm font-medium text-gray-900">{i18n.language === "ar" ? product.name_ar : product.name_en}</div>
+                                                <div className="text-xs text-gray-500 truncate max-w-[200px]">{i18n.language === "ar" ? product.description_ar : product.description_en}</div>
                                             </div>
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <span className="px-2.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-50 text-blue-700">
-                                            {product.category_name_en ?? product.category_name_ar ?? 'Uncategorized'}
+                                            {i18n.language === "ar" ? product.category_name_ar ?? product.category_name_en : product.category_name_en}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -136,7 +138,7 @@ export function ProductsScreen({ products, materials }: { products: ProductAdmin
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="flex items-center">
-                                            <div className={`h-2.5 w-2.5 rounded-full mr-2 ${product.stock > 10 ? 'bg-green-500' : product.stock > 0 ? 'bg-yellow-500' : 'bg-red-500'}`}></div>
+                                            <div className={`h-2.5 w-2.5 rounded-full mx-2 ${product.stock > 10 ? 'bg-green-500' : product.stock > 0 ? 'bg-yellow-500' : 'bg-red-500'}`}></div>
                                             <span className="text-sm text-gray-500">{product.stock} {t("leftInStock")}</span>
                                         </div>
                                     </td>
@@ -171,7 +173,7 @@ export function ProductsScreen({ products, materials }: { products: ProductAdmin
                             {t("noProductsFound")}
                         </div>
                     ) : filteredProducts.map((product) => (
-                        <div key={product.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex gap-4">
+                        <div key={product.slug} className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex gap-4">
                             <div className="h-20 w-20 flex-shrink-0 relative rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
                                 {product.image ? (
                                     <Image
@@ -212,7 +214,7 @@ export function ProductsScreen({ products, materials }: { products: ProductAdmin
                 </div>
             </div>
 
-            {isModalOpen && (
+            {/* {isModalOpen && (
                 <ProductModal
                     onClose={handleCloseModal}
                     materials={materials}
@@ -222,7 +224,7 @@ export function ProductsScreen({ products, materials }: { products: ProductAdmin
                         handleCloseModal();
                     }}
                 />
-            )}
+            )} */}
         </div>
     );
 }

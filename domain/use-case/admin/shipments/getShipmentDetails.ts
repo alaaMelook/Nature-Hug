@@ -1,15 +1,14 @@
-import { City } from "@/domain/entities/shipment/city";
 import { ShipmentRepository } from "@/domain/repositories/shipmentRepository";
 
-export class GetCities {
+export class GetShipmentDetails {
     constructor(private repo = ShipmentRepository) { }
 
-    async execute(): Promise<City[]> {
+    async execute(awb: string): Promise<any> {
         try {
             // await this.repo.login();
-            return await this.repo.getCities();
+            return await this.repo.getShipmentDetails(awb);
         } catch (error) {
-            console.error("[GetCities] Error fetching cities:", error);
+            console.error("[GetShipmentDetails] Error fetching shipment details:", error);
             throw error;
         }
     }

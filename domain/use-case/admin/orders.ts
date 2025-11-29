@@ -1,5 +1,5 @@
-import {IAdminServerRepository} from "@/data/repositories/server/iAdminRepository";
-import {OrderDetailsView} from "@/domain/entities/views/admin/orderDetailsView";
+import { IAdminServerRepository } from "@/data/repositories/server/iAdminRepository";
+import { OrderDetailsView } from "@/domain/entities/views/admin/orderDetailsView";
 
 export class Orders {
     constructor(private repo = new IAdminServerRepository()) {
@@ -15,6 +15,15 @@ export class Orders {
             return result.slice(0, 5);
         } catch (error) {
             console.error("[getRecentOrders] Error in execute:", error);
+            throw error;
+        }
+    }
+
+    async getAll() {
+        try {
+            return await this.repo.getOrderDetails();
+        } catch (error) {
+            console.error("[getAllOrders] Error in execute:", error);
             throw error;
         }
     }

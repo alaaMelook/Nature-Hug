@@ -5,85 +5,16 @@ import { useCart } from "@/ui/providers/CartProvider";
 import { Tooltip } from "flowbite-react";
 import Counter from "@/ui/components/store/Counter";
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCartProducts } from "@/ui/hooks/store/useCartProducts";
 
-// Import CartItem and ProductView types
-import { CartItem } from "@/domain/entities/views/shop/productView";
-import { GetProductsData } from "@/ui/hooks/store/useProductsData";
-// Removed import { Router } from "next/router";
 export default function CartPage() {
     const pathname = usePathname();
     const router = useRouter();
-    const { t, i18n } = useTranslation();
+    const { t } = useTranslation();
     const { cart, removeFromCart, clearCart, updateQuantity } = useCart();
-    const [holder, setHolder] = useState(cart.items);
 
-    const [products, setProducts] = useState<CartItem[]>([]);
-    const [loadingProducts, setLoadingProducts] = useState(true);
-
-
-
-    // --- DATA FETCHING AND SYNC LOGIC --- 
-
-
-    // 1. loadProducts: Fetches product details based on cart items.
-    const loadProducts = useCallback(async () => {
-
-
-        if (holder.length === 0) {
-            setProducts([]);
-            setLoadingProducts(false);
-            return;
-        }
-
-        setLoadingProducts(true);
-        const productSlugsInCart = holder.map(item => item.slug);
-        const productsData: CartItem[] = []; // Prepare to hold complete CartItem objects
-
-        for (const slug of productSlugsInCart) {
-            // Assume GetProductsData is defined as LangKey
-            const prodView = await new GetProductsData(i18n.language as LangKey).bySlug(slug);
-            const cartItemData = holder.find(ci => ci.slug === slug);
-
-            if (prodView && cartItemData) {
-                // 💡 MAPPING: Combine fetched ProductView with the current quantity
-                const completeCartItem: CartItem = {
-                    ...prodView,
-                    quantity: cartItemData.quantity
-                };
-                productsData.push(completeCartItem);
-            }
-        }
-
-        setProducts(productsData);
-        setLoadingProducts(false);
-        // Dependency only on language. Removed Router.events.
-    }, [i18n.language]);
-
-    useEffect(() => {
-        if (holder.length > 0) {
-            loadProducts();
-        }
-    }, [loadProducts, cart.items.length]);
-
-
-    // 3. useEffect (Quantity Sync): Runs on *every* cart change (including quantity).
-    useEffect(() => {
-        if (!loadingProducts) {
-            setProducts(prevProducts => {
-                const cartQuantities = new Map(cart.items.map(item => [item.slug, item.quantity]));
-
-                return prevProducts
-                    .map(p => {
-                        const newQuantity = cartQuantities.get(p.slug);
-                        // If the item exists in the cart, update its quantity.
-                        return newQuantity !== undefined ? { ...p, quantity: newQuantity } : p;
-                    })
-                    // Filter out any products that no longer exist in the cart.
-                    .filter(p => cartQuantities.has(p.slug));
-            });
-        }
-    }, [cart.items, loadingProducts]); // Runs whenever the cart structure OR quantities change.
+    // Use the new hook for data fetching and caching
+    const { data: products = [], isLoading: loadingProducts } = useCartProducts();
 
     // --- RENDER LOGIC ---
 
@@ -156,20 +87,11 @@ export default function CartPage() {
                                         <Counter
                                             quantity={item.quantity} // Use item.quantity (no need for ?? 0 since it's a CartItem)
                                             onIncrease={() => {
-                                                // Optimistically update local products list for instant UI feedback
-                                                setProducts(prev => prev.map(p => p.slug === item.slug ? { ...p, quantity: p.quantity + 1 } : p));
                                                 // Pass the CartItem object for update
                                                 updateQuantity(item, item.quantity + 1);
                                             }}
                                             onDecrease={() => {
                                                 const newQty = item.quantity - 1;
-                                                // Optimistically update or remove locally to keep UI seamless
-                                                setProducts(prev => {
-                                                    if (newQty <= 0) {
-                                                        return prev.filter(p => p.slug !== item.slug);
-                                                    }
-                                                    return prev.map(p => p.slug === item.slug ? { ...p, quantity: newQty } : p);
-                                                });
                                                 // Pass the CartItem object for update
                                                 updateQuantity(item, newQty);
                                             }}

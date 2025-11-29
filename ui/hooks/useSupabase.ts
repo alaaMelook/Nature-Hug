@@ -47,23 +47,14 @@ export const useSupabase = () => {
         // ✅ 2. Subscribe to session changes
         const {
             data: { subscription },
-        } = supabase.auth.onAuthStateChange(async (_event, session) => {
+        } = supabase.auth.onAuthStateChange((_event, session) => {
             if (!session) {
                 setUser(null);
-                setMember(null);
             } else {
                 // Optionally refresh user info if you need it here
-                const u = await CustomerRepoClient.getCurrentUser();
-                if (u) {
-                    const fetched = await CustomerRepoClient.fetchCustomer(u.id);
-                    setUser(fetched ?? null);
-                    if (fetched) {
-                        const m = await CustomerRepoClient.fetchMember(fetched.id);
-                        setMember(m);
-                    } else {
-                        setMember(null);
-                    }
-                }
+                CustomerRepoClient.getCurrentUser()
+                    .then(u => u && CustomerRepoClient.fetchCustomer(u.id))
+                    .then(fetched => setUser(fetched ?? null));
             }
         });
 
@@ -80,6 +71,7 @@ export const useSupabase = () => {
     const signOut = async () => {
         await supabase.auth.signOut();
         setUser(null);
+        setMember(null);
     };
     const login = async (email: string, password: string) => {
         setLoading(true);

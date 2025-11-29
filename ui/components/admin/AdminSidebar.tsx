@@ -30,16 +30,16 @@ export default function AdminSidebar() {
       name: t("materials"),
       href: "/admin/materials",
       icon: BrickWall,
-      submenu: [
-        { name: t("materials"), href: "/admin/materials", icon: BrickWall },
-        // { name: "BOM", href: "/admin/materials/bom", icon: List },
-        // { name: "Inventory", href: "/admin/materials/inventory", icon: Package },
-        // { name: "Production", href: "/admin/materials/production", icon: Factory },
-        // { name: "Movements", href: "/admin/materials/movements", icon: Repeat },
-        // { name: "Reports", href: "/admin/materials/reports", icon: ClipboardList },
-        // { name: "Suppliers", href: "/admin/materials/suppliers", icon: Truck },
-        // { name: "Missing Items", href: "/admin/materials/missing-items", icon: DollarSign },
-      ]
+      // submenu: [
+      //   { name: t("materials"), href: "/admin/materials", icon: BrickWall },
+      //   // { name: "BOM", href: "/admin/materials/bom", icon: List },
+      //   // { name: "Inventory", href: "/admin/materials/inventory", icon: Package },
+      //   // { name: "Production", href: "/admin/materials/production", icon: Factory },
+      //   // { name: "Movements", href: "/admin/materials/movements", icon: Repeat },
+      //   // { name: "Reports", href: "/admin/materials/reports", icon: ClipboardList },
+      //   // { name: "Suppliers", href: "/admin/materials/suppliers", icon: Truck },
+      //   // { name: "Missing Items", href: "/admin/materials/missing-items", icon: DollarSign },
+      // ]
     },
     {
       name: t("products"),
@@ -55,12 +55,12 @@ export default function AdminSidebar() {
       name: t("orders"),
       href: "/admin/orders",
       icon: ShoppingCart,
-      submenu: [
-        { name: t("allOrders"), href: "/admin/orders" },
-        // { name: "Missed Orders", href: "/admin/orders/missed" },
-        // { name: "Blocked Numbers", href: "/admin/orders/blocked" },
-        // { name: "Blocked OTP", href: "/admin/orders/blocked-otp" },
-      ]
+      // submenu: [
+      //   { name: t("allOrders"), href: "/admin/orders" },
+      //   // { name: "Missed Orders", href: "/admin/orders/missed" },
+      // { name: "Blocked Numbers", href: "/admin/orders/blocked" },
+      // { name: "Blocked OTP", href: "/admin/orders/blocked-otp" },
+      // ]
     },
     // {
     //   name: t("finance"),
@@ -83,7 +83,16 @@ export default function AdminSidebar() {
     //     { name: "Customers", href: "/admin/people/customers" },
     //   ]
     // },
-    { name: t("shipping"), href: "/admin/shipping", icon: Truck },
+    {
+      name: t("shipping"),
+      href: "/admin/shipping",
+      icon: Truck,
+      submenu: [
+        { name: t("dashboard"), href: "/admin/shipping/" },
+        // { name: t("orders"), href: "/admin/shipping/orders" },
+        { name: t("history"), href: "/admin/shipping/history" },
+      ]
+    },
     { name: t("gallery"), href: "/admin/gallery", icon: Image },
   ];
 
@@ -119,7 +128,7 @@ export default function AdminSidebar() {
               ${isActive ? "bg-primary-50 text-primary-700" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"}`}
           >
             <div className="flex items-center">
-              {item.icon && <item.icon className={`mr-3 h-5 w-5 ${isActive ? "text-primary-600" : "text-gray-400 group-hover:text-gray-500"}`} />}
+              {item.icon && <item.icon className={`mx-3 h-5 w-5 ${isActive ? "text-primary-600" : "text-gray-400 group-hover:text-gray-500"}`} />}
               <span>{item.name}</span>
             </div>
             <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`} />
@@ -136,7 +145,7 @@ export default function AdminSidebar() {
                       ? "bg-primary-50 text-primary-700 font-medium"
                       : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"}`}
                 >
-                  {subItem.icon && <subItem.icon className="h-4 w-4 mr-2 opacity-70" />}
+                  {subItem.icon && <subItem.icon className="h-4 w-4 mx-2 opacity-70" />}
                   {subItem.name}
                 </Link>
               ))}
@@ -155,7 +164,7 @@ export default function AdminSidebar() {
             : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"}`}
         onClick={() => setIsMobileOpen(false)}
       >
-        <item.icon className={`mr-3 h-5 w-5 ${pathname === item.href ? "text-white" : "text-gray-400 group-hover:text-gray-500"}`} />
+        <item.icon className={`mx-3 h-5 w-5 ${pathname === item.href ? "text-white" : "text-gray-400 group-hover:text-gray-500"}`} />
         {item.name}
       </Link>
     );
@@ -206,7 +215,7 @@ export default function AdminSidebar() {
 
         <div className="p-4 border-t border-gray-100 mt-auto">
           <div className="px-3 py-2">
-            <p className="text-xs text-gray-400 text-center">© 2024 Nature Hug Admin</p>
+            <p className="text-xs text-gray-400 text-center">© 2025 Nature Hug</p>
           </div>
         </div>
       </aside>

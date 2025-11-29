@@ -13,7 +13,8 @@ export interface OrderDetailsView {
     promo_percentage: number;
     phone_numbers: string[];
     items: OrderItemView[];
-
+    shipment_id?: string;
+    awb?: string;
 }
 export interface OrderItemView {
     quantity: number;

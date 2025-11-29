@@ -10,52 +10,38 @@ import { toast } from "sonner";
 import { useForm } from "react-hook-form";
 import { createOrder } from "@/ui/hooks/store/useCreateOrderActions";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { Loader2, CreditCard, Banknote, MapPin, Phone, User, Mail, CheckCircle2 } from "lucide-react";
 import { CartItem } from "@/domain/entities/views/shop/productView";
 import { GetProductsData } from "@/ui/hooks/store/useProductsData";
-
+import { useTranslation, Trans } from "react-i18next";
+import { useCartProducts } from "@/ui/hooks/store/useCartProducts";
 
 type FormValues = Partial<Order> & {
     termsAccepted?: boolean;
 };
 
 export function CheckoutGuestScreen({ governorates }: { governorates: Governorate[] }) {
+    const { t } = useTranslation();
     const [selectedGovernorate, setSelectedGovernorate] = useState<Governorate | null>(null);
-    const [cartItems, setCartItems] = useState<Partial<CartItem>[]>([]);
-    const { cart, loading: fetching, getCartTotal } = useCart();
+    const { cart, clearCart, getCartTotal } = useCart();
     const [loading, setLoading] = useState(false);
     const [selectedPayment, setSelectedPayment] = useState<'cod' | 'paymob'>('cod');
-    const { register, handleSubmit, formState: { errors }, setValue, setError } = useForm<FormValues>({
+    const { register, handleSubmit, formState: { errors }, setValue, setError, watch } = useForm<FormValues>({
         defaultValues: {
             guest_address: {}
         }
     });
     const router = useRouter();
+    const { data: products = [], isLoading: loadingProducts } = useCartProducts();
 
     useEffect(() => {
-        async function fetchItems() {
-
-            let checkout = []
-            for (const item of cart.items) {
-                let found = await new GetProductsData().bySlug(item.slug);
-                if (found) {
-                    checkout.push({ found, quantity: item.quantity ?? 0 });
-                }
-            }
-            setCartItems(checkout);
-        }
-        fetchItems();
-    }, [cart.items.length]);
-
-    console.log('cart length ,' + cart.items.length)
-    useEffect(() => {
-        if (!fetching && cart.items.length === 0) {
+        if (!loadingProducts && products.length === 0) {
             // Only redirect if not currently submitting an order
             if (!loading) {
                 router.push('/'); // ✅ safe here
             }
         }
-    }, [cart, router, fetching, loading]);
+    }, [products, router, loadingProducts, loading]);
 
     useEffect(() => {
         // keep governorate slug in the form in sync with selectedGovernorate
@@ -65,14 +51,14 @@ export function CheckoutGuestScreen({ governorates }: { governorates: Governorat
     const onSubmit = async (data: FormValues) => {
         // extra validation: governorate
         if (!selectedGovernorate) {
-            setError('guest_address', { type: 'manual', message: 'Please select a governorate.' } as any);
-            toast.error('Please select a governorate.');
+            setError('guest_address', { type: 'manual', message: t('checkout.errors.selectGovernorate') } as any);
+            toast.error(t('checkout.errors.selectGovernorate'));
             return;
         }
 
         if (!data.termsAccepted) {
-            setError('termsAccepted', { type: 'manual', message: 'You must accept the Terms and Conditions.' });
-            toast.error('You must accept the Terms and Conditions.');
+            setError('termsAccepted', { type: 'manual', message: t('checkout.errors.acceptTerms') });
+            toast.error(t('checkout.errors.acceptTerms'));
             return;
         }
         setLoading(true);
@@ -89,184 +75,241 @@ export function CheckoutGuestScreen({ governorates }: { governorates: Governorat
             grand_total: getCartTotal(selectedGovernorate?.fees ?? 0),
             guest_address: { ...(data.guest_address || {}), governorate_slug: selectedGovernorate?.slug }
         };
-        // const result = await createOrder(orderPayload, cart);
-        // if (result.error) {
-        //     toast.error(result.error);
-        //     setLoading(false);
-        //     return;
-        // } else if (result.order_id) {
-        //     toast.success('Order created successfully!');
-        //     // navigate first then clear cart to avoid any cart-empty watchers redirecting away
-        //     router.push(`/orders/${result.order_id}`);
-        //     await clearCart();
-        // }
+        const result = await createOrder(orderPayload, products);
+        if (result.error) {
+            toast.error(result.error);
+            setLoading(false);
+            return;
+        } else if (result.order_id) {
+            toast.success('Order created successfully!');
+            // navigate first then clear cart to avoid any cart-empty watchers redirecting away
+            router.push(`/orders/${result.order_id}`);
+            await clearCart();
+        }
     };
     if (loading) return (<main className="min-h-screen flex justify-center items-center flex-col gap-5">
-        <Loader2 className=" w-10 h-10 inline-block animate-spin mr-2" size={16} />
-        <p>Processing your Order...</p>
+        <Loader2 className=" w-10 h-10 inline-block animate-spin mr-2 text-primary-600" size={32} />
+        <p className="text-gray-600 font-medium">{t('checkout.processing')}</p>
     </main>)
     return (
-        <main className="min-h-screen flex flex-col md:flex-row">
+        <main className="min-h-screen bg-gray-50/50">
+            <div className="container mx-auto px-4 py-8 md:py-12">
+                <div className="flex flex-col lg:flex-row gap-8 lg:gap-12">
 
-            {/* Left: Shipping Form */}
-            <section className="w-full md:w-2/3 border-r border-gray-100 p-8 md:p-12">
+                    {/* Left: Shipping Form */}
+                    <section className="w-full lg:w-2/3">
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+                                <div>
+                                    <h2 className="text-2xl font-bold text-gray-900">{t('checkout.title')}</h2>
+                                    <p className="text-gray-500 text-sm mt-1">{t('checkout.subtitleGuest')}</p>
+                                </div>
+                                <div className="text-sm bg-primary-50 text-primary-700 px-4 py-2 rounded-full font-medium flex items-center gap-2">
+                                    <span>{t('checkout.alreadyHaveAccount')}</span>
+                                    <Link href={'/login'} className={'underline hover:text-primary-800'}>{t('checkout.login')}</Link>
+                                </div>
+                            </div>
 
+                            <form className="space-y-8" onSubmit={handleSubmit(onSubmit)}>
 
-                <span className={'flex justify-start mb-8 gap-3 items-end'}>
-                    <h2 className="text-lg font-semibold self-end">Shipping Information</h2>
-                    <span className={'text-sm self-end'}> Make it easier and <Link
-                        href={'/login'} className={'text-teal-950 font-semibold'}>Login Here!</Link> </span>
-                </span>
+                                {/* Contact Info Section */}
+                                <div className="space-y-4">
+                                    <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                                        <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-600">
+                                            <User size={16} />
+                                        </div>
+                                        {t('checkout.contactInfo')}
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <label className="block">
+                                            <span className="text-sm font-medium text-gray-700 mb-1.5 block">{t('checkout.fullName')}</span>
+                                            <div className="relative">
+                                                <input
+                                                    {...register('guest_name', { required: t('checkout.errors.required', { field: t('checkout.fullName') }) })}
+                                                    type="text"
+                                                    placeholder="John Doe"
+                                                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all"
+                                                />
+                                                <User className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                                            </div>
+                                            {errors.guest_name && (
+                                                <p className="text-sm text-red-600 mt-1">{errors.guest_name.message as any}</p>
+                                            )}
+                                        </label>
 
-                {/* Delivery / Pickup Toggle */}
+                                        <label className="block">
+                                            <span className="text-sm font-medium text-gray-700 mb-1.5 block">{t('checkout.email')}</span>
+                                            <div className="relative">
+                                                <input
+                                                    {...register('guest_email', {
+                                                        required: t('checkout.errors.required', { field: t('checkout.email') }),
+                                                        pattern: { value: /^\S+@\S+\.\S+$/, message: t('checkout.errors.invalid', { field: t('checkout.email') }) }
+                                                    })}
+                                                    type="email"
+                                                    placeholder="john@example.com"
+                                                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all"
+                                                />
+                                                <Mail className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                                            </div>
+                                            {errors.guest_email && (
+                                                <p className="text-sm text-red-600 mt-1">{errors.guest_email.message as any}</p>
+                                            )}
+                                        </label>
 
-                {/* Form */}
-                <form className="space-y-5" onSubmit={handleSubmit(onSubmit)}>
+                                        <label className="block">
+                                            <span className="text-sm font-medium text-gray-700 mb-1.5 block">{t('checkout.phone')}</span>
+                                            <div className="relative">
+                                                <input
+                                                    {...register('guest_phone', {
+                                                        required: t('checkout.errors.required', { field: t('checkout.phone') }),
+                                                        minLength: { value: 6, message: t('checkout.errors.invalid', { field: t('checkout.phone') }) }
+                                                    })}
+                                                    type="tel"
+                                                    placeholder="+20 123 456 7890"
+                                                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all"
+                                                />
+                                                <Phone className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                                            </div>
+                                            {errors.guest_phone && (
+                                                <p className="text-sm text-red-600 mt-1">{errors.guest_phone.message as any}</p>
+                                            )}
+                                        </label>
 
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Full name
+                                        <label className="block">
+                                            <span className="text-sm font-medium text-gray-700 mb-1.5 block">{t('checkout.altPhone')} <span className="text-gray-400 font-normal">{t('checkout.optional')}</span></span>
+                                            <div className="relative">
+                                                <input
+                                                    {...register('guest_phone2')}
+                                                    type="tel"
+                                                    placeholder="+20 123 456 7890"
+                                                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all"
+                                                />
+                                                <Phone className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
 
-                        <input
-                            {...register('guest_name', { required: 'Full name is required' })}
-                            type="text"
-                            placeholder="Enter full name"
-                            className="w-full border border-gray-200 rounded-md px-3 py-2 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none"
-                        />
-                        {errors.guest_name && (
-                            <p className="text-sm text-red-600 mt-1">{errors.guest_name.message as any}</p>
-                        )}
-                    </label>
+                                <hr className="border-gray-100" />
 
+                                {/* Shipping Address Section */}
+                                <div className="space-y-4">
+                                    <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                                        <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-600">
+                                            <MapPin size={16} />
+                                        </div>
+                                        {t('checkout.shippingAddress')}
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <label className="block md:col-span-2">
+                                            <span className="text-sm font-medium text-gray-700 mb-1.5 block">{t('checkout.streetAddress')}</span>
+                                            <div className="relative">
+                                                <input
+                                                    {...register('guest_address.address', { required: t('checkout.errors.required', { field: t('checkout.streetAddress') }) })}
+                                                    type="text"
+                                                    placeholder="123 Main St, Apt 4B"
+                                                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all"
+                                                />
+                                                <MapPin className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                                            </div>
+                                            {errors.guest_address?.message && (
+                                                <p className="text-sm text-red-600 mt-1">{errors.guest_address?.message as any}</p>
+                                            )}
+                                        </label>
 
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Email address
-                        <input
-                            {...register('guest_email', {
-                                required: 'Email is required',
-                                pattern: { value: /^\S+@\S+\.\S+$/, message: 'Enter a valid email' }
-                            })}
-                            type="email"
-                            placeholder="Enter email address"
-                            className="w-full border border-gray-200 rounded-md px-3 py-2 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none"
-                        />
-                        {errors.guest_email && (
-                            <p className="text-sm text-red-600 mt-1">{errors.guest_email.message as any}</p>
-                        )}
-                    </label>
+                                        <label className="block">
+                                            <span className="text-sm font-medium text-gray-700 mb-1.5 block">{t('checkout.governorate')}</span>
+                                            <div className="relative">
+                                                <select
+                                                    {...register('guest_address.governorate_slug')}
+                                                    className="w-full pl-4 pr-10 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all appearance-none"
+                                                    onChange={(e) => {
+                                                        const gov = governorates.find(gov => gov.slug === e.target.value) || null;
+                                                        setSelectedGovernorate(gov);
+                                                    }}>
+                                                    <option value={''}>{t('checkout.selectGovernorate')}</option>
+                                                    {governorates.map((gov) => (
+                                                        <option key={gov.slug} value={gov.slug}>{gov.name_en}</option>
+                                                    ))}
+                                                </select>
+                                                <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
+                                                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                                                </div>
+                                            </div>
+                                            {errors.guest_address?.message && (
+                                                <p className="text-sm text-red-600 mt-1">{errors.guest_address?.message as any}</p>
+                                            )}
+                                        </label>
+                                    </div>
+                                </div>
 
+                                <hr className="border-gray-100" />
 
-                    <div className={'flex justify-between gap-3'}>
+                                {/* Payment Method Section */}
+                                <div className="space-y-4">
+                                    <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                                        <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-600">
+                                            <CreditCard size={16} />
+                                        </div>
+                                        {t('checkout.paymentMethod')}
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div
+                                            onClick={() => setSelectedPayment('cod')}
+                                            className={`cursor-pointer border rounded-xl p-4 flex items-center gap-4 transition-all ${selectedPayment === 'cod' ? 'border-primary-500 bg-primary-50 ring-1 ring-primary-500' : 'border-gray-200 hover:border-primary-200 hover:bg-gray-50'}`}
+                                        >
+                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${selectedPayment === 'cod' ? 'bg-primary-100 text-primary-600' : 'bg-gray-100 text-gray-500'}`}>
+                                                <Banknote size={20} />
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className={`font-semibold ${selectedPayment === 'cod' ? 'text-primary-900' : 'text-gray-900'}`}>{t('checkout.cod')}</p>
+                                                <p className="text-sm text-gray-500">{t('checkout.codDesc')}</p>
+                                            </div>
+                                            {selectedPayment === 'cod' && <CheckCircle2 className="text-primary-600" size={20} />}
+                                        </div>
 
-                        <label className="block text-sm font-medium flex-grow text-gray-700 mb-1">
-                            Phone number
+                                        <div
+                                            onClick={() => setSelectedPayment('paymob')}
+                                            className={`cursor-pointer border rounded-xl p-4 flex items-center gap-4 transition-all ${selectedPayment === 'paymob' ? 'border-primary-500 bg-primary-50 ring-1 ring-primary-500' : 'border-gray-200 hover:border-primary-200 hover:bg-gray-50'}`}
+                                        >
+                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${selectedPayment === 'paymob' ? 'bg-primary-100 text-primary-600' : 'bg-gray-100 text-gray-500'}`}>
+                                                <CreditCard size={20} />
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className={`font-semibold ${selectedPayment === 'paymob' ? 'text-primary-900' : 'text-gray-900'}`}>{t('checkout.online')}</p>
+                                                <p className="text-sm text-gray-500">{t('checkout.onlineDesc')}</p>
+                                            </div>
+                                            {selectedPayment === 'paymob' && <CheckCircle2 className="text-primary-600" size={20} />}
+                                        </div>
+                                    </div>
+                                </div>
 
-                            <input
-                                {...register('guest_phone', {
-                                    required: 'Phone number is required',
-                                    minLength: { value: 6, message: 'Enter a valid phone' }
-                                })}
-                                type="tel"
-                                placeholder="Enter phone number"
-                                className="w-full border border-gray-200 rounded-md px-3 py-2 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none"
-                            />
-                            {errors.guest_phone && (
-                                <p className="text-sm text-red-600 mt-1">{errors.guest_phone.message as any}</p>
-                            )}
-                        </label>
+                                <div className="flex items-center gap-3 bg-gray-50 p-4 rounded-xl border border-gray-100">
+                                    <input
+                                        {...register('termsAccepted', { required: t('checkout.errors.acceptTerms') })}
+                                        type="checkbox"
+                                        id="terms"
+                                        className="w-5 h-5 border-gray-300 rounded text-primary-600 focus:ring-primary-500"
+                                    />
+                                    <label htmlFor="terms" className="text-sm text-gray-600 cursor-pointer select-none">
+                                        <Trans i18nKey="checkout.terms" components={{ 1: <span className="text-primary-600 font-medium hover:underline" /> }} />
+                                    </label>
+                                </div>
+                                {errors.termsAccepted && (
+                                    <p className="text-sm text-red-600 ml-1">{errors.termsAccepted.message as any}</p>
+                                )}
 
+                            </form>
+                        </div>
+                    </section>
 
-                        <label className="block text-sm font-medium flex-grow text-gray-700 mb-1">
-                            Alternative Phone number
-
-                            <input
-                                {...register('guest_phone2')}
-                                type="tel"
-                                placeholder="Enter Another phone number"
-                                className="w-full border border-gray-200 rounded-md px-3 py-2 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none"
-                            /> </label>
-
-                    </div>
-
-                    <div className={'flex justify-between gap-3'}>
-                        <label className="block text-sm font-medium text-gray-700 mb-1 flex-grow">
-                            Address
-                            <input
-                                {...register('guest_address.address', { required: 'Address is required' })}
-                                type="text"
-                                placeholder="Enter Your Address"
-                                className="w-full border border-gray-200 rounded-md px-3 py-2 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none"
-                            />
-                            {errors.guest_address?.message && (
-                                <p className="text-sm text-red-600 mt-1">{errors.guest_address?.message as any}</p>
-                            )}
-                        </label>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Governorate
-
-                            <select
-                                {...register('guest_address.governorate_slug')}
-                                className="w-full border border-gray-200 rounded-md px-3 py-2 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none"
-                                onChange={(e) => {
-                                    const gov = governorates.find(gov => gov.slug === e.target.value) || null;
-                                    setSelectedGovernorate(gov);
-                                }}>
-                                <option value={''}>Choose governorate</option>
-                                {governorates.map((gov) => (
-                                    <option key={gov.slug} value={gov.slug}>{gov.name_en}</option>
-                                ))}
-
-                            </select>
-                            {errors.guest_address?.message && (
-                                <p className="text-sm text-red-600 mt-1">{errors.guest_address?.message as any}</p>
-                            )}
-                        </label>
-                    </div>
-
-
-                    <h2 className="text-lg font-semibold self-end">Payment Summary</h2>
-                    <div className="flex items-center gap-8 mt-4 ">
-                        <label className={'flex items-center gap-2'}>
-                            <input
-                                type="radio"
-                                id={`cod`}
-                                value={'Cash on Delivery'}
-                                checked={selectedPayment === 'cod'}
-                                onChange={() => setSelectedPayment('cod')}
-                            />
-                            Cash on Delivery
-                        </label>
-                        <label className={'flex items-center gap-2'}>
-                            <input
-                                type="radio"
-                                id={`paymob`}
-                                value={'Online Payment'}
-                                checked={selectedPayment === 'paymob'}
-                                onChange={() => setSelectedPayment('paymob')}
-                            />
-                            Online Payment
-                        </label>
-                    </div>
-                    <div className="flex items-center gap-2 mt-4">
-                        <input
-                            {...register('termsAccepted', { required: 'You must accept the Terms and Conditions' })}
-                            type="checkbox"
-                            className="w-4 h-4 border-gray-300 rounded"
-                        />
-                        <p className="text-sm text-gray-600">
-                            I have read and agree to the <span className="text-primary-600">Terms and Conditions</span>.
-                        </p>
-                        {errors.termsAccepted && (
-                            <p className="text-sm text-red-600 mt-1">{errors.termsAccepted.message as any}</p>
-                        )}
-                    </div>
-                </form>
-            </section>
-
-            {/* Right: Cart Summary */}
-            <CheckoutCart selectedGovernorate={selectedGovernorate} items={cartItems} onPurchase={async () => {
-                // trigger form submission via react-hook-form
-                await handleSubmit(onSubmit)();
-            }} />
+                    {/* Right: Cart Summary */}
+                    <CheckoutCart selectedGovernorate={selectedGovernorate} onPurchase={async () => {
+                        // trigger form submission via react-hook-form
+                        await handleSubmit(onSubmit)();
+                    }} />
+                </div>
+            </div>
         </main>
     );
 }

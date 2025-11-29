@@ -1,166 +1,145 @@
 "use client";
-import Image from "next/image";
 import { useCart } from "@/ui/providers/CartProvider";
 import { useState } from "react";
-// Assuming Governorate type is defined outside this component
-// import { Governorate } from "@/domain/entities/database/governorate"; 
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-// Assuming CartItem is defined or imported correctly
-import { CartItem } from "@/domain/entities/views/shop/productView";
+import { ArrowLeft, Tag } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Governorate } from "@/domain/entities/database/governorate";
+import { useCartProducts } from "@/ui/hooks/store/useCartProducts";
 
 
-export function CheckoutCart({ selectedGovernorate, onDiscountApplied, onPurchase, items }: {
+export function CheckoutCart({ selectedGovernorate, onDiscountApplied, onPurchase }: {
     selectedGovernorate: Governorate | null,
     onDiscountApplied?: (code: string) => void,
     onPurchase: () => void,
-    // Using CartItem[] ensures we have all required properties like 'quantity'
-    items: Partial<CartItem>[]
 }) {
     const { t } = useTranslation();
     const { cart, getCartTotal } = useCart()
     const [promoCode, setPromoCode] = useState<string>('');
-
-
+    const { data: products = [], isLoading: loadingProducts } = useCartProducts();
 
     return (
-        // Adjusted padding and removed fixed h-screen
-        <section className="w-full md:w-1/3 p-4 md:p-8 flex flex-col space-y-8 bg-gray-50 rounded-2xl shadow-xl">
+        <section className="w-full md:w-1/3 flex flex-col space-y-6">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8 sticky top-24">
+                {/* Back to Cart Link */}
+                <Link href={'/cart'}
+                    className="flex items-center gap-2 text-gray-500 hover:text-primary-600 transition-colors duration-200 mb-6 group">
+                    <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                    <span className="text-sm font-medium">{t('checkout.backToCart')}</span>
+                </Link>
 
-            {/* Back to Cart Link */}
-            <Link href={'/cart'}
-                className="flex items-center gap-2 text-primary-600 font-semibold hover:text-primary-800 transition duration-150">
-                <ArrowLeft className="w-5 h-5" />
-                <span className="text-sm font-medium">Back to Cart</span>
-            </Link>
+                <h2 className="text-xl font-bold text-gray-900 mb-6">{t('checkout.orderSummary')}</h2>
 
-            <h2 className="text-xl font-bold text-gray-800 border-b pb-4">Order Summary</h2>
-
-            {/* Cart Items List - Max height for scrolling */}
-            {/* Using a custom max-height class for a more controlled scroll area */}
-            <div className="space-y-5 auto-scroll max-h-[40vh] overflow-y-auto pr-3">
-                {items.length === 0 ? (
-                    <p className="text-gray-500 italic text-center">Your cart is empty.</p>
-                ) : (
-                    items.map((item) => (
-                        // Use item.slug as the key if it exists, otherwise fallback to item.id
-                        <div key={item.slug || item.id} className="flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-
-                                {/* Image Display with Fallback */}
-                                <div className="w-16 h-16 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden border border-gray-200 flex items-center justify-center">
-
+                {/* Cart Items List */}
+                <div className="space-y-4 max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
+                    {!loadingProducts && products.length === 0 ? (
+                        <p className="text-gray-400 text-sm text-center py-4">{t('checkout.cartEmpty')}</p>
+                    ) : (
+                        products.map((item) => (
+                            <div key={item.slug} className="flex gap-4 py-2">
+                                {/* Image */}
+                                <div className="w-16 h-16 flex-shrink-0 bg-gray-50 rounded-lg overflow-hidden border border-gray-100 relative">
                                     <img
                                         className="w-full h-full object-cover"
-                                        src={
-                                            item.image ||
-                                            "https://placehold.co/100x100/E2E8F0/FFF?text=No+Image"
-                                        }
+                                        src={item.image || "https://placehold.co/100x100/E2E8F0/FFF?text=No+Image"}
                                         alt={item.name}
-                                        width={64} height={64}
-
-
                                     />
-
+                                    <span className="absolute bottom-0 right-0 bg-gray-900 text-white text-[10px] px-1.5 py-0.5 rounded-tl-md font-medium">
+                                        x{item.quantity}
+                                    </span>
                                 </div>
 
-                                <div>
-                                    <p className="text-sm font-medium text-gray-800 line-clamp-1">{item.name}</p>
-                                    {/* BUG FIX: Displaying the actual item quantity */}
-                                    <p className="text-xs text-gray-500">{item.quantity}x</p>
+                                <div className="flex-1 min-w-0 flex flex-col justify-center">
+                                    <p className="text-sm font-medium text-gray-900 line-clamp-2 leading-snug">{item.name}</p>
+                                    <div className="mt-1">
+                                        {item.discount && item.discount > 0 ? (
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-sm font-semibold text-primary-600">
+                                                    {t("{{price, currency}}", { price: ((item.price ?? 0) - (item.discount ?? 0)) * (item.quantity ?? 1) })}
+                                                </span>
+                                                <span className="text-xs text-gray-400 line-through">
+                                                    {t("{{price, currency}}", { price: (item.price ?? 0) * (item.quantity ?? 1) })}
+                                                </span>
+                                            </div>
+                                        ) : (
+                                            <span className="text-sm font-semibold text-gray-700">
+                                                {t("{{price, currency}}", { price: (item.price ?? 0) * (item.quantity ?? 1) })}
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
+                        ))
+                    )}
+                </div>
 
-                            {/* Item Price */}
-                            <div className="text-right">
-                                {item.discount && item.discount > 0 ? (
-                                    <>
-                                        <p className="text-xs text-gray-500 line-through">
-                                            {t("{{price, currency}}", { price: (item.price ?? 0) * (item.quantity ?? 1) })}
-                                        </p>
-                                        <p className="text-sm font-semibold text-primary-700">
-                                            {t("{{price, currency}}", { price: ((item.price ?? 0) - (item.discount ?? 0)) * (item.quantity ?? 1) })}
-                                        </p>
-                                    </>
-                                ) : (
-                                    <p className="text-sm font-semibold text-gray-700">
-                                        {t("{{price, currency}}", { price: (item.price ?? 0) * (item.quantity ?? 1) })}
-                                    </p>
-                                )}
-                            </div>
+                {/* Promo Code */}
+                <div className="mt-6 pt-6 border-t border-gray-100">
+                    <div className="relative">
+                        <input
+                            onChange={(e) => setPromoCode(e.target.value)}
+                            type="text"
+                            placeholder={t("checkout.promoCodePlaceholder")}
+                            className="w-full px-20 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all"
+                        />
+                        <Tag className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                        <button
+                            className="absolute right-1.5 top-1.5 bottom-1.5 px-3 bg-white text-primary-600 text-xs font-semibold rounded-lg border border-gray-100 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+                            onClick={() => onDiscountApplied?.(promoCode)}
+                            disabled={promoCode.trim().length === 0}
+                        >
+                            {t("checkout.applyButton")}
+                        </button>
+                    </div>
+                </div>
+
+                {/* Totals */}
+                <div className="space-y-3 mt-6 pt-6 border-t border-gray-100">
+                    <div className="flex justify-between text-sm">
+                        <span className="text-gray-500">{t('checkout.subtotal')}</span>
+                        <span className="font-medium text-gray-900">
+                            {t("{{price, currency}}", { price: cart.netTotal })}
+                        </span>
+                    </div>
+
+                    <div className="flex justify-between text-sm">
+                        <span className="text-gray-500">{t('checkout.shipping')}</span>
+                        <span className="font-medium text-gray-900">
+                            {selectedGovernorate ?
+                                t("{{price, currency}}", { price: selectedGovernorate.fees }) :
+                                <span className="text-orange-500 text-xs bg-orange-50 px-2 py-1 rounded-full">{t('checkout.selectLocation')}</span>}
+                        </span>
+                    </div>
+
+                    {cart.discount > 0 && (
+                        <div className="flex justify-between text-sm">
+                            <span className="text-gray-500">{t('checkout.discount')}</span>
+                            <span className="font-medium text-green-600">
+                                -{t("{{price, currency}}", { price: Math.abs(cart.discount) })}
+                            </span>
                         </div>
-                    ))
-                )}
-            </div>
+                    )}
 
-            {/* Promo Code Input */}
-            <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden shadow-sm mt-4">
-                <input
-                    onChange={(e) => setPromoCode(e.target.value)}
-                    type="text"
-                    placeholder={t("promoCodePlaceholder") || "Promo Code"}
-                    className="flex-1 px-4 py-3 outline-none text-sm text-gray-700 placeholder-gray-400 bg-white"
-                />
+                    <div className="flex justify-between items-end pt-4 border-t border-gray-100">
+                        <span className="text-base font-bold text-gray-900">{t('checkout.total')}</span>
+                        <div className="text-right">
+                            <span className="text-2xl font-bold text-primary-600 block leading-none">
+                                {t("{{price, currency}}", { price: getCartTotal(selectedGovernorate?.fees ?? 0) })}
+                            </span>
+                            <span className="text-[10px] text-gray-400 font-normal">{t('checkout.includingVat')}</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Pay Button */}
                 <button
-                    className="px-4 py-3 bg-gray-100 text-primary-600 font-medium hover:bg-primary-50 transition duration-150 disabled:opacity-50"
-                    onClick={() => {
-                        onDiscountApplied?.(promoCode)
-                    }}
-                    disabled={promoCode.trim().length === 0}
+                    onClick={onPurchase}
+                    disabled={!selectedGovernorate || products.length === 0}
+                    className="w-full mt-6 py-3.5 rounded-xl bg-primary-600 text-white font-semibold shadow-lg shadow-primary-600/20 hover:bg-primary-700 hover:shadow-primary-600/30 active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
                 >
-                    {t("applyButton") || "Apply"}
+                    {t("checkout.payNowButton")}
                 </button>
             </div>
-
-            {/* Totals Summary */}
-            <div className="space-y-3 text-sm pt-4 border-t border-gray-200">
-
-                {/* Subtotal */}
-                <div className="flex justify-between">
-                    <span className="text-gray-600">Subtotal</span>
-                    <span className="font-medium text-gray-800">
-                        {t("{{price, currency}}", { price: cart.netTotal })}
-                    </span>
-                </div>
-
-                {/* Shipping */}
-                <div className="flex justify-between">
-                    <span className="text-gray-600">Shipping</span>
-                    <span className="font-medium text-gray-800">
-                        {selectedGovernorate ?
-                            t("{{price, currency}}", { price: selectedGovernorate.fees }) :
-                            <span className="text-yellow-600">Select Location</span>}
-                    </span>
-                </div>
-
-                {/* Discount */}
-                <div className="flex justify-between">
-                    <span className="text-gray-600">Discount</span>
-                    <span
-                        className={`font-bold ${cart.discount > 0 ? "text-red-500" : 'text-gray-800'}`}>
-                        {/* Improved discount currency formatting */}
-                        {t("{{price, currency}}", { price: -Math.abs(cart.discount) })}
-                    </span>
-                </div>
-
-                {/* Total */}
-                <div className="border-t border-gray-300 pt-3 flex justify-between text-lg font-bold text-gray-900">
-                    <span>Total</span>
-                    <span>{t("{{price, currency}}", { price: getCartTotal(selectedGovernorate?.fees ?? 0) })}</span>
-                </div>
-            </div>
-
-            {/* Pay Button */}
-            <button
-                onClick={onPurchase}
-                // Disabled if no governorate is selected
-                disabled={!selectedGovernorate || items.length === 0}
-                className="w-full py-3 rounded-xl bg-primary-600 text-white font-semibold shadow-lg hover:bg-primary-700 transition duration-150 disabled:opacity-50 disabled:cursor-not-allowed">
-                {t("payNowButton") || "Pay Now"}
-            </button>
-
         </section>
     );
 }

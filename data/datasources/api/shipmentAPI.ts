@@ -14,6 +14,13 @@ export class ShipmentApi {
     }
 
     async login() {
+        console.log("[ShipmentApi] Login attempt with:", {
+            url: `${API_URL}/api/ClientUsers/V6/Login`,
+            companyId: COMPANY_ID,
+            username: username,
+            passwordLength: password ? password.length : 0
+        });
+
         const res = await fetch(`${API_URL}/api/ClientUsers/V6/Login`, {
             method: "POST",
             headers: {
@@ -23,11 +30,10 @@ export class ShipmentApi {
             body: JSON.stringify({ "username": username, "password": password }),
 
         });
-        console.log(JSON.stringify({ "username": username, "password": password }));
-        console.log({ "username": username, "password": password, "companyID": COMPANY_ID });
         if (!res.ok) {
-            console.error("Login failed:", res.statusText);
-            throw new Error("Login failed : " + res.statusText);
+            const text = await res.text();
+            console.error(`[ShipmentApi] Login failed: ${res.status} ${res.statusText}`, text);
+            throw new Error(`Login failed : ${res.status} ${res.statusText} - ${text}`);
         }
         return res.json();
     }
@@ -45,6 +51,14 @@ export class ShipmentApi {
             headers: this.authHeader(token),
         });
         if (!res.ok) throw new Error("Failed to get products");
+        return res.json();
+    }
+
+    async getShipmentDetails(token: string, awb: string) {
+        const res = await fetch(`${API_URL}/api/ClientUsers/V6/GetShipmentDetails/${awb}`, {
+            headers: this.authHeader(token),
+        });
+        if (!res.ok) throw new Error("Failed to get shipment details");
         return res.json();
     }
 
@@ -88,6 +102,23 @@ export class ShipmentApi {
         });
 
         if (!res.ok) throw new Error("Failed to upload Excel file");
+        return res.json();
+    }
+
+    async getShipmentHistory(token: string, fromDate: Date, toDate: Date) {
+        const res = await fetch(`${API_URL}/api/ClientUsers/V6/GetShipmentsEx`, {
+            method: "POST",
+            headers: this.authHeader(token),
+            body: JSON.stringify({
+                fromDate: fromDate.toISOString(),
+                toDate: toDate.toISOString()
+            }),
+        });
+        if (!res.ok) {
+            const text = await res.text();
+            console.error(`[ShipmentApi] getShipmentHistory failed: ${res.status} ${res.statusText}`, text);
+            throw new Error(`Failed to get shipment history: ${res.status} ${text}`);
+        }
         return res.json();
     }
 }

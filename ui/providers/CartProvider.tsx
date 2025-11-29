@@ -146,7 +146,7 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
 
     const getCartTotal = (shipping: number) => {
         // Use the existing `total` field from state, which is assumed to be updated externally.
-        return (cart.total || 0) + (shipping || 0);
+        return (cart.netTotal || 0) + (shipping || 0);
     };
 
     // --- Memoized Context Value ---

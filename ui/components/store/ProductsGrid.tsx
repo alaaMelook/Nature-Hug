@@ -26,7 +26,7 @@ export function ProductCard({
         >
             <div className={`relative ${compact ? "aspect-[4/3]" : "aspect-w-4 aspect-h-3"} block`}>
                 <img
-                    src={product.image || undefined}
+                    src={product.image ?? ''}
                     alt={product.name || "Product image"}
                     className={`w-full ${compact ? "h-40" : "h-50"} object-cover align-middle`}
                     onError={(e) => {

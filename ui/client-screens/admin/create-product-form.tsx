@@ -9,10 +9,12 @@ import { createProductAction } from "@/ui/hooks/admin/products";
 import { ImageSelector } from "@/ui/components/admin/imageSelector";
 import { MaterialSelector } from "@/ui/components/admin/materialSelector";
 import { Material } from "@/domain/entities/database/material";
+import { Category } from "@/domain/entities/database/category";
 import { ChevronDown, ChevronUp, Trash2, Plus, Image as ImageIcon, Box } from "lucide-react";
 
 interface CreateProductFormProps {
     initialImages: { image: any; url: string }[];
+    initialCategories: Category[];
 }
 
 // Helper component for collapsible sections
@@ -33,15 +35,15 @@ const CollapsibleSection = ({ title, children, defaultOpen = false }: { title: s
     );
 };
 
-export function CreateProductForm({ initialImages }: CreateProductFormProps) {
-    const { t } = useTranslation();
+export function CreateProductForm({ initialImages, initialCategories }: CreateProductFormProps) {
+    const { t, i18n } = useTranslation();
     const router = useRouter();
     const [showImageSelector, setShowImageSelector] = useState(false);
     const [showMaterialSelector, setShowMaterialSelector] = useState(false);
     const [activeImageField, setActiveImageField] = useState<'main' | number | null>(null); // 'main' for product, number for variant index
     const [activeMaterialField, setActiveMaterialField] = useState<'main' | number | null>(null);
 
-    const { register, control, handleSubmit, setValue, watch, formState: { errors } } = useForm<ProductAdminView>({
+    const { register, control, handleSubmit, setValue, watch, formState: { errors } } = useForm<ProductAdminView & { image_url: string }>({
         defaultValues: {
             variants: [],
             gallery: [],
@@ -113,8 +115,8 @@ export function CreateProductForm({ initialImages }: CreateProductFormProps) {
         if (activeImageField === 'main') {
             const currentGallery = watch("gallery") || [];
             setValue("gallery", [...currentGallery, url]);
-            if (!watch("image")) {
-                setValue("image", url);
+            if (!watch("image_url")) {
+                setValue("image_url", url);
             }
         } else if (typeof activeImageField === 'number') {
             // Variant image logic
@@ -198,14 +200,26 @@ export function CreateProductForm({ initialImages }: CreateProductFormProps) {
                             </div>
                             <div>
                                 <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">{t("category")}</label>
-                                <input type="number" {...register("category_id")} className="text-sm w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" placeholder="ID" />
+                                <select
+                                    {...register("category_id", { required: true })}
+                                    className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border"
+                                >
+                                    <option value="">{t("selectCategory")}</option>
+                                    {initialCategories.map((category) => (
+                                        <option key={category.id} value={category.id}>
+                                            {i18n.language === 'ar'
+                                                ? (category.name_ar && category.name_en ? `${category.name_ar} (${category.name_en})` : (category.name_ar || category.name_en))
+                                                : (category.name_en && category.name_ar ? `${category.name_en} (${category.name_ar})` : (category.name_en || category.name_ar))}
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
                             <div>
-                                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">Skin Type</label>
+                                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">{t("skinType")}</label>
                                 <input {...register("skin_type")} className="text-sm w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" placeholder="e.g. Oily, Dry" />
                             </div>
                             <div>
-                                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">Product Type</label>
+                                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">{t("productType")}</label>
                                 <input {...register("product_type")} className="text-sm w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" placeholder="e.g. Cream, Serum" />
                             </div>
                         </div>
@@ -215,7 +229,7 @@ export function CreateProductForm({ initialImages }: CreateProductFormProps) {
                     {/* Media */}
                     <div className="bg-white rounded-xl shadow-sm border p-6">
                         <h2 className="text-lg md:text-xl font-semibold mb-4 text-gray-800 flex items-center gap-2">
-                            <ImageIcon size={18} /> Media
+                            <ImageIcon size={18} /> {t("media")}
                         </h2>
                         <div className="grid grid-cols-3 gap-2">
                             {watch("gallery")?.map((url, index) => (
@@ -226,7 +240,7 @@ export function CreateProductForm({ initialImages }: CreateProductFormProps) {
                                         onClick={() => {
                                             const newGallery = watch("gallery").filter((_, i) => i !== index);
                                             setValue("gallery", newGallery);
-                                            if (watch("image") === url) setValue("image", newGallery[0] || "");
+                                            if (watch("image_url") === url) setValue("image_url", newGallery[0] || "");
                                         }}
                                         className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                                     >
@@ -259,7 +273,7 @@ export function CreateProductForm({ initialImages }: CreateProductFormProps) {
                             </div>
                         </CollapsibleSection>
 
-                        <CollapsibleSection title="Highlights">
+                        <CollapsibleSection title={t("highlights")}>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">English</label>
@@ -284,7 +298,7 @@ export function CreateProductForm({ initialImages }: CreateProductFormProps) {
                     {/* Pricing & Stock */}
                     <div className="bg-white rounded-xl shadow-sm border p-6">
                         <h2 className="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2">
-                            <Box size={18} /> Inventory & Pricing
+                            <Box size={18} /> {t("inventoryPricing")}
                         </h2>
                         <div className="space-y-4">
                             <div>
@@ -296,7 +310,7 @@ export function CreateProductForm({ initialImages }: CreateProductFormProps) {
                                 <input type="number" {...register("stock")} className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Discount (%)</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">{t("discountPercentage")}</label>
                                 <input type="number" {...register("discount")} className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" />
                             </div>
                         </div>
@@ -305,7 +319,7 @@ export function CreateProductForm({ initialImages }: CreateProductFormProps) {
                         <CollapsibleSection title={t("materialsIngredients")}>
                             <div className="space-y-4">
                                 <div className="flex justify-between items-center">
-                                    <h3 className="text-sm font-medium text-gray-700">Cost Calculation</h3>
+                                    <h3 className="text-sm font-medium text-gray-700">{t("costCalculation")}</h3>
                                     <button
                                         type="button"
                                         onClick={() => { setActiveMaterialField('main'); setShowMaterialSelector(true); }}
@@ -320,7 +334,7 @@ export function CreateProductForm({ initialImages }: CreateProductFormProps) {
                                         <table className="w-full text-sm text-left">
                                             <thead className="bg-gray-50 text-gray-500">
                                                 <tr>
-                                                    <th className="px-4 py-2">Material</th>
+                                                    <th className="px-4 py-2">{t("materials")}</th>
                                                     <th className="px-4 py-2 text-right">Amount</th>
                                                     <th className="px-4 py-2 text-right">Cost</th>
                                                     <th className="px-4 py-2"></th>
@@ -340,7 +354,7 @@ export function CreateProductForm({ initialImages }: CreateProductFormProps) {
                                                     </tr>
                                                 ))}
                                                 <tr className="bg-gray-50 font-bold">
-                                                    <td className="px-4 py-2" colSpan={2}>Total Estimated Cost</td>
+                                                    <td className="px-4 py-2" colSpan={2}>{t("totalEstimatedCost")}</td>
                                                     <td className="px-4 py-2 text-right">{calculateTotalCost()} EGP</td>
                                                     <td></td>
                                                 </tr>
@@ -353,11 +367,11 @@ export function CreateProductForm({ initialImages }: CreateProductFormProps) {
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Public Ingredients List (EN)</label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">{t("publicIngredientsListEn")}</label>
                                         <textarea {...register("faq_en.ingredients")} rows={3} className="w-full border-gray-300 rounded-lg shadow-sm p-2 border" placeholder="Water, Glycerin, etc." />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Public Ingredients List (AR)</label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">{t("publicIngredientsListAr")}</label>
                                         <textarea {...register("faq_ar.ingredients")} rows={3} className="w-full border-gray-300 rounded-lg shadow-sm p-2 border" placeholder="ماء، جلسرين، إلخ." />
                                     </div>
                                 </div>
@@ -440,11 +454,11 @@ export function CreateProductForm({ initialImages }: CreateProductFormProps) {
                                             <input type="number" {...register(`variants.${index}.stock` as const)} className="w-full border-gray-300 rounded shadow-sm p-1.5 border text-sm" />
                                         </div>
                                         <div>
-                                            <label className="text-xs font-medium text-gray-500 uppercase">Discount</label>
+                                            <label className="text-xs font-medium text-gray-500 uppercase">{t("discountPercentage")}</label>
                                             <input type="number" {...register(`variants.${index}.discount` as const)} className="w-full border-gray-300 rounded shadow-sm p-1.5 border text-sm" />
                                         </div>
                                         <div>
-                                            <label className="text-xs font-medium text-gray-500 uppercase">Distinguisher</label>
+                                            <label className="text-xs font-medium text-gray-500 uppercase">{t("distinguisher")}</label>
                                             <input {...register(`variants.${index}.type` as const)} className="w-full border-gray-300 rounded shadow-sm p-1.5 border text-sm" placeholder="e.g. blue, small, 50 ml, ..." />
                                         </div>
                                     </div>
@@ -466,11 +480,11 @@ export function CreateProductForm({ initialImages }: CreateProductFormProps) {
                                         </div>
                                     </div>
 
-                                    <CollapsibleSection title="Advanced Details (Description & Materials)" defaultOpen={false}>
+                                    <CollapsibleSection title={t("advancedDetails")} defaultOpen={false}>
                                         <div className="space-y-4">
                                             {/* Description Override */}
                                             <div>
-                                                <h4 className="text-xs font-bold text-gray-700 uppercase mb-2">Description Override</h4>
+                                                <h4 className="text-xs font-bold text-gray-700 uppercase mb-2">{t("descriptionOverride")}</h4>
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                     <div>
                                                         <label className="block text-xs font-medium text-gray-500 uppercase mb-1">English</label>
@@ -486,7 +500,7 @@ export function CreateProductForm({ initialImages }: CreateProductFormProps) {
                                             {/* Variant Materials */}
                                             <div>
                                                 <div className="flex justify-between items-center mb-2">
-                                                    <h4 className="text-xs font-bold text-gray-700 uppercase">Materials</h4>
+                                                    <h4 className="text-xs font-bold text-gray-700 uppercase">{t("materials")}</h4>
                                                     <button
                                                         type="button"
                                                         onClick={() => { setActiveMaterialField(index); setShowMaterialSelector(true); }}
@@ -517,7 +531,7 @@ export function CreateProductForm({ initialImages }: CreateProductFormProps) {
                                                     </div>
                                                 ) : (
                                                     <div className="text-xs text-gray-400 italic border border-dashed rounded p-2 text-center">
-                                                        No specific materials for this variant.
+                                                        {t("noMaterialsForVariant")}
                                                     </div>
                                                 )}
                                             </div>
@@ -527,7 +541,7 @@ export function CreateProductForm({ initialImages }: CreateProductFormProps) {
                             ))}
                             {variantFields.length === 0 && (
                                 <p className="text-sm text-gray-500 text-center py-4 border-2 border-dashed rounded-lg">
-                                    No variants added. Main product details will be used.
+                                    {t("noVariantsAdded")}
                                 </p>
                             )}
                         </div>

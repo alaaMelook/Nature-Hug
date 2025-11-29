@@ -1,5 +1,5 @@
-import {OrderItem} from "./orderItem";
-import {CustomerAddress} from "@/domain/entities/auth/customer";
+import { OrderItem } from "./orderItem";
+import { CustomerAddress } from "@/domain/entities/auth/customer";
 
 export type OrderStatus = 'pending' | 'processing' | 'completed' | 'cancelled' | 'refunded' | 'failed';
 
@@ -14,20 +14,14 @@ export interface Order {
     discount_total: number;
     shipping_total: number;
     tax_total: number;
-    grand_total: number;
-    promo_code_id?: number;
-    payment_method?: string;
-    payment_status?: string;
-    items: Partial<OrderItem>[];
-
-    // For Users
-    shipping_address_id?: number | null;
-    customer_id: number | null;
-
-    // For Guests
-    guest_name: string;
-    guest_email: string;
-    guest_phone: string;
-    guest_phone2: string | null;
     guest_address: Partial<CustomerAddress>; // -> can be for users adding new address in checkout
+    guest_name: string | null;
+    guest_email: string | null;
+    guest_phone: string | null;
+    guest_phone2: string | null;
+    payment_method: string;
+    grand_total: number;
+    customer_id: number | null;
+    shipping_address_id?: number | null;
+    items?: Partial<OrderItem>[];
 }

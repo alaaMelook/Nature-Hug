@@ -9,17 +9,16 @@ import { Toaster } from "sonner";
 import I18nProvider from "@/ui/providers/i18nProvider";
 
 export const metadata: Metadata = {
-    title: "Hug Nature",
+    title: "Nature Hug",
     description: "Natural Skincare Store",
 };
-
 
 export default async function RootLayoutRootLayout({
     children,
     params,
 }: {
     children: React.ReactNode;
-    params: { lang: Lang };
+    params: Promise<{ lang: Lang }>;
 }) {
     const paramsResult = await params;
     const lang = languages.includes(paramsResult.lang) ? paramsResult.lang : "ar";
@@ -40,7 +39,23 @@ export default async function RootLayoutRootLayout({
             })(window,document,'script','dataLayer','GTM-MRZ8RP3M');`,
                     }}
                 />
-                <title>Nature Hug</title>
+                <meta name="keywords" content="Nature Hug, Natural Skincare, Skincare Products, Skincare Store" />
+                <meta name="robots" content="index, follow" />
+                <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+                <meta name="description" content="Natural Skincare Store" />
+                <meta name="og:title" content="Nature Hug" />
+                <meta name="og:description" content="Natural Skincare Store" />
+                <meta name="og:type" content="website" />
+                <meta name="designer" content="Katherine Ashraf/@katie__space" />
+                <meta name="developer" content="Katherine Ashraf/@katie__space" />
+                <meta name="author" content="Katherine Ashraf/@katie__space" />
+                <meta name="og:url" content="https://naturehug.com" />
+                <meta name="og:image" content="https://naturehug.com/og-image.jpg" />
+                <meta name="twitter:card" content="summary_large_image" />
+                <meta name="twitter:title" content="Nature Hug" />
+                <meta name="twitter:description" content="Natural Skincare Store" />
+                <meta name="twitter:image" content="https://naturehug.com/og-image.jpg" />
+                <meta name="old_website" content="https://naturehug.shop" />
                 {/* End Google Tag Manager */}
 
 
@@ -56,7 +71,7 @@ export default async function RootLayoutRootLayout({
                         style={{ display: "none", visibility: "hidden" }}
                     ></iframe>
                 </noscript>
-                <I18nProvider>
+                <I18nProvider lang={lang}>
 
                     <FontProvider>
 

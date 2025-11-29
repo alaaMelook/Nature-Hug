@@ -23,7 +23,7 @@ export default function Navbar() {
         () => getCartCount(),
         [cart]
     );
-    const { user, member, signOut, loading } = useSupabase();
+    const { user, member, signOut } = useSupabase();
     const router = useRouter();
     const { t } = useTranslation();
     const language = useCurrentLanguage();
@@ -60,7 +60,7 @@ export default function Navbar() {
                 <Link href="/" className="flex items-center sm:w-30 sm:h-30 w-20 h-20 relative">
                     <Image
                         src="https://reqrsmboabgxshacmkst.supabase.co/storage/v1/object/sign/product-images/logo.jpg?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV85ZGU3NTY3OC0zMDRhLTQ3OTUtYjdhZC04M2IwMzM3ZDY2ZTUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9kdWN0LWltYWdlcy9sb2dvLmpwZyIsImlhdCI6MTc1NjM4MDIxNSwiZXhwIjo0OTA5OTgwMjE1fQ.D5eFaioyALpbvbK7LWj6Di0kI1-I3kAQKI0H-DVtiao"
-                        priority={true} alt="Logo Hug Nature"
+                        priority={true} alt="Logo  Nature"
                         fill={true} />
                 </Link>
                 <LanguageSwitcher />
@@ -100,11 +100,7 @@ export default function Navbar() {
                 </Link>
 
                 {/* Auth Buttons */}
-                {loading ? (
-                    <div className="animate-pulse flex space-x-4">
-                        <div className="rounded-full bg-slate-200 h-10 w-10"></div>
-                    </div>
-                ) : user ? (
+                {user ? (
                     <div className="relative">
                         <button
                             onClick={toggleSettingsMenu}

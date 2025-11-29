@@ -3,8 +3,10 @@
 import { ProfileView } from "@/domain/entities/views/shop/profileView";
 import { Search, Mail, Phone, Calendar } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 export function CustomersScreen({ allCustomers }: { allCustomers: ProfileView[] | undefined }) {
+    const { t } = useTranslation();
     const [filters, setFilters] = useState({
         search: "",
         excludeMembers: true,
@@ -48,12 +50,12 @@ export function CustomersScreen({ allCustomers }: { allCustomers: ProfileView[] 
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <div>
-                    <h2 className="text-3xl font-bold text-gray-900">Customers</h2>
-                    <p className="text-gray-600">Manage your customer base</p>
+                    <h2 className="text-3xl font-bold text-gray-900">{t("customers")}</h2>
+                    <p className="text-gray-600">{t("manageCustomerBase")}</p>
                 </div>
                 <div className="flex items-center space-x-4">
                     <div className="flex items-center">
-                        <label htmlFor="members" className="align-text-top font-medium text-gray-700"> Exclude Members </label>
+                        <label htmlFor="members" className="align-text-top font-medium text-gray-700"> {t("excludeMembers")} </label>
                         <input type="checkbox" name="members" checked={filters.excludeMembers} className="justify-center h-4 w-4 ml-2 rounded border-gray-300 text-primary-600 focus:ring-primary-500 "
                             onChange={(e) => {
                                 setFilters({ ...filters, excludeMembers: e.target.checked });
@@ -67,7 +69,7 @@ export function CustomersScreen({ allCustomers }: { allCustomers: ProfileView[] 
                             value={filters.search.length > 0 ? filters.search : ""}
                             name="search"
                             type="text"
-                            placeholder="Search customers..."
+                            placeholder={t("searchCustomers")}
                             className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                         />
                     </div>
@@ -80,23 +82,23 @@ export function CustomersScreen({ allCustomers }: { allCustomers: ProfileView[] 
                         <thead className="bg-gray-50">
                             <tr>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Customer
+                                    {t("customer")}
                                 </th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Contact
+                                    {t("contact")}
                                 </th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Governorates
+                                    {t("governorates")}
                                 </th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Member Since
+                                    {t("memberSince")}
                                 </th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Status
+                                    {t("status")}
                                 </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Actions
-                                </th>
+                                {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    {t("actions")}
+                                </th> */}
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
@@ -125,7 +127,7 @@ export function CustomersScreen({ allCustomers }: { allCustomers: ProfileView[] 
                                         <div className="text-sm text-gray-900">
                                             <div className="flex items-center">
                                                 <Mail className="h-4 w-4 text-gray-400 mr-2" />
-                                                {customer.email || "No email"}
+                                                {customer.email || t("noEmail")}
                                             </div>
                                             {customer.phone.map((phone: string, index: number) => (
                                                 <div className="flex items-center mt-1" key={`${phone}-${index}`}>
@@ -142,7 +144,7 @@ export function CustomersScreen({ allCustomers }: { allCustomers: ProfileView[] 
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        {(customer.address?.length ?? 0) > 0 ? customer.address?.map((addr) => addr.governorate.name_en).join(", ") : "No addresses"}
+                                        {(customer.address?.length ?? 0) > 0 ? customer.address?.map((addr) => addr.governorate.name_en).join(", ") : t("noAddresses")}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="flex items-center text-sm text-gray-900">
@@ -152,17 +154,17 @@ export function CustomersScreen({ allCustomers }: { allCustomers: ProfileView[] 
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                                            Active
+                                            {t("active")}
                                         </span>
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                    {/* <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                         <button className="text-primary-600 hover:text-primary-900 mr-4">
-                                            View
+                                            {t("view")}
                                         </button>
                                         <button className="text-gray-600 hover:text-gray-900">
-                                            Edit
+                                            {t("edit")}
                                         </button>
-                                    </td>
+                                    </td> */}
                                 </tr>
                             ))}
                         </tbody>
@@ -174,9 +176,9 @@ export function CustomersScreen({ allCustomers }: { allCustomers: ProfileView[] 
                 <div className="text-center py-12">
                     <div className="text-gray-500">
                         <div className="mx-auto h-12 w-12 text-gray-400" />
-                        <h3 className="mt-2 text-sm font-medium text-gray-900">No customers</h3>
+                        <h3 className="mt-2 text-sm font-medium text-gray-900">{t("noCustomers")}</h3>
                         <p className="mt-1 text-sm text-gray-500">
-                            Couldn't find any customers.
+                            {t("couldntFindCustomers")}
                         </p>
                     </div>
                 </div>

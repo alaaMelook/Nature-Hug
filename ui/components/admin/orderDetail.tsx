@@ -8,6 +8,7 @@ import { Shipment } from "@/domain/entities/shipment/shipment";
 import { City } from "@/domain/entities/shipment/city";
 import { updateOrderAction, createShipmentAction, getCitiesAction } from "@/ui/hooks/admin/orders";
 import { User, MapPin, Phone, Package, Calendar, DollarSign, X } from "lucide-react";
+import { ShipmentTracking } from "./ShipmentTracking";
 
 export function OrderDetailsModal({
     order,
@@ -37,14 +38,11 @@ export function OrderDetailsModal({
     const handleStatusChange = async (newStatus: string) => {
         setUpdating(true);
         try {
-            // Update order status in DB
-            const updateResult = await updateOrderAction({ ...order, order_status: newStatus });
-            if (!updateResult.success) throw new Error(updateResult.error);
-
-            toast.success(`Order status updated to ${newStatus}`);
+            let shipmentId = order.shipment_id;
+            let awb = order.awb;
 
             // If status is 'processing', create shipment
-            if (newStatus === 'processing') {
+            if (newStatus === 'processing' && !awb) {
                 try {
                     const city = cities.find(c => c.cityName.toLowerCase().includes(order.shipping_governorate.toLowerCase()) || order.shipping_governorate.toLowerCase().includes(c.cityName.toLowerCase()));
                     const cityId = city ? city.cityId : 1; // Default to 1 or handle error
@@ -60,22 +58,36 @@ export function OrderDetailsModal({
 
                     const shipmentResult = await createShipmentAction(shipmentData, order.shipping_governorate);
                     if (shipmentResult.skipped) {
-                        toast.info("Shipment creation skipped for Damanhour");
-                    } else if (shipmentResult.success) {
-                        toast.success("Shipment request sent successfully");
+                        toast.info(t("shipmentSkipped"));
+                    } else if (shipmentResult.success && shipmentResult.data) {
+                        toast.success(t("shipmentRequestSent"));
+                        // Assuming the API returns AWB or similar identifier in the result
+                        // Adjust based on actual API response structure
+                        if (shipmentResult.data.AWB) awb = shipmentResult.data.AWB;
+                        if (shipmentResult.data.ShipmentID) shipmentId = shipmentResult.data.ShipmentID;
                     } else {
                         throw new Error(shipmentResult.error);
                     }
                 } catch (shipmentError) {
                     console.error("Shipment creation failed:", shipmentError);
-                    toast.error("Failed to create shipment request");
+                    toast.error(t("failedToCreateShipment"));
                 }
             }
 
+            // Update order status in DB
+            const updateResult = await updateOrderAction({
+                ...order,
+                order_status: newStatus,
+                shipment_id: shipmentId,
+                awb: awb
+            });
+            if (!updateResult.success) throw new Error(updateResult.error);
+
+            toast.success(t("orderStatusUpdated", { status: newStatus }));
             onClose();
         } catch (error) {
             console.error("Failed to update order:", error);
-            toast.error("Failed to update order status");
+            toast.error(t("failedToUpdateOrder"));
         } finally {
             setUpdating(false);
         }
@@ -89,7 +101,7 @@ export function OrderDetailsModal({
                 {/* Header */}
                 <div className="bg-gray-50 px-6 py-4 border-b flex justify-between items-center">
                     <div className="flex items-center gap-3">
-                        <h2 className="text-xl font-bold text-gray-800">Order #{order.order_id}</h2>
+                        <h2 className="text-xl font-bold text-gray-800">{t("orderId")} #{order.order_id}</h2>
                         <span className={`px-3 py-1 rounded-full text-xs font-medium uppercase tracking-wide ${getStatusColor(order.order_status)}`}>
                             {order.order_status}
                         </span>
@@ -109,7 +121,7 @@ export function OrderDetailsModal({
                         <div className="space-y-6">
                             <section>
                                 <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-                                    <User size={14} /> Customer Details
+                                    <User size={14} /> {t("customerDetails")}
                                 </h3>
                                 <div className="bg-gray-50 rounded-lg p-4 space-y-3">
                                     <div className="flex items-center gap-3">
@@ -129,7 +141,7 @@ export function OrderDetailsModal({
 
                             <section>
                                 <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-                                    <MapPin size={14} /> Shipping Address
+                                    <MapPin size={14} /> {t("shippingAddress")}
                                 </h3>
                                 <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-700 space-y-1">
                                     <p className="font-medium">{order.shipping_street_address}</p>
@@ -137,12 +149,24 @@ export function OrderDetailsModal({
                                 </div>
                             </section>
 
+                            {order.awb && (
+                                <section>
+                                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                                        <Package size={14} /> {t("shipmentTracking")}
+                                    </h3>
+                                    <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-700 space-y-2">
+                                        <p><span className="font-medium">{t("awb")}:</span> {order.awb}</p>
+                                        <ShipmentTracking awb={order.awb} />
+                                    </div>
+                                </section>
+                            )}
+
                             <section>
                                 <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-                                    <Calendar size={14} /> Order Info
+                                    <Calendar size={14} /> {t("orderInfo")}
                                 </h3>
                                 <div className="text-sm text-gray-600">
-                                    Placed on {new Date(order.order_date).toLocaleDateString()} at {new Date(order.order_date).toLocaleTimeString()}
+                                    {t("placedOn")} {new Date(order.order_date).toLocaleDateString()} {t("at")} {new Date(order.order_date).toLocaleTimeString()}
                                 </div>
                             </section>
                         </div>
@@ -150,16 +174,16 @@ export function OrderDetailsModal({
                         {/* Right Column: Order Items & Summary */}
                         <div className="flex flex-col h-full">
                             <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-                                <Package size={14} /> Order Items
+                                <Package size={14} /> {t("orderItems")}
                             </h3>
                             <div className="bg-gray-50 rounded-lg flex-1 flex flex-col">
                                 <div className="flex-1 overflow-y-auto p-2">
                                     <table className="w-full text-sm text-left">
                                         <thead className="text-xs text-gray-500 uppercase border-b">
                                             <tr>
-                                                <th className="px-4 py-2 font-medium">Item</th>
-                                                <th className="px-4 py-2 font-medium text-right">Qty</th>
-                                                <th className="px-4 py-2 font-medium text-right">Price</th>
+                                                <th className="px-4 py-2 font-medium">{t("item")}</th>
+                                                <th className="px-4 py-2 font-medium text-right">{t("qty")}</th>
+                                                <th className="px-4 py-2 font-medium text-right">{t("price")}</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-100">
@@ -175,9 +199,9 @@ export function OrderDetailsModal({
                                 </div>
                                 <div className="p-4 border-t bg-gray-100 rounded-b-lg">
                                     <div className="flex justify-between items-center">
-                                        <span className="font-medium text-gray-700">Total Amount</span>
+                                        <span className="font-medium text-gray-700">{t("totalAmount")}</span>
                                         <span className="text-xl font-bold text-gray-900 flex items-center">
-                                            {order.final_order_total} <span className="text-sm font-normal text-gray-500 ml-1">EGP</span>
+                                            {order.final_order_total} <span className="text-sm font-normal text-gray-500 ml-1">{t("EGP")}</span>
                                         </span>
                                     </div>
                                 </div>
@@ -192,7 +216,7 @@ export function OrderDetailsModal({
                         onClick={onClose}
                         className="px-4 py-2 text-gray-600 hover:bg-gray-200 rounded-lg font-medium transition-colors"
                     >
-                        Close
+                        {t("close")}
                     </button>
                     {actions.neg && (
                         <button
@@ -200,7 +224,7 @@ export function OrderDetailsModal({
                             disabled={updating}
                             className="px-4 py-2 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg font-medium transition-colors disabled:opacity-50"
                         >
-                            {actions.neg}
+                            {t(actions.neg)}
                         </button>
                     )}
                     {actions.pos && (
@@ -209,7 +233,7 @@ export function OrderDetailsModal({
                             disabled={updating}
                             className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-medium transition-colors disabled:opacity-50 shadow-sm"
                         >
-                            {actions.pos}
+                            {t(actions.pos)}
                         </button>
                     )}
                 </div>
@@ -232,13 +256,13 @@ function getStatusColor(status: string) {
 function orderActions({ status }: { status: string }) {
     switch (status) {
         case 'pending':
-            return { pos: 'Accept Order', neg: 'Reject Order', status_pos: 'processing', status_neg: 'declined' };
+            return { pos: 'acceptOrder', neg: 'rejectOrder', status_pos: 'processing', status_neg: 'declined' };
         case 'processing':
-            return { pos: 'Mark as Out for delivery', neg: 'Cancel Order', status_pos: 'out for delivery', status_neg: 'cancelled' };
+            return { pos: 'markAsOutForDelivery', neg: 'cancelOrder', status_pos: 'out for delivery', status_neg: 'cancelled' };
         case 'out for delivery':
-            return { pos: 'Mark as Shipped', neg: 'Cancel Order', status_pos: 'shipped', status_neg: 'cancelled' };
+            return { pos: 'markAsShipped', neg: 'cancelOrder', status_pos: 'shipped', status_neg: 'cancelled' };
         case 'shipped':
-            return { pos: 'Mark as Delivered', neg: 'Return Order', status_pos: 'completed', status_neg: 'returned' };
+            return { pos: 'markAsDelivered', neg: 'returnOrder', status_pos: 'completed', status_neg: 'returned' };
         default:
             return { pos: null, neg: null, status_pos: '', status_neg: '' };
     }

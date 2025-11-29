@@ -2,6 +2,7 @@ import { Material } from "@/domain/entities/database/material";
 import { DashboardMetricsView } from "@/domain/entities/views/admin/dashboardMetricsView";
 import { OrderDetailsView } from "@/domain/entities/views/admin/orderDetailsView";
 import { ProductAdminView } from "@/domain/entities/views/admin/productAdminView";
+import { Category } from "../entities/database/category";
 
 export interface AdminRepository {
     getOrderDetails(): Promise<OrderDetailsView[]>;
@@ -16,6 +17,8 @@ export interface AdminRepository {
 
     deleteMaterial(id: number): Promise<void>;
 
+    createCategory(category: Partial<Category>): Promise<void>;
+    deleteCategory(id: number): Promise<void>;
     createProduct(product: ProductAdminView): Promise<number>;
 
     updateProduct(product: ProductAdminView): Promise<number>;

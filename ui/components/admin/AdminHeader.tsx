@@ -69,7 +69,7 @@ export default function AdminHeader({ adminUser }: { adminUser: MemberView }) {
                         onClick={() => router.push("/admin/profile")}
                         className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
                       >
-                        <User className="w-4 h-4 mr-3 text-gray-400" />
+                        <User className="w-4 h-4 mx-3 text-gray-400" />
                         {t("profile")}
                       </button>
 
@@ -77,7 +77,7 @@ export default function AdminHeader({ adminUser }: { adminUser: MemberView }) {
                         onClick={() => router.push("/")}
                         className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
                       >
-                        <Settings className="w-4 h-4 mr-3 text-gray-400" />
+                        <Settings className="w-4 h-4 mx-3 text-gray-400" />
                         {t("backToSite")}
                       </button>
                     </div>
@@ -87,7 +87,7 @@ export default function AdminHeader({ adminUser }: { adminUser: MemberView }) {
                         onClick={handleLogout}
                         className="flex items-center w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                       >
-                        <LogOut className="w-4 h-4 mr-3" />
+                        <LogOut className="w-4 h-4 mx-3" />
                         {t("logout")}
                       </button>
                     </div>
@@ -127,7 +127,7 @@ export default function AdminHeader({ adminUser }: { adminUser: MemberView }) {
         onClick={() => router.push("/profile")}
         className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
       >
-        <User className="w-4 h-4 mr-3" />
+        <User className="w-4 h-4 mx-3" />
         {t("profile")}
       </button>
 
@@ -135,7 +135,7 @@ export default function AdminHeader({ adminUser }: { adminUser: MemberView }) {
         onClick={() => router.push("/")}
         className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
       >
-        <Settings className="w-4 h-4 mr-3" />
+        <Settings className="w-4 h-4 mx-3" />
         {t("backToSite")}
       </button>
 
@@ -143,7 +143,7 @@ export default function AdminHeader({ adminUser }: { adminUser: MemberView }) {
         onClick={handleLogout}
         className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
       >
-        <LogOut className="w-4 h-4 mr-3" />
+        <LogOut className="w-4 h-4 mx-3" />
         {t("logout")}
       </button>
     </div>

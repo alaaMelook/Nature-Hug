@@ -1,16 +1,18 @@
 "use client";
 
-import {useProfileManager} from "@/ui/hooks/store/useProfileManager";
-import {EditableAddressField, EditableAddressItem, EditablePhoneField} from "@/ui/components/editableFields";
-import {ConfirmDialog} from "@/ui/components/confirmDialog";
-import {Plus} from "lucide-react";
-import {ProfileView} from "@/domain/entities/views/shop/profileView";
-import {Governorate} from "@/domain/entities/database/governorate";
-import {useState} from "react";
-import {deleteAddress, updateAddress} from "@/ui/hooks/store/useProfileActions";
-import {toast} from "sonner";
+import { useProfileManager } from "@/ui/hooks/store/useProfileManager";
+import { EditableAddressField, EditableAddressItem, EditablePhoneField } from "@/ui/components/editableFields";
+import { ConfirmDialog } from "@/ui/components/confirmDialog";
+import { Plus } from "lucide-react";
+import { ProfileView } from "@/domain/entities/views/shop/profileView";
+import { Governorate } from "@/domain/entities/database/governorate";
+import { useState } from "react";
+import { deleteAddress, updateAddress } from "@/ui/hooks/store/useProfileActions";
+import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
-export function ProfileScreen({profile, governorates}: { profile: ProfileView, governorates: Governorate[] }) {
+export function ProfileScreen({ profile, governorates }: { profile: ProfileView, governorates: Governorate[] }) {
+    const { t } = useTranslation();
     const {
         loading,
         newPhone,
@@ -33,13 +35,13 @@ export function ProfileScreen({profile, governorates}: { profile: ProfileView, g
     } | null>(null);
 
     return (
-        <div className="max-w-3xl mx-auto my-10 p-6 bg-white rounded-lg shadow">
-            <h1 className="text-2xl font-bold mb-6 text-amber-800">My Profile</h1>
+        <div className=" mx-30 my-10 p-6 bg-white rounded-lg shadow">
+            <h1 className="text-2xl font-bold mb-6 text-amber-800">{t("profileScreen.title")}</h1>
 
             {/* --- Basic Info --- */}
             <section className="space-y-4 mb-8">
                 <label className="block text-sm font-medium text-gray-700">
-                    Name
+                    {t("profileScreen.name")}
                     <input
                         type="text"
                         value={profile?.name ?? ""}
@@ -48,7 +50,7 @@ export function ProfileScreen({profile, governorates}: { profile: ProfileView, g
                     />
                 </label>
                 <label className="block text-sm font-medium text-gray-700">
-                    Email
+                    {t("profileScreen.email")}
                     <input
                         type="text"
                         value={profile?.email ?? ""}
@@ -61,22 +63,22 @@ export function ProfileScreen({profile, governorates}: { profile: ProfileView, g
                 {profile?.phone?.map((p, index) => (
                     <EditablePhoneField
                         key={index}
-                        label={`Phone ${profile?.phone.length > 1 ? index + 1 : ""}`}
+                        label={t("profileScreen.phone", { index: profile?.phone.length > 1 ? index + 1 : "" })}
                         value={p ?? ""}
                         loading={loading}
-                        onChange={(val) => setEditingPhone({index: index + 1, phone: val})}
+                        onChange={(val) => setEditingPhone({ index: index + 1, phone: val })}
                         onSave={() => handlePhoneSave(editingPhone)}
-                        onDelete={() => setConfirmDelete({type: "phone", data: {index: index + 1, phone: p}})}
+                        onDelete={() => setConfirmDelete({ type: "phone", data: { index: index + 1, phone: p } })}
                     />
                 ))}
 
                 {newPhone && (
                     <EditablePhoneField
-                        label="New Phone"
+                        label={t("profileScreen.newPhone")}
                         value={newPhone?.phone ?? ""}
                         newItem
                         loading={loading}
-                        onChange={(val) => setNewPhone({index: (profile?.phone.length ?? 0) + 1, phone: val})}
+                        onChange={(val) => setNewPhone({ index: (profile?.phone.length ?? 0) + 1, phone: val })}
                         onSave={() => handlePhoneSave(newPhone)}
                     />
                 )}
@@ -86,19 +88,19 @@ export function ProfileScreen({profile, governorates}: { profile: ProfileView, g
                         className="px-4 py-2 rounded bg-amber-700 text-white hover:bg-amber-800 disabled:opacity-60"
                         onClick={() => setNewPhone({})}
                     >
-                        Add Phone
+                        {t("profileScreen.addPhone")}
                     </button>
                 )}
             </section>
 
             {/* --- Addresses --- */}
             <section className="mb-10">
-                <h2 className="font-semibold mb-2">Addresses</h2>
+                <h2 className="font-semibold mb-2">{t("profileScreen.addresses")}</h2>
 
                 <ul className="mt-4 space-y-2">
                     {/* No addresses */}
                     {(profile?.address?.length ?? 0) === 0 && newAddress == null ? (
-                        <li className="text-gray-500 text-sm">No addresses yet.</li>
+                        <li className="text-gray-500 text-sm">{t("profileScreen.noAddresses")}</li>
                     ) : (
                         profile?.address?.map((a) => (
                             <EditableAddressItem
@@ -108,12 +110,12 @@ export function ProfileScreen({profile, governorates}: { profile: ProfileView, g
                                 onDeleteAction={async (id) => {
                                     const res = await deleteAddress(id);
                                     if (res?.error) toast.error(res.error);
-                                    else toast.success("Address deleted successfully");
+                                    else toast.success(t("profileScreen.addressDeleted"));
                                 }}
                                 onSaveAction={async (updated) => {
                                     const res = await updateAddress(updated);
                                     if (res?.error) toast.error(res.error);
-                                    else toast.success("Address updated successfully");
+                                    else toast.success(t("profileScreen.addressUpdated"));
                                 }}
                             />
                         ))
@@ -121,7 +123,7 @@ export function ProfileScreen({profile, governorates}: { profile: ProfileView, g
 
                     {newAddress != null && (
                         <EditableAddressField
-                            label={`New Address`}
+                            label={t("profileScreen.newAddress")}
                             key="new"
                             address={newAddress}
                             newItem={true}
@@ -134,11 +136,11 @@ export function ProfileScreen({profile, governorates}: { profile: ProfileView, g
 
                 <div className="flex gap-2 mt-10 justify-end">
                     <button
-                        onClick={() => setNewAddress({address: ""})}
+                        onClick={() => setNewAddress({ address: "" })}
                         className="flex px-4 py-2 bg-amber-700 text-white hover:bg-amber-800 disabled:opacity-60 justify-between gap-2 rounded-2xl "
                     >
-                        <Plus className="w-4 h-4 text-white self-center"/>
-                        Add a new address
+                        <Plus className="w-4 h-4 text-white self-center" />
+                        {t("profileScreen.addNewAddress")}
                     </button>
                 </div>
             </section>
@@ -147,7 +149,7 @@ export function ProfileScreen({profile, governorates}: { profile: ProfileView, g
             {/* --- Confirm Delete Dialog --- */}
             <ConfirmDialog
                 open={!!confirmDelete}
-                title={`Are you sure you want to delete this ${confirmDelete?.type}?`}
+                title={t("profileScreen.confirmDelete", { type: confirmDelete?.type })}
                 description=""
                 onCancel={() => setConfirmDelete(null)}
                 onConfirm={() => {

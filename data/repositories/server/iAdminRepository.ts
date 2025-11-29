@@ -4,6 +4,7 @@ import { OrderDetailsView } from "@/domain/entities/views/admin/orderDetailsView
 import { DashboardMetricsView } from "@/domain/entities/views/admin/dashboardMetricsView";
 import { Material } from "@/domain/entities/database/material";
 import { ProductAdminView } from "@/domain/entities/views/admin/productAdminView";
+import { Category } from "@/domain/entities/database/category";
 
 export class IAdminServerRepository implements AdminRepository {
     async getOrderDetails(): Promise<OrderDetailsView[]> {
@@ -148,6 +149,23 @@ export class IAdminServerRepository implements AdminRepository {
             throw error;
         }
     }
+    async createCategory(category: Partial<Category>): Promise<void> {
+        console.log("[IProductRepository] createCategory called with:", category);
+        const { error } = await supabaseAdmin.schema('store').from('categories').insert(category);
+        if (error) {
+            console.error("[IProductRepository] createCategory error:", error);
+            throw error;
+        }
+    }
+
+    async deleteCategory(id: number): Promise<void> {
+        console.log("[IProductRepository] deleteCategory called with id:", id);
+        const { error } = await supabaseAdmin.schema('store').from('categories').delete().eq('id', id);
+        if (error) {
+            console.error("[IProductRepository] deleteCategory error:", error);
+            throw error;
+        }
+    }
 
     async viewAllWithDetails(): Promise<ProductAdminView[]> {
         console.log("[IAdminRepository] viewAllWithDetails called.");
@@ -203,12 +221,16 @@ export class IAdminServerRepository implements AdminRepository {
 
     async updateOrder(order: Partial<OrderDetailsView>) {
         console.log("[IAdminRepository] updateOrder called with order:", order);
+        const updateData: any = { status: order.order_status };
+        if (order.shipment_id) updateData.shipment_id = order.shipment_id;
+        if (order.awb) updateData.awb = order.awb;
+
         const {
             data,
             status,
             statusText,
             error,
-        } = await supabaseAdmin.schema('store').from('orders').update({ status: order.order_status }).eq('id', order.order_id);
+        } = await supabaseAdmin.schema('store').from('orders').update(updateData).eq('id', order.order_id);
         console.log("[IAdminRepository] updateOrder result:", { data, status, statusText });
         if (error) {
             console.error("[IAdminRepository] updateOrder error:", error);
