@@ -5,7 +5,7 @@ import { Material } from "@/domain/entities/database/material";
 import { Category } from "@/domain/entities/database/category";
 import { useUploadImage } from "@/ui/hooks/admin/useUploadImage";
 import { createProductAction } from "@/ui/hooks/admin/products";
-import { GetAllCategories } from "@/domain/use-case/shop/getAllCategories";
+import { GetAllCategories } from "@/domain/use-case/store/getAllCategories";
 import { useCategories } from "@/ui/hooks/admin/useCategories";
 import { useTranslation } from "react-i18next";
 

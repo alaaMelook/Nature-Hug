@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
 const ImageCarousel = ({ images }: { images: (string | null)[] }) => {
     const [activeIndex, setActiveIndex] = useState(0);
@@ -42,19 +43,24 @@ const ImageCarousel = ({ images }: { images: (string | null)[] }) => {
 
             {/* Main Image and Pagination (Right Column - now main area) */}
             <div className="sm:relative flex-1 h-full w-full rounded-xl overflow-hidden  flex flex-col">
-
-                <img
-                    src={images[activeIndex] || 'https://placehold.co/600x600/94A3B8/ffffff?text=?'}
-                    alt={`Product view ${activeIndex + 1}`}
-                    className="w-90 h-90 object-contain transition-all duration-500 rounded-xl"
-                    onError={(e) =>
-                    (e.currentTarget.src =
-                        'https://placehold.co/600x600/94A3B8/ffffff?text=Image+Missing')
-                    }
-                />
-
-
-
+                <div className="relative w-full h-90 rounded-xl overflow-hidden">
+                    <AnimatePresence mode="wait">
+                        <motion.img
+                            key={activeIndex}
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -20 }}
+                            transition={{ duration: 0.3 }}
+                            src={images[activeIndex] || 'https://placehold.co/600x600/94A3B8/ffffff?text=?'}
+                            alt={`Product view ${activeIndex + 1}`}
+                            className="w-full h-full object-contain rounded-xl"
+                            onError={(e) =>
+                            (e.currentTarget.src =
+                                'https://placehold.co/600x600/94A3B8/ffffff?text=Image+Missing')
+                            }
+                        />
+                    </AnimatePresence>
+                </div>
 
                 {/* --- Pagination (Dots or Page Numbers) --- */}
                 <div className="mt-6 mb-3 flex justify-center items-center gap-2">
@@ -70,8 +76,6 @@ const ImageCarousel = ({ images }: { images: (string | null)[] }) => {
                         />
                     ))}
                 </div>
-
-
             </div>
         </div>
     );

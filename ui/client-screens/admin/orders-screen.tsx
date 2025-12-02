@@ -7,6 +7,9 @@ import { orderStatus } from "@/lib/utils/status";
 import { toTitleCase } from "@/lib/utils/titleCase";
 import { OrderDetailsModal } from "@/ui/components/admin/orderDetail";
 import { useTranslation } from "react-i18next";
+import { useRouter, useParams } from "next/navigation";
+import { toast } from "sonner";
+import { motion, AnimatePresence } from "framer-motion";
 
 function AddOrderModal({
     onClose,
@@ -34,7 +37,12 @@ function AddOrderModal({
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
             <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-            <div className="relative bg-white rounded max-w-md w-full shadow-lg p-6">
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="relative bg-white rounded max-w-md w-full shadow-lg p-6"
+            >
                 <h2 className="text-lg font-bold mb-4">{t("addOrder")}</h2>
                 <input
                     type="text"
@@ -81,20 +89,20 @@ function AddOrderModal({
                 <div className="flex justify-end gap-2">
                     <button
                         onClick={onClose}
-                        className="px-4 py-2 border rounded"
+                        className="px-4 py-2 border rounded hover:bg-gray-50 transition-colors"
                         disabled={saving}
                     >
                         {t("cancel")}
                     </button>
                     <button
                         onClick={handleSave}
-                        className="px-4 py-2 bg-blue-600 text-white rounded"
+                        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
                         disabled={saving}
                     >
                         {t("save")}
                     </button>
                 </div>
-            </div>
+            </motion.div>
         </div>
     );
 }
@@ -111,7 +119,12 @@ function ExportModal({
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
             <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-            <div className="relative bg-white rounded max-w-sm w-full shadow-lg p-6">
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="relative bg-white rounded max-w-sm w-full shadow-lg p-6"
+            >
                 <h2 className="text-lg font-bold mb-4">{t("exportOrders")}</h2>
                 <select
                     value={status}
@@ -130,31 +143,35 @@ function ExportModal({
                 <div className="flex justify-end gap-2">
                     <button
                         onClick={onClose}
-                        className="px-4 py-2 border rounded"
+                        className="px-4 py-2 border rounded hover:bg-gray-50 transition-colors"
                     >
                         {t("cancel")}
                     </button>
                     <button
                         onClick={() => onExport(status)}
-                        className="px-4 py-2 bg-blue-600 text-white rounded"
+                        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
                     >
                         {t("export")}
                     </button>
                 </div>
-            </div>
+            </motion.div>
         </div>
     );
 }
 
 export function OrdersScreen({ initialOrders }: { initialOrders: OrderDetailsView[] }) {
     const { t } = useTranslation();
+    const router = useRouter();
+    const params = useParams();
+    const lang = params.lang as string;
     const [orders, setOrders] = useState<OrderDetailsView[]>(initialOrders);
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
     const [sort, setSort] = useState("newest");
-    const [selectedOrder, setSelectedOrder] = useState<OrderDetailsView | null>(null);
+    const [selectedOrders, setSelectedOrders] = useState<number[]>([]);
     const [showAddModal, setShowAddModal] = useState(false);
     const [showExportModal, setShowExportModal] = useState(false);
+    const [processingBulk, setProcessingBulk] = useState(false);
 
     const filteredOrders = orders.filter(order => {
         const matchesSearch = (order.customer_name?.toLowerCase().includes(search.toLowerCase()) || false) ||
@@ -169,7 +186,50 @@ export function OrdersScreen({ initialOrders }: { initialOrders: OrderDetailsVie
         return 0;
     });
 
+    const toggleSelectAll = () => {
+        if (selectedOrders.length === filteredOrders.length) {
+            setSelectedOrders([]);
+        } else {
+            setSelectedOrders(filteredOrders.map(o => o.order_id));
+        }
+    };
+
+    const toggleSelectOrder = (id: number) => {
+        if (selectedOrders.includes(id)) {
+            setSelectedOrders(selectedOrders.filter(oid => oid !== id));
+        } else {
+            setSelectedOrders([...selectedOrders, id]);
+        }
+    };
+
+    const handleBulkAction = async (action: 'accept' | 'reject') => {
+        if (selectedOrders.length === 0) return;
+        if (!confirm(t(`confirmBulk${action === 'accept' ? 'Accept' : 'Reject'}`))) return;
+
+        setProcessingBulk(true);
+        try {
+            // Import actions dynamically or use the ones we have
+            const { acceptOrderAction, rejectOrderAction } = await import("@/ui/hooks/admin/orders");
+
+            const promises = selectedOrders.map(id =>
+                action === 'accept' ? acceptOrderAction(id.toString()) : rejectOrderAction(id.toString())
+            );
+
+            await Promise.all(promises);
+            toast.success(t("bulkActionSuccess"));
+            setSelectedOrders([]);
+            // Refresh logic - ideally re-fetch or rely on server action revalidation
+            router.refresh();
+        } catch (error) {
+            console.error("Bulk action failed:", error);
+            toast.error(t("bulkActionFailed"));
+        } finally {
+            setProcessingBulk(false);
+        }
+    };
+
     const handleExport = async (status: string) => {
+        // ... (existing export logic)
         const mapped = (orders.filter((o: any) => o.order_status === status) ?? []).map((o: any) => [
             o.id,
             o.status,
@@ -220,36 +280,63 @@ export function OrdersScreen({ initialOrders }: { initialOrders: OrderDetailsVie
     };
 
     return (
-        <div className="p-6">
-            <h1 className="text-2xl font-bold mb-4">{t("allOrders")}</h1>
-            <button
-                onClick={() => setShowAddModal(true)}
-                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 mb-4"
-            >
-                + {t("addOrder")}
-            </button>
-            <button
-                onClick={() => setShowExportModal(true)}
-                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 mb-4 ml-2"
-            >
-                {t("exportOrders")}
-            </button>
-            {showAddModal && (
-                <AddOrderModal
-                    onClose={() => setShowAddModal(false)}
-                    onSaved={() => {
-                        // Refresh logic would go here, maybe re-fetch or use server action
-                        // For now we rely on initialOrders, but in real app we'd revalidate
-                        window.location.reload();
-                    }}
-                />
-            )}
-            {showExportModal && (
-                <ExportModal
-                    onClose={() => setShowExportModal(false)}
-                    onExport={handleExport}
-                />
-            )}
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="p-6"
+        >
+            <div className="flex justify-between items-center mb-6">
+                <h1 className="text-2xl font-bold">{t("allOrders")}</h1>
+                <div className="flex gap-2">
+                    {selectedOrders.length > 0 && (
+                        <>
+                            <button
+                                onClick={() => handleBulkAction('accept')}
+                                disabled={processingBulk}
+                                className="bg-green-100 text-green-700 px-4 py-2 rounded hover:bg-green-200 disabled:opacity-50 font-medium transition-colors"
+                            >
+                                {t("acceptSelected")} ({selectedOrders.length})
+                            </button>
+                            <button
+                                onClick={() => handleBulkAction('reject')}
+                                disabled={processingBulk}
+                                className="bg-red-100 text-red-700 px-4 py-2 rounded hover:bg-red-200 disabled:opacity-50 font-medium transition-colors"
+                            >
+                                {t("rejectSelected")} ({selectedOrders.length})
+                            </button>
+                        </>
+                    )}
+                    <button
+                        onClick={() => setShowAddModal(true)}
+                        className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition-colors"
+                    >
+                        + {t("addOrder")}
+                    </button>
+                    <button
+                        onClick={() => setShowExportModal(true)}
+                        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
+                    >
+                        {t("exportOrders")}
+                    </button>
+                </div>
+            </div>
+
+            <AnimatePresence>
+                {showAddModal && (
+                    <AddOrderModal
+                        onClose={() => setShowAddModal(false)}
+                        onSaved={() => {
+                            window.location.reload();
+                        }}
+                    />
+                )}
+                {showExportModal && (
+                    <ExportModal
+                        onClose={() => setShowExportModal(false)}
+                        onExport={handleExport}
+                    />
+                )}
+            </AnimatePresence>
 
             {/* Filters */}
             <div className="flex gap-4 mb-4 items-center flex-wrap">
@@ -285,65 +372,87 @@ export function OrdersScreen({ initialOrders }: { initialOrders: OrderDetailsVie
             </div>
 
             {/* Table */}
-            <div className="overflow-x-auto">
-                <table className="min-w-full border border-gray-200 rounded-md text-sm">
-                    <thead className="bg-gray-100">
+            <div className="overflow-x-auto bg-white rounded-lg shadow border">
+                <table className="min-w-full text-sm">
+                    <thead className="bg-gray-50 border-b">
                         <tr>
-                            <th className="px-4 py-2 text-left border-b">{t("orderId")}</th>
-                            <th className="px-4 py-2 text-left border-b">{t("customerName")}</th>
-                            <th className="px-4 py-2 text-left border-b">{t("customerPhone")}</th>
-                            <th className="px-4 py-2 text-left border-b">{t("address")}</th>
-                            <th className="px-4 py-2 text-left border-b">{t("governorate")}</th>
-                            <th className="px-4 py-2 text-left border-b">{t("status")}</th>
-                            <th className="px-4 py-2 text-left border-b">{t("total")}</th>
-                            <th className="px-4 py-2 text-left border-b">{t("createdAt")}</th>
+                            <th className="px-4 py-3 text-left w-10">
+                                <input
+                                    type="checkbox"
+                                    checked={selectedOrders.length === filteredOrders.length && filteredOrders.length > 0}
+                                    onChange={toggleSelectAll}
+                                    className="rounded border-gray-300"
+                                />
+                            </th>
+                            <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">{t("orderId")}</th>
+                            <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">{t("customerName")}</th>
+                            <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">{t("customerPhone")}</th>
+                            <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">{t("address")}</th>
+                            <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">{t("governorate")}</th>
+                            <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">{t("status")}</th>
+                            <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">{t("total")}</th>
+                            <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">{t("createdAt")}</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        {(filteredOrders?.length ?? 0) > 0 ? (
-                            filteredOrders.map((order) => (
-                                <tr
-                                    key={order.order_id}
-                                    className="hover:bg-gray-50 cursor-pointer"
-                                    onClick={() => setSelectedOrder(order)}
-                                >
-                                    <td className="px-4 py-2 border-b">{order.order_id}</td>
-                                    <td className="px-4 py-2 border-b">{order.customer_name}</td>
-                                    <td className="px-4 py-2 border-b text-wrap">{order.phone_numbers.toString().split(',').map((phone, index) =>
-                                        <div key={index}>{phone}</div>)}</td>
-                                    <td className="px-4 py-2 border-b">{order.shipping_street_address}</td>
-                                    <td className="px-4 py-2 border-b">{order.shipping_governorate}</td>
-                                    <td className="px-4 py-2 border-b"> <span
-                                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${order.order_status === "completed" ? "bg-green-100 text-green-800" : order.order_status === "pending" ? "bg-yellow-100 text-yellow-800" : "bg-red-100 text-red-800"}`}>
-                                        {t(order.order_status) || order.order_status}
-                                    </span></td>
-                                    <td className="px-4 py-2 border-b">{order.final_order_total} {t("EGP")}</td>
-                                    <td className="px-4 py-2 border-b">
-                                        {t('{{date, datetime}}', { date: new Date(order.order_date) })}
+                    <tbody className="divide-y divide-gray-100">
+                        <AnimatePresence>
+                            {(filteredOrders?.length ?? 0) > 0 ? (
+                                filteredOrders.map((order) => (
+                                    <motion.tr
+                                        key={order.order_id}
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        exit={{ opacity: 0 }}
+                                        layout
+                                        className="hover:bg-gray-50 cursor-pointer transition-colors"
+                                        onClick={(e) => {
+                                            // Prevent navigation if clicking checkbox
+                                            if ((e.target as HTMLElement).tagName === 'INPUT') return;
+                                            router.push(`/${lang}/admin/orders/${order.order_id}`);
+                                        }}
+                                    >
+                                        <td className="px-4 py-3">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedOrders.includes(order.order_id)}
+                                                onChange={() => toggleSelectOrder(order.order_id)}
+                                                className="rounded border-gray-300"
+                                            />
+                                        </td>
+                                        <td className="px-4 py-3 font-medium text-gray-900">{order.order_id}</td>
+                                        <td className="px-4 py-3 text-gray-700">{order.customer_name}</td>
+                                        <td className="px-4 py-3 text-gray-600">
+                                            {order.phone_numbers.map((phone, i) => (
+                                                <div key={i}>{phone}</div>
+                                            ))}
+                                        </td>
+                                        <td className="px-4 py-3 text-gray-600 max-w-xs truncate" title={order.shipping_street_address}>{order.shipping_street_address}</td>
+                                        <td className="px-4 py-3 text-gray-600">{order.shipping_governorate}</td>
+                                        <td className="px-4 py-3">
+                                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${order.order_status === "completed" ? "bg-green-100 text-green-800" : order.order_status === "pending" ? "bg-yellow-100 text-yellow-800" : order.order_status === "processing" ? "bg-blue-100 text-blue-800" : "bg-red-100 text-red-800"}`}>
+                                                {t(order.order_status) || order.order_status}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3 font-medium text-gray-900">{order.final_order_total} {t("EGP")}</td>
+                                        <td className="px-4 py-3 text-gray-500">
+                                            {t("{{date, datetime}}", { date: new Date(order.order_date) })}
+                                        </td>
+                                    </motion.tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td
+                                        colSpan={9}
+                                        className="px-4 py-12 text-center text-gray-500"
+                                    >
+                                        {t("noOrdersFound")}
                                     </td>
                                 </tr>
-                            ))
-                        ) : (
-                            <tr>
-                                <td
-                                    colSpan={10}
-                                    className="px-4 py-6 text-center text-gray-500"
-                                >
-                                    {t("noOrdersFound")}
-                                </td>
-                            </tr>
-                        )}
+                            )}
+                        </AnimatePresence>
                     </tbody>
                 </table>
             </div>
-
-            {/* Order Details Modal */}
-            {selectedOrder && (
-                <OrderDetailsModal
-                    order={selectedOrder}
-                    onClose={() => setSelectedOrder(null)}
-                />
-            )}
-        </div>
+        </motion.div>
     );
 }

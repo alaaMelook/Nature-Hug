@@ -239,20 +239,28 @@ export class ICustomerClientRepository implements CustomerRepository {
         }
     }
 
-    async createOrder(orderData: Order): Promise<{ order_id: number, customer_id: number }> {
-        console.log("[ICustomerRepository] createOrder called with orderData:", orderData);
+    async createOrder(orderData: Partial<Order>): Promise<{ order_id: number, customer_id: number }> {
+        console.log("[ICustomerClientRepository] createOrder called with orderData:", orderData);
         const {
             data,
             status,
             statusText,
             error
         } = await supabase.schema('store').rpc('create_order', { order_data: orderData });
-        console.log("[ICustomerRepository] createOrder result:", { data, status, statusText });
+        console.log("[ICustomerClientRepository] createOrder result:", { data, status, statusText });
         if (error) {
-            console.error("[ICustomerRepository] createOrder error:", error);
+            console.error("[ICustomerClientRepository] createOrder error:", error);
             throw error;
         }
         return data;
     }
 
+    async addMember(member: Partial<Member>): Promise<void> {
+        console.log("[ICustomerClientRepository] addMember called with member:", member);
+        const { error } = await supabase.schema('store').from('members').insert(member);
+        if (error) {
+            console.error("[ICustomerClientRepository] addMember error:", error);
+            throw error;
+        }
+    }
 }

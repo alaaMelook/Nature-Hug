@@ -1,6 +1,6 @@
 "use client";
 import { useCart } from "@/ui/providers/CartProvider";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Tag } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -8,16 +8,18 @@ import { Governorate } from "@/domain/entities/database/governorate";
 import { useCartProducts } from "@/ui/hooks/store/useCartProducts";
 
 
-export function CheckoutCart({ selectedGovernorate, onDiscountApplied, onPurchase }: {
+export function CheckoutCart({ selectedGovernorate, onPurchase }: {
     selectedGovernorate: Governorate | null,
-    onDiscountApplied?: (code: string) => void,
     onPurchase: () => void,
 }) {
     const { t } = useTranslation();
-    const { cart, getCartTotal } = useCart()
+    const { cart, getCartTotal, applyPromoCode, removePromoCode } = useCart()
     const [promoCode, setPromoCode] = useState<string>('');
     const { data: products = [], isLoading: loadingProducts } = useCartProducts();
 
+    useEffect(() => {
+
+    }, [applyPromoCode]);
     return (
         <section className="w-full md:w-1/3 flex flex-col space-y-6">
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8 sticky top-24">
@@ -75,22 +77,37 @@ export function CheckoutCart({ selectedGovernorate, onDiscountApplied, onPurchas
 
                 {/* Promo Code */}
                 <div className="mt-6 pt-6 border-t border-gray-100">
-                    <div className="relative">
-                        <input
-                            onChange={(e) => setPromoCode(e.target.value)}
-                            type="text"
-                            placeholder={t("checkout.promoCodePlaceholder")}
-                            className="w-full px-20 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all"
-                        />
-                        <Tag className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                        <button
-                            className="absolute right-1.5 top-1.5 bottom-1.5 px-3 bg-white text-primary-600 text-xs font-semibold rounded-lg border border-gray-100 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
-                            onClick={() => onDiscountApplied?.(promoCode)}
-                            disabled={promoCode.trim().length === 0}
-                        >
-                            {t("checkout.applyButton")}
-                        </button>
-                    </div>
+                    {cart.promoCode ? (
+                        <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-xl p-3">
+                            <div className="flex items-center gap-2">
+                                <Tag className="w-4 h-4 text-green-600" />
+                                <span className="text-sm font-medium text-green-700">{cart.promoCode.toUpperCase()}</span>
+                            </div>
+                            <button
+                                onClick={() => removePromoCode()}
+                                className="text-xs text-red-500 hover:text-red-700 font-medium"
+                            >
+                                {t('checkout.remove')}
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="relative">
+                            <input
+                                onChange={(e) => setPromoCode(e.target.value)}
+                                type="text"
+                                placeholder={t("checkout.promoCodePlaceholder")}
+                                className="w-full px-20 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all"
+                            />
+                            <Tag className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                            <button
+                                className="absolute right-1.5 top-1.5 bottom-1.5 px-3 bg-white text-primary-600 text-xs font-semibold rounded-lg border border-gray-100 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+                                onClick={() => applyPromoCode(promoCode)}
+                                disabled={promoCode.trim().length === 0}
+                            >
+                                {t("checkout.applyButton")}
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 {/* Totals */}

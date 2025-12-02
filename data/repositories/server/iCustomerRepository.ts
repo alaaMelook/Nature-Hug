@@ -227,7 +227,7 @@ export class ICustomerServerRepository implements CustomerRepository {
     }
 
     async createOrder(orderData: Partial<Order>): Promise<{ order_id: number, customer_id: number }> {
-        console.log("[IProductRepository] createOrder called with orderData:", orderData);
+        console.log("[ICustomerServerRepository] createOrder called with orderData:", orderData);
         const supabase = await createSupabaseServerClient();
         const {
             data,
@@ -235,12 +235,42 @@ export class ICustomerServerRepository implements CustomerRepository {
             status,
             statusText
         } = await supabase.schema('store').rpc('create_order', { order_data: orderData });
-        console.log("[IProductRepository] createOrder result:", { data, status, statusText });
+        console.log("[ICustomerServerRepository] createOrder result:", { data, status, statusText });
         if (error) {
-            console.error("[IProductRepository] createOrder error:", error);
+            console.error("[ICustomerServerRepository] createOrder error:", error);
             throw error;
         }
         return data;
+    }
+
+    async addMember(member: Partial<Member>): Promise<void> {
+        console.log("[ICustomerServerRepository] addMember called with member:", member);
+        const supabase = await createSupabaseServerClient();
+        const { error } = await supabase.schema('store').from('members').insert(member);
+        if (error) {
+            console.error("[ICustomerServerRepository] addMember error:", error);
+            throw error;
+        }
+    }
+
+    async updateMember(member: Partial<Member>): Promise<void> {
+        console.log("[ICustomerServerRepository] updateMember called with member:", member);
+        const supabase = await createSupabaseServerClient();
+        const { error } = await supabase.schema('store').from('members').update(member).eq('user_id', member.user_id);
+        if (error) {
+            console.error("[ICustomerServerRepository] updateMember error:", error);
+            throw error;
+        }
+    }
+
+    async removeMember(customerId: number): Promise<void> {
+        console.log("[ICustomerServerRepository] removeMember called with customerId:", customerId);
+        const supabase = await createSupabaseServerClient();
+        const { error } = await supabase.schema('store').from('members').delete().eq('user_id', customerId);
+        if (error) {
+            console.error("[ICustomerServerRepository] removeMember error:", error);
+            throw error;
+        }
     }
 
     async viewAllOrders(customerId: number): Promise<OrderSummaryView[]> {
@@ -277,4 +307,20 @@ export class ICustomerServerRepository implements CustomerRepository {
         return data;
     }
 
+    async cancelOrder(orderId: number, customerId: number): Promise<void> {
+        console.log(`[ICustomerRepository] cancelOrder called for order ${orderId} by customer ${customerId}`);
+        const supabase = await createSupabaseServerClient();
+
+        const { error } = await supabase.schema('store')
+            .from('orders')
+            .update({ status: 'cancelled' })
+            .eq('id', orderId)
+            .eq('customer_id', customerId)
+            .in('status', ['pending', 'processing']);
+
+        if (error) {
+            console.error("[ICustomerRepository] cancelOrder error:", error);
+            throw error;
+        }
+    }
 }

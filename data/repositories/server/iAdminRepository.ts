@@ -5,6 +5,8 @@ import { DashboardMetricsView } from "@/domain/entities/views/admin/dashboardMet
 import { Material } from "@/domain/entities/database/material";
 import { ProductAdminView } from "@/domain/entities/views/admin/productAdminView";
 import { Category } from "@/domain/entities/database/category";
+import { ReviewAdminView } from "@/domain/entities/views/admin/reviewAdminView";
+import { PromoCode } from "@/domain/entities/database/promoCode";
 
 export class IAdminServerRepository implements AdminRepository {
     async getOrderDetails(): Promise<OrderDetailsView[]> {
@@ -19,6 +21,26 @@ export class IAdminServerRepository implements AdminRepository {
             throw error;
         }
         return data || [];
+    }
+
+    async getOrderById(id: string): Promise<OrderDetailsView | null> {
+        console.log(`[IAdminRepository] getOrderById called for id: ${id}`);
+        // Try to filter the view directly if possible, otherwise fetch all and find (fallback)
+        // Assuming we can query the view directly as we are admin
+        const { data, error } = await supabaseAdmin.schema('admin')
+            .from('order_details')
+            .select('*')
+            .eq('order_id', id)
+            .single();
+
+        if (error) {
+            console.error("[IAdminRepository] getOrderById error:", error);
+            // Fallback: fetch all and find
+            // const all = await this.getOrderDetails();
+            // return all.find(o => o.order_id.toString() === id) || null;
+            throw error;
+        }
+        return data;
     }
 
     async getDashboardMetrics(): Promise<DashboardMetricsView> {
@@ -112,6 +134,67 @@ export class IAdminServerRepository implements AdminRepository {
             console.error("[IAdminRepository] createProduct error:", error);
             throw error;
         }
+
+        // Deduct materials from stock
+        try {
+            const materialsToUpdate = new Map<number, number>();
+
+            // Helper to accumulate usage
+            const addUsage = (matId: number, amountPerUnit: number, units: number) => {
+                const total = amountPerUnit * units;
+                const current = materialsToUpdate.get(matId) || 0;
+                materialsToUpdate.set(matId, current + total);
+            };
+
+            // 1. Main Product Materials
+            if (product.stock > 0 && product.materials) {
+                for (const mat of product.materials) {
+                    addUsage(mat.material_id, (mat.grams_used || mat.amount || 0), product.stock);
+                }
+            }
+
+            // 2. Variant Materials
+            if (product.variants) {
+                for (const variant of product.variants) {
+                    if (variant.stock > 0 && variant.materials) {
+                        for (const mat of variant.materials) {
+                            addUsage(mat.material_id, (mat.grams_used || mat.amount || 0), variant.stock);
+                        }
+                    }
+                }
+            }
+
+            // 3. Perform Updates
+            if (materialsToUpdate.size > 0) {
+                console.log("[IAdminRepository] Deducting materials:", Object.fromEntries(materialsToUpdate));
+
+                // Fetch current stocks for involved materials
+                const { data: currentMaterials, error: fetchError } = await supabaseAdmin.schema('admin')
+                    .from("materials")
+                    .select('id, stock_grams')
+                    .in('id', Array.from(materialsToUpdate.keys()));
+
+                if (fetchError) {
+                    console.error("[IAdminRepository] Error fetching materials for deduction:", fetchError);
+                } else if (currentMaterials) {
+                    for (const mat of currentMaterials) {
+                        const deduction = materialsToUpdate.get(mat.id) || 0;
+                        const newStock = Math.max(0, (mat.stock_grams || 0) - deduction);
+
+                        await supabaseAdmin.schema('admin')
+                            .from("materials")
+                            .update({ stock_grams: newStock })
+                            .eq('id', mat.id);
+                    }
+                }
+            }
+
+        } catch (deductionError) {
+            console.error("[IAdminRepository] Error deducting material stock:", deductionError);
+            // We don't throw here to avoid failing the product creation if stock deduction fails, 
+            // but in a real app we might want a transaction or compensation action.
+        }
+
         return data;
     }
 
@@ -268,6 +351,174 @@ export class IAdminServerRepository implements AdminRepository {
         console.log("[IAdminRepository] deleteImage result:", { data });
         if (error) {
             console.error("[IAdminRepository] deleteImage error:", error);
+            throw error;
+        }
+    }
+    async seeAllReviews(): Promise<ReviewAdminView[]> {
+        console.log("[IAdminRepository] seeAllReviews called.");
+
+        const { data, error, status, statusText } = await supabaseAdmin.schema('admin')
+            .rpc("select_from_view", { view_name: 'all_reviews' })
+
+        console.log("[IAdminRepository] seeAllReviews result:", { data, status, statusText });
+        if (error) {
+            console.error("[IAdminRepository] seeAllReviews error:", error);
+            throw error;
+        }
+
+        return (data || []);
+    }
+
+    async updateReviewStatus(reviewId: number, status: 'approved' | 'rejected' | 'pending'): Promise<void> {
+        console.log(`[IAdminRepository] updateReviewStatus called for review ${reviewId} with status ${status}`);
+        const { error } = await supabaseAdmin.schema('store')
+            .from('reviews')
+            .update({ status })
+            .eq('id', reviewId);
+
+        if (error) {
+            console.error("[IAdminRepository] updateReviewStatus error:", error);
+            throw error;
+        }
+    }
+
+    async addMaterialStock(material: Material, amount: number): Promise<void> {
+        console.log(`[IAdminRepository] addMaterialStock called for id: ${material.id}, amount: ${amount}`);
+
+        // 2. Update stock
+        const newStock = (material.stock_grams || 0) + amount;
+        const { error: updateError } = await supabaseAdmin.schema('admin')
+            .from("materials")
+            .update({ stock_grams: newStock })
+            .eq('id', material.id);
+
+        if (updateError) {
+            console.error("[IAdminRepository] addMaterialStock update error:", updateError);
+            throw updateError;
+        }
+    }
+
+    async addProductStock(product: ProductAdminView, quantity: number): Promise<void> {
+        console.log(`[IAdminRepository] addProductStock called for productId: ${product.product_id}, quantity: ${quantity}`);
+
+        let materialsNeeded: { material_id: number, amount: number }[] = [];
+
+        // Map variant materials
+        if (product.variant_id) {
+            materialsNeeded = product.materials.map(m => ({
+                material_id: m.material_id,
+                amount: (m.grams_used || m.amount || 0) * quantity
+            }));
+        } else {
+            // Main product materials
+            materialsNeeded = product.materials.map(m => ({
+                material_id: m.material_id,
+                amount: (m.grams_used || m.amount || 0) * quantity
+            }));
+        }
+
+        if (materialsNeeded.length === 0) {
+            // No materials needed, just update stock
+            console.log("[IAdminRepository] No materials linked, updating stock directly.");
+        } else {
+            // 3. Check Material Availability
+            const materialIds = materialsNeeded.map(m => m.material_id);
+            const { data: currentMaterials, error: matError } = await supabaseAdmin.schema('admin')
+                .from("materials")
+                .select('id, stock_grams, name')
+                .in('id', materialIds);
+
+            if (matError) throw matError;
+
+            for (const need of materialsNeeded) {
+                const mat = currentMaterials?.find(m => m.id === need.material_id);
+                if (!mat) throw new Error(`Material ID ${need.material_id} not found`);
+
+                if ((mat.stock_grams || 0) < need.amount) {
+                    throw new Error(`Insufficient stock for material: ${mat.name}. Required: ${need.amount}, Available: ${mat.stock_grams}`);
+                }
+            }
+
+            // 4. Deduct Materials
+            for (const need of materialsNeeded) {
+                const mat = currentMaterials?.find(m => m.id === need.material_id)!;
+                const newStock = (mat.stock_grams || 0) - need.amount;
+
+                const { error: deductError } = await supabaseAdmin.schema('admin')
+                    .from("materials")
+                    .update({ stock_grams: newStock })
+                    .eq('id', mat.id);
+
+                if (deductError) throw deductError;
+            }
+        }
+
+        // 5. Update Product/Variant Stock
+        if (product.variant_id) {
+            const { error: updateError } = await supabaseAdmin.schema('store')
+                .from('product_variants')
+                .update({ stock: (product.stock || 0) + quantity })
+                .eq('id', product.variant_id);
+            if (updateError) throw updateError;
+        } else {
+            const { error: updateError } = await supabaseAdmin.schema('store')
+                .from('products')
+                .update({ stock: (product.stock || 0) + quantity })
+                .eq('id', product.product_id);
+            if (updateError) throw updateError;
+        }
+    }
+    async getAllPromoCodes(): Promise<PromoCode[]> {
+        console.log("[IAdminRepository] getAllPromoCodes called.");
+        const { data, error } = await supabaseAdmin.schema('store')
+            .from('promo_codes')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error("[IAdminRepository] getAllPromoCodes error:", error);
+            throw error;
+        }
+        return data || [];
+    }
+
+    async createPromoCode(promoCode: Partial<PromoCode>): Promise<void> {
+        console.log("[IAdminRepository] createPromoCode called with:", promoCode);
+        const { error } = await supabaseAdmin.schema('store')
+            .from('promo_codes')
+            .insert(promoCode);
+
+        if (error) {
+            console.error("[IAdminRepository] createPromoCode error:", error);
+            throw error;
+        }
+    }
+
+    async deletePromoCode(id: number): Promise<void> {
+        console.log("[IAdminRepository] deletePromoCode called with id:", id);
+        const { error } = await supabaseAdmin.schema('store')
+            .from('promo_codes')
+            .delete()
+            .eq('id', id);
+
+        if (error) {
+            console.error("[IAdminRepository] deletePromoCode error:", error);
+            throw error;
+        }
+    }
+
+    async updatePromoCode(promoCode: Partial<PromoCode>): Promise<void> {
+        console.log("[IAdminRepository] updatePromoCode called with:", promoCode);
+        const { id, ...updates } = promoCode;
+        if (!id) throw new Error("Promo code ID is required for update");
+
+        const { error } = await supabaseAdmin.schema('store')
+            .from('promo_codes')
+            .update(updates)
+            .eq('id', id);
+
+        if (error) {
+            console.error("[IAdminRepository] updatePromoCode error:", error);
             throw error;
         }
     }

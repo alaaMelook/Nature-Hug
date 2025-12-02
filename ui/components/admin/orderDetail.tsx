@@ -6,7 +6,8 @@ import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { Shipment } from "@/domain/entities/shipment/shipment";
 import { City } from "@/domain/entities/shipment/city";
-import { updateOrderAction, createShipmentAction, getCitiesAction } from "@/ui/hooks/admin/orders";
+import { updateOrderAction, } from "@/ui/hooks/admin/orders";
+import { createShipmentAction, getCitiesAction } from "@/ui/hooks/admin/shippingActions";
 import { User, MapPin, Phone, Package, Calendar, DollarSign, X } from "lucide-react";
 import { ShipmentTracking } from "./ShipmentTracking";
 
@@ -56,7 +57,7 @@ export function OrderDetailsModal({
                         weight: 1, // Default weight
                     };
 
-                    const shipmentResult = await createShipmentAction(shipmentData, order.shipping_governorate);
+                    const shipmentResult = await createShipmentAction(order, shipmentData, order.shipping_governorate);
                     if (shipmentResult.skipped) {
                         toast.info(t("shipmentSkipped"));
                     } else if (shipmentResult.success && shipmentResult.data) {

@@ -1,6 +1,6 @@
-import {SignupScreen} from "@/ui/client-screens/(store)/signup-screen";
-import {GetCurrentUser} from "@/domain/use-case/shop/getCurrentUser";
-import {redirect} from "next/navigation";
+import { SignupScreen } from "@/ui/client-screens/(store)/signup-screen";
+import { GetCurrentUser } from "@/domain/use-case/store/getCurrentUser";
+import { redirect } from "next/navigation";
 
 export default async function SignupPage() {
     const user = await new GetCurrentUser().execute();
@@ -9,6 +9,6 @@ export default async function SignupPage() {
     }
 
     return (
-        <SignupScreen/>
+        <SignupScreen />
     );
 }

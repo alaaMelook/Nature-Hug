@@ -35,11 +35,13 @@ i18n
                         hour: '2-digit',      // hh (01-12)
                         minute: '2-digit',    // mm
                         hour12: true,         // aa (AM/PM or equivalent)
+                        timeZone: "Africa/Cairo",
                     } :
                         format === 'date' ? {
                             day: '2-digit',       // dd
                             month: '2-digit',     // MM
-                            year: 'numeric',      // yyyy
+                            year: 'numeric',
+                            timeZone: "Africa/Cairo",    // yyyy
                         } : {
                             hour: '2-digit',      // hh (01-12)
                             minute: '2-digit',    // mm
@@ -47,8 +49,17 @@ i18n
                             day: '2-digit',       // dd
                             month: '2-digit',     // MM
                             year: 'numeric',      // yyyy
+                            timeZone: "Africa/Cairo",
                         };
-
+                    if (!lng) {
+                        lng = "en-GB";
+                    }
+                    else if (lng === "ar") {
+                        lng = "ar-EG";
+                    }
+                    else if (lng === "en") {
+                        lng = "en-GB";
+                    }
                     const formatted = new Intl.DateTimeFormat(lng, options).format(value);
 
                     return formatted;

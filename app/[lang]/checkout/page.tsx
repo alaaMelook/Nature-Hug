@@ -1,7 +1,7 @@
-import { GetAllGovernorates } from "@/domain/use-case/shop/getAllGovernorates";
+import { GetAllGovernorates } from "@/domain/use-case/store/getAllGovernorates";
 import { CheckoutGuestScreen } from "@/ui/client-screens/(store)/checkout-guest-screen";
 import { CheckoutUserScreen } from "@/ui/client-screens/(store)/checkout-user-screen";
-import { ViewProfile } from "@/domain/use-case/shop/viewProfile";
+import { ViewProfile } from "@/domain/use-case/store/viewProfile";
 
 export default async function CheckoutPage() {
     let governorates = await new GetAllGovernorates().execute();

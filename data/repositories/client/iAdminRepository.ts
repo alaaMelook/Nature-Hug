@@ -4,8 +4,34 @@ import { OrderDetailsView } from "@/domain/entities/views/admin/orderDetailsView
 import { DashboardMetricsView } from "@/domain/entities/views/admin/dashboardMetricsView";
 import { Material } from "@/domain/entities/database/material";
 import { ProductAdminView } from "@/domain/entities/views/admin/productAdminView";
+import { Category } from "@/domain/entities/database/category";
+import { Review } from "@/domain/entities/database/review";
+import { ReviewAdminView } from "@/domain/entities/views/admin/reviewAdminView";
 
 export class IAdminClientRepository implements AdminRepository {
+    async createCategory(category: Partial<Category>): Promise<void> {
+        console.log("[IAdminRepository] createCategory called with category:", category);
+        const { data, status, statusText, error } = await supabase.schema('admin')
+            .from("categories")
+            .insert(category);
+        console.log("[IAdminRepository] createCategory result:", { data, status, statusText });
+        if (error) {
+            console.error("[IAdminRepository] createCategory error:", error);
+            throw error;
+        }
+    }
+    async deleteCategory(id: number): Promise<void> {
+        console.log("[IAdminRepository] deleteCategory called with id:", id);
+        const { data, status, statusText, error } = await supabase.schema('admin')
+            .from("categories")
+            .delete()
+            .eq('id', id);
+        console.log("[IAdminRepository] deleteCategory result:", { data, status, statusText });
+        if (error) {
+            console.error("[IAdminRepository] deleteCategory error:", error);
+            throw error;
+        }
+    }
     async getOrderDetails(): Promise<OrderDetailsView[]> {
         console.log("[IAdminRepository] getOrderDetails called.");
         const { data, status, statusText, error } = await supabase.schema('admin')
@@ -222,6 +248,38 @@ export class IAdminClientRepository implements AdminRepository {
         console.log('[IAdminRepository] deleteImage result:', { data });
         if (error) {
             console.error('[IAdminRepository] deleteImage error:', error);
+            throw error;
+        }
+    }
+    async seeAllReviews(): Promise<ReviewAdminView[]> {
+        console.log("[IAdminRepository] seeAllReviews called.");
+
+        const { data, error, status, statusText } = await supabase
+            .from('store.reviews')
+            .select('*, products(name), customers(first_name, last_name)');
+
+        console.log("[IAdminRepository] seeAllReviews result:", { data, status, statusText });
+        if (error) {
+            console.error("[IAdminRepository] seeAllReviews error:", error);
+            throw error;
+        }
+
+        return (data || []).map((review: any) => ({
+            ...review,
+            product_name: review.products?.name || 'Unknown Product',
+            customer_name: `${review.customers?.first_name || ''} ${review.customers?.last_name || ''}`.trim() || 'Unknown Customer'
+        }));
+    }
+
+    async updateReviewStatus(reviewId: number, status: 'approved' | 'rejected' | 'pending'): Promise<void> {
+        console.log(`[IAdminClientRepository] updateReviewStatus called for review ${reviewId} with status ${status}`);
+        const { error } = await supabase
+            .from('store.reviews')
+            .update({ status })
+            .eq('id', reviewId);
+
+        if (error) {
+            console.error("[IAdminClientRepository] updateReviewStatus error:", error);
             throw error;
         }
     }

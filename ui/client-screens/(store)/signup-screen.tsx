@@ -4,6 +4,7 @@ import { FcGoogle } from "react-icons/fc";
 import { googleLogin, signup } from "@/ui/hooks/store/useLoginActions";
 import { useForm } from 'react-hook-form';
 import { useTranslation } from "react-i18next";
+import { motion } from "framer-motion";
 
 export function SignupScreen() {
     const [googleLoading, setGoogleLoading] = useState(false);
@@ -35,8 +36,12 @@ export function SignupScreen() {
     }
 
     return (
-        <div
-            className="max-w-md mx-auto flex flex-col my-5  p-6 bg-white shadow rounded max-h-screen">
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="max-w-md mx-auto flex flex-col my-5  p-6 bg-white shadow rounded max-h-screen"
+        >
             <h2 className="text-2xl font-bold mb-6 text-center">Sign Up</h2>
 
             {/* native form posts to server action `signup` */}
@@ -124,6 +129,6 @@ export function SignupScreen() {
                     {errorMsg}
                 </div>
             )}
-        </div>
+        </motion.div>
     );
 }

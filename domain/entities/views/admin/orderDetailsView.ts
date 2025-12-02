@@ -14,7 +14,9 @@ export interface OrderDetailsView {
     phone_numbers: string[];
     items: OrderItemView[];
     shipment_id?: string;
-    awb?: string;
+    awb: string | null;
+    subtotal: number;
+    shipping_total: number;
 }
 export interface OrderItemView {
     quantity: number;

@@ -8,20 +8,36 @@ import { statusColor } from "@/lib/utils/statusColors";
 import { useSupabase } from "@/ui/hooks/useSupabase";
 import { useTranslation, Trans } from "react-i18next";
 
+import { cancelUserOrderAction } from "@/ui/hooks/store/userOrderActions";
+import { toast } from "sonner";
+
 export default function OrderDetailScreen({ order, fromCheckout }: {
     order: OrderSummaryView | null,
     fromCheckout?: boolean | string | null
 }) {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const { user, loading } = useSupabase();
     const [formatted, setFormatted] = useState('');
 
     useEffect(() => {
         if (order && order.created_at) {
             const date = new Date(order.created_at);
-            setFormatted(t('{{date, datetime}}', { date: date }));
+            setFormatted(t("{{date, datetime}}", { date: date }));
         }
     }, []);
+
+    const handleCancel = async () => {
+        if (!order) return;
+        if (!confirm(t("ordersScreen.confirmCancel") || "Are you sure you want to cancel this order?")) return;
+
+        const result = await cancelUserOrderAction(order.order_id);
+        if (result.success) {
+            toast.success(t("ordersScreen.cancelSuccess") || "Order cancelled successfully");
+        } else {
+            toast.error(t("ordersScreen.cancelFailed") || "Failed to cancel order");
+        }
+    };
+
     // If order is null, show a friendly fallback UI. If `fromCheckout` is true, still show thank-you banner.
     if (!order) {
         return (
@@ -32,7 +48,7 @@ export default function OrderDetailScreen({ order, fromCheckout }: {
     }
 
     return (
-        <div className="max-w-5xl mx-40 my-10 p-6 bg-white rounded-lg shadow">
+        <div className="max-w-5xl mx-4 lg:mx-auto my-10 p-6 bg-white rounded-lg shadow">
             {fromCheckout && (
                 <>
                     <div
@@ -40,8 +56,6 @@ export default function OrderDetailScreen({ order, fromCheckout }: {
                         <h2 className="text-2xl font-semibold">{t("ordersScreen.thankYou")}</h2>
                         <p className="mt-1 text-sm opacity-90">{t("ordersScreen.preparing")}</p>
                     </div>
-
-
                 </>
             )} {!user && !loading && (
                 <div
@@ -55,7 +69,7 @@ export default function OrderDetailScreen({ order, fromCheckout }: {
             )}
             {order && (
                 <>
-                    <div className=" mt-6 flex justify-between items-start gap-6">
+                    <div className=" mt-6 flex  justify-between items-start gap-6">
                         <div>
                             <h1 className="text-2xl font-bold text-amber-800">{t("ordersScreen.orderNumber", { id: order.order_id })}</h1>
                             <p className="text-sm text-gray-600">{t("ordersScreen.placed", { date: formatted })}</p>
@@ -65,19 +79,19 @@ export default function OrderDetailScreen({ order, fromCheckout }: {
                             </div>
                         </div>
 
-                        <div className="text-right">
+                        <div className="text-left md:text-right mt-4 md:mt-0">
                             <p className="text-sm text-gray-500">{t("ordersScreen.items")}</p>
                             <p className="text-lg font-semibold">{order.item_count}</p>
                         </div>
                     </div>
 
-                    <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <div className="lg:col-span-2 border rounded-md">
+                    <div className="mt-6 flex flex-col sm:grid sm:grid-cols-3 gap-6">
+                        <div className="col-span-1 sm:col-span-2 border rounded-md">
 
                             <h3 className="font-semibold my-3 mx-10 ">{t("ordersScreen.items")}</h3>
                             <div className="divide-y divide-gray-100 ">
                                 {(order.order_items || []).map((it) => (
-                                    <div key={it.slug} className="flex items-center gap-4 p-4">
+                                    <div key={it.slug} className="flex flex-row items-start sm:items-center gap-4 p-4">
                                         <Image
                                             src={it.image || ''}
                                             alt={it.slug}
@@ -86,7 +100,7 @@ export default function OrderDetailScreen({ order, fromCheckout }: {
                                             className="w-16 h-16 bg-gray-100 rounded-md object-cover"
                                         ></Image>
                                         <div className="flex-1">
-                                            <p className="text-sm font-medium"> {it.name_en} </p>
+                                            <p className="text-sm font-medium"> {i18n.language === 'ar' ? it.name_ar : it.name_en} </p>
                                             <p className="text-xs text-gray-500 mt-1">{t("ordersScreen.qty")} {it.quantity} </p>
                                         </div>
                                         <div>
@@ -96,11 +110,10 @@ export default function OrderDetailScreen({ order, fromCheckout }: {
                                 ))}
                             </div>
 
-
                         </div>
 
-                        <aside
-                            className="p-4 border rounded-md bg-white h-max shadow-sm self-center items-center">
+
+                        <div className="p-4 border w-full rounded-md bg-white h-max shadow-sm self-center items-center">
                             <h4 className="font-semibold mb-3">{t("ordersScreen.summary")}</h4>
                             <dl className="text-sm text-gray-700 space-y-2">
                                 <div className="flex justify-between">
@@ -127,27 +140,38 @@ export default function OrderDetailScreen({ order, fromCheckout }: {
 
                             {order.applied_promo_code && (
                                 <div className="mt-4 p-2 bg-green-50 text-green-800 rounded text-sm">
-                                    <Trans i18nKey="ordersScreen.promoApplied" values={{ code: order.applied_promo_code, percent: order.promo_percentage ?? 0 }}>
-                                        Promo <b>{order.applied_promo_code}</b> applied ({order.promo_percentage ?? 0}% off)
+                                    <Trans i18nKey="ordersScreen.promoApplied" values={{ code: order.applied_promo_code, percent: order.promo_percentage ?? 0 }} components={{ b: <b /> }}>
+                                        {t("ordersScreen.promoApplied", { code: order.applied_promo_code, percent: order.promo_percentage ?? 0 })}
                                     </Trans>
                                 </div>
                             )}
 
                             <Link href="/"
                                 className="block mt-4 text-center px-4 py-2 bg-amber-700 text-white rounded hover:bg-amber-800"> {t("ordersScreen.orderAgain")}</Link>
-                        </aside>
-                        <div className="mt-6 flex justify-between items-center p-4 bg-gray-50 rounded-md col-span-3">
+                        </div>
+
+                        <div className="mt-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-4 bg-gray-50 rounded-md col-span-3">
                             <div>
                                 <p className="text-sm text-gray-600">{t("ordersScreen.paymentStatus")}</p>
                                 <p className="font-medium">{order.payment_status} {order.payment_status === 'unpaid' && (
                                     <Link href={'#'} className={'ml-10 text-teal-800'}>{t("ordersScreen.payNow")}</Link>)}</p>
                             </div>
-                            <div className="text-right">
+                            <div className="text-left sm:text-right w-full sm:w-auto">
                                 <p className="text-sm text-gray-500">{t("ordersScreen.grandTotal")}</p>
                                 <p className="text-2xl font-extrabold">{t("{{price, currency}}", { price: order.grand_total })}</p>
                             </div>
                         </div>
                     </div>
+                    {['pending', 'processing'].includes(order.order_status) && (
+                        <div className="min-w-full flex justify-end pt-5">
+                            <button
+                                onClick={handleCancel}
+                                className="text-sm text-red-600 hover:text-red-800 underline "
+                            >
+                                {t("ordersScreen.cancelOrder") || "Cancel Order"}
+                            </button>
+                        </div>
+                    )}
                 </>
             )}
             {!order && user && (

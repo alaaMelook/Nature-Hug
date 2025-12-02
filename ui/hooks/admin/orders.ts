@@ -1,14 +1,15 @@
-'use server'
-
-import { UpdateOrder } from "@/domain/use-case/admin/orders/updateOrder";
-import { CreateShipment } from "@/domain/use-case/admin/shipments/createShipment";
-import { GetShipmentDetails } from "@/domain/use-case/admin/shipments/getShipmentDetails";
+"use server"
+import { Orders } from "@/domain/use-case/admin/orders";
 import { OrderDetailsView } from "@/domain/entities/views/admin/orderDetailsView";
-import { Shipment } from "@/domain/entities/shipment/shipment";
+import { revalidatePath } from "next/cache";
+
+const ordersUseCase = new Orders();
 
 export async function updateOrderAction(order: OrderDetailsView) {
     try {
-        await new UpdateOrder().execute(order);
+        await ordersUseCase.update(order);
+        revalidatePath("/[lang]/admin/orders", "page");
+        revalidatePath(`/[lang]/admin/orders/${order.order_id}`, "page");
         return { success: true };
     } catch (error) {
         console.error("Failed to update order:", error);
@@ -16,51 +17,50 @@ export async function updateOrderAction(order: OrderDetailsView) {
     }
 }
 
-export async function createShipmentAction(shipment: Shipment, governorate: string) {
-    if (governorate.toLowerCase().includes("damanhour") || governorate.toLowerCase().includes("دمنهور")) {
-        console.log("Skipping shipment creation for Damanhour");
-        return { success: true, skipped: true };
-    }
-
+export async function acceptOrderAction(id: string) {
     try {
-        const result = await new CreateShipment().execute(shipment);
-        return { success: true, data: result };
+        await ordersUseCase.accept(id);
+        revalidatePath("/[lang]/admin/orders", "page");
+        revalidatePath(`/[lang]/admin/orders/${id}`, "page");
+        return { success: true };
     } catch (error) {
-        console.error("Failed to create shipment:", error);
-        return { success: false, error: "Failed to create shipment" };
+        console.error("Failed to accept order:", error);
+        return { success: false, error: "Failed to accept order" };
     }
 }
 
-import { GetCities } from "@/domain/use-case/admin/shipments/getCities";
-
-export async function getCitiesAction() {
+export async function rejectOrderAction(id: string) {
     try {
-        const cities = await new GetCities().execute();
-        return { success: true, cities };
+        await ordersUseCase.reject(id);
+        revalidatePath("/[lang]/admin/orders", "page");
+        revalidatePath(`/[lang]/admin/orders/${id}`, "page");
+        return { success: true };
     } catch (error) {
-        console.error("Failed to fetch cities:", error);
-        return { success: false, error: "Failed to fetch cities" };
+        console.error("Failed to reject order:", error);
+        return { success: false, error: "Failed to reject order" };
     }
 }
 
-export async function getShipmentDetailsAction(awb: string) {
+export async function cancelOrderAction(id: string) {
     try {
-        const result = await new GetShipmentDetails().execute(awb);
-        return { success: true, data: result };
+        await ordersUseCase.cancel(id);
+        revalidatePath("/[lang]/admin/orders", "page");
+        revalidatePath(`/[lang]/admin/orders/${id}`, "page");
+        return { success: true };
     } catch (error) {
-        console.error("Failed to fetch shipment details:", error);
-        return { success: false, error: "Failed to fetch shipment details" };
+        console.error("Failed to cancel order:", error);
+        return { success: false, error: "Failed to cancel order" };
     }
 }
 
-import { GetShipmentHistory } from "@/domain/use-case/admin/shipments/getShipmentHistory";
-
-export async function getShipmentHistoryAction(fromDate: Date, toDate: Date) {
+export async function markAsOutForDeliveryAction(order: OrderDetailsView, shipmentData: any) {
     try {
-        const result = await new GetShipmentHistory().execute(fromDate, toDate);
-        return { success: true, data: result };
-    } catch (error) {
-        console.error("Failed to fetch shipment history:", error);
-        return { success: false, error: "Failed to fetch shipment history" };
+        await ordersUseCase.markAsOutForDelivery(order, shipmentData);
+        revalidatePath("/[lang]/admin/orders", "page");
+        revalidatePath(`/[lang]/admin/orders/${order.order_id}`, "page");
+        return { success: true };
+    } catch (error: any) {
+        console.error("Failed to mark as out for delivery:", error);
+        return { success: false, error: error.message || "Failed to mark as out for delivery" };
     }
 }

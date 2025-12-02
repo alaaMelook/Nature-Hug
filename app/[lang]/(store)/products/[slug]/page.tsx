@@ -1,6 +1,6 @@
-import { ViewProduct } from "@/domain/use-case/shop/viewProduct";
+import { ViewProduct } from "@/domain/use-case/store/viewProduct";
 import { ProductDetailScreen } from "@/ui/client-screens/(store)/product-detail-screen";
-import { ViewSimilarProducts } from "@/domain/use-case/shop/viewSimilarProducts";
+import { ViewSimilarProducts } from "@/domain/use-case/store/viewSimilarProducts";
 
 export default async function ProductPage({ params }: { params: Promise<{ slug: string, lang?: string }> }) {
     const resolvedParams = await params;

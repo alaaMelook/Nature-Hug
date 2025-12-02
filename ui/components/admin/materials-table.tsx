@@ -3,175 +3,136 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
-import { Plus, Edit, Trash2, Upload, Download, Layers } from "lucide-react";
-import * as XLSX from "xlsx";
-import { Material, Unit } from "@/domain/entities/database/material";
-import { units } from "@/lib/utils/units";
-import { deleteMaterial, insertMaterials, updateMaterial } from "@/ui/hooks/admin/useMaterials";
+import { Plus, Trash2, Search, Filter, PlusCircle } from "lucide-react";
+import { Material } from "@/domain/entities/database/material";
+import { deleteMaterial } from "@/ui/hooks/admin/useMaterials";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
+import { StockUpdateModal } from "./stockUpdateModal";
+import { addStockAction } from "@/ui/hooks/admin/inventory";
 
 export function MaterialsTable({
   initialMaterials,
-
 }: {
   initialMaterials: Material[];
-
 }) {
+  const { t } = useTranslation();
   const [materials, setMaterials] = useState<Material[]>(initialMaterials || []);
-  const [showModal, setShowModal] = useState(false);
-  const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
-  const [formData, setFormData] = useState<Partial<Material>>({});
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isStockModalOpen, setIsStockModalOpen] = useState(false);
+  const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null);
 
   const router = useRouter();
 
-  /** ───────────────────────────────
-   * 🟢 Modal Open (Add / Edit)
-   * ─────────────────────────────── */
-  const openAddModal = () => {
-    setEditingMaterial(null);
-    setFormData({
-    });
-    setShowModal(true);
-  };
+  const filteredMaterials = useMemo(() => {
+    return materials.filter((material) =>
+      material.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [materials, searchTerm]);
 
-  const openEditModal = (material: Material) => {
-    setEditingMaterial(material);
-    setFormData(material);
-    setShowModal(true);
-  };
-
-  /** ───────────────────────────────
-   * 💾 Save Material
-   * ─────────────────────────────── */
-  const handleSave = async () => {
-    if (editingMaterial) {
-      try {
-        // Update existing material
-        const res = await updateMaterial(formData);
-        if (res.error) {
-          toast.error("Update failed: " + res.error);
-          return;
-        }
-        toast.success("Update successful");
-        setMaterials((prev) =>
-          prev.map((m) =>
-            m.id === editingMaterial.id ? { ...m, ...formData } as Material : m
-          )
-        );
-
-        setEditingMaterial(null);
-        setFormData({});
-        setShowModal(false);
-
-      } catch (err) {
-        console.error("handleSave error:", err);
-        alert("Save failed");
-      }
-    }
-  };
-
-  /** ───────────────────────────────
-   * ❌ Delete
-   * ─────────────────────────────── */
   const handleDelete = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this material?")) return;
+    if (!confirm(t("deleteConfirm") || "Are you sure you want to delete this material?")) return;
     try {
-      await deleteMaterial(id);
-      alert("Delete successful");
-      router.refresh();
-    } catch (err) {
-      console.error("handleDelete error:", err);
-      alert("Delete failed");
+      const result = await deleteMaterial(id);
+      if (result?.error === "DELETE_RESTRICTED") {
+        toast.error(t("materialInUse") || "Material is in use and cannot be deleted");
+      } else if (result?.success) {
+        setMaterials((prev) => prev.filter((m) => m.id !== id));
+        toast.success(t("deleteSuccess") || "Material deleted successfully");
+      } else {
+        toast.error(t("deleteFailed") || "Failed to delete material");
+      }
+    } catch (error) {
+      console.error("Failed to delete material:", error);
+      toast.error(t("deleteFailed") || "Failed to delete material");
     }
   };
 
-  /** ───────────────────────────────
-   * 📤 Export
-   * ─────────────────────────────── */
-  const handleExport = () => {
-    const exportData = materials.map((m) => ({
-      name: m.name,
-      price_per_gram: m.price_per_gram,
-      stock_grams: m.stock_grams,
-      supplier_id: m.supplier_id,
-      unit_id: m.unit,
-      low_stock_threshold: m.low_stock_threshold,
-      material_type: m.material_type || "normal",
-
-    }));
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Materials");
-    XLSX.writeFile(wb, "materials.xlsx");
+  const handleOpenStockModal = (material: Material) => {
+    setSelectedMaterial(material);
+    setIsStockModalOpen(true);
   };
 
-  /** ───────────────────────────────
-   * 📥 Import
-   * ─────────────────────────────── */
-  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const data = await file.arrayBuffer();
-      const workbook = XLSX.read(data, { type: "array" });
-      const sheetName = workbook.SheetNames[0];
-      const sheet = workbook.Sheets[sheetName];
-      const rows: any[] = XLSX.utils.sheet_to_json(sheet);
+  const handleAddStock = async (quantity: number) => {
+    if (!selectedMaterial) return;
 
-      const formatted: Partial<Material>[] = rows.map((r) => ({
-        name: r.name,
-        price_per_gram: Number(r.price_per_gram || 0),
-        stock_grams: Number(r.stock_grams || 0),
-        supplier_id: Number(r.supplier_id) || null,
-        unit: r.unit as Unit || null,
-        low_stock_threshold: r.low_stock_threshold
-          ? Number(r.low_stock_threshold)
-          : null,
-        material_type: r.material_type || "normal",
+    const result = await addStockAction('material', selectedMaterial, quantity);
 
-      }));
-
-      await insertMaterials(formatted);
-      alert("Import successful");
-      router.refresh();
-    } catch (err) {
-      console.error("handleImport error:", err);
-      alert("Import failed");
-    } finally {
-      if (e.target) (e.target as HTMLInputElement).value = "";
+    if (result.success) {
+      toast.success(t("stockAdded") || "Stock added successfully");
+      // Optimistic update
+      setMaterials(prev => prev.map(m =>
+        m.id === selectedMaterial.id
+          ? { ...m, stock_grams: (m.stock_grams || 0) + quantity }
+          : m
+      ));
+    } else {
+      toast.error(result.error);
     }
   };
 
-  /** ───────────────────────────────
-   * 📊 Table Columns
-   * ─────────────────────────────── */
   const columns: GridColDef[] = [
-    { field: "name", headerName: "Name", flex: 1 },
+    {
+      field: "name", headerName: t("materialName") || "Name", flex: 1, minWidth: 150,
+      renderCell: (params) => <span className="font-medium text-center">{params.row.name || "-"}</span>,
+    },
     {
       field: "unit",
-      headerName: "Unit",
-      flex: 1,
-      renderCell: (params) => params.row.unit || "-",
+      headerName: t("unit") || "Unit",
+      flex: 0.5,
+      minWidth: 100,
+      renderCell: (params) => <span className="font-medium text-center">{params.row.unit || "-"}</span>,
     },
-    { field: "price_per_gram", headerName: "Price/g", flex: 1 },
-    { field: "stock_grams", headerName: "Stock", flex: 1 },
+    {
+      field: "price_per_gram",
+      headerName: t("pricePerUnit") || "Price/unit",
+      flex: 1,
+      minWidth: 120,
+      renderCell: (params) => (
+        <span className="font-medium text-center">
+          {t('{{price,currency}}', { price: params.row.price_per_gram })}/{params.row.unit || 'g'}
+        </span>
+      )
+    },
+    {
+      field: "stock_grams",
+      headerName: t("stockUnits") || "Stock",
+      flex: 1,
+      minWidth: 140,
+      // renderCell: (params) => <span className="font-medium text-center">{params.row.stock_grams || "-"}</span>,
+      renderCell: (params) => (
+        <div className="flex items-center justify-center gap-2">
+          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${(params.row.stock_grams || 0) > 10 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+            {params.row.stock_grams} {t("g")}
+          </span>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleOpenStockModal(params.row as Material);
+            }}
+            className="p-1 hover:bg-gray-100 rounded-full text-primary-600 transition-colors"
+            title={t("addStock") || "Add Stock"}
+          >
+            <PlusCircle size={18} />
+          </button>
+        </div>
+      )
+    },
     {
       field: "material_type",
-      headerName: "Type",
+      headerName: t("materialType") || "Type",
       flex: 1,
+      minWidth: 120,
     },
     {
       field: "actions",
-      headerName: "Actions",
-      flex: 1,
+      headerName: t("actions") || "Actions",
+      sortable: false,
+      flex: 0.5,
+      minWidth: 100,
       renderCell: (params) => (
         <div className="space-x-2">
-          <button
-            onClick={() => openEditModal(params.row as Material)}
-            className="text-blue-600 hover:text-blue-800"
-          >
-            <Edit className="h-4 w-4 inline" />
-          </button>
+
           <button
             onClick={() => handleDelete((params.row as Material).id)}
             className="text-red-600 hover:text-red-800"
@@ -183,247 +144,112 @@ export function MaterialsTable({
     },
   ];
 
-  /** ───────────────────────────────
-   * 📈 Totals
-   * ─────────────────────────────── */
-  const totalInventoryValue = useMemo(
-    () =>
-      materials.reduce(
-        (sum, m) => sum + (m.price_per_gram || 0) * (m.stock_grams || 0),
-        0
-      ),
-    [materials]
-  );
-
-  const totalStock = useMemo(
-    () => materials.reduce((sum, m) => sum + (m.stock_grams || 0), 0),
-    [materials]
-  );
-
-  /** ───────────────────────────────
-   * 🖥️ Render
-   * ─────────────────────────────── */
   return (
-    <div style={{ height: 700, width: "100%" }}>
-      <div className="flex flex-wrap gap-2 mb-4">
-        {/* <button
-          onClick={openAddModal}
-          className="px-3 py-2 bg-amber-700 text-white rounded flex items-center gap-1"
-        >
-          <Plus className="h-4 w-4" /> Add Material
-        </button> */}
-
-        {/* <button
-          onClick={() => router.push("/admin/materials/units")}
-          className="px-3 py-2 bg-gray-600 text-white rounded flex items-center gap-1"
-        >
-          <Layers className="h-4 w-4" /> Manage Units
-        </button> */}
-
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">{t("materials") || "Materials"}</h1>
+          <p className="text-sm text-gray-500 mt-1">{t("manageMaterials") || "Manage raw materials inventory"}</p>
+        </div>
         <button
-          onClick={handleExport}
-          className="px-3 py-2 bg-green-600 text-white rounded flex items-center gap-1"
+          onClick={() => router.push("/admin/materials/create")}
+          className="flex items-center justify-center px-4 py-2 bg-amber-700 text-white text-sm font-medium rounded-lg hover:bg-amber-800 focus:ring-4 focus:ring-amber-100 transition-all w-full sm:w-auto"
         >
-          <Download className="h-4 w-4" /> Export
+          <Plus className="w-4 h-4 mx-2" /> {t("addMaterial") || "Add Material"}
         </button>
-
-        <label className="px-3 py-2 bg-blue-600 text-white rounded cursor-pointer flex items-center gap-1">
-          <Upload className="h-4 w-4" /> Import
-          <input type="file" accept=".xlsx" hidden onChange={handleImport} />
-        </label>
       </div>
 
-      <DataGrid
-        rows={materials}
-        columns={columns}
-        getRowId={(row) => row.id}
-        disableRowSelectionOnClick
+      {/* Toolbar */}
+      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-col sm:flex-row gap-4 justify-between items-center">
+        <div className="relative w-full sm:w-96">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder={t("searchMaterials") || "Search materials..."}
+            className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <button className="flex items-center justify-center px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors w-full sm:w-auto">
+            <Filter className="w-4 h-4 mx-2 text-gray-500" />
+            {t("filter") || "Filter"}
+          </button>
+        </div>
+      </div>
+
+      {/* Content Area */}
+      <div className="md:bg-white rounded-xl md:shadow-sm md:border border-gray-200 overflow-hidden">
+        {/* Desktop View */}
+        <div className="hidden md:block" style={{ height: 600, width: "100%" }}>
+          <DataGrid
+            rows={filteredMaterials}
+            columns={columns}
+            getRowId={(row) => row.id}
+            disableRowSelectionOnClick
+            className="border-none"
+          />
+        </div>
+
+        {/* Mobile View */}
+        <div className="md:hidden grid grid-cols-1 gap-4">
+          {filteredMaterials.length === 0 ? (
+            <div className="text-center py-10 text-gray-500">
+              {t("noMaterialsFound") || "No materials found"}
+            </div>
+          ) : (
+            filteredMaterials.map((material) => (
+              <div key={material.id} className=" p-4 rounded-xl shadow-sm border border-gray-200">
+                <div className="flex justify-between items-start mb-2">
+                  <h3 className="text-sm font-semibold text-gray-900 truncate pr-2">{material.name}</h3>
+                  <button
+                    onClick={() => handleDelete(material.id)}
+                    className="p-1 text-gray-400 hover:text-red-600"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="space-y-1 text-xs text-gray-600">
+                  <div className="flex justify-between">
+                    <span>{t("unit") || "Unit"}:</span>
+                    <span className="font-medium">{material.unit || "-"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>{t("type") || "Type"}:</span>
+                    <span className="font-medium">{material.material_type || "-"}</span>
+                  </div>
+                  <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-100">
+                    <span className="font-bold text-gray-900">{t('{{price,currency}}', { price: material.price_per_gram })}/{material.unit}</span>
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2 py-0.5 rounded-full ${(material.stock_grams || 0) > 10 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                        {material.stock_grams} {t("g")}
+                      </span>
+                      <button
+                        onClick={() => handleOpenStockModal(material)}
+                        className="p-1 text-primary-600 bg-primary-50 rounded-full"
+                      >
+                        <PlusCircle size={16} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      <StockUpdateModal
+        isOpen={isStockModalOpen}
+        onClose={() => setIsStockModalOpen(false)}
+        onConfirm={handleAddStock}
+        title={t("addMaterialStock") || "Add Material Stock"}
+        itemName={selectedMaterial?.name || ""}
+        currentStock={selectedMaterial?.stock_grams}
       />
 
-      <div className="mt-4 p-3 bg-gray-100 rounded">
-        <p className="font-semibold">
-          Total Stock (grams):{" "}
-          <span className="text-blue-600">{totalStock}</span>
-        </p>
-        <p className="font-semibold">
-          Total Inventory Value:{" "}
-          <span className="text-green-600">{totalInventoryValue.toFixed(2)}</span>
-        </p>
-      </div>
-
-      {/* 🟡 Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
-          <div className="bg-white p-6 rounded shadow-lg w-[500px] max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-semibold mb-4">
-              {editingMaterial ? "Edit Material" : "Add Material"}
-            </h3>
-
-            <div className="space-y-3">
-              {/* Name */}
-              <label className="block text-sm font-medium mb-1">
-                Material Name
-              </label>
-              <input
-                type="text"
-                placeholder="Material Name"
-                className="border w-full p-2 rounded"
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
-              />
-
-              {/* Price */}
-              <label className="block text-sm font-medium mb-1">
-                Price per gram
-              </label>
-              <input
-                type="number"
-                placeholder="Price per gram"
-                className="border w-full p-2 rounded"
-                value={formData.price_per_gram}
-                onChange={(e) =>
-                  setFormData({ ...formData, price_per_gram: Number(e.target.value) })
-                }
-              />
-
-              {/* Stock */}
-              <label className="block text-sm font-medium mb-1">
-                Stock (grams)
-              </label>
-              <input
-                type="number"
-                placeholder="Stock in grams"
-                className="border w-full p-2 rounded"
-                value={formData.stock_grams}
-                onChange={(e) =>
-                  setFormData({ ...formData, stock_grams: Number(e.target.value) })
-                }
-              />
-
-              {/* Unit */}
-              <label className="block text-sm font-medium mb-1">
-                Unit
-              </label>
-              <select
-                className="border w-full p-2 rounded"
-                value={formData.unit ?? ''}
-                onChange={(e) =>
-                  setFormData({ ...formData, unit: e.target.value as Unit })
-                }
-              >
-                <option value="">Select Unit</option>
-                {units.map((u) => (
-                  <option key={u} value={u}>
-                    {u}
-                  </option>
-                ))}
-              </select>
-
-              {/* Supplier
-              <select
-                className="border w-full p-2 rounded"
-                value={formData.supplier_id ?? ''}
-                onChange={(e) =>
-                  setFormData({ ...formData, supplier_id: Number(e.target.value) })
-                }
-              >
-                <option value="">Select Supplier</option>
-                 {suppliers.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))} 
-              </select> */}
-
-              {/* Low stock */}
-              <label className="block text-sm font-medium mb-1">
-                Low Stock Threshold
-              </label>
-              <input
-                type="number"
-                placeholder="Low Stock Threshold"
-                className="border w-full p-2 rounded"
-                value={formData.low_stock_threshold ?? 0}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    low_stock_threshold: Number(e.target.value),
-                  })
-                }
-              />
-
-              {/* Material Type */}
-              <label className="block text-sm font-medium mb-1">
-                Material Type
-              </label>
-              <select
-                className="border w-full p-2 rounded"
-                value={formData.material_type}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    material_type: e.target.value as
-                      | "normal"
-                      | "special"
-                      | "other",
-                  })
-                }
-              >
-                <option value="normal">Normal</option>
-                <option value="special">Special</option>
-                <option value="other">Other</option>
-              </select>
-
-              {/* ✅ Products Checkboxes
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Select Products
-                </label>
-                <div className="grid grid-cols-2 gap-2 max-h-[150px] overflow-y-auto border p-2 rounded">
-                  {products.map((p) => {
-                    const isChecked = formData.products.includes(Number(p.id));
-                    return (
-                      <label key={p.id} className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={(e) => {
-                            const updated = e.target.checked
-                              ? [...formData.products, Number(p.id)]
-                              : formData.products.filter(
-                                (id) => id !== Number(p.id)
-                              );
-                            setFormData({ ...formData, products: updated });
-                          }}
-                        />
-                        {p.name_english || p.name_arabic || `Product #${p.id}`}
-                      </label>
-                    );
-                  })}
-                </div>
-              </div> */}
-            </div>
-
-            {/* Buttons */}
-            <div className="flex justify-end gap-2 mt-5">
-              <button
-                onClick={() => setShowModal(false)}
-                className="px-4 py-2 border rounded"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSave}
-                className="bg-green-600 text-white px-4 py-2 rounded"
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

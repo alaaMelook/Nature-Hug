@@ -1,0 +1,105 @@
+import { IProductServerRepository } from "@/data/repositories/server/iProductsRepository";
+
+export class ValidatePromoCode {
+    constructor(private repo = new IProductServerRepository()) { }
+
+    async execute(code: string, cartItems: { slug: string, quantity: number }[]) {
+        // 1. Get Promo Code
+        const promo = await this.repo.getPromoCode(code);
+        if (!promo || !promo.is_active) {
+            return { isValid: false, error: "Invalid promo code" };
+        }
+
+        // 2. Fetch Products to get prices and IDs
+        const products = [];
+        for (const item of cartItems) {
+            const product = await this.repo.viewBySlug(item.slug);
+            if (product) {
+                products.push({ ...product, quantity: item.quantity });
+            }
+        }
+
+        // 3. Calculate Discount
+        let totalDiscount = 0;
+
+        if (promo.all_cart) {
+            if (promo.percentage_off > 0) {
+                totalDiscount = products.reduce((acc, item) => acc + (item.price * item.quantity) * (promo.percentage_off / 100), 0);
+            }
+            else if (promo.is_bogo) {
+                // remove the cheapest counts in promo.bogo_get_count, but make sure there's enough products == promo.bogo_buy_count
+                const sortedProducts = [...products].sort((a, b) => a.price - b.price);
+                let cartCount = sortedProducts.reduce((acc, item) => acc + item.quantity, 0);
+                if (cartCount < promo.bogo_buy_count + promo.bogo_get_count) {
+                    return { isValid: false, error: "Not enough products in cart" };
+                }
+
+                totalDiscount = 0;
+                let i = promo.bogo_get_count;
+                for (const item of sortedProducts) {
+                    if (i === 0) break;
+                    else if (item.quantity > i) {
+                        totalDiscount += item.price * i;
+                        break;
+                    }
+                    else {
+                        totalDiscount += item.price * item.quantity;
+                        i -= item.quantity;
+                    }
+                }
+            }
+            else {
+                return { isValid: false, error: "Invalid promo code" };
+            }
+        }
+        else if ((promo.eligible_product_slugs?.length ?? 0) > 0) {
+            //  offers happens on certain items only!!
+
+            const eligibleProducts = products.filter(item => promo.eligible_product_slugs?.includes(item.slug));
+            if (eligibleProducts.length === 0) {
+                return { isValid: false, error: "No eligible products found" };
+            }
+            if (promo.percentage_off > 0) {
+                totalDiscount = eligibleProducts.reduce((acc, item) => acc + (item.price * item.quantity) * (promo.percentage_off / 100), 0);
+            }
+            else if (promo.is_bogo) {
+                // remove the cheapest counts in promo.bogo_get_count, but make sure there's enough products == promo.bogo_buy_count
+                // keep in mind that cheapest products can have multiple quantities
+
+                const sortedProducts = [...eligibleProducts].sort((a, b) => a.price - b.price);
+                let cartCount = sortedProducts.reduce((acc, item) => acc + item.quantity, 0);
+                if (cartCount < promo.bogo_buy_count + promo.bogo_get_count) {
+                    return { isValid: false, error: "Not enough products in cart" };
+                }
+                totalDiscount = 0;
+                let i = promo.bogo_get_count;
+                for (const item of sortedProducts) {
+                    if (i === 0) break;
+                    else if (item.quantity > i) {
+                        totalDiscount += item.price * i;
+                        break;
+                    }
+                    else {
+                        totalDiscount += item.price * item.quantity;
+                        i -= item.quantity;
+                    }
+                }
+
+
+            }
+            else {
+                return { isValid: false, error: "Invalid promo code" };
+            }
+        }
+        else {
+            return { isValid: false, error: "Invalid promo code" };
+        }
+
+        return {
+            isValid: true,
+            discount: totalDiscount,
+            promoCode: promo.code,
+            details: promo
+        };
+    }
+}

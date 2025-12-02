@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form';
 import { FcGoogle } from "react-icons/fc";
 import { useSupabase } from "@/ui/hooks/useSupabase";
 import { useTranslation } from "react-i18next";
+import { motion } from "framer-motion";
 
 export function LoginScreen() {
     const router = useRouter();
@@ -33,19 +34,22 @@ export function LoginScreen() {
     };
 
     return (
-        <div className="flex flex-col items-center align-items-center justify-center max-h-screen space-y-6 my-10">
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="flex flex-col items-center align-items-center justify-center max-h-screen space-y-6 my-10"
+        >
             <h1 className="text-2xl font-bold ">{t("login")}</h1>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col space-y-4 w-72">
+            <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col space-y-4 border p-4 w-96">
                 <input
                     {...register('email', {
                         required: t('emailRequired'),
-                        pattern: { value: /^\S+@\S+\.\S+$/, message: t('enterValidEmail') }
                     })}
                     type="email"
                     placeholder={t('email')}
-                    className="border p-2 rounded"
-                    disabled={loading}
+                    className="border p-2 rounded text-black"
                 />
                 {errors.email && <p className="text-sm text-red-600">{errors.email.message}</p>}
 
@@ -56,14 +60,12 @@ export function LoginScreen() {
                     })}
                     type="password"
                     placeholder={t('password')}
-                    className="border p-2 rounded"
-                    disabled={loading}
+                    className="border p-2 rounded text-black"
                 />
                 {errors.password && <p className="text-sm text-red-600">{errors.password.message}</p>}
 
                 <button
                     type="submit"
-                    disabled={loading}
                     className="px-6 py-3 bg-primary-900 text-white rounded-md cursor-pointer"
                 >
                     {loading ? t('loggingIn') : t('login')}
@@ -72,7 +74,6 @@ export function LoginScreen() {
                 <button
                     type="button"
                     onClick={() => router.push("/signup")}
-                    disabled={loading}
                     className="px-6 py-3 bg-primary-200 text-primary-900 rounded-md cursor-pointer"
                 >
                     {t('signup')}
@@ -87,7 +88,6 @@ export function LoginScreen() {
 
             <button
                 onClick={googleLogin}
-                disabled={loading}
                 className="cursor-pointer flex items-center justify-center w-fit gap-3 px-15 py-3 border border-gray-200 rounded-md bg-white shadow-sm hover:bg-gray-50 transition disabled:opacity-60 disabled:cursor-not-allowed"
             >
                 <FcGoogle className="text-xl" />
@@ -99,6 +99,6 @@ export function LoginScreen() {
                     {errorMsg}
                 </div>
             )}
-        </div>
+        </motion.div>
     );
 }

@@ -6,6 +6,8 @@ import { ProductMaterial } from "@/domain/entities/database/productMaterials";
 import { Review } from "@/domain/entities/database/review";
 import { Category } from "../entities/database/category";
 
+import { PromoCode } from "../entities/database/promoCode";
+
 export interface ProductRepository {
     viewDetailedBySlug(slug: string): Promise<ProductDetailView>;
 
@@ -28,4 +30,5 @@ export interface ProductRepository {
 
     addReview(review: Review): Promise<void>;
 
+    getPromoCode(code: string): Promise<PromoCode | null>;
 }

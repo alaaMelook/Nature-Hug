@@ -46,7 +46,7 @@ export default function OrdersScreen({ orders }: { orders: OrderSummaryView[] })
                                 </div>
                                 <p className="text-sm text-gray-500">
 
-                                    {t("ordersScreen.placed", { date: t('{{date, datetime}}', { date: new Date(order.created_at) }) })}
+                                    {t("ordersScreen.placed", { date: t("{{date, datetime}}", { date: new Date(order.created_at) }) })}
 
                                 </p>
                                 <p className="text-sm text-gray-600 mt-1">

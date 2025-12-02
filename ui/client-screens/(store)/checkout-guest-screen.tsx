@@ -15,6 +15,7 @@ import { CartItem } from "@/domain/entities/views/shop/productView";
 import { GetProductsData } from "@/ui/hooks/store/useProductsData";
 import { useTranslation, Trans } from "react-i18next";
 import { useCartProducts } from "@/ui/hooks/store/useCartProducts";
+import { initiatePaymobPayment } from "@/ui/hooks/store/usePaymobActions";
 
 type FormValues = Partial<Order> & {
     termsAccepted?: boolean;
@@ -48,6 +49,7 @@ export function CheckoutGuestScreen({ governorates }: { governorates: Governorat
         setValue('guest_address.governorate_slug', selectedGovernorate?.slug);
     }, [selectedGovernorate, setValue]);
 
+
     const onSubmit = async (data: FormValues) => {
         // extra validation: governorate
         if (!selectedGovernorate) {
@@ -71,9 +73,10 @@ export function CheckoutGuestScreen({ governorates }: { governorates: Governorat
             discount_total: cart.discount,
             shipping_total: selectedGovernorate?.fees ?? 0,
             tax_total: 0.00,
-            payment_method: selectedPayment === 'cod' ? 'Cash on Delivery' : 'unpaid',
+            payment_method: selectedPayment === 'cod' ? 'Cash on Delivery' : 'Online Card',
             grand_total: getCartTotal(selectedGovernorate?.fees ?? 0),
-            guest_address: { ...(data.guest_address || {}), governorate_slug: selectedGovernorate?.slug }
+            guest_address: { ...(data.guest_address || {}), governorate_slug: selectedGovernorate?.slug },
+            promo_code_id: cart.promoCodeId
         };
         const result = await createOrder(orderPayload, products);
         if (result.error) {
@@ -81,6 +84,44 @@ export function CheckoutGuestScreen({ governorates }: { governorates: Governorat
             setLoading(false);
             return;
         } else if (result.order_id) {
+            if (selectedPayment === 'paymob') {
+                try {
+                    const responseData = await initiatePaymobPayment(
+                        result.order_id,
+                        orderPayload.grand_total!,
+                        {
+                            first_name: data.guest_name?.split(' ')[0] || 'Guest',
+                            last_name: data.guest_name?.split(' ').slice(1).join(' ') || 'NA',
+                            email: data.guest_email!,
+                            phone: data.guest_phone!,
+                        },
+                        {
+                            street: data.guest_address?.address || 'NA',
+                            city: selectedGovernorate?.name_en || 'NA',
+                            country: 'EG',
+                            state: selectedGovernorate?.name_en || 'NA',
+                        }
+                    );
+
+                    if (responseData.error) {
+                        toast.error(responseData.error);
+                        setLoading(false);
+                        return;
+                    }
+
+                    if (responseData.iframeUrl) {
+                        await clearCart();
+                        window.location.href = responseData.iframeUrl;
+                        return;
+                    }
+                } catch (err) {
+                    console.error(err);
+                    toast.error("Failed to initiate payment");
+                    setLoading(false);
+                    return;
+                }
+            }
+
             toast.success('Order created successfully!');
             // navigate first then clear cart to avoid any cart-empty watchers redirecting away
             router.push(`/orders/${result.order_id}`);

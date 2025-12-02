@@ -7,6 +7,7 @@ import { Review } from "@/domain/entities/database/review";
 import { ProductDetailView } from "@/domain/entities/views/shop/productDetailView";
 import { ProductView } from "@/domain/entities/views/shop/productView";
 import { ProductRepository } from "@/domain/repositories/productRepository";
+import { PromoCode } from "@/domain/entities/database/promoCode";
 
 
 export class IProductServerRepository implements ProductRepository {
@@ -188,6 +189,26 @@ export class IProductServerRepository implements ProductRepository {
         console.log("[IProductRepository] getBySlug result:", { data, status, statusText });
         if (error) {
             console.error("[IProductRepository] getBySlug error:", error);
+            throw error;
+        }
+        return data;
+    }
+
+    async getPromoCode(code: string): Promise<PromoCode | null> {
+        console.log("[IProductRepository] getPromoCode called with code:", code);
+        const supabase = await createSupabaseServerClient();
+        const { data, error } = await supabase
+            .schema('store')
+            .from('promo_codes')
+            .select('*')
+            .eq('code', code)
+            .single();
+
+        if (error) {
+            if (error.code === 'PGRST116') { // Not found
+                return null;
+            }
+            console.error("[IProductRepository] getPromoCode error:", error);
             throw error;
         }
         return data;

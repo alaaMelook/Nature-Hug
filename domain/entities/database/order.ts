@@ -23,5 +23,7 @@ export interface Order {
     grand_total: number;
     customer_id: number | null;
     shipping_address_id?: number | null;
+    promo_code_id?: number | null;
     items?: Partial<OrderItem>[];
+    awb: string | null;
 }

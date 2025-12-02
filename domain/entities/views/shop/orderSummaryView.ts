@@ -12,10 +12,12 @@ export interface OrderSummaryView {
     payment_status: string;
     item_count: number;
     order_items: OrderSummaryItems[];
+    awb: string | null;
 }
 
 export interface OrderSummaryItems {
     name_en: string;
+    name_ar: string;
     quantity: number;
     slug: string;
     image: string | null;

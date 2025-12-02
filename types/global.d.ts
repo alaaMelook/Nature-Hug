@@ -12,6 +12,7 @@ declare global {
     }
     interface Cart {
         promoCode: string | null;
+        promoCodeId: number | null;
         discount: number;
         total: number;
         netTotal: number;
@@ -27,6 +28,8 @@ declare global {
         getCartTotal: (shipping: number) => number;
         getCartCount: () => number;
         loading: boolean;
+        applyPromoCode: (code: string) => Promise<void>;
+        removePromoCode: () => Promise<void>;
     }
 
     type SupabaseAuthContextType = {
@@ -50,4 +53,9 @@ declare global {
     type LangKey = 'en' | 'ar';
     type LangChangeListener = (lang: LangKey) => void;
     type MemberRole = 'admin' | 'moderator' | 'user';
+    interface SidebarStats {
+        productsWarningCount: { products: number, reviews: number };
+        materialsWarningCount: number;
+        ordersWarningCount: { pending: number, processing: number };
+    }
 }

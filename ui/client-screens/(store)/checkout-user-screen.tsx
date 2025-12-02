@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 import { Loader2, MapPin, Plus, CreditCard, Banknote, CheckCircle2, Phone, User, Mail, Edit2 } from "lucide-react";
 import { useCartProducts } from "@/ui/hooks/store/useCartProducts";
 import { useTranslation, Trans } from "react-i18next";
+import { initiatePaymobPayment } from "@/ui/hooks/store/usePaymobActions";
 
 
 type FormValues = Partial<Order> & {
@@ -25,7 +26,7 @@ export function CheckoutUserScreen({ governorates, user }: { governorates: Gover
     const [selectedGovernorate, setSelectedGovernorate] = useState<Governorate | null>(user?.address?.[0]?.governorate ?? null);
     // index of selected saved address, or 'new' to create another
     const [selectedAddressIndex, setSelectedAddressIndex] = useState<number | 'new'>(user?.address && user.address.length > 0 ? 0 : 'new');
-    const { cart, getCartTotal, loading: cartLoading, clearCart } = useCart();
+    const { cart, getCartTotal, clearCart } = useCart();
     const [loading, setLoading] = useState(false);
     const [selectedPayment, setSelectedPayment] = useState<'cod' | 'paymob'>('cod');
     const { register, handleSubmit, formState: { errors }, setValue, setError } = useForm<FormValues>({
@@ -56,6 +57,7 @@ export function CheckoutUserScreen({ governorates, user }: { governorates: Gover
             setSelectedGovernorate(addrGov ?? null);
         }
     }, [selectedGovernorate, setValue, selectedAddressIndex, user]);
+
 
 
     const onSubmit = async (data: FormValues) => {
@@ -98,8 +100,9 @@ export function CheckoutUserScreen({ governorates, user }: { governorates: Gover
             discount_total: cart.discount,
             shipping_total: selectedGovernorate?.fees ?? 0,
             tax_total: 0.00,
-            payment_method: selectedPayment === 'cod' ? 'Cash on Delivery' : 'unpaid',
+            payment_method: selectedPayment === 'cod' ? 'Cash on Delivery' : 'Online Card',
             grand_total: getCartTotal(selectedGovernorate?.fees ?? 0),
+            promo_code_id: cart.promoCodeId
         };
         const result = await createOrder(payload, products);
         if (result.error) {
@@ -107,6 +110,44 @@ export function CheckoutUserScreen({ governorates, user }: { governorates: Gover
             setLoading(false);
             return;
         } else if (result.order_id) {
+            if (selectedPayment === 'paymob') {
+                try {
+                    const responseData = await initiatePaymobPayment(
+                        result.order_id,
+                        payload.grand_total!,
+                        {
+                            first_name: user.name.split(' ')[0],
+                            last_name: user.name.split(' ').slice(1).join(' ') || 'NA',
+                            email: user.email,
+                            phone: user.phone[0] || data.guest_phone!,
+                        },
+                        {
+                            street: payload.guest_address?.address || user.address?.[selectedAddressIndex as number]?.address || 'NA',
+                            city: selectedGovernorate?.name_en || 'NA',
+                            country: 'EG',
+                            state: selectedGovernorate?.name_en || 'NA',
+                        }
+                    );
+
+                    if (responseData.error) {
+                        toast.error(responseData.error);
+                        setLoading(false);
+                        return;
+                    }
+
+                    if (responseData.iframeUrl) {
+                        await clearCart();
+                        window.location.href = responseData.iframeUrl;
+                        return;
+                    }
+                } catch (err) {
+                    console.error(err);
+                    toast.error("Failed to initiate payment");
+                    setLoading(false);
+                    return;
+                }
+            }
+
             toast.success('Order created successfully!');
             // navigate first, then clear the cart to avoid in-place redirect from cart-empty watchers
             router.push(`/orders/${result.order_id}`);

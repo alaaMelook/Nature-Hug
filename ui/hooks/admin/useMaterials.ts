@@ -2,16 +2,13 @@
 import { Material } from "@/domain/entities/database/material";
 import { AddMaterial, DeleteMaterial, UpdateMaterial } from "@/domain/use-case/admin/materials";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
-
 
 export async function insertMaterials(form: Partial<Material>[]) {
     try {
-        form.forEach(async (material) => {
-
+        await Promise.all(form.map(async (material) => {
             await new AddMaterial().execute(material);
             console.log("Material inserted:", material);
-        });
+        }));
     } catch (error) {
         console.error("Error inserting material:", error);
         return { error: 'Insert failed' };
@@ -25,8 +22,11 @@ export async function deleteMaterial(id: number) {
         await new DeleteMaterial().execute(id);
         revalidatePath('/admin', 'layout');
         return { success: true };
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error deleting material:", error);
+        if (error?.code === '23503') {
+            return { error: 'DELETE_RESTRICTED' };
+        }
         return { error: 'Delete failed' };
     }
 }
@@ -37,9 +37,7 @@ export async function updateMaterial(material: Partial<Material>) {
         revalidatePath('/admin', 'layout');
         return { success: true };
     } catch (error) {
-        console.error("Error deleting material:", error);
+        console.error("Error updating material:", error);
         return { error: 'Update failed' };
     }
-
-
 }

@@ -47,12 +47,9 @@ export default function LanguageSwitcher({ }: {}) {
             aria-label="Switch language"
         >
             <Globe className="sm:w-7 sm:h-7 w-4 h-4  text-primary-700" />
-            <span className={`text-primary-800 text-sm sm:mt-1 ${fontClass}`}>
+            <span className={`text-primary-800 text-sm sm:mt-1 ${fontClass}`} suppressHydrationWarning>
                 {currentLocale === "en" ? "العربية" : "English"}
             </span>
         </button>
     );
-
-
-
 };

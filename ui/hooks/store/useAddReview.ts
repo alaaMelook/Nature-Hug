@@ -1,14 +1,14 @@
 'use server'
 
-import {revalidatePath} from 'next/cache'
-import {Review} from "@/domain/entities/database/review";
-import {GetCurrentUser} from "@/domain/use-case/shop/getCurrentUser";
-import {AddProductReview} from "@/domain/use-case/shop/addProductReview";
+import { revalidatePath } from 'next/cache'
+import { Review } from "@/domain/entities/database/review";
+import { GetCurrentUser } from "@/domain/use-case/store/getCurrentUser";
+import { AddProductReview } from "@/domain/use-case/store/addProductReview";
 
 
 export async function postReview(data: { product: number; rating: number; comment: string }) {
     const user = await new GetCurrentUser().execute();
-    if (!user) return {error: 'User not logged in'};
+    if (!user) return { error: 'User not logged in' };
 
 
     const review: Partial<Review> = {
@@ -20,10 +20,10 @@ export async function postReview(data: { product: number; rating: number; commen
         // status: 'pending',
         // created_at: '',
     };
-    if (!review.product_id) return {error: 'Product not found'};
+    if (!review.product_id) return { error: 'Product not found' };
 
     await new AddProductReview().execute(review);
 
     revalidatePath('/', 'layout');
-    return {success: true};
+    return { success: true };
 }

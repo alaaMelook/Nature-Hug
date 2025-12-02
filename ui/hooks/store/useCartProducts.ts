@@ -9,7 +9,7 @@ import { useEffect, useMemo, useState } from "react";
 const productCache = new Map<string, ProductView>();
 
 export function useCartProducts() {
-    const { cart } = useCart();
+    const { cart, loading: cartLoading } = useCart();
     const { i18n } = useTranslation();
     const lang = i18n.language as LangKey;
     const [isLoading, setIsLoading] = useState(true);
@@ -75,5 +75,5 @@ export function useCartProducts() {
         }).filter((item): item is CartItem => item !== null);
     }, [cart.items, _, lang]); // Re-calculate when cart items change, cache updates (tick), or language changes
 
-    return { data: products, isLoading: isLoading && products.length < cart.items.length };
+    return { data: products, isLoading: cartLoading || (isLoading && products.length < cart.items.length) };
 }

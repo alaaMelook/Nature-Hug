@@ -14,6 +14,7 @@ import Link from "next/link";
 import { ProductDetailView } from "@/domain/entities/views/shop/productDetailView";
 import { ProductView } from "@/domain/entities/views/shop/productView";
 import SimilarProductsScroll from "@/ui/components/store/SimilarProductsScroll";
+import { motion } from "framer-motion";
 
 
 export function ProductDetailScreen({ initProduct: product, similarProducts = [] }: { initProduct: ProductDetailView | null, similarProducts?: ProductView[] }) {
@@ -47,17 +48,30 @@ export function ProductDetailScreen({ initProduct: product, similarProducts = []
 
     ];
     return (
-        <div
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
             className={`flex flex-col items-center w-full bg-white`}> {/* Changed bg-primary-10 to bg-white for a clean look */}
             <div
                 className={`lg:flex lg:space-x-16 px-6 p-10 max-w-7xl w-full`}> {/* Increased horizontal space and padding */}
-                <div className="lg:w-1/2 flex flex-col items-center mb-6 lg:mb-0 p-4">
+                <motion.div
+                    initial={{ x: -50, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ delay: 0.2, duration: 0.5 }}
+                    className="lg:w-1/2 flex flex-col items-center mb-6 lg:mb-0 p-4"
+                >
                     <div className="w-full max-w-md h-96 relative">
                         <ImageCarousel images={[product.image ?? '', ...(product.gallery || [])]} />
                     </div>
-                </div>
+                </motion.div>
 
-                <div className="lg:w-1/2 flex flex-col justify-start lg:pt-0 pt-8"> {/* Adjusted padding */}
+                <motion.div
+                    initial={{ x: 50, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ delay: 0.4, duration: 0.5 }}
+                    className="lg:w-1/2 flex flex-col justify-start lg:pt-0 pt-8"
+                > {/* Adjusted padding */}
                     <p className="text-sm font-semibold text-gray-500 uppercase mb-1">{product.category_name?.toUpperCase()}</p> {/* Added category/type for style */}
                     <h1 className="text-4xl lg:text-5xl font-serif font-semibold text-primary-900 mb-2 leading-tight"> {/* Changed font and color to primary-900 */}
                         {product.name}
@@ -141,7 +155,7 @@ export function ProductDetailScreen({ initProduct: product, similarProducts = []
                     {/* Stock Info - Moved to a less prominent location */}
 
 
-                </div>
+                </motion.div>
             </div>
 
             {/* Reviews Section - Dark Background */}
@@ -194,7 +208,7 @@ export function ProductDetailScreen({ initProduct: product, similarProducts = []
                     </div>
                 </div>
             </div>
-        </div>
+        </motion.div>
     );
 }
 

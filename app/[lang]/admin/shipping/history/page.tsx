@@ -1,5 +1,5 @@
-import { ShipmentHistoryScreen } from "@/ui/client-screens/admin/shipment-history-screen";
+import { ShipmentHistoryScreen } from '@/ui/client-screens/admin/shipment-history-screen';
 
-export default function ShipmentHistoryPage() {
-    return <ShipmentHistoryScreen />;
+export default function page() {
+    return <ShipmentHistoryScreen />
 }

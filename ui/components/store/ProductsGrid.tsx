@@ -8,6 +8,7 @@ import { ProductView } from "@/domain/entities/views/shop/productView";
 import Skeleton from "@mui/material/Skeleton";
 import { StarRating } from "./StarRating";
 import { useTranslation } from "react-i18next";
+import { motion, AnimatePresence } from "framer-motion";
 
 export function ProductCard({
     product,
@@ -19,7 +20,12 @@ export function ProductCard({
     const router = useRouter();
     const { t } = useTranslation();
     return (
-        <div
+        <motion.div
+            layout
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{ duration: 0.3 }}
             className={`bg-white rounded-xl shadow-lg overflow-hidden flex flex-col transform transition-transform duration-300 hover:scale-105 cursor-pointer ${compact ? "p-3" : ""
                 }`}
             onClick={() => router.push(`/products/${product.slug}`)}
@@ -87,7 +93,7 @@ export function ProductCard({
                     )}
                 </div>
             </div>
-        </div>
+        </motion.div>
     );
 }
 
@@ -144,16 +150,19 @@ export default function ProductGrid({
                 </div>
             ) : (products?.length ?? 0) > 0 ? (
                 <>
-                    <div
+                    <motion.div
+                        layout
                         className={`grid ${recent
                             ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4"
                             : "grid-cols-2 sm:grid-cols-2 md:grid-cols-3"
                             } gap-6`}
                     >
-                        {visibleProducts.map((product) => (
-                            <ProductCard key={product.slug} product={product} compact={!recent} />
-                        ))}
-                    </div>
+                        <AnimatePresence>
+                            {visibleProducts.map((product) => (
+                                <ProductCard key={product.slug} product={product} compact={!recent} />
+                            ))}
+                        </AnimatePresence>
+                    </motion.div>
 
                     {/* Pagination Controls — hidden when recent */}
                     {!recent && totalPages > 1 && (

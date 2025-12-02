@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getShipmentDetailsAction } from '@/ui/hooks/admin/orders';
+import { getShipmentDetailsAction } from '@/ui/hooks/admin/shippingActions';
 import { useTranslation } from 'react-i18next';
 import { Loader2 } from 'lucide-react';
 

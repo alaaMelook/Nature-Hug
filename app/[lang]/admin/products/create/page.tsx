@@ -1,5 +1,5 @@
 import { GetAllImages } from "@/domain/use-case/admin/images";
-import { GetAllCategories } from "@/domain/use-case/shop/getAllCategories";
+import { GetAllCategories } from "@/domain/use-case/store/getAllCategories";
 import { CreateProductForm } from "@/ui/client-screens/admin/create-product-form";
 
 export default async function CreateProductPage() {

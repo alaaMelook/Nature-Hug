@@ -12,17 +12,22 @@ import {
   ChevronDown,
   Menu,
   X,
-  Truck
+  Truck,
+  Tag
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
-export default function AdminSidebar() {
+export default function AdminSidebar({
+  stats
+}: {
+  stats?: SidebarStats
+}) {
   const pathname = usePathname();
   const { t } = useTranslation();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
-
+  console.log(stats);
   const navigation = [
     { name: t("dashboard"), href: "/admin", icon: Home },
     { name: t("customers"), href: "/admin/customers", icon: Users },
@@ -30,6 +35,7 @@ export default function AdminSidebar() {
       name: t("materials"),
       href: "/admin/materials",
       icon: BrickWall,
+      badge: stats?.materialsWarningCount,
       // submenu: [
       //   { name: t("materials"), href: "/admin/materials", icon: BrickWall },
       //   // { name: "BOM", href: "/admin/materials/bom", icon: List },
@@ -45,22 +51,29 @@ export default function AdminSidebar() {
       name: t("products"),
       href: "/admin/products",
       icon: Package,
+      badge: (stats?.productsWarningCount?.products ?? 0) + (stats?.productsWarningCount?.reviews ?? 0),
       submenu: [
-        { name: t("allProducts"), href: "/admin/products" },
+        { name: t("allProducts"), href: "/admin/products", badge: stats?.productsWarningCount?.products },
         { name: t("categories"), href: "/admin/products/categories" },
-        { name: t("reviews"), href: "/admin/products/reviews" },
+        { name: t("reviews"), href: "/admin/products/reviews", badge: stats?.productsWarningCount?.reviews },
       ]
     },
     {
       name: t("orders"),
       href: "/admin/orders",
       icon: ShoppingCart,
+      badge: (stats?.ordersWarningCount?.pending ?? 0) + (stats?.ordersWarningCount?.processing ?? 0),
       // submenu: [
       //   { name: t("allOrders"), href: "/admin/orders" },
       //   // { name: "Missed Orders", href: "/admin/orders/missed" },
       // { name: "Blocked Numbers", href: "/admin/orders/blocked" },
       // { name: "Blocked OTP", href: "/admin/orders/blocked-otp" },
       // ]
+    },
+    {
+      name: "Promo Codes",
+      href: "/admin/promo-codes",
+      icon: Tag,
     },
     // {
     //   name: t("finance"),
@@ -89,7 +102,6 @@ export default function AdminSidebar() {
       icon: Truck,
       submenu: [
         { name: t("dashboard"), href: "/admin/shipping/" },
-        // { name: t("orders"), href: "/admin/shipping/orders" },
         { name: t("history"), href: "/admin/shipping/history" },
       ]
     },
@@ -131,7 +143,14 @@ export default function AdminSidebar() {
               {item.icon && <item.icon className={`mx-3 h-5 w-5 ${isActive ? "text-primary-600" : "text-gray-400 group-hover:text-gray-500"}`} />}
               <span>{item.name}</span>
             </div>
-            <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`} />
+            <div className="flex items-center gap-2">
+              {item.badge > 0 && !isExpanded && (
+                <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+                  {item.badge}
+                </span>
+              )}
+              <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`} />
+            </div>
           </button>
 
           <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isExpanded ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"}`}>
@@ -146,7 +165,15 @@ export default function AdminSidebar() {
                       : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"}`}
                 >
                   {subItem.icon && <subItem.icon className="h-4 w-4 mx-2 opacity-70" />}
-                  {subItem.name}
+                  <div className="flex items-center gap-2">
+
+                    {subItem.name}
+                    {subItem.badge > 0 && (
+                      <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+                        {subItem.badge}
+                      </span>
+                    )}
+                  </div>
                 </Link>
               ))}
             </div>
@@ -158,14 +185,22 @@ export default function AdminSidebar() {
     return (
       <Link
         href={item.href}
-        className={`group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg mb-1 transition-all duration-200
+        className={`group flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-lg mb-1 transition-all duration-200
           ${pathname === item.href
             ? "bg-primary-600 text-white shadow-md shadow-primary-200"
             : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"}`}
         onClick={() => setIsMobileOpen(false)}
       >
-        <item.icon className={`mx-3 h-5 w-5 ${pathname === item.href ? "text-white" : "text-gray-400 group-hover:text-gray-500"}`} />
-        {item.name}
+        <div className="flex items-center">
+          <item.icon className={`mx-3 h-5 w-5 ${pathname === item.href ? "text-white" : "text-gray-400 group-hover:text-gray-500"}`} />
+          {item.name}
+        </div>
+        {item.badge > 0 && (
+          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center
+            ${pathname === item.href ? "bg-white text-primary-600" : "bg-red-500 text-white"}`}>
+            {item.badge}
+          </span>
+        )}
       </Link>
     );
   };
@@ -210,6 +245,7 @@ export default function AdminSidebar() {
           </div>
           {navigation.map((item) => (
             <NavItem key={item.name} item={item} />
+
           ))}
         </nav>
 

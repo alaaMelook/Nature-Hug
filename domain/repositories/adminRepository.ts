@@ -2,6 +2,7 @@ import { Material } from "@/domain/entities/database/material";
 import { DashboardMetricsView } from "@/domain/entities/views/admin/dashboardMetricsView";
 import { OrderDetailsView } from "@/domain/entities/views/admin/orderDetailsView";
 import { ProductAdminView } from "@/domain/entities/views/admin/productAdminView";
+import { ReviewAdminView } from "@/domain/entities/views/admin/reviewAdminView";
 import { Category } from "../entities/database/category";
 
 export interface AdminRepository {
@@ -32,4 +33,12 @@ export interface AdminRepository {
     getAllImages(): Promise<{ image: any, url: string }[]>;
 
     deleteImage(imageName: string): Promise<void>;
+
+    seeAllReviews(): Promise<ReviewAdminView[]>;
+
+    updateReviewStatus(reviewId: number, status: 'approved' | 'rejected' | 'pending'): Promise<void>;
+
+    getAllPromoCodes(): Promise<any[]>;
+    createPromoCode(promoCode: any): Promise<void>;
+    deletePromoCode(id: number): Promise<void>;
 }

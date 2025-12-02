@@ -10,7 +10,8 @@ import { ImageSelector } from "@/ui/components/admin/imageSelector";
 import { MaterialSelector } from "@/ui/components/admin/materialSelector";
 import { Material } from "@/domain/entities/database/material";
 import { Category } from "@/domain/entities/database/category";
-import { ChevronDown, ChevronUp, Trash2, Plus, Image as ImageIcon, Box } from "lucide-react";
+import { ChevronDown, ChevronUp, Trash2, Plus, Image as ImageIcon, Box, Check, ChevronRight, ChevronLeft } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface CreateProductFormProps {
     initialImages: { image: any; url: string }[];
@@ -30,7 +31,19 @@ const CollapsibleSection = ({ title, children, defaultOpen = false }: { title: s
                 <span className="font-semibold text-gray-700">{title}</span>
                 {isOpen ? <ChevronUp size={20} className="text-gray-500" /> : <ChevronDown size={20} className="text-gray-500" />}
             </button>
-            {isOpen && <div className="p-4 border-t">{children}</div>}
+            <AnimatePresence>
+                {isOpen && (
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
+                    >
+                        <div className="p-4 border-t">{children}</div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };
@@ -42,8 +55,18 @@ export function CreateProductForm({ initialImages, initialCategories }: CreatePr
     const [showMaterialSelector, setShowMaterialSelector] = useState(false);
     const [activeImageField, setActiveImageField] = useState<'main' | number | null>(null); // 'main' for product, number for variant index
     const [activeMaterialField, setActiveMaterialField] = useState<'main' | number | null>(null);
+    const [currentStep, setCurrentStep] = useState(0);
+    const [lastStepChangeTime, setLastStepChangeTime] = useState(0);
 
-    const { register, control, handleSubmit, setValue, watch, formState: { errors } } = useForm<ProductAdminView & { image_url: string }>({
+    const steps = [
+        { id: 'essentials', title: t("stepEssentials") },
+        { id: 'media', title: t("stepMedia") },
+        { id: 'pricing', title: t("stepPricing") },
+        { id: 'variants', title: t("stepVariants") },
+        { id: 'extras', title: t("stepExtras") },
+    ];
+
+    const { register, control, handleSubmit, setValue, watch, trigger, formState: { errors } } = useForm<ProductAdminView & { image_url: string }>({
         defaultValues: {
             variants: [],
             gallery: [],
@@ -87,6 +110,16 @@ export function CreateProductForm({ initialImages, initialCategories }: CreatePr
         // 2. Conditional Validation
         const hasVariants = cleanedData.variants.length > 0;
         const mainPriceSet = cleanedData.price > 0;
+
+        // Prevent premature submission (e.g. via Enter key on earlier steps)
+        if (currentStep !== steps.length - 1) {
+            return;
+        }
+
+        // Prevent accidental double-click submission when transitioning to the last step
+        if (Date.now() - lastStepChangeTime < 1000) {
+            return;
+        }
 
         if (!mainPriceSet) {
             if (!hasVariants) {
@@ -160,166 +193,273 @@ export function CreateProductForm({ initialImages, initialCategories }: CreatePr
         return name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
     };
 
+    const nextStep = async () => {
+        let isValid = false;
+        if (currentStep === 0) {
+            isValid = await trigger(["name_en", "slug", "category_id"]);
+        } else {
+            isValid = true;
+        }
+
+        if (isValid) {
+            setCurrentStep((prev) => Math.min(prev + 1, steps.length - 1));
+            setLastStepChangeTime(Date.now());
+            window.scrollTo(0, 0);
+        }
+    };
+
+    const prevStep = () => {
+        setCurrentStep((prev) => Math.max(prev - 1, 0));
+        window.scrollTo(0, 0);
+    };
+
+    const stepVariants = {
+        hidden: { opacity: 0, x: 20 },
+        visible: { opacity: 1, x: 0, transition: { duration: 0.3 } },
+        exit: { opacity: 0, x: -20, transition: { duration: 0.2 } }
+    };
+
     return (
-        <div className="max-w-7xl mx-auto p-4">
-            <div className="flex justify-between items-center mb-6">
-                <h1 className=" text-xl md:text-3xl font-bold text-gray-800">{t("createProduct")}</h1>
-                <button
-                    onClick={handleSubmit(onSubmit)}
-                    className="fixed bottom-10 right-10 z-50 md:flex md:max-w-7xl  p-4 md:px-6 md:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md font-medium"
-                >
-                    {t("saveProduct")}
-                </button>
+        <div className="max-w-5xl mx-auto p-4 pb-24">
+            {/* Stepper */}
+            <div className="mb-8">
+                <div className="flex items-center justify-between relative">
+                    <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-full h-1 -z-10" />
+                    {steps.map((step, index) => (
+                        <div key={step.id} className="flex flex-col items-center px-2">
+                            <motion.div
+                                initial={false}
+                                animate={{
+                                    backgroundColor: index <= currentStep ? "#2563eb" : "#e5e7eb",
+                                    color: index <= currentStep ? "#ffffff" : "#6b7280",
+                                    scale: index === currentStep ? 1.1 : 1
+                                }}
+                                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors`}
+                            >
+                                {index < currentStep ? <Check size={16} /> : index + 1}
+                            </motion.div>
+                            <span className={`text-xs mt-2 font-medium ${index <= currentStep ? "text-primary-600" : "text-gray-500"} hidden md:block`}>
+                                {step.title}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+                <div className="md:hidden text-center mt-4 font-semibold text-gray-800">
+                    {steps[currentStep].title}
+                </div>
             </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Left Column: Main Info & Variants (1/2 width) */}
-                <div className="space-y-6">
-                    {/* Basic Info Card */}
-                    <div className="bg-white rounded-xl shadow-sm border p-6">
-                        <h2 className="text-lg md:text-xl font-semibold mb-4 text-gray-800">{t("basicInformation")}</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">{t("nameEn")}</label>
-                                <input
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                <AnimatePresence mode="wait">
+                    {/* Step 1: Essentials */}
+                    {currentStep === 0 && (
+                        <motion.div
+                            key="step1"
+                            variants={stepVariants}
+                            initial="hidden"
+                            animate="visible"
+                            exit="exit"
+                            className="space-y-6"
+                        >
+                            <div className="bg-white rounded-xl shadow-sm border p-6">
+                                <h2 className="text-lg md:text-xl font-semibold mb-4 text-gray-800">{t("basicInformation")}</h2>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">{t("nameEn")} <span className="text-red-500">*</span></label>
+                                        <input
+                                            {...register("name_en", {
+                                                required: true,
+                                                onChange: (e) => setValue("slug", generateSlug(e.target.value))
+                                            })}
+                                            className={`w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border ${errors.name_en ? 'border-red-500' : ''}`}
+                                        />
+                                        {errors.name_en && <span className="text-xs text-red-500">{t("errors.required", { field: t("nameEn") })}</span>}
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">{t("nameAr")}</label>
+                                        <input {...register("name_ar")} className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">{t("slug")} <span className="text-red-500">*</span></label>
+                                        <input placeholder="Auto-generated" {...register("slug", { required: true })} className="text-sm w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">{t("category")} <span className="text-red-500">*</span></label>
+                                        <select
+                                            {...register("category_id", { required: true })}
+                                            className={`w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border ${errors.category_id ? 'border-red-500' : ''}`}
+                                        >
+                                            <option value="">{t("selectCategory")}</option>
+                                            {initialCategories.map((category) => (
+                                                <option key={category.id} value={category.id}>
+                                                    {i18n.language === 'ar'
+                                                        ? (category.name_ar && category.name_en ? `${category.name_ar} (${category.name_en})` : (category.name_ar || category.name_en))
+                                                        : (category.name_en && category.name_ar ? `${category.name_en} (${category.name_ar})` : (category.name_en || category.name_ar))}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">{t("skinType")}</label>
+                                        <input {...register("skin_type")} className="text-sm w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" placeholder="e.g. Oily, Dry" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">{t("productType")}</label>
+                                        <input {...register("product_type")} className="text-sm w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" placeholder="e.g. Cream, Serum" />
+                                    </div>
+                                </div>
+                            </div>
 
-                                    {...register("name_en", {
-                                        required: true,
-                                        onChange: (e) => setValue("slug", generateSlug(e.target.value))
-                                    })}
-                                    className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border"
-                                />
+                            <div className="bg-white rounded-xl shadow-sm border p-6">
+                                <h2 className="text-lg md:text-xl font-semibold mb-4 text-gray-800">{t("fullDescription")}</h2>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">English</label>
+                                        <textarea {...register("description_en")} rows={6} className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Arabic</label>
+                                        <textarea {...register("description_ar")} rows={6} className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" />
+                                    </div>
+                                </div>
                             </div>
-                            <div>
-                                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">{t("nameAr")}</label>
-                                <input {...register("name_ar")} className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" />
-                            </div>
-                            <div>
-                                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">{t("slug")}</label>
-                                <input placeholder="Auto-generated" {...register("slug", { required: true })} className="text-sm w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" />
-                            </div>
-                            <div>
-                                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">{t("category")}</label>
-                                <select
-                                    {...register("category_id", { required: true })}
-                                    className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border"
-                                >
-                                    <option value="">{t("selectCategory")}</option>
-                                    {initialCategories.map((category) => (
-                                        <option key={category.id} value={category.id}>
-                                            {i18n.language === 'ar'
-                                                ? (category.name_ar && category.name_en ? `${category.name_ar} (${category.name_en})` : (category.name_ar || category.name_en))
-                                                : (category.name_en && category.name_ar ? `${category.name_en} (${category.name_ar})` : (category.name_en || category.name_ar))}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">{t("skinType")}</label>
-                                <input {...register("skin_type")} className="text-sm w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" placeholder="e.g. Oily, Dry" />
-                            </div>
-                            <div>
-                                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">{t("productType")}</label>
-                                <input {...register("product_type")} className="text-sm w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" placeholder="e.g. Cream, Serum" />
-                            </div>
-                        </div>
 
-                    </div>
+                            <div className="bg-white rounded-xl shadow-sm border p-6">
+                                <h2 className="text-lg md:text-xl font-semibold mb-4 text-gray-800">{t("highlights")}</h2>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">English</label>
+                                        <textarea {...register("highlight_en")} rows={3} className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" placeholder="Short highlight..." />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Arabic</label>
+                                        <textarea {...register("highlight_ar")} rows={3} className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" placeholder="Short highlight..." />
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
 
-                    {/* Media */}
-                    <div className="bg-white rounded-xl shadow-sm border p-6">
-                        <h2 className="text-lg md:text-xl font-semibold mb-4 text-gray-800 flex items-center gap-2">
-                            <ImageIcon size={18} /> {t("media")}
-                        </h2>
-                        <div className="grid grid-cols-3 gap-2">
-                            {watch("gallery")?.map((url, index) => (
-                                <div key={index} className="relative aspect-square rounded-lg overflow-hidden border group">
-                                    <img src={url} alt="Product" className="w-full h-full object-cover" />
+                    {/* Step 2: Media */}
+                    {currentStep === 1 && (
+                        <motion.div
+                            key="step2"
+                            variants={stepVariants}
+                            initial="hidden"
+                            animate="visible"
+                            exit="exit"
+                            className="space-y-6"
+                        >
+                            <div className="bg-white rounded-xl shadow-sm border p-6">
+                                <h2 className="text-lg md:text-xl font-semibold mb-4 text-gray-800 flex items-center gap-2">
+                                    <ImageIcon size={18} /> {t("media")}
+                                </h2>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    <AnimatePresence>
+                                        {watch("gallery")?.map((url, index) => (
+                                            <motion.div
+                                                key={url}
+                                                initial={{ opacity: 0, scale: 0.8 }}
+                                                animate={{ opacity: 1, scale: 1 }}
+                                                exit={{ opacity: 0, scale: 0.8 }}
+                                                className="relative aspect-square rounded-lg overflow-hidden border group"
+                                            >
+                                                <img src={url} alt="Product" className="w-full h-full object-cover" />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const newGallery = watch("gallery").filter((_, i) => i !== index);
+                                                        setValue("gallery", newGallery);
+                                                        if (watch("image_url") === url) setValue("image_url", newGallery[0] || "");
+                                                    }}
+                                                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                >
+                                                    <Trash2 size={12} />
+                                                </button>
+                                            </motion.div>
+                                        ))}
+                                    </AnimatePresence>
                                     <button
                                         type="button"
-                                        onClick={() => {
-                                            const newGallery = watch("gallery").filter((_, i) => i !== index);
-                                            setValue("gallery", newGallery);
-                                            if (watch("image_url") === url) setValue("image_url", newGallery[0] || "");
-                                        }}
-                                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        onClick={() => { setActiveImageField('main'); setShowImageSelector(true); }}
+                                        className="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50 transition-colors"
                                     >
-                                        <Trash2 size={12} />
+                                        <Plus size={24} />
+                                        <span className="text-xs mt-1">{t("add")}</span>
                                     </button>
                                 </div>
-                            ))}
-                            <button
-                                type="button"
-                                onClick={() => { setActiveImageField('main'); setShowImageSelector(true); }}
-                                className="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50 transition-colors"
-                            >
-                                <Plus size={24} />
-                                <span className="text-xs mt-1">{t("add")}</span>
-                            </button>
-                        </div>
-                    </div>
-                    {/* Collapsible Sections for Details */}
-                    <>
-                        <CollapsibleSection title={t("fullDescription")} defaultOpen>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">English</label>
-                                    <textarea {...register("description_en")} rows={6} className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" />
+                            </div>
+                        </motion.div>
+                    )}
+
+                    {/* Step 3: Pricing & Inventory */}
+                    {currentStep === 2 && (
+                        <motion.div
+                            key="step3"
+                            variants={stepVariants}
+                            initial="hidden"
+                            animate="visible"
+                            exit="exit"
+                            className="space-y-6"
+                        >
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="bg-white rounded-xl shadow-sm border p-6">
+                                    <h2 className="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2">
+                                        {t("inventoryPricing")}
+                                    </h2>
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">{t("price")} (EGP)</label>
+                                            <input type="number" {...register("price")} className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">{t("stock")}</label>
+                                            <input type="number" {...register("stock")} className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">{t("discountPercentage")}</label>
+                                            <input type="number" {...register("discount")} className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" />
+                                        </div>
+                                    </div>
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Arabic</label>
-                                    <textarea {...register("description_ar")} rows={6} className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" />
+
+                                {/* Profitability Analysis */}
+                                <div className="bg-white rounded-xl shadow-sm border p-6">
+                                    <h2 className="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2">
+                                        {t("profitability")}
+                                    </h2>
+                                    <div className="space-y-3">
+                                        <div className="flex justify-between items-center text-sm">
+                                            <span className="text-gray-600">{t("sellingPrice")}:</span>
+                                            <span className="font-medium">{watch("price") || 0} EGP</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-sm">
+                                            <span className="text-gray-600">{t("totalMaterialCost")}:</span>
+                                            <span className="font-medium text-red-600">-{calculateTotalCost()} EGP</span>
+                                        </div>
+                                        <div className="border-t pt-2 mt-2">
+                                            <div className="flex justify-between items-center">
+                                                <span className="font-bold text-gray-800">{t("netProfit")}:</span>
+                                                <span className={`font-bold ${(Number(watch("price") || 0) - Number(calculateTotalCost())) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                    {(Number(watch("price") || 0) - Number(calculateTotalCost())).toFixed(2)} EGP
+                                                </span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-xs mt-1">
+                                                <span className="text-gray-500">{t("profitMargin")}:</span>
+                                                <span className={`${(Number(watch("price") || 0) > 0 ? ((Number(watch("price") || 0) - Number(calculateTotalCost())) / Number(watch("price") || 0)) * 100 : 0) >= 20 ? 'text-green-600' : 'text-orange-500'}`}>
+                                                    {Number(watch("price") || 0) > 0
+                                                        ? (((Number(watch("price") || 0) - Number(calculateTotalCost())) / Number(watch("price") || 0)) * 100).toFixed(1)
+                                                        : 0}%
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                        </CollapsibleSection>
 
-                        <CollapsibleSection title={t("highlights")}>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">English</label>
-                                    <textarea {...register("highlight_en")} rows={3} className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" placeholder="Short highlight..." />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Arabic</label>
-                                    <textarea {...register("highlight_ar")} rows={3} className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" placeholder="Short highlight..." />
-                                </div>
-                            </div>
-                        </CollapsibleSection>
-
-
-                    </>
-
-
-
-                </div>
-
-                {/* Right Column: Pricing, Stock, Media (1/2 width) */}
-                <div className="space-y-6">
-                    {/* Pricing & Stock */}
-                    <div className="bg-white rounded-xl shadow-sm border p-6">
-                        <h2 className="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2">
-                            <Box size={18} /> {t("inventoryPricing")}
-                        </h2>
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">{t("price")} (EGP)</label>
-                                <input type="number" {...register("price")} className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">{t("stock")}</label>
-                                <input type="number" {...register("stock")} className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">{t("discountPercentage")}</label>
-                                <input type="number" {...register("discount")} className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" />
-                            </div>
-                        </div>
-                    </div>
-                    <>
-                        <CollapsibleSection title={t("materialsIngredients")}>
-                            <div className="space-y-4">
-                                <div className="flex justify-between items-center">
-                                    <h3 className="text-sm font-medium text-gray-700">{t("costCalculation")}</h3>
+                            <div className="bg-white rounded-xl shadow-sm border p-6">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className="text-lg font-semibold text-gray-800">{t("materialsIngredients")}</h3>
                                     <button
                                         type="button"
                                         onClick={() => { setActiveMaterialField('main'); setShowMaterialSelector(true); }}
@@ -341,18 +481,25 @@ export function CreateProductForm({ initialImages, initialCategories }: CreatePr
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y">
-                                                {materialFields.map((field: any, index) => (
-                                                    <tr key={field.id}>
-                                                        <td className="px-4 py-2">{field.material_name || `ID: ${field.material_id}`}</td>
-                                                        <td className="px-4 py-2 text-right">{field.grams_used || field.amount} {field.material_unit || 'g'}</td>
-                                                        <td className="px-4 py-2 text-right">{((field.grams_used || field.amount || 0) * (field.material_price || 0)).toFixed(2)}</td>
-                                                        <td className="px-4 py-2 text-right">
-                                                            <button type="button" onClick={() => removeMaterial(index)} className="text-red-500 hover:text-red-700">
-                                                                <Trash2 size={16} />
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                ))}
+                                                <AnimatePresence>
+                                                    {materialFields.map((field: any, index) => (
+                                                        <motion.tr
+                                                            key={field.id}
+                                                            initial={{ opacity: 0 }}
+                                                            animate={{ opacity: 1 }}
+                                                            exit={{ opacity: 0 }}
+                                                        >
+                                                            <td className="px-4 py-2">{field.material_name || `ID: ${field.material_id}`}</td>
+                                                            <td className="px-4 py-2 text-right">{field.grams_used || field.amount} {field.material_unit || 'g'}</td>
+                                                            <td className="px-4 py-2 text-right">{((field.grams_used || field.amount || 0) * (field.material_price || 0)).toFixed(2)}</td>
+                                                            <td className="px-4 py-2 text-right">
+                                                                <button type="button" onClick={() => removeMaterial(index)} className="text-red-500 hover:text-red-700">
+                                                                    <Trash2 size={16} />
+                                                                </button>
+                                                            </td>
+                                                        </motion.tr>
+                                                    ))}
+                                                </AnimatePresence>
                                                 <tr className="bg-gray-50 font-bold">
                                                     <td className="px-4 py-2" colSpan={2}>{t("totalEstimatedCost")}</td>
                                                     <td className="px-4 py-2 text-right">{calculateTotalCost()} EGP</td>
@@ -364,190 +511,258 @@ export function CreateProductForm({ initialImages, initialCategories }: CreatePr
                                 ) : (
                                     <p className="text-sm text-gray-500 italic text-center py-4">{t("noMaterialsListed")}</p>
                                 )}
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">{t("publicIngredientsListEn")}</label>
-                                        <textarea {...register("faq_en.ingredients")} rows={3} className="w-full border-gray-300 rounded-lg shadow-sm p-2 border" placeholder="Water, Glycerin, etc." />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">{t("publicIngredientsListAr")}</label>
-                                        <textarea {...register("faq_ar.ingredients")} rows={3} className="w-full border-gray-300 rounded-lg shadow-sm p-2 border" placeholder="ماء، جلسرين، إلخ." />
-                                    </div>
-                                </div>
                             </div>
-                        </CollapsibleSection>
+                        </motion.div>
+                    )}
 
-                        <CollapsibleSection title={t("bestFor")}>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <textarea {...register("faq_en.best_for")} placeholder="English..." rows={3} className="w-full border-gray-300 rounded-lg shadow-sm p-2 border" />
-                                <textarea {...register("faq_ar.best_for")} placeholder="Arabic..." rows={3} className="w-full border-gray-300 rounded-lg shadow-sm p-2 border" />
-                            </div>
-                        </CollapsibleSection>
-
-                        <CollapsibleSection title={t("precautions")}>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <textarea {...register("faq_en.precautions")} placeholder="English..." rows={3} className="w-full border-gray-300 rounded-lg shadow-sm p-2 border" />
-                                <textarea {...register("faq_ar.precautions")} placeholder="Arabic..." rows={3} className="w-full border-gray-300 rounded-lg shadow-sm p-2 border" />
-                            </div>
-                        </CollapsibleSection>
-                    </>
-                    {/* Variants Section */}
-                    <div className="bg-white rounded-xl shadow-sm border p-6">
-                        <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-xl font-semibold text-gray-800">
-                                {t("variants")} <span className="text-sm font-normal text-gray-500 ml-2">(Fields here override main product details)</span>
-                            </h2>
-                            <button
-                                type="button"
-                                onClick={() => appendVariant({ name_en: "", price: 0, stock: 0, gallery: [] } as any)}
-                                className="text-sm bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1 rounded-lg font-medium transition-colors flex items-center gap-1"
-                            >
-                                <Plus size={16} /> {t("addVariant")}
-                            </button>
-                        </div>
-
-                        <div className="space-y-4">
-                            {variantFields.map((field, index) => (
-                                <div key={field.id} className="border rounded-lg p-4 bg-gray-50 relative">
+                    {/* Step 4: Variants */}
+                    {currentStep === 3 && (
+                        <motion.div
+                            key="step4"
+                            variants={stepVariants}
+                            initial="hidden"
+                            animate="visible"
+                            exit="exit"
+                            className="space-y-6"
+                        >
+                            <div className="bg-white rounded-xl shadow-sm border p-6">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h2 className="text-xl font-semibold text-gray-800">
+                                        {t("variants")} <span className="text-sm font-normal text-gray-500 ml-2">(Fields here override main product details)</span>
+                                    </h2>
                                     <button
                                         type="button"
-                                        onClick={() => removeVariant(index)}
-                                        className="absolute top-2 right-2 text-gray-400 hover:text-red-500 transition-colors"
+                                        onClick={() => appendVariant({ name_en: "", price: 0, stock: 0, gallery: [] } as any)}
+                                        className="text-sm bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1 rounded-lg font-medium transition-colors flex items-center gap-1"
                                     >
-                                        <Trash2 size={18} />
+                                        <Plus size={16} /> {t("addVariant")}
                                     </button>
+                                </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                        <div>
-                                            <label className="text-xs font-medium text-gray-500 uppercase">{t("variantNameEn")}</label>
-                                            <input
-                                                {...register(`variants.${index}.name_en` as const, {
-                                                    required: true,
-                                                    onChange: (e) => setValue(`variants.${index}.slug`, generateSlug(e.target.value))
-                                                })}
-                                                className="w-full border-gray-300 rounded shadow-sm p-1.5 border text-sm"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="text-xs font-medium text-gray-500 uppercase">{t("variantNameAr")}</label>
-                                            <input {...register(`variants.${index}.name_ar` as const)} className="w-full border-gray-300 rounded shadow-sm p-1.5 border text-sm" />
-                                        </div>
-                                        <div>
-                                            <label className="text-xs font-medium text-gray-500 uppercase">{t("slug")}</label>
-                                            <input {...register(`variants.${index}.slug` as const)} className="w-full border-gray-300 rounded shadow-sm p-1.5 border text-sm" placeholder="Auto-generated" />
-                                        </div>
-
-                                        <div>
-                                            <label className="text-xs font-medium text-gray-500 uppercase">{t("price")}</label>
-                                            <div className="flex items-center gap-2">
-                                                <input type="number" {...register(`variants.${index}.price` as const)} className="w-full border-gray-300 rounded shadow-sm p-1.5 border text-sm" />
-                                                {watch(`variants.${index}.materials`)?.length > 0 && (
-                                                    <span className="text-xs text-gray-500 whitespace-nowrap" title="Total Material Cost">
-                                                        (Cost: {watch(`variants.${index}.materials`).reduce((acc, m) => acc + ((m.grams_used || 0) * (m.material_price || 0)), 0).toFixed(2)})
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <label className="text-xs font-medium text-gray-500 uppercase">{t("stock")}</label>
-                                            <input type="number" {...register(`variants.${index}.stock` as const)} className="w-full border-gray-300 rounded shadow-sm p-1.5 border text-sm" />
-                                        </div>
-                                        <div>
-                                            <label className="text-xs font-medium text-gray-500 uppercase">{t("discountPercentage")}</label>
-                                            <input type="number" {...register(`variants.${index}.discount` as const)} className="w-full border-gray-300 rounded shadow-sm p-1.5 border text-sm" />
-                                        </div>
-                                        <div>
-                                            <label className="text-xs font-medium text-gray-500 uppercase">{t("distinguisher")}</label>
-                                            <input {...register(`variants.${index}.type` as const)} className="w-full border-gray-300 rounded shadow-sm p-1.5 border text-sm" placeholder="e.g. blue, small, 50 ml, ..." />
-                                        </div>
-                                    </div>
-
-                                    {/* Variant Gallery */}
-                                    <div className="mb-4">
-                                        <label className="text-xs font-medium text-gray-500 uppercase mb-2 block">{t("images")}</label>
-                                        <div className="flex gap-2 flex-wrap">
-                                            {watch(`variants.${index}.gallery`)?.map((url, imgIndex) => (
-                                                <img key={imgIndex} src={url} alt="Variant" className="h-12 w-12 object-cover rounded border" />
-                                            ))}
-                                            <button
-                                                type="button"
-                                                onClick={() => { setActiveImageField(index); setShowImageSelector(true); }}
-                                                className="h-12 w-12 flex items-center justify-center border-2 border-dashed border-gray-300 rounded hover:border-blue-500 hover:text-blue-500 bg-white"
+                                <div className="space-y-4">
+                                    <AnimatePresence>
+                                        {variantFields.map((field, index) => (
+                                            <motion.div
+                                                key={field.id}
+                                                initial={{ opacity: 0, y: 20 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                exit={{ opacity: 0, y: -20 }}
+                                                className="border rounded-lg p-4 bg-gray-50 relative"
                                             >
-                                                <ImageIcon size={16} />
-                                            </button>
-                                        </div>
-                                    </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeVariant(index)}
+                                                    className="absolute top-2 right-2 text-gray-400 hover:text-red-500 transition-colors"
+                                                >
+                                                    <Trash2 size={18} />
+                                                </button>
 
-                                    <CollapsibleSection title={t("advancedDetails")} defaultOpen={false}>
-                                        <div className="space-y-4">
-                                            {/* Description Override */}
-                                            <div>
-                                                <h4 className="text-xs font-bold text-gray-700 uppercase mb-2">{t("descriptionOverride")}</h4>
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                                     <div>
-                                                        <label className="block text-xs font-medium text-gray-500 uppercase mb-1">English</label>
-                                                        <textarea {...register(`variants.${index}.description_en` as const)} rows={3} className="w-full border-gray-300 rounded shadow-sm p-1.5 border text-sm" placeholder="Override main description..." />
+                                                        <label className="text-xs font-medium text-gray-500 uppercase">{t("variantNameEn")}</label>
+                                                        <input
+                                                            {...register(`variants.${index}.name_en` as const, {
+                                                                required: true,
+                                                                onChange: (e) => setValue(`variants.${index}.slug`, generateSlug(e.target.value))
+                                                            })}
+                                                            className="w-full border-gray-300 rounded shadow-sm p-1.5 border text-sm"
+                                                        />
                                                     </div>
                                                     <div>
-                                                        <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Arabic</label>
-                                                        <textarea {...register(`variants.${index}.description_ar` as const)} rows={3} className="w-full border-gray-300 rounded shadow-sm p-1.5 border text-sm" placeholder="Override main description..." />
+                                                        <label className="text-xs font-medium text-gray-500 uppercase">{t("variantNameAr")}</label>
+                                                        <input {...register(`variants.${index}.name_ar` as const)} className="w-full border-gray-300 rounded shadow-sm p-1.5 border text-sm" />
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-xs font-medium text-gray-500 uppercase">{t("slug")}</label>
+                                                        <input {...register(`variants.${index}.slug` as const)} className="w-full border-gray-300 rounded shadow-sm p-1.5 border text-sm" placeholder="Auto-generated" />
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="text-xs font-medium text-gray-500 uppercase">{t("price")}</label>
+                                                        <div className="flex items-center gap-2">
+                                                            <input type="number" {...register(`variants.${index}.price` as const)} className="w-full border-gray-300 rounded shadow-sm p-1.5 border text-sm" />
+                                                            {watch(`variants.${index}.materials`)?.length > 0 && (
+                                                                <div className="flex flex-col text-[10px] leading-tight ml-2">
+                                                                    <span className="text-gray-500">Cost: {watch(`variants.${index}.materials`).reduce((acc, m) => acc + ((m.grams_used || 0) * (m.material_price || 0)), 0).toFixed(2)}</span>
+                                                                    <span className={(Number(watch(`variants.${index}.price`) || 0) - watch(`variants.${index}.materials`).reduce((acc, m) => acc + ((m.grams_used || 0) * (m.material_price || 0)), 0)) >= 0 ? "text-green-600 font-bold" : "text-red-600 font-bold"}>
+                                                                        Profit: {(Number(watch(`variants.${index}.price`) || 0) - watch(`variants.${index}.materials`).reduce((acc, m) => acc + ((m.grams_used || 0) * (m.material_price || 0)), 0)).toFixed(2)}
+                                                                        ({(Number(watch(`variants.${index}.price`) || 0) > 0 ? ((Number(watch(`variants.${index}.price`) || 0) - watch(`variants.${index}.materials`).reduce((acc, m) => acc + ((m.grams_used || 0) * (m.material_price || 0)), 0)) / Number(watch(`variants.${index}.price`) || 0)) * 100 : 0).toFixed(0)}%)
+                                                                    </span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-xs font-medium text-gray-500 uppercase">{t("stock")}</label>
+                                                        <input type="number" {...register(`variants.${index}.stock` as const)} className="w-full border-gray-300 rounded shadow-sm p-1.5 border text-sm" />
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-xs font-medium text-gray-500 uppercase">{t("discountPercentage")}</label>
+                                                        <input type="number" {...register(`variants.${index}.discount` as const)} className="w-full border-gray-300 rounded shadow-sm p-1.5 border text-sm" />
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-xs font-medium text-gray-500 uppercase">{t("distinguisher")}</label>
+                                                        <input {...register(`variants.${index}.type` as const)} className="w-full border-gray-300 rounded shadow-sm p-1.5 border text-sm" placeholder="e.g. blue, small, 50 ml, ..." />
                                                     </div>
                                                 </div>
-                                            </div>
 
-                                            {/* Variant Materials */}
-                                            <div>
-                                                <div className="flex justify-between items-center mb-2">
-                                                    <h4 className="text-xs font-bold text-gray-700 uppercase">{t("materials")}</h4>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => { setActiveMaterialField(index); setShowMaterialSelector(true); }}
-                                                        className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
-                                                    >
-                                                        <Plus size={14} /> {t("addMaterial")}
-                                                    </button>
+                                                {/* Variant Gallery */}
+                                                <div className="mb-4">
+                                                    <label className="text-xs font-medium text-gray-500 uppercase mb-2 block">{t("images")}</label>
+                                                    <div className="flex gap-2 flex-wrap">
+                                                        {watch(`variants.${index}.gallery`)?.map((url, imgIndex) => (
+                                                            <img key={imgIndex} src={url} alt="Variant" className="h-12 w-12 object-cover rounded border" />
+                                                        ))}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => { setActiveImageField(index); setShowImageSelector(true); }}
+                                                            className="h-12 w-12 flex items-center justify-center border-2 border-dashed border-gray-300 rounded hover:border-blue-500 hover:text-blue-500 bg-white"
+                                                        >
+                                                            <ImageIcon size={16} />
+                                                        </button>
+                                                    </div>
                                                 </div>
 
-                                                {watch(`variants.${index}.materials`)?.length > 0 ? (
-                                                    <div className="flex flex-wrap gap-2">
-                                                        {watch(`variants.${index}.materials`)?.map((mat, mIndex) => (
-                                                            <div key={mIndex} className="flex items-center gap-2 bg-white border rounded-full px-3 py-1 text-xs shadow-sm">
-                                                                <span className="font-medium text-gray-700">{mat.material_name || `ID: ${mat.material_id}`}</span>
-                                                                <span className="text-gray-500 border-l pl-2 ml-1">{mat.grams_used} {mat.measurement_unit}</span>
+                                                <CollapsibleSection title={t("advancedDetails")} defaultOpen={false}>
+                                                    <div className="space-y-4">
+                                                        {/* Description Override */}
+                                                        <div>
+                                                            <h4 className="text-xs font-bold text-gray-700 uppercase mb-2">{t("descriptionOverride")}</h4>
+                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                <div>
+                                                                    <label className="block text-xs font-medium text-gray-500 uppercase mb-1">English</label>
+                                                                    <textarea {...register(`variants.${index}.description_en` as const)} rows={3} className="w-full border-gray-300 rounded shadow-sm p-1.5 border text-sm" placeholder="Override main description..." />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Arabic</label>
+                                                                    <textarea {...register(`variants.${index}.description_ar` as const)} rows={3} className="w-full border-gray-300 rounded shadow-sm p-1.5 border text-sm" placeholder="Override main description..." />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Variant Materials */}
+                                                        <div>
+                                                            <div className="flex justify-between items-center mb-2">
+                                                                <h4 className="text-xs font-bold text-gray-700 uppercase">{t("materials")}</h4>
                                                                 <button
                                                                     type="button"
-                                                                    onClick={() => {
-                                                                        const current = watch(`variants.${index}.materials`);
-                                                                        setValue(`variants.${index}.materials`, current.filter((_, i) => i !== mIndex));
-                                                                    }}
-                                                                    className="text-red-400 hover:text-red-600 ml-1"
+                                                                    onClick={() => { setActiveMaterialField(index); setShowMaterialSelector(true); }}
+                                                                    className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
                                                                 >
-                                                                    <Trash2 size={12} />
+                                                                    <Plus size={14} /> {t("addMaterial")}
                                                                 </button>
                                                             </div>
-                                                        ))}
+
+                                                            {watch(`variants.${index}.materials`)?.length > 0 ? (
+                                                                <div className="flex flex-wrap gap-2">
+                                                                    {watch(`variants.${index}.materials`)?.map((mat, mIndex) => (
+                                                                        <div key={mIndex} className="flex items-center gap-2 bg-white border rounded-full px-3 py-1 text-xs shadow-sm">
+                                                                            <span className="font-medium text-gray-700">{mat.material_name || `ID: ${mat.material_id}`}</span>
+                                                                            <span className="text-gray-500 border-l pl-2 ml-1">{mat.grams_used} {mat.measurement_unit}</span>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => {
+                                                                                    const current = watch(`variants.${index}.materials`);
+                                                                                    setValue(`variants.${index}.materials`, current.filter((_, i) => i !== mIndex));
+                                                                                }}
+                                                                                className="text-red-400 hover:text-red-600 ml-1"
+                                                                            >
+                                                                                <Trash2 size={12} />
+                                                                            </button>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            ) : (
+                                                                <div className="text-xs text-gray-400 italic border border-dashed rounded p-2 text-center">
+                                                                    {t("noMaterialsForVariant")}
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </div>
-                                                ) : (
-                                                    <div className="text-xs text-gray-400 italic border border-dashed rounded p-2 text-center">
-                                                        {t("noMaterialsForVariant")}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </CollapsibleSection>
+                                                </CollapsibleSection>
+                                            </motion.div>
+                                        ))}
+                                    </AnimatePresence>
+                                    {variantFields.length === 0 && (
+                                        <p className="text-sm text-gray-500 text-center py-4 border-2 border-dashed rounded-lg">
+                                            {t("noVariantsAdded")}
+                                        </p>
+                                    )}
                                 </div>
-                            ))}
-                            {variantFields.length === 0 && (
-                                <p className="text-sm text-gray-500 text-center py-4 border-2 border-dashed rounded-lg">
-                                    {t("noVariantsAdded")}
-                                </p>
-                            )}
-                        </div>
-                    </div>
+                            </div>
+                        </motion.div>
+                    )}
+
+                    {/* Step 5: Extra Details */}
+                    {currentStep === 4 && (
+                        <motion.div
+                            key="step5"
+                            variants={stepVariants}
+                            initial="hidden"
+                            animate="visible"
+                            exit="exit"
+                            className="space-y-6"
+                        >
+                            <div className="bg-white rounded-xl shadow-sm border p-6">
+                                <h2 className="text-lg md:text-xl font-semibold mb-4 text-gray-800">{t("stepExtras")}</h2>
+                                <div className="space-y-6">
+
+
+                                    <div>
+                                        <h3 className="text-sm font-medium text-gray-700 mb-2">{t("bestFor")}</h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <textarea {...register("faq_en.best_for")} placeholder="English..." rows={3} className="w-full border-gray-300 rounded-lg shadow-sm p-2 border" />
+                                            <textarea {...register("faq_ar.best_for")} placeholder="Arabic..." rows={3} className="w-full border-gray-300 rounded-lg shadow-sm p-2 border" />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <h3 className="text-sm font-medium text-gray-700 mb-2">{t("precautions")}</h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <textarea {...register("faq_en.precautions")} placeholder="English..." rows={3} className="w-full border-gray-300 rounded-lg shadow-sm p-2 border" />
+                                            <textarea {...register("faq_ar.precautions")} placeholder="Arabic..." rows={3} className="w-full border-gray-300 rounded-lg shadow-sm p-2 border" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* Navigation Buttons */}
+                <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 z-40 flex justify-between items-center max-w-5xl mx-auto w-full shadow-lg md:shadow-none md:relative md:bg-transparent md:border-t-0 md:p-0 md:mt-8">
+                    <button
+                        type="button"
+                        onClick={prevStep}
+                        disabled={currentStep === 0}
+                        className={`flex items-center px-6 py-2 rounded-lg font-medium transition-colors ${currentStep === 0 ? "text-gray-300 cursor-not-allowed" : "text-gray-600 hover:bg-gray-100"
+                            }`}
+                    >
+                        <ChevronLeft size={20} className="mr-1" />
+                        {t("previous")}
+                    </button>
+
+                    {currentStep < steps.length - 1 ? (
+                        <button
+                            type="button"
+                            onClick={nextStep}
+                            className="flex items-center px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-md transition-colors"
+                        >
+                            {t("next")}
+                            <ChevronRight size={20} className="ml-1" />
+                        </button>
+                    ) : (
+                        <button
+                            type="submit"
+                            className="flex items-center px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium shadow-md transition-colors"
+                        >
+                            {t("finish")}
+                            <Check size={20} className="ml-1" />
+                        </button>
+                    )}
                 </div>
             </form>
+
             {showImageSelector && (
                 <ImageSelector
                     images={initialImages}

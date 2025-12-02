@@ -5,7 +5,8 @@ import AdminHeader from "@/ui/components/admin/AdminHeader";
 import { ReactNode } from "react";
 
 import { ViewMember } from "@/domain/use-case/admin/members";
-import { GetCurrentUser } from "@/domain/use-case/shop/getCurrentUser";
+import { GetCurrentUser } from "@/domain/use-case/store/getCurrentUser";
+import { GetSidebarStats } from "@/domain/use-case/admin/getSidebarStats";
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
 
@@ -19,10 +20,11 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     // console.log(member);
     if (!member) redirect("/");
 
+    const stats = await new GetSidebarStats().execute();
 
     return (
         <div className="min-h-screen bg-gray-50 flex">
-            <AdminSidebar />
+            <AdminSidebar stats={stats} />
             <div className="flex-1 flex flex-col min-w-0 transition-all duration-300 ease-in-out">
                 <AdminHeader adminUser={member} />
                 <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-y-auto">

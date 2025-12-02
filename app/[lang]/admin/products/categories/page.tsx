@@ -1,4 +1,4 @@
-import { GetAllCategories } from "@/domain/use-case/shop/getAllCategories";
+import { GetAllCategories } from "@/domain/use-case/store/getAllCategories";
 import CategoriesScreen from "@/ui/client-screens/admin/categories-screen";
 
 export default async function CategoriesPage() {

@@ -39,4 +39,61 @@ export class Orders {
             throw error;
         }
     }
+
+    async getById(id: string) {
+        try {
+            return await this.repo.getOrderById(id);
+        } catch (error) {
+            console.error("[getOrderById] Error in execute:", error);
+            throw error;
+        }
+    }
+
+    async accept(id: string) {
+        return this.update({ order_id: Number(id), order_status: 'processing' });
+    }
+
+    async reject(id: string) {
+        return this.update({ order_id: Number(id), order_status: 'declined' });
+    }
+
+    async cancel(id: string) {
+        return this.update({ order_id: Number(id), order_status: 'cancelled' });
+    }
+
+    async markAsOutForDelivery(order: OrderDetailsView, shipmentData: any) {
+        // 1. Create Shipment
+        const { shipmentService } = await import("@/lib/services/shipmentService");
+
+        // Ensure cityId is a number
+        const cityId = Number(shipmentData.cityId);
+        if (isNaN(cityId)) {
+            throw new Error("Invalid City ID");
+        }
+
+        const shipmentPayload = {
+            ...shipmentData,
+            cityId: cityId
+        };
+
+        const shipmentResult = await shipmentService.createShipment(shipmentPayload);
+
+        if (!shipmentResult) {
+            throw new Error("Failed to create shipment: No response");
+        }
+
+        // 2. Update Order with AWB and Status
+        let awb = order.awb;
+        let shipmentId = order.shipment_id;
+
+        if (shipmentResult.AWB) awb = shipmentResult.AWB;
+        if (shipmentResult.ShipmentID) shipmentId = shipmentResult.ShipmentID;
+
+        return this.update({
+            order_id: order.order_id,
+            order_status: 'out for delivery',
+            awb: awb,
+            shipment_id: shipmentId
+        });
+    }
 }

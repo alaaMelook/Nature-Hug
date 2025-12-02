@@ -1,5 +1,5 @@
 import React from "react";
-import { ViewRecentProducts } from "@/domain/use-case/shop/viewRecentProducts";
+import { ViewRecentProducts } from "@/domain/use-case/store/viewRecentProducts";
 import { HomeScreen } from "@/ui/client-screens/(store)/home-screen";
 
 

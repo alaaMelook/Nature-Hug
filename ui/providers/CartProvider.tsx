@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import lz from 'lz-string';
 import { ProductView } from "@/domain/entities/views/shop/productView";
 import { useTranslation } from "react-i18next";
+import { validatePromoCodeAction } from "@/ui/hooks/store/usePromoCodeActions";
 
 // Note: Ensure 'js-cookie' is installed
 const Cookies = require("js-cookie");
@@ -21,7 +22,7 @@ export const useCart = () => {
 
 export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
     // Initializing totals to 0 and items as empty array
-    const emptyCart: Cart = { discount: 0, netTotal: 0, total: 0, items: [], promoCode: null };
+    const emptyCart: Cart = { discount: 0, netTotal: 0, total: 0, items: [], promoCode: null, promoCodeId: null };
     const [cart, setCart] = useState<Cart>(emptyCart);
     const [loading, setLoading] = useState(true);
     const [isClient, setIsClient] = useState(false);
@@ -56,6 +57,29 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
         }
     }, [cart, loading, isClient]);
 
+    // --- Promo Code Re-validation ---
+    useEffect(() => {
+        const revalidate = async () => {
+            if (cart.promoCode && cart.items.length > 0) {
+                const result = await validatePromoCodeAction(cart.promoCode, cart.items);
+                if (result.isValid && 'discount' in result) {
+                    setCart(prev => ({
+                        ...prev,
+                        discount: result.discount,
+                        promoCodeId: result.details?.id ?? null
+                    }));
+                } else {
+                    setCart(prev => ({ ...prev, discount: 0, promoCodeId: null }));
+                }
+            } else if (cart.items.length === 0 && cart.discount > 0) {
+                setCart(prev => ({ ...prev, discount: 0, promoCodeId: null }));
+            }
+        };
+
+        const timeout = setTimeout(revalidate, 500);
+        return () => clearTimeout(timeout);
+    }, [cart.items, cart.promoCode]);
+
     // --- Cart Actions (Simplified Logic) ---
 
     const addToCart = async (product: ProductView, quantity: number) => {
@@ -64,22 +88,31 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
                 (item) => item.slug === product.slug
             );
 
+            const currentQty = existingItem ? existingItem.quantity : 0;
+            const newQty = currentQty + quantity;
+
+            if (newQty > product.stock) {
+                toast.error(t('stockLimitExceeded', { product: product.name, stock: product.stock }));
+                return prevCart;
+            }
+
             let newItems: { slug: string, quantity: number }[];
 
             if (existingItem) {
                 // Item exists: update quantity
-                updateQuantity(product, existingItem.quantity + quantity);
-                return prevCart; // Early return as updateQuantity already updates the state
+                // We don't call updateQuantity here to avoid double validation/toast, just update state directly
+                newItems = prevCart.items.map((item) =>
+                    item.slug === product.slug ? { ...item, quantity: newQty } : item
+                );
             } else {
                 // Item is new: add to cart
                 newItems = [...prevCart.items, { slug: product.slug, quantity: quantity }];
             }
 
+            toast.success(t('addedtoCart', { product: product.name }), { duration: 2000 });
             // ONLY update items; totals (discount, total, netTotal) are left untouched
             return { ...prevCart, items: newItems, netTotal: prevCart.netTotal + (product.price || 0) * quantity };
         });
-
-        toast.success(t('addedtoCart', { product: product.name }), { duration: 2000 });
     };
 
     const removeFromCart = async (product: ProductView) => {
@@ -97,6 +130,11 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
     const updateQuantity = async (product: ProductView, quantity: number) => {
         if (quantity <= 0) {
             await removeFromCart(product);
+            return;
+        }
+
+        if (quantity > product.stock) {
+            toast.error(t('stockLimitExceeded', { product: product.name, stock: product.stock }));
             return;
         }
 
@@ -118,22 +156,27 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
     // --- Promo Code Actions (New Simple Logic) ---
 
     const applyPromoCode = async (code: string) => {
-        // ONLY update promoCode field
-        setCart(prevCart => ({
-            ...prevCart,
-            promoCode: code,
-            // NOTE: Total, netTotal, and discount would ideally be updated here by a server response.
-            // Since we're not calculating, we just update the code.
-        }));
-        toast.info(t('promoApplied', { code }), { duration: 2000 });
+        const result = await validatePromoCodeAction(code, cart.items);
+        if (result.isValid && 'discount' in result) {
+            setCart(prevCart => ({
+                ...prevCart,
+                promoCode: code,
+                promoCodeId: result.details?.id ?? null,
+                discount: result.discount
+            }));
+            console.log(code, result.discount, result);
+            toast.success(t('promoApplied', { code }), { duration: 2000 });
+        } else {
+            toast.error(result.error || t('invalidPromoCode'));
+        }
     };
 
     const removePromoCode = async () => {
-        // ONLY reset promoCode field
         setCart(prevCart => ({
             ...prevCart,
             promoCode: null,
-            // NOTE: Total, netTotal, and discount would ideally be updated here by a server response.
+            promoCodeId: null,
+            discount: 0
         }));
     };
 
@@ -146,7 +189,7 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
 
     const getCartTotal = (shipping: number) => {
         // Use the existing `total` field from state, which is assumed to be updated externally.
-        return (cart.netTotal || 0) + (shipping || 0);
+        return (cart.netTotal || 0) + (shipping || 0) - (cart.discount || 0);
     };
 
     // --- Memoized Context Value ---

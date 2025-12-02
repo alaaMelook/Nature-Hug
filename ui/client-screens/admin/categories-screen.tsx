@@ -7,6 +7,7 @@ import { createCategoryAction, deleteCategoryAction } from "@/ui/hooks/admin/cat
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useCategories } from "@/ui/hooks/admin/useCategories";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function CategoriesScreen({ initialCategories }: { initialCategories: Category[] }) {
     const { t } = useTranslation();
@@ -53,11 +54,15 @@ export default function CategoriesScreen({ initialCategories }: { initialCategor
     }, [t]);
 
     return (
-        <div className="p-6 max-w-2xl mx-auto">
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-6 max-w-2xl mx-auto"
+        >
             <h1 className="text-2xl font-bold mb-6">{t("manageCategories")}</h1>
 
             {/* Add Form */}
-            <div className="mb-6 space-y-3">
+            <div className="mb-6 space-y-3 bg-white p-4 rounded-lg shadow-sm border">
                 <input
                     type="text"
                     placeholder={t("englishName")}
@@ -74,38 +79,52 @@ export default function CategoriesScreen({ initialCategories }: { initialCategor
                 />
                 <button
                     onClick={handleAdd}
-                    className="flex items-center px-3 py-2 bg-primary-600 text-white text-sm rounded-md hover:bg-primary-700"
+                    className="flex items-center px-3 py-2 bg-primary-600 text-white text-sm rounded-md hover:bg-primary-700 transition-colors w-full justify-center sm:w-auto"
                 >
                     <Plus className="h-4 w-4 mr-2" /> {t("addCategory")}
                 </button>
             </div>
 
             {/* Categories List */}
-            <div className="border rounded-md divide-y">
-                {categories.length > 0 ? (
-                    categories.map((c) => (
-                        <div
-                            key={c.id}
-                            className="flex items-center justify-between px-4 py-2"
-                        >
-                            <div>
-                                <p className="font-medium">{c.name_en}</p>
-                                {c.name_ar && (
-                                    <p className="text-sm text-gray-500">{c.name_ar}</p>
-                                )}
-                            </div>
-                            <button
-                                onClick={() => handleDelete(c.id)}
-                                className="p-1 text-red-600 hover:bg-red-50 rounded"
+            <div className="border rounded-md divide-y bg-white shadow-sm overflow-hidden">
+                <AnimatePresence mode="popLayout">
+                    {categories.length > 0 ? (
+                        categories.map((c) => (
+                            <motion.div
+                                key={c.id}
+                                layout
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: "auto" }}
+                                exit={{ opacity: 0, height: 0 }}
+                                transition={{ duration: 0.2 }}
+                                className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors"
                             >
-                                <Trash2 className="h-4 w-4" />
-                            </button>
-                        </div>
-                    ))
-                ) : (
-                    <p className="p-4 text-gray-500 text-sm">{t("noCategoriesFound")}</p>
-                )}
+                                <div>
+                                    <p className="font-medium text-gray-900">{c.name_en}</p>
+                                    {c.name_ar && (
+                                        <p className="text-sm text-gray-500">{c.name_ar}</p>
+                                    )}
+                                </div>
+                                <button
+                                    onClick={() => handleDelete(c.id)}
+                                    className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                                    title={t("delete")}
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                </button>
+                            </motion.div>
+                        ))
+                    ) : (
+                        <motion.p
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="p-8 text-gray-500 text-sm text-center italic"
+                        >
+                            {t("noCategoriesFound")}
+                        </motion.p>
+                    )}
+                </AnimatePresence>
             </div>
-        </div>
+        </motion.div>
     );
 }

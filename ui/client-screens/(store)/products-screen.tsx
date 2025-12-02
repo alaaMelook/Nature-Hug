@@ -5,7 +5,7 @@ import ProductFilters from "@/ui/components/store/ProductFilters";
 import ProductGrid from "@/ui/components/store/ProductsGrid";
 import { useTranslation } from "react-i18next";
 import { Category } from "@/domain/entities/database/category";
-import { GetProductsData } from "@/ui/hooks/store/useProductsData";
+import { motion } from "framer-motion";
 
 export function ProductsScreen({ initProducts, initCategories }: {
     initProducts: ProductView[],
@@ -58,19 +58,27 @@ export function ProductsScreen({ initProducts, initCategories }: {
     }, [products, filters]);
 
     return (
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col lg:flex-row sm:gap-8">
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+            className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col lg:flex-row sm:gap-8"
+        >
             {/* Filters Column */}
-            <div className="w-full lg:w-1/4 lg:sticky lg:top-30 h-fit">
+            <motion.div
+                initial={{ x: -20, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ delay: 0.2, duration: 0.5 }}
+                className="w-full lg:w-1/4 lg:sticky lg:top-30 h-fit"
+            >
                 <ProductFilters onFilterChangeAction={handleFilterChange} initCategories={initCategories} />
-            </div>
+            </motion.div>
 
             {/* Product Grid Column */}
             <div className="w-full lg:w-3/4">
                 <ProductGrid products={filteredProducts} isLoading={loading} perPage={9} />
             </div>
-        </div>
-
-
+        </motion.div>
     );
 }
 
