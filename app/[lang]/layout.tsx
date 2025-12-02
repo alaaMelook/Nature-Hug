@@ -18,10 +18,10 @@ export default async function RootLayoutRootLayout({
     params,
 }: {
     children: React.ReactNode;
-    params: Promise<{ lang: Lang }>;
+    params: Promise<{ lang: string }>;
 }) {
     const paramsResult = await params;
-    const lang = languages.includes(paramsResult.lang) ? paramsResult.lang : "ar";
+    const lang = languages.includes(paramsResult.lang as Lang) ? (paramsResult.lang as Lang) : "ar";
     const dir = lang === "ar" ? "rtl" : "ltr";
 
     return (

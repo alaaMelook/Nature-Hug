@@ -3,6 +3,7 @@ import { Product } from "@/domain/entities/database/product";
 import { ProductMaterial } from "@/domain/entities/database/productMaterials";
 import { ProductVariant } from "@/domain/entities/database/productVariant";
 import { Review } from "@/domain/entities/database/review";
+import { PromoCode } from "@/domain/entities/database/promoCode";
 import { ProductDetailView } from "@/domain/entities/views/shop/productDetailView";
 import { ProductView } from "@/domain/entities/views/shop/productView";
 import { ProductRepository } from "@/domain/repositories/productRepository";
@@ -185,4 +186,18 @@ export class IProductClientRepository implements ProductRepository {
     }
 
 
+    async getPromoCode(code: string): Promise<PromoCode | null> {
+        console.log("[IProductRepository] getPromoCode called with code:", code);
+        const { data, error } = await supabase.schema('store')
+            .from('promo_codes')
+            .select('*')
+            .eq('code', code)
+            .single();
+
+        if (error) {
+            console.error("[IProductRepository] getPromoCode error:", error);
+            return null;
+        }
+        return data as PromoCode;
+    }
 }

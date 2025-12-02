@@ -59,7 +59,7 @@ class ShipmentService {
         }
     }
 
-    private async ensureAuth(): Promise<void> {
+    public async ensureAuth(): Promise<void> {
         console.log("[ShipmentService] Ensuring authentication...");
         if (!this.token) {
             console.log("[ShipmentService] Token is missing, logging in...");

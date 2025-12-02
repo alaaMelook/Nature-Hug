@@ -283,4 +283,32 @@ export class IAdminClientRepository implements AdminRepository {
             throw error;
         }
     }
+
+    async getAllPromoCodes(): Promise<any[]> {
+        console.log("[IAdminClientRepository] getAllPromoCodes called.");
+        const { data, error } = await supabase.schema('store').from('promo_codes').select('*');
+        if (error) {
+            console.error("[IAdminClientRepository] getAllPromoCodes error:", error);
+            throw error;
+        }
+        return data || [];
+    }
+
+    async createPromoCode(promoCode: any): Promise<void> {
+        console.log("[IAdminClientRepository] createPromoCode called with:", promoCode);
+        const { error } = await supabase.schema('store').from('promo_codes').insert(promoCode);
+        if (error) {
+            console.error("[IAdminClientRepository] createPromoCode error:", error);
+            throw error;
+        }
+    }
+
+    async deletePromoCode(id: number): Promise<void> {
+        console.log("[IAdminClientRepository] deletePromoCode called with id:", id);
+        const { error } = await supabase.schema('store').from('promo_codes').delete().eq('id', id);
+        if (error) {
+            console.error("[IAdminClientRepository] deletePromoCode error:", error);
+            throw error;
+        }
+    }
 }
