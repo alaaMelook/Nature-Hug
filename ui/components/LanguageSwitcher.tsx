@@ -7,7 +7,7 @@ import { i18nConfig } from "@/i18nconfig";
 import i18n from "@/lib/i18n/i18nClient";
 import { Globe } from "lucide-react";
 
-export default function LanguageSwitcher({ tohover }: { tohover: boolean }) {
+export default function LanguageSwitcher({ tohover = true }: { tohover?: boolean }) {
     const { i18n } = useTranslation();
     const currentLocale = i18n.language;
     const router = useRouter();
