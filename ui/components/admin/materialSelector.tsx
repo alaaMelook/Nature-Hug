@@ -135,7 +135,7 @@ export function MaterialSelector({ onSelect, onClose }: MaterialSelectorProps) {
                                             <div>
                                                 <p className="font-medium text-gray-900">{material.name}</p>
                                                 <p className="text-sm text-gray-500">
-                                                    {material.price_per_gram} {t('EGP')} / {material.unit} • Stock: {material.stock_grams}
+                                                    {t('{{price, currency}}', { price: material.price_per_gram })} / {material.unit} • Stock: {material.stock_grams}
                                                 </p>
                                             </div>
                                             {selectedMaterial?.id === material.id && (
@@ -167,7 +167,7 @@ export function MaterialSelector({ onSelect, onClose }: MaterialSelectorProps) {
                                         <div className="text-right">
                                             <p className="text-xs text-gray-500 uppercase">{t('cost')}</p>
                                             <p className="text-lg font-bold text-gray-900">
-                                                {amount ? (parseFloat(amount) * selectedMaterial.price_per_gram).toFixed(2) : '0.00'} {t('EGP')}
+                                                {amount ? t('{{price, currency}}', { price: parseFloat(amount) * selectedMaterial.price_per_gram }) : '0.00'}
                                             </p>
                                         </div>
                                     </div>

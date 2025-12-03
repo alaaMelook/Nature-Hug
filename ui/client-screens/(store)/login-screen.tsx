@@ -38,11 +38,11 @@ export function LoginScreen() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="flex flex-col items-center align-items-center justify-center max-h-screen space-y-6 my-10"
+            className="w-full flex flex-col items-center align-items-center  space-y-6 justify-center py-5 min-h-full max-h-screen"
         >
-            <h1 className="text-2xl font-bold ">{t("login")}</h1>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col space-y-4 border p-4 w-96">
+            <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col space-y-4 shadow-lg rounded-2xl p-10 w-4/5 sm:w-1/3 text-sm sm:text-base">
+                <h1 className="text-2xl font-bold ">{t("login")}</h1>
                 <input
                     {...register('email', {
                         required: t('emailRequired'),
@@ -88,11 +88,12 @@ export function LoginScreen() {
 
             <button
                 onClick={googleLogin}
-                className="cursor-pointer flex items-center justify-center w-fit gap-3 px-15 py-3 border border-gray-200 rounded-md bg-white shadow-sm hover:bg-gray-50 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                className="text-sm sm:text-base cursor-pointer flex items-center justify-center sm:w-1/3 gap-3 px-15 py-3 border border-gray-200 rounded-md bg-white shadow-lg hover:bg-gray-50 transition disabled:opacity-60 disabled:cursor-not-allowed"
             >
                 <FcGoogle className="text-xl" />
                 {t("continueWithGoogle")}
             </button>
+
 
             {errorMsg && (
                 <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded w-72">

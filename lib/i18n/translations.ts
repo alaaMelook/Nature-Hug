@@ -580,8 +580,10 @@ export const resources = {
         orderNotFoundDesc: "We couldn't find the order details. This may be because the order ID is invalid or the order hasn't been processed yet.",
         viewMyOrders: "View my orders",
         contactSupport: "Contact support",
-      },
 
+      },
+      shopbyCategory: "Shop by Category",
+      viewAllProducts: "View All Products",
       // Profile
       profileScreen: {
         title: "My Profile",
@@ -1189,6 +1191,9 @@ export const resources = {
         viewMyOrders: "عرض طلباتي",
         contactSupport: "تواصل مع الدعم",
       },
+
+      shopByCategory: "تسوق حسب الفئة",
+      viewAllProducts: "عرض جميع المنتجات",
 
       // Profile
       profileScreen: {

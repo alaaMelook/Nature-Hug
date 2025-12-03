@@ -7,13 +7,18 @@ import { useTranslation } from "react-i18next";
 import { Category } from "@/domain/entities/database/category";
 import { motion } from "framer-motion";
 
+import { useSearchParams } from "next/navigation";
+
 export function ProductsScreen({ initProducts, initCategories }: {
     initProducts: ProductView[],
     initCategories: Category[]
 }) {
+    const searchParams = useSearchParams();
+    const categoryParam = searchParams.get('category');
+
     const [filters, setFilters] = useState({
         search: '',
-        category: '',
+        category: categoryParam || '',
         sortBy: 'name-asc',
         inStock: false,
         onSale: false
@@ -71,7 +76,7 @@ export function ProductsScreen({ initProducts, initCategories }: {
                 transition={{ delay: 0.2, duration: 0.5 }}
                 className="w-full lg:w-1/4 lg:sticky lg:top-30 h-fit"
             >
-                <ProductFilters onFilterChangeAction={handleFilterChange} initCategories={initCategories} />
+                <ProductFilters onFilterChangeAction={handleFilterChange} initCategories={initCategories} currentFilters={filters} />
             </motion.div>
 
             {/* Product Grid Column */}

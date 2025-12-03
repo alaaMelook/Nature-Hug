@@ -11,154 +11,6 @@ import { useRouter, useParams } from "next/navigation";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
-function AddOrderModal({
-    onClose,
-    onSaved,
-}: {
-    onClose: () => void;
-    onSaved: () => void;
-}) {
-    const { t } = useTranslation();
-    const [form, setForm] = useState<Partial<Order>>({});
-    const [saving, setSaving] = useState(false);
-
-    const handleSave = async () => {
-        if (!form.guest_name || !form.guest_phone) {
-            alert(t("fillRequiredFields"));
-            return;
-        }
-        setSaving(true);
-        // TODO: Implement create order logic
-        setSaving(false);
-        onSaved();
-        onClose();
-    };
-
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
-            <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-            <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="relative bg-white rounded max-w-md w-full shadow-lg p-6"
-            >
-                <h2 className="text-lg font-bold mb-4">{t("addOrder")}</h2>
-                <input
-                    type="text"
-                    placeholder={t("customerName")}
-                    value={form.guest_name || ''}
-                    onChange={(e) => setForm({ ...form, guest_name: e.target.value })}
-                    className="border px-3 py-2 rounded w-full mb-3"
-                />
-                <input
-                    type="text"
-                    placeholder={t("customerPhone")}
-                    value={form.guest_phone || ''}
-                    onChange={(e) => setForm({ ...form, guest_phone: e.target.value })}
-                    className="border px-3 py-2 rounded w-full mb-3"
-                />
-                <input
-                    type="text"
-                    placeholder={t("address")}
-                    value={form.guest_address?.address || ''}
-                    onChange={(e) => setForm({ ...form, guest_address: { ...form.guest_address, address: e.target.value } })}
-                    className="border px-3 py-2 rounded w-full mb-3"
-                />
-                <input
-                    type="text"
-                    placeholder={t("governorate")}
-                    value={form.guest_address?.governorate_slug || ''}
-                    onChange={(e) =>
-                        setForm({ ...form, guest_address: { ...form.guest_address, governorate_slug: e.target.value } })
-                    }
-                    className="border px-3 py-2 rounded w-full mb-3"
-                />
-
-                <select
-                    value={toTitleCase(form.status ?? '')}
-                    onChange={(e) => setForm({ ...form, status: e.target.value as OrderStatus })}
-                    className="border px-3 py-2 rounded w-full mb-3"
-                >
-                    {orderStatus.map((status, index) => (
-                        <option key={index} value={status}>
-                            {t(status) || status}
-                        </option>
-                    ))}
-                </select>
-                <div className="flex justify-end gap-2">
-                    <button
-                        onClick={onClose}
-                        className="px-4 py-2 border rounded hover:bg-gray-50 transition-colors"
-                        disabled={saving}
-                    >
-                        {t("cancel")}
-                    </button>
-                    <button
-                        onClick={handleSave}
-                        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                        disabled={saving}
-                    >
-                        {t("save")}
-                    </button>
-                </div>
-            </motion.div>
-        </div>
-    );
-}
-
-function ExportModal({
-    onClose,
-    onExport,
-}: {
-    onClose: () => void;
-    onExport: (status: string) => void;
-}) {
-    const { t } = useTranslation();
-    const [status, setStatus] = useState("pending");
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-            <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="relative bg-white rounded max-w-sm w-full shadow-lg p-6"
-            >
-                <h2 className="text-lg font-bold mb-4">{t("exportOrders")}</h2>
-                <select
-                    value={status}
-                    onChange={(e) => setStatus(e.target.value)}
-                    className="border px-3 py-2 rounded w-full mb-4"
-                >
-                    <option value="pending">{t("pending")}</option>
-                    <option value="processing">{t("processing")}</option>
-                    <option value="shipped">{t("shipped")}</option>
-                    <option value="delivered">{t("delivered")}</option>
-                    <option value="completed">{t("completed")}</option>
-                    <option value="cancelled">{t("cancelled")}</option>
-                    <option value="returned">{t("returned")}</option>
-                    <option value="refunded">{t("refunded")}</option>
-                </select>
-                <div className="flex justify-end gap-2">
-                    <button
-                        onClick={onClose}
-                        className="px-4 py-2 border rounded hover:bg-gray-50 transition-colors"
-                    >
-                        {t("cancel")}
-                    </button>
-                    <button
-                        onClick={() => onExport(status)}
-                        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                    >
-                        {t("export")}
-                    </button>
-                </div>
-            </motion.div>
-        </div>
-    );
-}
-
 export function OrdersScreen({ initialOrders }: { initialOrders: OrderDetailsView[] }) {
     const { t } = useTranslation();
     const router = useRouter();
@@ -321,22 +173,6 @@ export function OrdersScreen({ initialOrders }: { initialOrders: OrderDetailsVie
                 </div>
             </div>
 
-            <AnimatePresence>
-                {showAddModal && (
-                    <AddOrderModal
-                        onClose={() => setShowAddModal(false)}
-                        onSaved={() => {
-                            window.location.reload();
-                        }}
-                    />
-                )}
-                {showExportModal && (
-                    <ExportModal
-                        onClose={() => setShowExportModal(false)}
-                        onExport={handleExport}
-                    />
-                )}
-            </AnimatePresence>
 
             {/* Filters */}
             <div className="flex gap-4 mb-4 items-center flex-wrap">
@@ -433,7 +269,7 @@ export function OrdersScreen({ initialOrders }: { initialOrders: OrderDetailsVie
                                                 {t(order.order_status) || order.order_status}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-3 font-medium text-gray-900">{order.final_order_total} {t("EGP")}</td>
+                                        <td className="px-4 py-3 font-medium text-gray-900">{t('{{price, currency}}', { price: order.final_order_total })}</td>
                                         <td className="px-4 py-3 text-gray-500">
                                             {t("{{date, datetime}}", { date: new Date(order.order_date) })}
                                         </td>

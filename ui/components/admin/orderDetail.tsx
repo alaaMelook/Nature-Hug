@@ -202,7 +202,7 @@ export function OrderDetailsModal({
                                     <div className="flex justify-between items-center">
                                         <span className="font-medium text-gray-700">{t("totalAmount")}</span>
                                         <span className="text-xl font-bold text-gray-900 flex items-center">
-                                            {order.final_order_total} <span className="text-sm font-normal text-gray-500 ml-1">{t("EGP")}</span>
+                                            {t('{{price, currency}}', { price: order.final_order_total })}
                                         </span>
                                     </div>
                                 </div>

@@ -157,7 +157,7 @@ export function ProductsScreen({ products, materials }: { products: ProductAdmin
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {product.price} {t("EGP")}
+                                            {t('{{price, currency}}', { price: product.price })}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="flex items-center gap-2">
@@ -235,7 +235,7 @@ export function ProductsScreen({ products, materials }: { products: ProductAdmin
                                     </div>
                                     <p className="text-xs text-gray-500 mt-0.5">{product.category?.name_en || 'Uncategorized'}</p>
                                     <div className="mt-2 flex items-center justify-between">
-                                        <span className="text-sm font-bold text-gray-900">{product.price} {t("EGP")}</span>
+                                        <span className="text-sm font-bold text-gray-900">{t('{{price, currency}}', { price: product.price })}</span>
                                         <div className="flex items-center gap-2">
                                             <span className={`text-xs px-2 py-0.5 rounded-full ${product.stock > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                                                 {product.stock > 0 ? `${product.stock} ${t("left")}` : t("outOfStock")}

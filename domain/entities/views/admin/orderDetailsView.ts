@@ -17,6 +17,7 @@ export interface OrderDetailsView {
     awb: string | null;
     subtotal: number;
     shipping_total: number;
+    discount: number;
 }
 export interface OrderItemView {
     quantity: number;

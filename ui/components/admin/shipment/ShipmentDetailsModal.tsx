@@ -145,7 +145,7 @@ export function ShipmentDetailsModal({ awb, isOpen, onClose }: ShipmentDetailsMo
                                     </div>
                                     <div>
                                         <p className="text-xs text-gray-400 mb-1">{t("cod")}</p>
-                                        <p className="font-bold text-green-600">{details.COD || 0} {t("EGP")}</p>
+                                        <p className="font-bold text-green-600">{t('{{price, currency}}', { price: details.COD })}</p>
                                     </div>
                                     <div>
                                         <p className="text-xs text-gray-400 mb-1">{t("contents")}</p>

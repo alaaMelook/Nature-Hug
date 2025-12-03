@@ -186,7 +186,7 @@ export function ShipmentHistoryScreen() {
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
-                                            {shipment.COD} {t("EGP")}
+                                            {t('{{price, currency}}', { price: shipment.COD })}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                             <button
@@ -262,7 +262,7 @@ export function ShipmentHistoryScreen() {
                                     <p className="text-xs text-gray-500 flex items-center gap-1">
                                         <DollarSign className="h-3 w-3" /> {t("cod")}
                                     </p>
-                                    <p className="text-sm font-bold text-gray-900">{shipment.COD} {t("EGP")}</p>
+                                    <p className="text-sm font-bold text-gray-900">{t('{{price, currency}}', { price: shipment.COD })}</p>
                                 </div>
                             </div>
 

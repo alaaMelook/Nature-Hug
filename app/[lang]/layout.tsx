@@ -60,7 +60,7 @@ export default async function RootLayoutRootLayout({
 
 
             </head>
-            <body className="bg-gray-50 min-h-screen color-text">
+            <body className="bg-gray-50 min-h-screen color-text flex flex-col">
 
                 {/* Google Tag Manager (noscript) */}
                 <noscript>
@@ -74,8 +74,9 @@ export default async function RootLayoutRootLayout({
                 <I18nProvider lang={lang}>
 
                     <FontProvider>
-
-                        {children}
+                        <main className="flex-grow">
+                            {children}
+                        </main>
                         <Toaster position="top-center" richColors />
                     </FontProvider>
                 </I18nProvider>

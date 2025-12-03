@@ -6,10 +6,30 @@ import Link from "next/link";
 import { ProductView } from "@/domain/entities/views/shop/productView";
 import { useFeatures } from "@/ui/hooks/store/useFeatures";
 import { motion } from "framer-motion";
+import { Category } from "@/domain/entities/database/category";
+import { useCurrentLanguage } from "@/ui/hooks/useCurrentLanguage";
 
-export function HomeScreen({ initialProducts: products }: { initialProducts: ProductView[] }) {
+// Helper to get category image (since it's not in DB)
+const getCategoryImage = (categoryName: string) => {
+    const images: Record<string, string> = {
+        'Skincare': 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?q=80&w=2070&auto=format&fit=crop',
+        'Haircare': 'https://images.unsplash.com/photo-1522337660859-02fbefca4702?q=80&w=2069&auto=format&fit=crop',
+        'Bodycare': 'https://images.unsplash.com/photo-1556228552-523de5029136?q=80&w=2070&auto=format&fit=crop',
+        'Fragrances': 'https://images.unsplash.com/photo-1594035910387-fea477942698?q=80&w=2080&auto=format&fit=crop',
+        'Oils': 'https://images.unsplash.com/photo-1601042879364-f3947d3f9c16?q=80&w=1974&auto=format&fit=crop',
+        // Default fallback
+        'default': 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?q=80&w=1887&auto=format&fit=crop'
+    };
+
+    // Simple matching, can be improved
+    const key = Object.keys(images).find(k => categoryName.toLowerCase().includes(k.toLowerCase()));
+    return key ? images[key] : images['default'];
+};
+
+export function HomeScreen({ initialProducts: products, categories }: { initialProducts: ProductView[], categories: Category[] }) {
     const { t } = useTranslation();
     const features = useFeatures();
+    const lang = useCurrentLanguage();
 
     const containerVariants = {
         hidden: { opacity: 0 },
@@ -33,42 +53,129 @@ export function HomeScreen({ initialProducts: products }: { initialProducts: Pro
     };
 
     return (
-        <div className="min-h-screen antialiased text-gray-800">
-            <main>
-                {/* Hero Section */}
-                <section className="bg-primary-50 py-12 md:py-20 lg:py-24 overflow-hidden">
+        <div className="min-h-screen antialiased bg-primary-50 text-gray-800">
+            <div className="absolute top-0 left-0 w-full overflow-hidden z-1 opacity-35 h-[150vh]">
+
+                {/* --- Sphere 1: Top-Left Start (Deep Blue) --- */}
+                <motion.div
+                    animate={{
+                        // Drifts from top-left toward bottom-right, then reverses
+                        x: [0, 800, 0],
+                        y: [0, 600, 0],
+                        scale: [1, 1.1, 1],
+                    }}
+                    transition={{
+                        duration: 13, // Slow, but noticeable over the long path
+                        ease: "easeInOut", // Smooth start/stop
+                        repeat: Infinity,
+                        repeatType: "reverse",
+                    }}
+                >
+                    {/* Placed off-screen to start */}
+                    <div className="absolute -top-[10rem] -left-[10rem] w-[50rem] h-[50rem] rounded-full bg-primary-600 blur-[80px] opacity-90"></div>
+                </motion.div>
+
+                {/* --- Sphere 2: Bottom-Right Start (Soft Pink) --- */}
+                <motion.div
+                    animate={{
+                        // Drifts from bottom-right toward top-left, then reverses
+                        x: [0, -700, 0],
+                        y: [0, -500, 0],
+                        scale: [1, 0.9, 1],
+                    }}
+                    transition={{
+                        duration: 10,
+                        ease: "easeInOut",
+                        repeat: Infinity,
+                        repeatType: "reverse",
+                        delay: 10 // Staggered start
+                    }}
+                >
+                    {/* Placed off-screen to start */}
+                    <div className="absolute bottom-[5rem] right-[5rem] w-[45rem] h-[45rem] rounded-full bg-primary-700 blur-[120px] opacity-85"></div>
+                </motion.div>
+
+                {/* --- Sphere 3: Top-Right Start (Cyan) --- */}
+                <motion.div
+                    animate={{
+                        // Drifts across the horizontal space
+                        x: [0, -900, 0],
+                        y: [0, 100, 0], // Slight vertical movement
+                        scale: [1, 1.05, 1],
+                    }}
+                    transition={{
+                        duration: 13,
+                        ease: "linear",
+                        repeat: Infinity,
+                        repeatType: "reverse",
+                        delay: 2 // Staggered start
+                    }}
+                >
+                    {/* Placed off-screen to start */}
+                    <div className="absolute -top-[5rem] right-[10rem] w-[40rem] h-[40rem] rounded-full bg-primary-500 blur-[80px] opacity-80"></div>
+                </motion.div>
+
+                {/* --- Sphere 4: Bottom-Left Start (Purple) --- */}
+                <motion.div
+                    animate={{
+                        // Drifts across the vertical space
+                        x: [0, 100, 0], // Slight horizontal movement
+                        y: [0, -700, 0],
+                        scale: [1, 0.95, 1.05, 1],
+                    }}
+                    transition={{
+                        duration: 15, // Slowest drift
+                        ease: "linear",
+                        repeat: Infinity,
+                        repeatType: "reverse",
+                        delay: 7 // Staggered start
+                    }}
+                >
+                    {/* Placed off-screen to start */}
+                    <div className="absolute bottom-[10rem] -left-[5rem] w-[35rem] h-[35rem] rounded-full bg-primary-600 blur-[50px] opacity-75"></div>
+                </motion.div>
+                <div className="absolute bottom-0 left-0 w-full h-1/4 z-10 
+                                    bg-gradient-to-t from-primary-50 via-primary-50/70 to-transparent">
+                </div>
+            </div>
+            <main className="z-2">
+                {/* Enhanced Hero Section */}
+
+                <section className="flex flex-col items-center justify-center py-20 md:py-32 overflow-hidden h-screen">
+                    {/* Background decoration */}
+
                     <motion.div
                         initial={{ opacity: 0, y: 30 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.8, ease: "easeOut" }}
-                        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center"
+                        transition={{ duration: 0.5, ease: "easeOut" }}
+                        className=" relative z-3 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center "
                     >
-                        <h1 className="text-3xl sm:text-4xl lg:text-5xl text-default leading-tight ">
+                        <h1 className="text-4xl sm:text-5xl lg:text-7xl font-serif font-bold text-primary-900 leading-tight mb-6">
                             {t("heroTitle")}
                         </h1>
                         <motion.p
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
-                            transition={{ delay: 0.3, duration: 0.8 }}
-                            className="sm:text-lg text-primary-800 max-w-2xl mx-auto mb-8 mt-4"
+                            transition={{ delay: 0.3, duration: 8 }}
+                            className="text-lg sm:text-xl text-primary-800 max-w-2xl mx-auto mb-10 leading-relaxed"
                         >
                             {t("heroDescription")}
                         </motion.p>
                         <motion.div
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: 0.5, duration: 0.5 }}
+                            transition={{ delay: 0.5, duration: 5 }}
                             className="flex flex-col sm:flex-row justify-center items-center gap-4"
                         >
                             <Link
                                 href="/products"
-                                className="bg-primary-800 w-1/2 sm:w-fit text-white font-semibold px-6 py-3 rounded-lg shadow-md hover:bg-primary-700 hover:scale-105 transition-all duration-300 text-center"
+                                className="bg-primary-900 text-white font-semibold px-8 py-4 rounded-full shadow-lg hover:bg-primary-800 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 text-center min-w-[160px]"
                             >
                                 {t("shopNow")}
                             </Link>
                             <Link
                                 href="/about-us"
-                                className="font-semibold w-1/2 sm:w-fit px-6 py-3 rounded-lg shadow-md hover:bg-primary-50 hover:text-primary-800 hover:scale-105 transition-all duration-300 text-center text-primary-900 border border-primary-900"
+                                className="bg-white text-primary-900 font-semibold px-8 py-4 rounded-full shadow-md hover:bg-gray-50 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 text-center border border-gray-200 min-w-[160px]"
                             >
                                 {t("learnMore")}
                             </Link>
@@ -76,32 +183,82 @@ export function HomeScreen({ initialProducts: products }: { initialProducts: Pro
                     </motion.div>
                 </section>
 
+                {/* Shop by Category Section */}
+                <section className="py-16 h-full z-2">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 z-2">
+                        <motion.h2
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            transition={{ duration: 0.6 }}
+                            className="text-3xl md:text-4xl font-serif font-bold mt-5 mb-12 text-primary-950 z-2 text-shadow-black"
+                        >
+                            {t("shopByCategory")}
+                        </motion.h2>
+
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                            {categories?.map((category) => {
+                                const categoryName = lang === 'en' ? category.name_en : (category.name_ar || category.name_en);
+                                const imageUrl = category.image_url || getCategoryImage(category.name_en);
+                                return (
+                                    <Link
+                                        key={category.id}
+                                        href={`/products?category=${encodeURIComponent(category.name_en)}`}
+                                        className="group relative overflow-hidden rounded-2xl shadow-md aspect-[4/5] cursor-pointer"
+                                    >
+                                        <img
+                                            src={imageUrl}
+                                            alt={categoryName}
+                                            className="z-2 absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                        />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-80 group-hover:opacity-90 transition-opacity duration-300"></div>
+                                        <div className="absolute bottom-0 left-0 w-full p-6 text-center">
+                                            <h3 className="text-white text-xl font-bold tracking-wide group-hover:text-primary-100 transition-colors">
+                                                {categoryName}
+                                            </h3>
+                                        </div>
+                                    </Link>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </section>
+
                 {/* Product Grid Section */}
-                <section className="py-12 md:py-16">
+                <section className="py-16 bg-gradient-to-b from-primary-50 to-white mt-6">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 max-h-fit">
                         <motion.h2
                             initial={{ opacity: 0, y: 20 }}
                             whileInView={{ opacity: 1, y: 0 }}
                             viewport={{ once: true }}
                             transition={{ duration: 0.6 }}
-                            className="text-2xl md:text-3xl font-extrabold text-center mb-8 md:mb-12 text-default "
+                            className="text-3xl md:text-4xl font-serif font-bold mb-12 text-primary-900"
                         >
                             {t("featuredProducts")}
                         </motion.h2>
 
                         <ProductGrid products={products} isLoading={false} recent={true} />
+
+                        <div className="mt-12 text-end">
+                            <Link
+                                href="/products"
+                                className="inline-block  justify-end items-end self-end border-b-2 border-primary-900 text-primary-900 font-semibold pb-1 hover:text-primary-700 hover:border-primary-700 transition-colors"
+                            >
+                                {t("viewAllProducts")}
+                            </Link>
+                        </div>
                     </div>
                 </section>
 
                 {/* Features Section */}
-                <section className="bg-primary-50 py-12 ">
+                <section className="bg-white py-16 border-t border-gray-100">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6">
                         <motion.div
                             variants={containerVariants}
                             initial="hidden"
                             whileInView="visible"
                             viewport={{ once: true }}
-                            className="grid grid-cols-2 sm:grid-cols-2 gap-4 md:gap-8"
+                            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8"
                         >
                             {features.map(
                                 (feature: {
@@ -112,17 +269,18 @@ export function HomeScreen({ initialProducts: products }: { initialProducts: Pro
                                     <motion.div
                                         variants={itemVariants}
                                         key={feature.title}
-                                        className="bg-white p-6 rounded-xl transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1 text-primary text-center shadow-md"
+                                        className="flex flex-col items-center text-center p-6 rounded-xl hover:bg-primary-50 transition-colors duration-300"
                                     >
-                                        <div className="flex justify-center mb-4">
-                                            <feature.icon className="w-8 h-8 sm:w-10 sm:h-10 text-[#8B4513]" />
+                                        <div className="mb-4 p-3 bg-primary-100 rounded-full text-primary-800">
+                                            <feature.icon className="w-8 h-8" />
                                         </div>
 
-                                        <h3 className={` text-sm sm:text-lg text-default font-bold `}>{feature.title}</h3>
-                                        <Trans components={{ b: <span className="font-semibold text-green-800" /> }}>
-                                            <p className={`text-gray-800 text-xs sm:text-sm font-semibold mt-2`}>
+                                        <h3 className="text-lg font-bold text-primary-900 mb-2">{feature.title}</h3>
+                                        <p className="text-gray-600 text-sm leading-relaxed">
+                                            <Trans components={{ b: <strong /> }}>
                                                 {feature.description}
-                                            </p> </Trans>
+                                            </Trans>
+                                        </p>
                                     </motion.div>
                                 )
                             )}

@@ -7,7 +7,7 @@ import { i18nConfig } from "@/i18nconfig";
 import i18n from "@/lib/i18n/i18nClient";
 import { Globe } from "lucide-react";
 
-export default function LanguageSwitcher({ }: {}) {
+export default function LanguageSwitcher({ tohover }: { tohover: boolean }) {
     const { i18n } = useTranslation();
     const currentLocale = i18n.language;
     const router = useRouter();
@@ -43,7 +43,7 @@ export default function LanguageSwitcher({ }: {}) {
     return (
         <button
             onClick={toggle}
-            className="flex flex-col  items-center text-default justify-center sm:p-2 rounded-md hover:bg-gray-100 transition-colors duration-200"
+            className={`flex flex-col  items-center text-default justify-center sm:p-2 rounded-md ${tohover ? "hover:bg-gray-100 transition-colors duration-200" : ""}`}
             aria-label="Switch language"
         >
             <Globe className="sm:w-7 sm:h-7 w-4 h-4  text-primary-700" />

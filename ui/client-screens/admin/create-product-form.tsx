@@ -409,7 +409,7 @@ export function CreateProductForm({ initialImages, initialCategories }: CreatePr
                                     </h2>
                                     <div className="space-y-4">
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">{t("price")} (EGP)</label>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">{t("price")} ({t("EGP")})</label>
                                             <input type="number" {...register("price")} className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" />
                                         </div>
                                         <div>
@@ -431,17 +431,17 @@ export function CreateProductForm({ initialImages, initialCategories }: CreatePr
                                     <div className="space-y-3">
                                         <div className="flex justify-between items-center text-sm">
                                             <span className="text-gray-600">{t("sellingPrice")}:</span>
-                                            <span className="font-medium">{watch("price") || 0} EGP</span>
+                                            <span className="font-medium">{t('{{price, currency}}', { price: watch("price") })}</span>
                                         </div>
                                         <div className="flex justify-between items-center text-sm">
                                             <span className="text-gray-600">{t("totalMaterialCost")}:</span>
-                                            <span className="font-medium text-red-600">-{calculateTotalCost()} EGP</span>
+                                            <span className="font-medium text-red-600">-{t('{{price, currency}}', { price: calculateTotalCost() })}</span>
                                         </div>
                                         <div className="border-t pt-2 mt-2">
                                             <div className="flex justify-between items-center">
                                                 <span className="font-bold text-gray-800">{t("netProfit")}:</span>
                                                 <span className={`font-bold ${(Number(watch("price") || 0) - Number(calculateTotalCost())) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                                    {(Number(watch("price") || 0) - Number(calculateTotalCost())).toFixed(2)} EGP
+                                                    {t('{{price, currency}}', { price: (Number(watch("price") || 0) - Number(calculateTotalCost())) })}
                                                 </span>
                                             </div>
                                             <div className="flex justify-between items-center text-xs mt-1">
@@ -502,7 +502,7 @@ export function CreateProductForm({ initialImages, initialCategories }: CreatePr
                                                 </AnimatePresence>
                                                 <tr className="bg-gray-50 font-bold">
                                                     <td className="px-4 py-2" colSpan={2}>{t("totalEstimatedCost")}</td>
-                                                    <td className="px-4 py-2 text-right">{calculateTotalCost()} EGP</td>
+                                                    <td className="px-4 py-2 text-right">{t('{{price, currency}}', { price: calculateTotalCost() })}</td>
                                                     <td></td>
                                                 </tr>
                                             </tbody>

@@ -15,9 +15,13 @@ import { useCurrentLanguage } from "@/ui/hooks/useCurrentLanguage";
 
 
 
+import { usePathname } from "next/navigation";
+import { useEffect } from "react";
+
 export default function Navbar() {
     const [isOpen, setIsOpen] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [isScrolled, setIsScrolled] = useState(false);
     const { cart, getCartCount } = useCart();
     const count = useMemo(
         () => getCartCount(),
@@ -27,6 +31,26 @@ export default function Navbar() {
     const router = useRouter();
     const { t } = useTranslation();
     const language = useCurrentLanguage();
+    const pathname = usePathname();
+
+    // Check if we are on the home page (root or language root)
+    const isHomePage = pathname === "/" || (pathname?.length === 3 && pathname?.startsWith("/"));
+
+    useEffect(() => {
+        const handleScroll = () => {
+            if (window.scrollY > 10) {
+                setIsScrolled(true);
+            } else {
+                setIsScrolled(false);
+            }
+        };
+
+        window.addEventListener("scroll", handleScroll);
+        return () => {
+            window.removeEventListener("scroll", handleScroll);
+        };
+    }, []);
+
     // Toggle mobile menu
     const toggleMobileMenu = useCallback(() => {
         setIsOpen((prev) => !prev);
@@ -53,17 +77,24 @@ export default function Navbar() {
         []
     );
 
+    const navbarClasses = `pl-10 pr-10 flex items-center justify-between transition-all duration-300 z-50 ${isHomePage
+        ? isScrolled
+            ? "fixed top-0 w-full bg-white shadow-md py-2"
+            : "fixed top-0 w-full bg-transparent shadow-none py-4"
+        : "sticky top-0 bg-white shadow-md py-2"
+        }`;
+
     return (
-        <nav className="bg-white pl-10 pr-10 sticky top-0 z-10 flex items-center justify-between shadow-md">
+        <nav className={navbarClasses}>
             {/* ---- Logo ---- */}
             <div className="text-xl font-bold flex items-center space-x-4 ">
                 <Link href="/" className="flex items-center sm:w-30 sm:h-30 w-20 h-20 relative">
                     <Image
-                        src="https://reqrsmboabgxshacmkst.supabase.co/storage/v1/object/sign/product-images/logo.jpg?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV85ZGU3NTY3OC0zMDRhLTQ3OTUtYjdhZC04M2IwMzM3ZDY2ZTUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9kdWN0LWltYWdlcy9sb2dvLmpwZyIsImlhdCI6MTc1NjM4MDIxNSwiZXhwIjo0OTA5OTgwMjE1fQ.D5eFaioyALpbvbK7LWj6Di0kI1-I3kAQKI0H-DVtiao"
+                        src={isHomePage && !isScrolled ? "https://reqrsmboabgxshacmkst.supabase.co/storage/v1/object/public/product-images/logo%20(4).png" : "https://reqrsmboabgxshacmkst.supabase.co/storage/v1/object/public/product-images/logo.jpg"}
                         priority={true} alt="Logo  Nature"
                         fill={true} />
                 </Link>
-                <LanguageSwitcher />
+                <LanguageSwitcher tohover={!(isHomePage && !isScrolled)} />
             </div>
 
             {/* ---- Desktop Menu ---- */}
@@ -87,7 +118,7 @@ export default function Navbar() {
                 {/* Cart */}
                 <Link
                     href="/cart"
-                    className="relative flex items-center bg-primary-10 px-4 py-2 rounded-lg shadow-md hover:bg-primary-100 transition"
+                    className={`relative flex items-center ${isHomePage && !isScrolled ? "" : "bg-primary-50 shadow-md  hover:bg-primary-100 transition"} px-4 py-2 rounded-lg `}
                 >
                     <ShoppingCart className="w-5 h-5 mx-2" />
                     {t('cart')}

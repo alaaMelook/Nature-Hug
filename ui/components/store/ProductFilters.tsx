@@ -6,9 +6,10 @@ import { useState } from "react";
 import { ArrowDownUp, ListFilter, SortAscIcon } from "lucide-react";
 import { useCurrentLanguage } from "@/ui/hooks/useCurrentLanguage";
 
-export default function ProductFilters({ onFilterChangeAction, initCategories }: {
+export default function ProductFilters({ onFilterChangeAction, initCategories, currentFilters }: {
     onFilterChangeAction: (filters: any) => void,
-    initCategories: Category[]
+    initCategories: Category[],
+    currentFilters?: { search: string; category: string; sortBy: string; inStock: boolean; onSale: boolean; }
 }) {
     const { t, i18n } = useTranslation();
     const language = useCurrentLanguage();
@@ -45,6 +46,7 @@ export default function ProductFilters({ onFilterChangeAction, initCategories }:
                             placeholder={t('search')}
                             enterKeyHint="search"
                             name="search"
+                            value={currentFilters?.search || ''}
                             onChange={handleInputChange}
                             className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                         />
@@ -55,6 +57,7 @@ export default function ProductFilters({ onFilterChangeAction, initCategories }:
                         <select
                             id="category"
                             name="category"
+                            value={currentFilters?.category || ''}
                             onChange={handleInputChange}
                             className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md"
                         >
@@ -70,6 +73,7 @@ export default function ProductFilters({ onFilterChangeAction, initCategories }:
                         <select
                             id="sortBy"
                             name="sortBy"
+                            value={currentFilters?.sortBy || 'name-asc'}
                             onChange={handleInputChange}
                             className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md"
                         >
@@ -85,6 +89,7 @@ export default function ProductFilters({ onFilterChangeAction, initCategories }:
                             id="inStock"
                             name="inStock"
                             type="checkbox"
+                            checked={currentFilters?.inStock || false}
                             onChange={handleInputChange}
                             className="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
                         />
@@ -95,6 +100,7 @@ export default function ProductFilters({ onFilterChangeAction, initCategories }:
                             id="onSale"
                             name="onSale"
                             type="checkbox"
+                            checked={currentFilters?.onSale || false}
                             onChange={handleInputChange}
                             className="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
                         />
@@ -111,6 +117,7 @@ export default function ProductFilters({ onFilterChangeAction, initCategories }:
                         id="search"
                         name="search"
                         placeholder={t('search')}
+                        value={currentFilters?.search || ''}
                         onChange={handleInputChange}
                         className="mb-5 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                     />
@@ -148,6 +155,7 @@ export default function ProductFilters({ onFilterChangeAction, initCategories }:
                                         <select
                                             id="sortBy"
                                             name="sortBy"
+                                            value={currentFilters?.sortBy || 'name-asc'}
                                             onChange={handleInputChange}
                                             className="mt-1 block w-full px-2 py-2 mx-2 border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 text-sm rounded-md"
                                         >
@@ -176,6 +184,7 @@ export default function ProductFilters({ onFilterChangeAction, initCategories }:
                                             <select
                                                 id="category"
                                                 name="category"
+                                                value={currentFilters?.category || ''}
                                                 onChange={handleInputChange}
                                                 className="mt-1 block w-full px-5 py-2  border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 text-sm rounded-md"
                                             >
@@ -201,6 +210,7 @@ export default function ProductFilters({ onFilterChangeAction, initCategories }:
                                                 id="inStock"
                                                 name="inStock"
                                                 type="checkbox"
+                                                checked={currentFilters?.inStock || false}
                                                 onChange={handleInputChange}
                                                 className="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
                                             />
@@ -211,6 +221,7 @@ export default function ProductFilters({ onFilterChangeAction, initCategories }:
                                                 id="onSale"
                                                 name="onSale"
                                                 type="checkbox"
+                                                checked={currentFilters?.onSale || false}
                                                 onChange={handleInputChange}
                                                 className="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
                                             />

@@ -17,6 +17,7 @@ import { User, MapPin, Phone, Package, Calendar, ArrowLeft, X } from "lucide-rea
 import { ShipmentTracking } from "@/ui/components/admin/ShipmentTracking";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import Image from "next/image";
 
 export function OrderDetailsScreen({ order }: { order: OrderDetailsView }) {
     const { t } = useTranslation();
@@ -222,14 +223,13 @@ export function OrderDetailsScreen({ order }: { order: OrderDetailsView }) {
                                         <tr key={index} className="hover:bg-gray-50 transition-colors">
                                             <td className="px-6 py-4 font-medium text-gray-900">
                                                 <div className="flex items-center gap-3">
-                                                    {/* Placeholder for image if available in item */}
-                                                    {/* <div className="w-10 h-10 bg-gray-200 rounded-md"></div> */}
+
                                                     {item.item_name}
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 text-right text-gray-600">{item.quantity}</td>
-                                            <td className="px-6 py-4 text-right text-gray-600">{item.unit_price} {t("EGP")}</td>
-                                            <td className="px-6 py-4 text-right font-medium text-gray-900">{(item.quantity * item.unit_price).toFixed(2)} {t("EGP")}</td>
+                                            <td className="px-6 py-4 text-right text-gray-600">{t('{{price, currency}}', { price: item.unit_price })}</td>
+                                            <td className="px-6 py-4 text-right font-medium text-gray-900">{t('{{price, currency}}', { price: item.quantity * item.unit_price })}</td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -239,15 +239,19 @@ export function OrderDetailsScreen({ order }: { order: OrderDetailsView }) {
                             <div className="flex flex-col gap-2 items-end">
                                 <div className="flex justify-between w-full max-w-xs text-sm text-gray-600">
                                     <span>{t("subtotal")}</span>
-                                    <span>{order.subtotal || 0} {t("EGP")}</span>
+                                    <span>{t('{{price, currency}}', { price: order.subtotal })}</span>
                                 </div>
                                 <div className="flex justify-between w-full max-w-xs text-sm text-gray-600">
                                     <span>{t("shipping")}</span>
-                                    <span>{order.shipping_total || 0} {t("EGP")}</span>
+                                    <span>{t('{{price, currency}}', { price: order.shipping_total })}</span>
+                                </div>
+                                <div className="flex justify-between w-full max-w-xs text-sm text-gray-600">
+                                    <span>{t("discount")}</span>
+                                    <span>{t('{{price, currency}}', { price: order.discount })}</span>
                                 </div>
                                 <div className="flex justify-between w-full max-w-xs text-lg font-bold text-gray-900 mt-2 pt-2 border-t">
                                     <span>{t("totalAmount")}</span>
-                                    <span>{order.final_order_total} {t("EGP")}</span>
+                                    <span>{t('{{price, currency}}', { price: order.final_order_total })}</span>
                                 </div>
                             </div>
                         </div>
