@@ -46,15 +46,12 @@ export interface ProductVariantAdminView {
 }
 
 export interface ProductMaterialAdminView {
-    id?: number;
-    product_id?: number;
-    variant_id?: number;
-    material_id: number;
-    amount: number;
+    id: number;
     measurement_unit?: string;
     grams_used?: number; // Keep for compatibility if needed
     // UI helper fields
     material_name?: string;
-    material_price?: number;
-    material_unit?: string;
+    material_type?: string;
+    price?: number;
+
 }

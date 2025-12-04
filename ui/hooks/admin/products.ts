@@ -4,8 +4,16 @@ import { CreateProduct } from "@/domain/use-case/admin/products/createProduct";
 import { ProductAdminView } from "@/domain/entities/views/admin/productAdminView";
 import { DeleteProduct } from "@/domain/use-case/admin/products";
 
+import { ViewProduct } from "@/domain/use-case/store/viewProduct";
+import { CheckProduct } from "@/domain/use-case/admin/products/checkProduct";
+
+
 export async function createProductAction(product: ProductAdminView) {
     try {
+        let exists = await new CheckProduct().execute(product.slug!);
+        if (exists) {
+            return { success: false, error: "Product already exists" };
+        }
         let id = await new CreateProduct().execute(product);
         return { success: true, id: id };
     } catch (error) {

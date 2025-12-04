@@ -167,7 +167,7 @@ export function MaterialSelector({ onSelect, onClose }: MaterialSelectorProps) {
                                         <div className="text-right">
                                             <p className="text-xs text-gray-500 uppercase">{t('cost')}</p>
                                             <p className="text-lg font-bold text-gray-900">
-                                                {amount ? t('{{price, currency}}', { price: parseFloat(amount) * selectedMaterial.price_per_gram }) : '0.00'}
+                                                {t('{{price, currency}}', { price: amount ? parseFloat(amount) * selectedMaterial.price_per_gram : 0 })}
                                             </p>
                                         </div>
                                     </div>

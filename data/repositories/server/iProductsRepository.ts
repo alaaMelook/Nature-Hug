@@ -68,7 +68,26 @@ export class IProductServerRepository implements ProductRepository {
         return data;
     }
 
-
+    async checkSlug(slug: string): Promise<boolean> {
+        console.log("[IProductRepository] checkSlug called with slug:", slug);
+        const supabase = await createSupabaseServerClient();
+        const { data, status, statusText, error } = await supabase
+            .schema('store')
+            .from(`products_view_${this.lang}`)
+            .select('*')
+            .eq('slug', slug)
+            .maybeSingle();
+        if (data) {
+            return true;
+        }
+        return false;
+        console.log("[IProductRepository] checkSlug result:", { data, status, statusText });
+        if (error) {
+            console.error("[IProductRepository] checkSlug error:", error);
+            throw error;
+        }
+        return data;
+    }
     async viewDetailedBySlug(slug: string): Promise<ProductDetailView> {
         console.log("[IProductRepository] viewBySlug called with slug:", slug);
         const supabase = await createSupabaseServerClient();

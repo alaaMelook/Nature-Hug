@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { useTranslation } from "react-i18next";
-import { ProductAdminView } from "@/domain/entities/views/admin/productAdminView";
+import { ProductAdminView, ProductMaterialAdminView } from "@/domain/entities/views/admin/productAdminView";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { createProductAction } from "@/ui/hooks/admin/products";
@@ -95,6 +95,7 @@ export function CreateProductForm({ initialImages, initialCategories }: CreatePr
 
         const cleanedData = {
             ...data,
+            name_ar: data.name_ar.trim().length > 0 ? data.name_ar.trim() : data.name_en.trim(),
             price: cleanNumber(data.price),
             stock: cleanNumber(data.stock),
             discount: cleanNumber(data.discount),
@@ -134,11 +135,11 @@ export function CreateProductForm({ initialImages, initialCategories }: CreatePr
                 return;
             }
         }
-
+        console.log("[CreateProductForm] Submitting data:", cleanedData);
         const result = await createProductAction(cleanedData);
         if (result.success) {
             toast.success(t("productCreated"));
-            router.push("/admin/products");
+            // router.push("/admin/products");
         } else {
             toast.error(t("errorCreatingProduct") + (result.error));
         }
@@ -163,14 +164,14 @@ export function CreateProductForm({ initialImages, initialCategories }: CreatePr
     };
 
     const handleMaterialSelect = (material: Material, amount: number) => {
-        const materialData = {
-            material_id: material.id,
+        const materialData: ProductMaterialAdminView = {
+            id: material.id,
             grams_used: amount,
-            amount: amount, // Keep for UI if needed, or remove if unused
+
             // @ts-ignore
             material_name: material.name,
-            material_price: material.price_per_gram,
-            material_unit: material.unit || undefined,
+            material_type: material.material_type,
+            price: material.price_per_gram,
             measurement_unit: material.unit || 'gm'
         };
 
@@ -183,9 +184,9 @@ export function CreateProductForm({ initialImages, initialCategories }: CreatePr
     };
 
     const calculateTotalCost = () => {
-        const materials = watch("materials") || [];
-        return materials.reduce((total, item: any) => {
-            return total + ((item.grams_used || item.amount || 0) * (item.material_price || 0));
+        // const materials = watch("materials") || [];
+        return materialFields.reduce((total, item: ProductMaterialAdminView) => {
+            return total + ((item.grams_used || 0) * (item.price || 0));
         }, 0).toFixed(2);
     };
 
@@ -490,8 +491,8 @@ export function CreateProductForm({ initialImages, initialCategories }: CreatePr
                                                             exit={{ opacity: 0 }}
                                                         >
                                                             <td className="px-4 py-2">{field.material_name || `ID: ${field.material_id}`}</td>
-                                                            <td className="px-4 py-2 text-right">{field.grams_used || field.amount} {field.material_unit || 'g'}</td>
-                                                            <td className="px-4 py-2 text-right">{((field.grams_used || field.amount || 0) * (field.material_price || 0)).toFixed(2)}</td>
+                                                            <td className="px-4 py-2 text-right">{field.grams_used || 0} {field.measurement_unit || 'g'}</td>
+                                                            <td className="px-4 py-2 text-right">{((field.grams_used || 0) * (field.price || 0)).toFixed(2)}</td>
                                                             <td className="px-4 py-2 text-right">
                                                                 <button type="button" onClick={() => removeMaterial(index)} className="text-red-500 hover:text-red-700">
                                                                     <Trash2 size={16} />
@@ -583,10 +584,10 @@ export function CreateProductForm({ initialImages, initialCategories }: CreatePr
                                                             <input type="number" {...register(`variants.${index}.price` as const)} className="w-full border-gray-300 rounded shadow-sm p-1.5 border text-sm" />
                                                             {watch(`variants.${index}.materials`)?.length > 0 && (
                                                                 <div className="flex flex-col text-[10px] leading-tight ml-2">
-                                                                    <span className="text-gray-500">Cost: {watch(`variants.${index}.materials`).reduce((acc, m) => acc + ((m.grams_used || 0) * (m.material_price || 0)), 0).toFixed(2)}</span>
-                                                                    <span className={(Number(watch(`variants.${index}.price`) || 0) - watch(`variants.${index}.materials`).reduce((acc, m) => acc + ((m.grams_used || 0) * (m.material_price || 0)), 0)) >= 0 ? "text-green-600 font-bold" : "text-red-600 font-bold"}>
-                                                                        Profit: {(Number(watch(`variants.${index}.price`) || 0) - watch(`variants.${index}.materials`).reduce((acc, m) => acc + ((m.grams_used || 0) * (m.material_price || 0)), 0)).toFixed(2)}
-                                                                        ({(Number(watch(`variants.${index}.price`) || 0) > 0 ? ((Number(watch(`variants.${index}.price`) || 0) - watch(`variants.${index}.materials`).reduce((acc, m) => acc + ((m.grams_used || 0) * (m.material_price || 0)), 0)) / Number(watch(`variants.${index}.price`) || 0)) * 100 : 0).toFixed(0)}%)
+                                                                    <span className="text-gray-500">Cost: {watch(`variants.${index}.materials`).reduce((acc, m) => acc + ((m.grams_used || 0) * (m.price || 0)), 0).toFixed(2)}</span>
+                                                                    <span className={(Number(watch(`variants.${index}.price`) || 0) - watch(`variants.${index}.materials`).reduce((acc, m) => acc + ((m.grams_used || 0) * (m.price || 0)), 0)) >= 0 ? "text-green-600 font-bold" : "text-red-600 font-bold"}>
+                                                                        Profit: {(Number(watch(`variants.${index}.price`) || 0) - watch(`variants.${index}.materials`).reduce((acc, m) => acc + ((m.grams_used || 0) * (m.price || 0)), 0)).toFixed(2)}
+                                                                        ({(Number(watch(`variants.${index}.price`) || 0) > 0 ? ((Number(watch(`variants.${index}.price`) || 0) - watch(`variants.${index}.materials`).reduce((acc, m) => acc + ((m.grams_used || 0) * (m.price || 0)), 0)) / Number(watch(`variants.${index}.price`) || 0)) * 100 : 0).toFixed(0)}%)
                                                                     </span>
                                                                 </div>
                                                             )}
@@ -657,7 +658,7 @@ export function CreateProductForm({ initialImages, initialCategories }: CreatePr
                                                                 <div className="flex flex-wrap gap-2">
                                                                     {watch(`variants.${index}.materials`)?.map((mat, mIndex) => (
                                                                         <div key={mIndex} className="flex items-center gap-2 bg-white border rounded-full px-3 py-1 text-xs shadow-sm">
-                                                                            <span className="font-medium text-gray-700">{mat.material_name || `ID: ${mat.material_id}`}</span>
+                                                                            <span className="font-medium text-gray-700">{mat.material_name || `ID: ${mat.id}`}</span>
                                                                             <span className="text-gray-500 border-l pl-2 ml-1">{mat.grams_used} {mat.measurement_unit}</span>
                                                                             <button
                                                                                 type="button"

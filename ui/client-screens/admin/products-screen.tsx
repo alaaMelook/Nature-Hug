@@ -233,7 +233,7 @@ export function ProductsScreen({ products, materials }: { products: ProductAdmin
                                             </button>
                                         </div>
                                     </div>
-                                    <p className="text-xs text-gray-500 mt-0.5">{product.category?.name_en || 'Uncategorized'}</p>
+                                    <p className="text-xs text-gray-500 mt-0.5">{i18n.language === "ar" ? product.category_name_ar ?? product.category_name_en : product.category_name_en || 'Uncategorized'}</p>
                                     <div className="mt-2 flex items-center justify-between">
                                         <span className="text-sm font-bold text-gray-900">{t('{{price, currency}}', { price: product.price })}</span>
                                         <div className="flex items-center gap-2">
@@ -262,11 +262,7 @@ export function ProductsScreen({ products, materials }: { products: ProductAdmin
                 title={t("addProductStock") || "Add Product Stock"}
                 itemName={i18n.language === 'ar' ? selectedProduct?.name_ar || "" : selectedProduct?.name_en || ""}
                 currentStock={selectedProduct?.stock}
-                variants={selectedProduct?.variants?.map(v => ({
-                    id: v.id,
-                    name: i18n.language === 'ar' ? v.name_ar : v.name_en,
-                    currentStock: v.stock
-                }))}
+
             />
         </motion.div>
     );

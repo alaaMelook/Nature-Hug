@@ -11,17 +11,15 @@ interface VariantOption {
 interface StockUpdateModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onConfirm: (quantity: number, variantId?: number) => Promise<void>;
+    onConfirm: (quantity: number) => Promise<void>;
     title: string;
     itemName: string;
     currentStock?: number;
-    variants?: VariantOption[];
 }
 
-export function StockUpdateModal({ isOpen, onClose, onConfirm, title, itemName, currentStock, variants }: StockUpdateModalProps) {
+export function StockUpdateModal({ isOpen, onClose, onConfirm, title, itemName, currentStock }: StockUpdateModalProps) {
     const { t } = useTranslation();
     const [quantity, setQuantity] = useState<number>(0);
-    const [selectedVariantId, setSelectedVariantId] = useState<number | undefined>(variants && variants.length > 0 ? variants[0].id : undefined);
     const [loading, setLoading] = useState(false);
 
     if (!isOpen) return null;
@@ -29,15 +27,11 @@ export function StockUpdateModal({ isOpen, onClose, onConfirm, title, itemName, 
     const handleConfirm = async () => {
         if (quantity <= 0) return;
         setLoading(true);
-        await onConfirm(quantity, selectedVariantId);
+        await onConfirm(quantity);
         setLoading(false);
         onClose();
         setQuantity(0);
     };
-
-    const activeStock = variants
-        ? variants.find(v => v.id === selectedVariantId)?.currentStock
-        : currentStock;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
@@ -55,28 +49,11 @@ export function StockUpdateModal({ isOpen, onClose, onConfirm, title, itemName, 
                         <p className="text-gray-900 font-medium">{itemName}</p>
                     </div>
 
-                    {variants && variants.length > 0 && (
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">{t("variant")}</label>
-                            <select
-                                value={selectedVariantId}
-                                onChange={(e) => setSelectedVariantId(Number(e.target.value))}
-                                className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500"
-                            >
-                                {variants.map(v => (
-                                    <option key={v.id} value={v.id}>
-                                        {v.name} (Stock: {v.currentStock})
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                    )}
-
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                             {t("quantityToAdd")}
                             <span className="text-xs text-gray-500 ml-2">
-                                ({t("current")}: {activeStock})
+                                ({t("current")}: {currentStock})
                             </span>
                         </label>
                         <input

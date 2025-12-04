@@ -122,18 +122,6 @@ export class IAdminServerRepository implements AdminRepository {
     async createProduct(product: ProductAdminView): Promise<number> {
         console.log("[IAdminRepository] createProduct called with product:", product);
 
-        const {
-            data,
-            status,
-            statusText,
-            error
-        } = await supabaseAdmin.schema('admin').rpc('create_product', { product_data: product });
-
-        console.log("[IAdminRepository] createProduct result:", { data, status, statusText });
-        if (error) {
-            console.error("[IAdminRepository] createProduct error:", error);
-            throw error;
-        }
 
         // Deduct materials from stock
         try {
@@ -149,7 +137,7 @@ export class IAdminServerRepository implements AdminRepository {
             // 1. Main Product Materials
             if (product.stock > 0 && product.materials) {
                 for (const mat of product.materials) {
-                    addUsage(mat.material_id, (mat.grams_used || mat.amount || 0), product.stock);
+                    addUsage(mat.id, (mat.grams_used || 0), product.stock);
                 }
             }
 
@@ -158,7 +146,7 @@ export class IAdminServerRepository implements AdminRepository {
                 for (const variant of product.variants) {
                     if (variant.stock > 0 && variant.materials) {
                         for (const mat of variant.materials) {
-                            addUsage(mat.material_id, (mat.grams_used || mat.amount || 0), variant.stock);
+                            addUsage(mat.id, (mat.grams_used || 0), variant.stock);
                         }
                     }
                 }
@@ -188,14 +176,29 @@ export class IAdminServerRepository implements AdminRepository {
                     }
                 }
             }
+            const {
+                data,
+                status,
+                statusText,
+                error
+            } = await supabaseAdmin.schema('admin').rpc('create_product', { product_data: product });
+
+            console.log("[IAdminRepository] createProduct result:", { data, status, statusText });
+
+            if (error) {
+                console.error("[IAdminRepository] createProduct error:", error);
+                throw error;
+            }
+            return data;
 
         } catch (deductionError) {
             console.error("[IAdminRepository] Error deducting material stock:", deductionError);
+            throw deductionError;
             // We don't throw here to avoid failing the product creation if stock deduction fails, 
             // but in a real app we might want a transaction or compensation action.
         }
 
-        return data;
+
     }
 
     async updateProduct(product: ProductAdminView): Promise<number> {
@@ -401,27 +404,20 @@ export class IAdminServerRepository implements AdminRepository {
     async addProductStock(product: ProductAdminView, quantity: number): Promise<void> {
         console.log(`[IAdminRepository] addProductStock called for productId: ${product.product_id}, quantity: ${quantity}`);
 
-        let materialsNeeded: { material_id: number, amount: number }[] = [];
 
-        // Map variant materials
-        if (product.variant_id) {
-            materialsNeeded = product.materials.map(m => ({
-                material_id: m.material_id,
-                amount: (m.grams_used || m.amount || 0) * quantity
-            }));
-        } else {
-            // Main product materials
-            materialsNeeded = product.materials.map(m => ({
-                material_id: m.material_id,
-                amount: (m.grams_used || m.amount || 0) * quantity
-            }));
-        }
+        // Main product materials
+        let materialsNeeded = product.materials.map(m => ({
+            material_id: m.id,
+            amount: (m.grams_used || 0) * quantity
+        }));
+
 
         if (materialsNeeded.length === 0) {
             // No materials needed, just update stock
             console.log("[IAdminRepository] No materials linked, updating stock directly.");
         } else {
             // 3. Check Material Availability
+            console.log("[IAdminRepository] Checking material availability:", materialsNeeded);
             const materialIds = materialsNeeded.map(m => m.material_id);
             const { data: currentMaterials, error: matError } = await supabaseAdmin.schema('admin')
                 .from("materials")
@@ -438,12 +434,13 @@ export class IAdminServerRepository implements AdminRepository {
                     throw new Error(`Insufficient stock for material: ${mat.name}. Required: ${need.amount}, Available: ${mat.stock_grams}`);
                 }
             }
-
+            console.log("[IAdminRepository] Material availability checked successfully.");
             // 4. Deduct Materials
+            console.log("[IAdminRepository] Deducting materials:", materialsNeeded);
             for (const need of materialsNeeded) {
                 const mat = currentMaterials?.find(m => m.id === need.material_id)!;
                 const newStock = (mat.stock_grams || 0) - need.amount;
-
+                console.log("[IAdminRepository] Deducting material:", mat.name, "New stock:", newStock);
                 const { error: deductError } = await supabaseAdmin.schema('admin')
                     .from("materials")
                     .update({ stock_grams: newStock })
@@ -451,6 +448,7 @@ export class IAdminServerRepository implements AdminRepository {
 
                 if (deductError) throw deductError;
             }
+            console.log("[IAdminRepository] Materials deducted successfully.");
         }
 
         // 5. Update Product/Variant Stock
@@ -467,6 +465,7 @@ export class IAdminServerRepository implements AdminRepository {
                 .eq('id', product.product_id);
             if (updateError) throw updateError;
         }
+        console.log("[IAdminRepository] Product/Variant stock updated successfully.");
     }
     async getAllPromoCodes(): Promise<PromoCode[]> {
         console.log("[IAdminRepository] getAllPromoCodes called.");
