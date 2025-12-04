@@ -9,7 +9,7 @@ export function useProfitCalculator(
 
     const productMaterials = product.materials || [];
     const totalCost = productMaterials.reduce((total, pm) => {
-        const m = materials.find((mat) => mat.id === pm.material_id);
+        const m = materials.find((mat) => mat.id === pm.id);
         return total + (m ? m.price_per_gram * (pm.grams_used || 0) : 0);
     }, 0);
 
