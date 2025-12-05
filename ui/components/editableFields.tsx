@@ -1,11 +1,12 @@
 "use client";
 
-import React, {useEffect, useState} from "react";
-import {PencilIcon, Trash2Icon} from "lucide-react";
-import {ConfirmDialog} from "@/ui/components/confirmDialog";
-import {Governorate} from "@/domain/entities/database/governorate";
-import {CustomerAddress} from "@/domain/entities/auth/customer";
-import {ViewAddress} from "@/domain/entities/views/shop/profileView";
+import React, { useEffect, useState } from "react";
+import { PencilIcon, Trash2Icon } from "lucide-react";
+import { ConfirmDialog } from "@/ui/components/confirmDialog";
+import { Governorate } from "@/domain/entities/database/governorate";
+import { CustomerAddress } from "@/domain/entities/auth/customer";
+import { ViewAddress } from "@/domain/entities/views/shop/profileView";
+import { t } from "i18next";
 
 interface EditablePhoneFieldProps {
     label: string;
@@ -18,14 +19,14 @@ interface EditablePhoneFieldProps {
 }
 
 export function EditablePhoneField({
-                                       label,
-                                       value,
-                                       loading,
-                                       newItem = false,
-                                       onChange,
-                                       onSave,
-                                       onDelete,
-                                   }: EditablePhoneFieldProps) {
+    label,
+    value,
+    loading,
+    newItem = false,
+    onChange,
+    onSave,
+    onDelete,
+}: EditablePhoneFieldProps) {
     const [input, setInput] = useState(value);
     const [editing, setEditing] = useState(newItem);
     const [confirmDelete, setConfirmDelete] = useState(false);
@@ -67,7 +68,7 @@ export function EditablePhoneField({
                         onClick={() => setConfirmDelete(true)}
                         className="px-4 py-2 rounded border-red-700 border-1"
                     >
-                        <Trash2Icon className="w-4 h-4 text-red-700"/>
+                        <Trash2Icon className="w-4 h-4 text-red-700" />
                     </button>
                 )}
 
@@ -77,7 +78,7 @@ export function EditablePhoneField({
                     onClick={handleSave}
                     className="px-4 py-2 rounded text-primary-900 border-1 border-primary-900"
                 >
-                    {editing ? (loading ? "Saving…" : "Save") : "Edit"}
+                    {editing ? (loading ? t("saving") : t("save")) : t("edit")}
                 </button>
             </div>
 
@@ -107,14 +108,14 @@ interface EditableAddressFieldProps {
 }
 
 export function EditableAddressField({
-                                         label,
-                                         address,
-                                         governorates,
-                                         loading,
-                                         newItem = false,
-                                         onChange,
-                                         onSave,
-                                     }: EditableAddressFieldProps) {
+    label,
+    address,
+    governorates,
+    loading,
+    newItem = false,
+    onChange,
+    onSave,
+}: EditableAddressFieldProps) {
     const [input, setInput] = useState(address);
     const [editing, setEditing] = useState(newItem);
 
@@ -140,7 +141,7 @@ export function EditableAddressField({
                     type="text"
                     value={input?.address ?? ""}
                     onChange={(e) => {
-                        const updated = {...input, address: e.target.value};
+                        const updated = { ...input, address: e.target.value };
                         setInput(updated);
                         onChange(updated);
                     }}
@@ -151,13 +152,13 @@ export function EditableAddressField({
                     className="flex-1/2 rounded border-1 border-gray-300 focus-visible:border-gray-300 p-1.5"
                     value={input?.governorate_slug ?? "Choose"}
                     onChange={(e) => {
-                        const updated = {...input, governorate_slug: e.target.value};
+                        const updated = { ...input, governorate_slug: e.target.value };
                         setInput(updated);
                         onChange(updated);
                     }}
                 >
                     <option value="Choose" key="init">
-                        Choose Governorate...
+                        {t("chooseGovernorate")}
                     </option>
                     {governorates.map((g) => (
                         <option key={g.slug} value={g.slug}>
@@ -171,7 +172,7 @@ export function EditableAddressField({
                     disabled={loading}
                     className="px-4 py-2 rounded text-primary-900 border-1 border-primary-900 w-1/3 self-end"
                 >
-                    {editing ? (loading ? "Saving…" : "Save") : "Edit"}
+                    {editing ? (loading ? t("saving") : t("save")) : t("edit")}
                 </button>
             </div>
         </label>
@@ -179,11 +180,11 @@ export function EditableAddressField({
 }
 
 export function EditableAddressItem({
-                                        address,
-                                        governorates,
-                                        onSaveAction,
-                                        onDeleteAction,
-                                    }: {
+    address,
+    governorates,
+    onSaveAction,
+    onDeleteAction,
+}: {
     address: Partial<ViewAddress>;
     governorates: Governorate[];
     onSaveAction: (updated: Partial<ViewAddress>) => Promise<void>;
@@ -194,7 +195,7 @@ export function EditableAddressItem({
     const [form, setForm] = useState<Partial<ViewAddress>>(address);
 
     const handleSave = async () => {
-        await onSaveAction({...address, ...form});
+        await onSaveAction({ ...address, ...form });
         setEditing(false);
     };
 
@@ -202,22 +203,22 @@ export function EditableAddressItem({
         <li className="flex justify-between border rounded p-2 text-sm text-gray-700 items-center">
             {!editing ? (
                 <>
-          <span>
-  {address.address}, {address.governorate?.name_en}
-</span>
+                    <span>
+                        {address.address}, {address.governorate?.name_en}
+                    </span>
 
                     <div className="flex gap-2">
                         <button
                             onClick={() => setEditing(true)}
                             className="text-amber-700 hover:text-amber-900"
                         >
-                            <PencilIcon className="w-4 h-4"/>
+                            <PencilIcon className="w-4 h-4" />
                         </button>
                         <button
                             onClick={() => setConfirmDelete(true)}
                             className="text-red-600 hover:text-red-800"
                         >
-                            <Trash2Icon className="w-4 h-4"/>
+                            <Trash2Icon className="w-4 h-4" />
                         </button>
                     </div>
 
@@ -238,14 +239,14 @@ export function EditableAddressItem({
                     <input
                         type="text"
                         value={form.address}
-                        onChange={(e) => setForm({...form, address: e.target.value})}
+                        onChange={(e) => setForm({ ...form, address: e.target.value })}
                         className="flex-1 rounded border border-gray-300 p-1"
                     />
                     <select
                         value={form.governorate?.slug}
                         onChange={(e) => {
                             if (e.target.value !== "Choose") {
-                                setForm({...form, governorate: {...form.governorate!, slug: e.target.value}})
+                                setForm({ ...form, governorate: { ...form.governorate!, slug: e.target.value } })
                             }
                         }
                         }
@@ -264,13 +265,13 @@ export function EditableAddressItem({
                             onClick={() => setEditing(false)}
                             className="px-3 py-1 border rounded text-gray-700"
                         >
-                            Cancel
+                            {t("cancel")}
                         </button>
                         <button
                             onClick={handleSave}
                             className="px-3 py-1 bg-amber-700 text-white rounded hover:bg-amber-800"
                         >
-                            Save
+                            {t("save")}
                         </button>
                     </div>
                 </div>

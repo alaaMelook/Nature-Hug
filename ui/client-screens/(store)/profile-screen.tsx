@@ -35,7 +35,7 @@ export function ProfileScreen({ profile, governorates }: { profile: ProfileView,
     } | null>(null);
 
     return (
-        <div className=" mx-30 my-10 p-6 bg-white rounded-lg shadow">
+        <div className=" md:mx-30 mx-10 my-10 p-6 bg-white rounded-lg shadow">
             <h1 className="text-2xl font-bold mb-6 text-amber-800">{t("profileScreen.title")}</h1>
 
             {/* --- Basic Info --- */}

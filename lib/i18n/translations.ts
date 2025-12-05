@@ -580,10 +580,9 @@ export const resources = {
         orderNotFoundDesc: "We couldn't find the order details. This may be because the order ID is invalid or the order hasn't been processed yet.",
         viewMyOrders: "View my orders",
         contactSupport: "Contact support",
-
+        chooseGovernorate: "Choose Governorate",
       },
-      shopbyCategory: "Shop by Category",
-      viewAllProducts: "View All Products",
+
       // Profile
       profileScreen: {
         title: "My Profile",
@@ -608,8 +607,13 @@ export const resources = {
         title: "Verify your email address",
         message: "You’ve entered <1>{{email}}</1> as the email address for your account.",
         instruction: "Just click on the link in that email to complete your signup. If you don't see it, you may need to check your spam folder."
-      }
+      },
+      shopByCategory: "Shop by Category",
+      viewAllProducts: "View All Products",
+      youMightAlsoLike: "Products you might also like",
+      pleaseWait: "Please wait...",
     }
+
   },
   ar: {
     translation: {
@@ -1219,7 +1223,10 @@ export const resources = {
         title: "تحقق من بريدك الإلكتروني",
         message: "لقد أدخلت <1>{{email}}</1> كعنوان بريد إلكتروني لحسابك.",
         instruction: "فقط انقر على الرابط في ذلك البريد الإلكتروني لإكمال تسجيلك. إذا لم تره، قد تحتاج للتحقق من مجلد الرسائل غير المرغوب فيها."
-      }
+      },
+      pleaseWait: "برجاء الانتظار...",
+      youMightAlsoLike: "منتجات أخري قد تعجبك",
+      chooseGovernorate: "اختر المحافظة",
     }
   }
 };

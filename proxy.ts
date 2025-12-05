@@ -4,7 +4,7 @@ import { i18nRouter } from "next-i18n-router";
 import { i18nConfig } from "./i18nconfig";
 import { NextResponse, type NextRequest } from "next/server";
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
     // 1️⃣ Step 1 — handle language routing FIRST
     const i18nResponse = i18nRouter(request, i18nConfig);
 

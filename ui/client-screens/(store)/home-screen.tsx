@@ -9,25 +9,9 @@ import { motion } from "framer-motion";
 import { Category } from "@/domain/entities/database/category";
 import { useCurrentLanguage } from "@/ui/hooks/useCurrentLanguage";
 
-// Helper to get category image (since it's not in DB)
-const getCategoryImage = (categoryName: string) => {
-    const images: Record<string, string> = {
-        'Skincare': 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?q=80&w=2070&auto=format&fit=crop',
-        'Haircare': 'https://images.unsplash.com/photo-1522337660859-02fbefca4702?q=80&w=2069&auto=format&fit=crop',
-        'Bodycare': 'https://images.unsplash.com/photo-1556228552-523de5029136?q=80&w=2070&auto=format&fit=crop',
-        'Fragrances': 'https://images.unsplash.com/photo-1594035910387-fea477942698?q=80&w=2080&auto=format&fit=crop',
-        'Oils': 'https://images.unsplash.com/photo-1601042879364-f3947d3f9c16?q=80&w=1974&auto=format&fit=crop',
-        // Default fallback
-        'default': 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?q=80&w=1887&auto=format&fit=crop'
-    };
-
-    // Simple matching, can be improved
-    const key = Object.keys(images).find(k => categoryName.toLowerCase().includes(k.toLowerCase()));
-    return key ? images[key] : images['default'];
-};
 
 export function HomeScreen({ initialProducts: products, categories }: { initialProducts: ProductView[], categories: Category[] }) {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const features = useFeatures();
     const lang = useCurrentLanguage();
 
@@ -156,7 +140,7 @@ export function HomeScreen({ initialProducts: products, categories }: { initialP
                         <motion.p
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
-                            transition={{ delay: 0.3, duration: 8 }}
+                            transition={{ duration: 0.3, ease: "easeOut" }}
                             className="text-lg sm:text-xl text-primary-800 max-w-2xl mx-auto mb-10 leading-relaxed"
                         >
                             {t("heroDescription")}
@@ -164,7 +148,7 @@ export function HomeScreen({ initialProducts: products, categories }: { initialP
                         <motion.div
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: 0.5, duration: 5 }}
+                            transition={{ duration: 0.5, ease: "easeOut", delay: 0.5 }}
                             className="flex flex-col sm:flex-row justify-center items-center gap-4"
                         >
                             <Link
@@ -191,34 +175,33 @@ export function HomeScreen({ initialProducts: products, categories }: { initialP
                             whileInView={{ opacity: 1, y: 0 }}
                             viewport={{ once: true }}
                             transition={{ duration: 0.6 }}
-                            className="text-3xl md:text-4xl font-serif font-bold mt-5 mb-12 text-primary-950 z-2 text-shadow-black"
+                            className="text-center text-3xl md:text-4xl font-serif font-bold mt-5 mb-22 text-primary-950 z-2 text-shadow-black"
                         >
                             {t("shopByCategory")}
                         </motion.h2>
 
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                             {categories?.map((category) => {
-                                const categoryName = lang === 'en' ? category.name_en : (category.name_ar || category.name_en);
-                                const imageUrl = category.image_url || getCategoryImage(category.name_en);
-                                return (
+                                return category.image_url ? (
                                     <Link
                                         key={category.id}
                                         href={`/products?category=${encodeURIComponent(category.name_en)}`}
                                         className="group relative overflow-hidden rounded-2xl shadow-md aspect-[4/5] cursor-pointer"
                                     >
                                         <img
-                                            src={imageUrl}
-                                            alt={categoryName}
+                                            src={category.image_url}
+                                            alt={category.name_en}
                                             className="z-2 absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                                         />
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-80 group-hover:opacity-90 transition-opacity duration-300"></div>
-                                        <div className="absolute bottom-0 left-0 w-full p-6 text-center">
-                                            <h3 className="text-white text-xl font-bold tracking-wide group-hover:text-primary-100 transition-colors">
-                                                {categoryName}
-                                            </h3>
+                                        <div className="z-3 absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-80 group-hover:opacity-90 transition-opacity duration-300">
+                                            <div className="absolute bottom-0 left-0 w-full p-6 text-center ">
+                                                <h3 className="text-white text-xl font-bold tracking-wide group-hover:text-primary-100 transition-colors">
+                                                    {i18n.language === "ar" ? category.name_ar ?? category.name_en : category.name_en}
+                                                </h3>
+                                            </div>
                                         </div>
                                     </Link>
-                                );
+                                ) : null
                             })}
                         </div>
                     </div>
@@ -232,7 +215,7 @@ export function HomeScreen({ initialProducts: products, categories }: { initialP
                             whileInView={{ opacity: 1, y: 0 }}
                             viewport={{ once: true }}
                             transition={{ duration: 0.6 }}
-                            className="text-3xl md:text-4xl font-serif font-bold mb-12 text-primary-900"
+                            className="text-center text-3xl md:text-4xl font-serif font-bold mb-22 text-primary-900 z-2 text-shadow-black"
                         >
                             {t("featuredProducts")}
                         </motion.h2>
@@ -251,14 +234,14 @@ export function HomeScreen({ initialProducts: products, categories }: { initialP
                 </section>
 
                 {/* Features Section */}
-                <section className="bg-white py-16 border-t border-gray-100">
+                <section className="bg-gradient-to-b from-white to-primary-50 pb-25">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6">
                         <motion.div
                             variants={containerVariants}
                             initial="hidden"
                             whileInView="visible"
                             viewport={{ once: true }}
-                            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8"
+                            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 "
                         >
                             {features.map(
                                 (feature: {
@@ -269,14 +252,14 @@ export function HomeScreen({ initialProducts: products, categories }: { initialP
                                     <motion.div
                                         variants={itemVariants}
                                         key={feature.title}
-                                        className="flex flex-col items-center text-center p-6 rounded-xl hover:bg-primary-50 transition-colors duration-300"
+                                        className="flex flex-col items-center text-center p-6 rounded-xl hover:shadow-lg hover:scale-105 transition-all duration-300"
                                     >
                                         <div className="mb-4 p-3 bg-primary-100 rounded-full text-primary-800">
                                             <feature.icon className="w-8 h-8" />
                                         </div>
 
-                                        <h3 className="text-lg font-bold text-primary-900 mb-2">{feature.title}</h3>
-                                        <p className="text-gray-600 text-sm leading-relaxed">
+                                        <h3 className="cursor-default text-lg font-bold text-primary-900 mb-2">{feature.title}</h3>
+                                        <p className="cursor-default text-gray-600 text-sm leading-relaxed">
                                             <Trans components={{ b: <strong /> }}>
                                                 {feature.description}
                                             </Trans>

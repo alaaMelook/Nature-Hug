@@ -139,7 +139,7 @@ export function CreateProductForm({ initialImages, initialCategories }: CreatePr
         const result = await createProductAction(cleanedData);
         if (result.success) {
             toast.success(t("productCreated"));
-            // router.push("/admin/products");
+            router.push("/admin/products");
         } else {
             toast.error(t("errorCreatingProduct") + (result.error));
         }

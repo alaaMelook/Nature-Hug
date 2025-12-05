@@ -10,7 +10,7 @@ import { useCategories } from "@/ui/hooks/admin/useCategories";
 import { motion, AnimatePresence } from "framer-motion";
 import { ImageSelector } from "@/ui/components/admin/imageSelector";
 
-export default function CategoriesScreen({ initialCategories }: { initialCategories: Category[] }) {
+export default function CategoriesScreen({ initialCategories, initialImages }: { initialCategories: Category[], initialImages: { image: any; url: string }[] }) {
     const { t } = useTranslation();
     const [categories, setCategories] = useState<Category[]>(initialCategories);
     const [nameEnglish, setNameEnglish] = useState("");
@@ -166,7 +166,7 @@ export default function CategoriesScreen({ initialCategories }: { initialCategor
 
             {showImageSelector && (
                 <ImageSelector
-                    images={[]} // You might want to pass initial images if available, or fetch them inside ImageSelector if it supports it. 
+                    images={initialImages}
                     // Based on previous usage in create-product-form, it seems to expect images prop.
                     // However, ImageSelector implementation shows it uses localImages state initialized from props.
                     // If we pass empty array, it will start empty. 

@@ -90,9 +90,10 @@ export default function Navbar() {
             <div className="text-xl font-bold flex items-center space-x-4 ">
                 <Link href="/" className="flex items-center sm:w-30 sm:h-30 w-20 h-20 relative">
                     <Image
-                        src={isHomePage && !isScrolled ? "https://reqrsmboabgxshacmkst.supabase.co/storage/v1/object/public/product-images/logo%20(4).png" : "https://reqrsmboabgxshacmkst.supabase.co/storage/v1/object/public/product-images/logo.jpg"}
+                        src={"https://reqrsmboabgxshacmkst.supabase.co/storage/v1/object/public/product-images/logo%20(4).png"}
                         priority={true} alt="Logo  Nature"
-                        fill={true} />
+                        fill={true}
+                        className="transition-all duration-900 ease-in-out" />
                 </Link>
                 <LanguageSwitcher tohover={!(isHomePage && !isScrolled)} />
             </div>
@@ -135,7 +136,7 @@ export default function Navbar() {
                     <div className="relative">
                         <button
                             onClick={toggleSettingsMenu}
-                            className="cursor-pointer flex items-center px-3 py-2 bg-primary-10 text-primary-950 rounded-lg "
+                            className={`cursor-pointer flex items-center px-3 py-2 ${isHomePage && !isScrolled ? "" : "bg-primary-50 shadow-md  hover:bg-primary-100 transition"} text-primary-950 rounded-lg `}
                         >
                             <Settings className="w-5 h-5" />
                         </button>

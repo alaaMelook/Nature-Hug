@@ -4,8 +4,7 @@ import CartSyncer from "@/ui/providers/CartSyncer";
 import React from "react";
 import { Footer } from "@/ui/components/footer";
 import { WhatsappFloat } from "@/ui/components/store/whatsappFloat";
-import { GetCurrentUser } from "@/domain/use-case/store/getCurrentUser";
-import { GetCurrentMember } from "@/domain/use-case/admin/getCurrentMember";
+
 
 
 export default async function ShopLayout({ children }: { children: React.ReactNode }) {
