@@ -101,8 +101,8 @@ export const resources = {
       featuredProducts: "Featured Products",
       learnMore: "Learn More",
       allRightsReserved: "All rights reserved.",
-      heroTitle: "Where every ingredient is a promise.",
-      heroDescription: "A gentle hug for your skin from nature itself.",
+      heroTitle: "A hug for your skin and soul",
+      heroDescription: "Where every ingredient is a promise.",
       addedLocal: "Added to local cart (login to sync).",
       addedServer: "Product added to cart!",
 
@@ -724,8 +724,8 @@ export const resources = {
       featuredProducts: "منتجات مميزة",
       learnMore: "اعرف المزيد",
       allRightsReserved: "جميع الحقوق محفوظة.",
-      heroTitle: "حيث كل مكون هو وعد.",
-      heroDescription: "عناق لطيف لبشرتك من الطبيعة نفسها.",
+      heroTitle: "حضن لبشرتك و روحك",
+      heroDescription: "حيث كل مكون هو وعد.",
       addedLocal: "تمت الإضافة للعربة المحلية (سجل الدخول للمزامنة).",
       addedServer: "تمت إضافة المنتج للعربة!",
 
