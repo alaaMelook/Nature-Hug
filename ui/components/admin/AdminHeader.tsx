@@ -77,14 +77,14 @@ export default function AdminHeader({ adminUser }: { adminUser: MemberView }) {
                     </div>
 
                     <div className="p-1">
-                      <button
+                      {/*     <button
                         onClick={() => router.push("/admin/profile")}
                         className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
                       >
                         <User className="w-4 h-4 mx-3 text-gray-400" />
                         {t("profile")}
                       </button>
-
+*/}
                       <button
                         onClick={() => router.push("/")}
                         className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"

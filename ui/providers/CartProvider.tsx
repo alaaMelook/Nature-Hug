@@ -193,7 +193,8 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
             promoCode: null,
             promoCodeId: null,
             free_shipping: false,
-            discount: 0
+            discount: 0,
+            isAdmin: false
         }));
     };
 
