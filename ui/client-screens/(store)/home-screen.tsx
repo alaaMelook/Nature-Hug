@@ -134,7 +134,7 @@ export function HomeScreen({ initialProducts: products, categories }: { initialP
                         transition={{ duration: 0.5, ease: "easeOut" }}
                         className=" relative z-3 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center "
                     >
-                        <h1 className="text-4xl sm:text-5xl lg:text-7xl font-serif font-bold text-primary-900 leading-tight mb-6">
+                        <h1 className={`text-4xl sm:text-5xl lg:text-7xl font-bold text-primary-900 leading-tight mb-6 font-${i18n.language === "ar" ? "arabic" : "serif"}`}>
                             {t("heroTitle")}
                         </h1>
                         <motion.p

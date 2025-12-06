@@ -1,15 +1,14 @@
-"use client";
-
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
-import { Plus, Trash2, Search, Filter, PlusCircle } from "lucide-react";
+import { Plus, Trash2, Search, Filter, PlusCircle, Check, X, ChevronDown } from "lucide-react";
 import { Material } from "@/domain/entities/database/material";
 import { deleteMaterial } from "@/ui/hooks/admin/useMaterials";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { StockUpdateModal } from "./stockUpdateModal";
 import { addStockAction } from "@/ui/hooks/admin/inventory";
+import { motion, AnimatePresence } from "framer-motion";
 
 export function MaterialsTable({
   initialMaterials,
@@ -19,16 +18,59 @@ export function MaterialsTable({
   const { t } = useTranslation();
   const [materials, setMaterials] = useState<Material[]>(initialMaterials || []);
   const [searchTerm, setSearchTerm] = useState("");
+  const [priceFilter, setPriceFilter] = useState<number | "">("");
+  const [typeFilter, setTypeFilter] = useState<string | null>(null);
+  const [stockFilter, setStockFilter] = useState<"all" | "in_stock" | "low_stock" | "out_of_stock">("all");
+
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
   const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null);
 
+  // Filter UI State
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const filterRef = useRef<HTMLDivElement>(null);
+
   const router = useRouter();
 
+  // Close filter dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (filterRef.current && !filterRef.current.contains(event.target as Node)) {
+        setIsFilterOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  // Hardcoded material types
+  const materialTypes = ['Chemicals', 'Labels', 'Containers', 'Packaging', 'Others'];
+
   const filteredMaterials = useMemo(() => {
-    return materials.filter((material) =>
-      material.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [materials, searchTerm]);
+    return materials.filter((material) => {
+      // 1. Name Filter
+      const matchesName = material.name.toLowerCase().includes(searchTerm.toLowerCase());
+
+      // 2. Price Filter (Max Price)
+      const matchesPrice = priceFilter === "" || (material.price_per_gram <= priceFilter);
+
+      // 3. Type Filter
+      const matchesType = typeFilter ? material.material_type === typeFilter : true;
+
+      // 4. Stock Filter
+      let matchesStock = true;
+      if (stockFilter === "in_stock") {
+        matchesStock = (material.stock_grams || 0) > 0;
+      } else if (stockFilter === "out_of_stock") {
+        matchesStock = (material.stock_grams || 0) <= 0;
+      } else if (stockFilter === "low_stock") {
+        matchesStock = (material.stock_grams || 0) <= (material.low_stock_threshold || 10); // Default threshold 10 if null
+      }
+
+      return matchesName && matchesPrice && matchesType && matchesStock;
+    });
+  }, [materials, searchTerm, priceFilter, typeFilter, stockFilter]);
 
   const handleDelete = async (id: number) => {
     if (!confirm(t("deleteConfirm") || "Are you sure you want to delete this material?")) return;
@@ -53,6 +95,14 @@ export function MaterialsTable({
     setIsStockModalOpen(true);
   };
 
+  const clearFilters = () => {
+    setSearchTerm("");
+    setPriceFilter("");
+    setTypeFilter(null);
+    setStockFilter("all");
+    setIsFilterOpen(false);
+  };
+
   const handleAddStock = async (quantity: number) => {
     if (!selectedMaterial) return;
 
@@ -71,25 +121,18 @@ export function MaterialsTable({
     }
   };
 
+  const activeFiltersCount = (typeFilter ? 1 : 0) + (stockFilter !== 'all' ? 1 : 0) + (priceFilter !== "" ? 1 : 0);
+
   const columns: GridColDef[] = [
-    {
-      field: "name", headerName: t("materialName") || "Name", flex: 1, minWidth: 150,
-      renderCell: (params) => <span className="font-medium text-center">{params.row.name || "-"}</span>,
-    },
-    {
-      field: "unit",
-      headerName: t("unit") || "Unit",
-      flex: 0.5,
-      minWidth: 100,
-      renderCell: (params) => <span className="font-medium text-center">{params.row.unit || "-"}</span>,
-    },
+    { field: "name", headerName: t("materialName") || "Name", flex: 1, minWidth: 150 },
+    { field: "unit", headerName: t("unit") || "Unit", flex: 0.5, minWidth: 100 },
     {
       field: "price_per_gram",
       headerName: t("pricePerUnit") || "Price/unit",
       flex: 1,
       minWidth: 120,
       renderCell: (params) => (
-        <span className="font-medium text-center">
+        <span>
           {t('{{price,currency}}', { price: params.row.price_per_gram })}/{params.row.unit || 'g'}
         </span>
       )
@@ -99,10 +142,9 @@ export function MaterialsTable({
       headerName: t("stockUnits") || "Stock",
       flex: 1,
       minWidth: 140,
-      // renderCell: (params) => <span className="font-medium text-center">{params.row.stock_grams || "-"}</span>,
       renderCell: (params) => (
-        <div className="flex items-center justify-center gap-2">
-          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${(params.row.stock_grams || 0) > 10 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+        <div className="flex items-center gap-2">
+          <span>
             {params.row.stock_grams} {t("g")}
           </span>
           <button
@@ -131,15 +173,12 @@ export function MaterialsTable({
       flex: 0.5,
       minWidth: 100,
       renderCell: (params) => (
-        <div className="space-x-2">
-
-          <button
-            onClick={() => handleDelete((params.row as Material).id)}
-            className="text-red-600 hover:text-red-800"
-          >
-            <Trash2 className="h-4 w-4 inline" />
-          </button>
-        </div>
+        <button
+          onClick={() => handleDelete((params.row as Material).id)}
+          className="text-red-600 hover:text-red-800"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
       ),
     },
   ];
@@ -160,7 +199,7 @@ export function MaterialsTable({
       </div>
 
       {/* Toolbar */}
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-col sm:flex-row gap-4 justify-between items-center">
+      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-col sm:flex-row gap-4 justify-between items-center z-20 relative">
         <div className="relative w-full sm:w-96">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <input
@@ -171,74 +210,123 @@ export function MaterialsTable({
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <button className="flex items-center justify-center px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors w-full sm:w-auto">
-            <Filter className="w-4 h-4 mx-2 text-gray-500" />
+
+        <div className="flex items-center gap-2 w-full sm:w-auto relative" ref={filterRef}>
+          <button
+            onClick={() => setIsFilterOpen(!isFilterOpen)}
+            className={`flex items-center justify-center px-3 py-2 border rounded-lg text-sm font-medium transition-colors w-full sm:w-auto ${isFilterOpen || activeFiltersCount > 0 ? 'bg-primary-50 border-primary-200 text-primary-700' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+          >
+            <Filter className="w-4 h-4 mx-2" />
             {t("filter") || "Filter"}
+            {activeFiltersCount > 0 && (
+              <span className="ml-2 bg-primary-600 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                {activeFiltersCount}
+              </span>
+            )}
+            <ChevronDown className={`w-3 h-3 ml-2 transition-transform ${isFilterOpen ? 'rotate-180' : ''}`} />
           </button>
+
+          <AnimatePresence>
+            {isFilterOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                transition={{ duration: 0.1 }}
+                className="absolute top-full right-0 mt-2 w-72 bg-white rounded-xl shadow-lg border border-gray-100 p-4 z-50 origin-top-right"
+              >
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center pb-2 border-b border-gray-100">
+                    <h3 className="font-semibold text-gray-900 text-sm">{t("filters") || "Filters"}</h3>
+                    {(typeFilter || stockFilter !== 'all' || priceFilter !== "") && (
+                      <button
+                        onClick={clearFilters}
+                        className="text-xs text-red-500 hover:text-red-600 flex items-center"
+                      >
+                        <X className="w-3 h-3 mr-1" />
+                        {t("clearAll") || "Clear All"}
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Stock Filter */}
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 mb-2 block uppercase tracking-wide">{t("stockStatus") || "Stock Status"}</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { id: 'all', label: t("all") || "All" },
+                        { id: 'in_stock', label: t("inStock") || "In Stock" },
+                        { id: 'low_stock', label: t("lowStock") || "Low Stock" },
+                        { id: 'out_of_stock', label: t("outOfStock") || "Out of Stock" }
+                      ].map((option) => (
+                        <button
+                          key={option.id}
+                          onClick={() => setStockFilter(option.id as any)}
+                          className={`px-3 py-2 rounded-lg text-xs font-medium transition-all text-center border ${stockFilter === option.id
+                            ? 'bg-primary-50 border-primary-200 text-primary-700'
+                            : 'bg-gray-50 border-transparent text-gray-600 hover:bg-gray-100'
+                            }`}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Type Filter */}
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 mb-2 block uppercase tracking-wide">{t("materialType") || "Material Type"}</label>
+                    <div className="max-h-40 overflow-y-auto space-y-1 custom-scrollbar">
+                      <button
+                        onClick={() => setTypeFilter(null)}
+                        className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center justify-between ${typeFilter === null ? 'bg-primary-50 text-primary-700 font-medium' : 'text-gray-600 hover:bg-gray-50'
+                          }`}
+                      >
+                        <span>{t("allTypes") || "All Types"}</span>
+                        {typeFilter === null && <Check className="w-3 h-3" />}
+                      </button>
+                      {materialTypes.map(type => (
+                        <button
+                          key={type}
+                          onClick={() => setTypeFilter(type)}
+                          className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center justify-between ${typeFilter === type ? 'bg-primary-50 text-primary-700 font-medium' : 'text-gray-600 hover:bg-gray-50'
+                            }`}
+                        >
+                          <span>{type}</span>
+                          {typeFilter === type && <Check className="w-3 h-3" />}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Price Filter */}
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 mb-2 block uppercase tracking-wide">{t("maxPrice") || "Max Price"}</label>
+                    <input
+                      type="number"
+                      placeholder="0.00"
+                      className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                      value={priceFilter}
+                      onChange={(e) => setPriceFilter(e.target.value === "" ? "" : Number(e.target.value))}
+                      min={0}
+                    />
+                  </div>
+
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
-      {/* Content Area */}
-      <div className="md:bg-white rounded-xl md:shadow-sm md:border border-gray-200 overflow-hidden">
-        {/* Desktop View */}
-        <div className="hidden md:block" style={{ height: 600, width: "100%" }}>
-          <DataGrid
-            rows={filteredMaterials}
-            columns={columns}
-            getRowId={(row) => row.id}
-            disableRowSelectionOnClick
-            className="border-none"
-          />
-        </div>
-
-        {/* Mobile View */}
-        <div className="md:hidden grid grid-cols-1 gap-4">
-          {filteredMaterials.length === 0 ? (
-            <div className="text-center py-10 text-gray-500">
-              {t("noMaterialsFound") || "No materials found"}
-            </div>
-          ) : (
-            filteredMaterials.map((material) => (
-              <div key={material.id} className=" p-4 rounded-xl shadow-sm border border-gray-200">
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="text-sm font-semibold text-gray-900 truncate pr-2">{material.name}</h3>
-                  <button
-                    onClick={() => handleDelete(material.id)}
-                    className="p-1 text-gray-400 hover:text-red-600"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-
-                <div className="space-y-1 text-xs text-gray-600">
-                  <div className="flex justify-between">
-                    <span>{t("unit") || "Unit"}:</span>
-                    <span className="font-medium">{material.unit || "-"}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>{t("type") || "Type"}:</span>
-                    <span className="font-medium">{material.material_type || "-"}</span>
-                  </div>
-                  <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-100">
-                    <span className="font-bold text-gray-900">{t('{{price,currency}}', { price: material.price_per_gram })}/{material.unit}</span>
-                    <div className="flex items-center gap-2">
-                      <span className={`px-2 py-0.5 rounded-full ${(material.stock_grams || 0) > 10 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                        {material.stock_grams} {t("g")}
-                      </span>
-                      <button
-                        onClick={() => handleOpenStockModal(material)}
-                        className="p-1 text-primary-600 bg-primary-50 rounded-full"
-                      >
-                        <PlusCircle size={16} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
+      <div style={{ height: 600, width: "100%" }}>
+        <DataGrid
+          rows={filteredMaterials}
+          columns={columns}
+          getRowId={(row) => row.id}
+          disableRowSelectionOnClick
+          className="bg-white rounded-lg shadow-sm border border-gray-200"
+        />
       </div>
 
       <StockUpdateModal
@@ -249,7 +337,6 @@ export function MaterialsTable({
         itemName={selectedMaterial?.name || ""}
         currentStock={selectedMaterial?.stock_grams}
       />
-
     </div>
   );
 }

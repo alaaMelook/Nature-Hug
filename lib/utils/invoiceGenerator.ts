@@ -45,7 +45,7 @@ export const generateInvoicePDF = (orders: OrderDetailsView | OrderDetailsView[]
         doc.setFont("helvetica", "normal");
         doc.setFontSize(14);
         doc.setTextColor(100, 100, 100);
-        doc.text("A gentle hug for your skin from nature itself.", pageWidth / 2, 60, { align: "center" }); // Matches image's subtitle
+        doc.text("A hug for your skin and soul.", pageWidth / 2, 60, { align: "center" }); // Matches image's subtitle
 
         // Horizontal Line removed for a cleaner look
         // doc.line(15, 38, pageWidth - 15, 38);

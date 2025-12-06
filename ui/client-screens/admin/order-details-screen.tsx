@@ -269,10 +269,10 @@ export function OrderDetailsScreen({ order }: { order: OrderDetailsView }) {
                                     <span>{t("shipping")}</span>
                                     <span>{t('{{price, currency}}', { price: order.shipping_total })}</span>
                                 </div>
-                                <div className="flex justify-between w-full max-w-xs text-sm text-gray-600">
+                                {order.discount_total > 0 && <div className="flex justify-between w-full max-w-xs text-sm text-gray-600">
                                     <span>{t("discount")}</span>
-                                    <span>{t('{{price, currency}}', { price: order.discount })}</span>
-                                </div>
+                                    <span><strong>-</strong> {t('{{price, currency}}', { price: order.discount_total ?? 0 })}</span>
+                                </div>}
                                 <div className="flex justify-between w-full max-w-xs text-lg font-bold text-gray-900 mt-2 pt-2 border-t">
                                     <span>{t("totalAmount")}</span>
                                     <span>{t('{{price, currency}}', { price: order.final_order_total })}</span>
