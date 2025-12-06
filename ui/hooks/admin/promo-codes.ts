@@ -4,8 +4,9 @@ import { CreatePromoCode } from "@/domain/use-case/admin/promo-codes/createPromo
 import { DeletePromoCode } from "@/domain/use-case/admin/promo-codes/deletePromoCode";
 import { UpdatePromoCode } from "@/domain/use-case/admin/promo-codes/updatePromoCode";
 import { revalidatePath } from "next/cache";
+import { PromoCode } from "@/domain/entities/database/promoCode";
 
-export async function createPromoCodeAction(promoCode: any) {
+export async function createPromoCodeAction(promoCode: PromoCode) {
     try {
         await new CreatePromoCode().execute(promoCode);
         revalidatePath('/admin/promo-codes');

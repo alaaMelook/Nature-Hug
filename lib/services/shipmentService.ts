@@ -1,6 +1,7 @@
 import { Shipment } from "@/domain/entities/shipment/shipment";
 import { City } from "@/domain/entities/shipment/city";
 import { ShipmentHistoryItem } from "@/domain/entities/shipment/shipmentHistoryItem";
+import { ShipmentDetailsEx } from "@/domain/entities/shipment/shipmentDetailsEx";
 
 const API_URL = process.env.NEXT_PUBLIC_VSOFT_API_URL!;
 const COMPANY_ID = process.env.NEXT_PUBLIC_SHIPMENT_COMPANY_ID!;
@@ -115,8 +116,8 @@ class ShipmentService {
         });
     }
 
-    public async getShipmentDetails(awb: string): Promise<any> {
-        return this.request(`${API_URL}/api/ClientUsers/V6/GetShipmentDetails/${awb}`);
+    public async getShipmentDetails(awb: string): Promise<ShipmentDetailsEx> {
+        return this.request<ShipmentDetailsEx>(`${API_URL}/api/ClientUsers/V6/GetShipmentDetails/${awb}`);
     }
 
     public async createShipment(shipment: Shipment): Promise<any> {

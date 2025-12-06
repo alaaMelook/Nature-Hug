@@ -115,7 +115,7 @@ export function CheckoutCart({ selectedGovernorate, onPurchase }: {
                     <div className="flex justify-between text-sm">
                         <span className="text-gray-500">{t('checkout.subtotal')}</span>
                         <span className="font-medium text-gray-900">
-                            {t("{{price, currency}}", { price: cart.netTotal })}
+                            {t("{{price, currency}}", { price: cart.isAdmin ? 0 : cart.netTotal })}
                         </span>
                     </div>
 
@@ -123,7 +123,7 @@ export function CheckoutCart({ selectedGovernorate, onPurchase }: {
                         <span className="text-gray-500">{t('checkout.shipping')}</span>
                         <span className="font-medium text-gray-900">
                             {selectedGovernorate ?
-                                t("{{price, currency}}", { price: selectedGovernorate.fees }) :
+                                t("{{price, currency}}", { price: cart.free_shipping || cart.isAdmin ? 0 : selectedGovernorate.fees }) :
                                 <span className="text-orange-500 text-xs bg-orange-50 px-2 py-1 rounded-full">{t('checkout.selectLocation')}</span>}
                         </span>
                     </div>
@@ -132,7 +132,7 @@ export function CheckoutCart({ selectedGovernorate, onPurchase }: {
                         <div className="flex justify-between text-sm">
                             <span className="text-gray-500">{t('checkout.discount')}</span>
                             <span className="font-medium text-green-600">
-                                -{t("{{price, currency}}", { price: Math.abs(cart.discount) })}
+                                -{t("{{price, currency}}", { price: cart.isAdmin ? cart.netTotal : Math.abs(cart.discount) })}
                             </span>
                         </div>
                     )}
@@ -141,7 +141,7 @@ export function CheckoutCart({ selectedGovernorate, onPurchase }: {
                         <span className="text-base font-bold text-gray-900">{t('checkout.total')}</span>
                         <div className="text-right">
                             <span className="text-2xl font-bold text-primary-600 block leading-none">
-                                {t("{{price, currency}}", { price: getCartTotal(selectedGovernorate?.fees ?? 0) })}
+                                {t("{{price, currency}}", { price: cart.isAdmin ? 0 : getCartTotal(cart.free_shipping ? 0 : selectedGovernorate?.fees ?? 0) })}
                             </span>
                             <span className="text-[10px] text-gray-400 font-normal">{t('checkout.includingVat')}</span>
                         </div>

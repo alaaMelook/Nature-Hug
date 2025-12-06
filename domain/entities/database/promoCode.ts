@@ -9,4 +9,5 @@ export interface PromoCode {
     bogo_buy_count: number;
     bogo_get_count: number;
     is_active: boolean;
+    free_shipping: boolean;
 }

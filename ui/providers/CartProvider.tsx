@@ -22,7 +22,7 @@ export const useCart = () => {
 
 export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
     // Initializing totals to 0 and items as empty array
-    const emptyCart: Cart = { discount: 0, netTotal: 0, total: 0, items: [], promoCode: null, promoCodeId: null };
+    const emptyCart: Cart = { discount: 0, netTotal: 0, total: 0, items: [], promoCode: null, promoCodeId: null, free_shipping: false, isAdmin: false };
     const [cart, setCart] = useState<Cart>(emptyCart);
     const [loading, setLoading] = useState(true);
     const [isClient, setIsClient] = useState(false);
@@ -157,15 +157,31 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
 
     const applyPromoCode = async (code: string) => {
         const result = await validatePromoCodeAction(code, cart.items);
-        if (result.isValid && 'discount' in result) {
+        if (result.isValid && 'isAdmin' in result && result.isAdmin) {
             setCart(prevCart => ({
                 ...prevCart,
                 promoCode: code,
+                free_shipping: false,
+                discount: 0,
                 promoCodeId: result.details?.id ?? null,
-                discount: result.discount
+                isAdmin: result.isAdmin,
             }));
-            console.log(code, result.discount, result);
-            toast.success(t('promoApplied', { code }), { duration: 2000 });
+        }
+        else if (result.isValid && 'discount' in result) {
+            setCart(prevCart => ({
+                ...prevCart,
+                promoCode: code,
+                free_shipping: result.details?.free_shipping ?? false,
+                promoCodeId: result.details?.id ?? null,
+                discount: result.discount,
+            }));
+            console.log('[ADMIN ORDER]', cart.discount, cart.netTotal, cart.free_shipping);
+            if (cart.isAdmin) {
+                toast.info(t('checkout.adminOrder'));
+            }
+            else {
+                toast.success(t('promoApplied', { code }), { duration: 2000 });
+            }
         } else {
             toast.error(result.error || t('invalidPromoCode'));
         }
@@ -176,6 +192,7 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
             ...prevCart,
             promoCode: null,
             promoCodeId: null,
+            free_shipping: false,
             discount: 0
         }));
     };

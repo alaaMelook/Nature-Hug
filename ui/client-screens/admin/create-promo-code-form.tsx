@@ -4,11 +4,12 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createPromoCodeAction } from "@/ui/hooks/admin/promo-codes";
 import { ProductAdminView } from "@/domain/entities/views/admin/productAdminView";
-import { Save, ArrowLeft, Check, Search } from "lucide-react";
+import { Save, ArrowLeft, Check, Search, Truck } from "lucide-react";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import { PromoCode } from "@/domain/entities/database/promoCode";
 import { motion } from "framer-motion";
+import { FcShipped } from "react-icons/fc";
 
 interface CreatePromoCodeFormProps {
     products: ProductAdminView[];
@@ -22,6 +23,7 @@ export default function CreatePromoCodeForm({ products }: CreatePromoCodeFormPro
     const [code, setCode] = useState("");
     const [isBogo, setIsBogo] = useState(false);
     const [percentageOff, setPercentageOff] = useState(0);
+    const [freeShipping, setFreeShipping] = useState(false);
     const [bogoBuy, setBogoBuy] = useState(1);
     const [bogoGet, setBogoGet] = useState(1);
     const [allCart, setAllCart] = useState(true);
@@ -40,6 +42,7 @@ export default function CreatePromoCodeForm({ products }: CreatePromoCodeFormPro
                 bogo_buy_count: isBogo ? bogoBuy : 0,
                 bogo_get_count: isBogo ? bogoGet : 0,
                 all_cart: allCart,
+                free_shipping: freeShipping,
                 eligible_product_slugs: allCart ? [] : selectedProducts,
             } as PromoCode);
 
@@ -56,7 +59,6 @@ export default function CreatePromoCodeForm({ products }: CreatePromoCodeFormPro
             setIsSubmitting(false);
         }
     };
-
     const toggleProduct = (slug: string) => {
         setSelectedProducts(prev =>
             prev.includes(slug)
@@ -104,7 +106,7 @@ export default function CreatePromoCodeForm({ products }: CreatePromoCodeFormPro
                         </span>
                     ) : (
                         <span className="flex items-center">
-                            <Save className="h-4 w-4 mr-2" />
+                            <Save className="h-4 w-4 mx-2" />
                             {t("createCode")}
                         </span>
                     )}
@@ -194,6 +196,23 @@ export default function CreatePromoCodeForm({ products }: CreatePromoCodeFormPro
                                 </div>
                             </div>
                         )}
+                        <div className="flex items-center gap-2">
+
+                            {t("freeShipping")}
+                            <button
+                                type="button"
+                                onClick={() => setFreeShipping(!freeShipping)}
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${freeShipping ? 'bg-primary-600' : 'bg-gray-200'
+                                    }`}
+                            >
+
+                                <span
+                                    className={`${i18n.dir() === "rtl" ? freeShipping ? '-translate-x-1' : '-translate-x-6'
+                                        : freeShipping ? 'translate-x-6' : 'translate-x-1'
+                                        } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+                                />
+                            </button>
+                        </div>
                     </motion.div>
 
                     {/* Scope Selection */}
@@ -284,6 +303,7 @@ export default function CreatePromoCodeForm({ products }: CreatePromoCodeFormPro
                         </div>
                     </motion.div>
                 )}
+
             </div>
         </motion.form>
     );

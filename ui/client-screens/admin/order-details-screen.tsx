@@ -13,7 +13,7 @@ import {
     updateOrderAction
 } from "@/ui/hooks/admin/orders";
 import { getCitiesAction } from "@/ui/hooks/admin/shippingActions";
-import { User, MapPin, Phone, Package, Calendar, ArrowLeft, X } from "lucide-react";
+import { User, MapPin, Phone, Package, Calendar, ArrowLeft, X, CreditCard } from "lucide-react";
 import { ShipmentTracking } from "@/ui/components/admin/ShipmentTracking";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -126,6 +126,12 @@ export function OrderDetailsScreen({ order }: { order: OrderDetailsView }) {
                 </div>
 
                 <div className="flex gap-3">
+                    <button
+                        onClick={() => import("@/lib/utils/invoiceGenerator").then(mod => mod.generateInvoicePDF(order))}
+                        className="px-4 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg font-medium transition-colors border border-gray-200"
+                    >
+                        {t("exportInvoice")}
+                    </button>
                     {actions.neg && (
                         <button
                             onClick={() => handleStatusChange(actions.status_neg)}
@@ -196,6 +202,24 @@ export function OrderDetailsScreen({ order }: { order: OrderDetailsView }) {
                         </h3>
                         <div className="text-sm text-gray-600">
                             {t("placedOn")} {new Date(order.order_date).toLocaleDateString()} {t("at")} {new Date(order.order_date).toLocaleTimeString()}
+                        </div>
+                    </motion.section>
+
+                    <motion.section variants={itemVariants} className="bg-white rounded-xl shadow-sm border p-6">
+                        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                            <CreditCard size={14} /> {t("paymentInfo")}
+                        </h3>
+                        <div className="space-y-3">
+                            <div>
+                                <p className="text-xs text-gray-500 mb-1">{t("paymentMethod")}</p>
+                                <p className="font-medium text-gray-900">{order.payment_method}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs text-gray-500 mb-1">{t("paymentStatus")}</p>
+                                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${order.payment_status === 'paid' ? 'bg-green-100 text-green-800' : order.payment_status === 'refunded' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}`}>
+                                    {t(order.payment_status) || order.payment_status}
+                                </span>
+                            </div>
                         </div>
                     </motion.section>
                 </div>

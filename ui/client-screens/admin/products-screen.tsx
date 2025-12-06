@@ -1,7 +1,7 @@
 'use client';
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { ProductAdminView } from "@/domain/entities/views/admin/productAdminView";
-import { Search, Plus, Filter, Edit, Trash2, Package, PlusCircle } from "lucide-react";
+import { Search, Plus, Filter, Edit, Trash2, Package, PlusCircle, X, Check, ChevronDown } from "lucide-react";
 import { ProductModal } from "@/ui/components/admin/productModal";
 import { deleteProduct } from "@/ui/hooks/admin/products";
 import { toast } from "sonner";
@@ -20,10 +20,47 @@ export function ProductsScreen({ products, materials }: { products: ProductAdmin
     const [selectedProduct, setSelectedProduct] = useState<ProductAdminView | null>(null);
     const router = useRouter();
 
-    const filteredProducts = (products || []).filter((product) =>
-        product.name_en.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.name_ar.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    // Filter State
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [filterCategory, setFilterCategory] = useState<string | null>(null);
+    const [filterStock, setFilterStock] = useState<'all' | 'in_stock' | 'low_stock' | 'out_of_stock'>('all');
+    const filterRef = useRef<HTMLDivElement>(null);
+
+    // Close filter dropdown when clicking outside
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (filterRef.current && !filterRef.current.contains(event.target as Node)) {
+                setIsFilterOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, []);
+
+    // Extract unique categories for filter
+    const uniqueCategories = Array.from(new Set(products.map(p =>
+        i18n.language === 'ar' ? (p.category_name_ar ?? p.category_name_en) : p.category_name_en
+    ))).filter(Boolean) as string[];
+
+    const filteredProducts = (products || []).filter((product) => {
+        // 1. Search Filter
+        const matchesSearch = product.name_en.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            product.name_ar.toLowerCase().includes(searchTerm.toLowerCase());
+
+        // 2. Category Filter
+        const productCategory = i18n.language === 'ar' ? (product.category_name_ar ?? product.category_name_en) : product.category_name_en;
+        const matchesCategory = filterCategory ? productCategory === filterCategory : true;
+
+        // 3. Stock Filter
+        let matchesStock = true;
+        if (filterStock === 'in_stock') matchesStock = product.stock > 0;
+        if (filterStock === 'out_of_stock') matchesStock = product.stock === 0;
+        if (filterStock === 'low_stock') matchesStock = product.stock > 0 && product.stock <= 10;
+
+        return matchesSearch && matchesCategory && matchesStock;
+    });
 
     const handleDelete = async (product: ProductAdminView) => {
         if (confirm(t("confirmDeleteProduct"))) {
@@ -55,6 +92,15 @@ export function ProductsScreen({ products, materials }: { products: ProductAdmin
         }
     };
 
+    const clearFilters = () => {
+        setFilterCategory(null);
+        setFilterStock('all');
+        setSearchTerm("");
+        setIsFilterOpen(false);
+    };
+
+    const activeFiltersCount = (filterCategory ? 1 : 0) + (filterStock !== 'all' ? 1 : 0);
+
     return (
         <motion.div
             initial={{ opacity: 0 }}
@@ -79,7 +125,7 @@ export function ProductsScreen({ products, materials }: { products: ProductAdmin
             </div>
 
             {/* Toolbar */}
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-col sm:flex-row gap-4 justify-between items-center">
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-col sm:flex-row gap-4 justify-between items-center z-20 relative">
                 <div className="relative w-full sm:w-96">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <input
@@ -90,16 +136,102 @@ export function ProductsScreen({ products, materials }: { products: ProductAdmin
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <button className="flex items-center justify-center px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors w-full sm:w-auto">
-                        <Filter className="w-4 h-4 mx-2 text-gray-500" />
+                <div className="flex items-center gap-2 w-full sm:w-auto relative" ref={filterRef}>
+                    <button
+                        onClick={() => setIsFilterOpen(!isFilterOpen)}
+                        className={`flex items-center justify-center px-3 py-2 border rounded-lg text-sm font-medium transition-colors w-full sm:w-auto ${isFilterOpen || activeFiltersCount > 0 ? 'bg-primary-50 border-primary-200 text-primary-700' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+                    >
+                        <Filter className="w-4 h-4 mx-2" />
                         {t("filter")}
+                        {activeFiltersCount > 0 && (
+                            <span className="ml-2 bg-primary-600 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                                {activeFiltersCount}
+                            </span>
+                        )}
+                        <ChevronDown className={`w-3 h-3 ml-2 transition-transform ${isFilterOpen ? 'rotate-180' : ''}`} />
                     </button>
+
+                    <AnimatePresence>
+                        {isFilterOpen && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                transition={{ duration: 0.1 }}
+                                className="absolute top-full right-0 mt-2 w-72 bg-white rounded-xl shadow-lg border border-gray-100 p-4 z-50 origin-top-right"
+                            >
+                                <div className="space-y-4">
+                                    <div className="flex justify-between items-center pb-2 border-b border-gray-100">
+                                        <h3 className="font-semibold text-gray-900 text-sm">{t("filters")}</h3>
+                                        {(filterCategory || filterStock !== 'all') && (
+                                            <button
+                                                onClick={clearFilters}
+                                                className="text-xs text-red-500 hover:text-red-600 flex items-center"
+                                            >
+                                                <X className="w-3 h-3 mr-1" />
+                                                {t("clearAll")}
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {/* Stock Filter */}
+                                    <div>
+                                        <label className="text-xs font-medium text-gray-500 mb-2 block uppercase tracking-wide">{t("stockStatus")}</label>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {[
+                                                { id: 'all', label: t("all") },
+                                                { id: 'in_stock', label: t("inStock") },
+                                                { id: 'low_stock', label: t("lowStock") },
+                                                { id: 'out_of_stock', label: t("outOfStock") }
+                                            ].map((option) => (
+                                                <button
+                                                    key={option.id}
+                                                    onClick={() => setFilterStock(option.id as any)}
+                                                    className={`px-3 py-2 rounded-lg text-xs font-medium transition-all text-center border ${filterStock === option.id
+                                                            ? 'bg-primary-50 border-primary-200 text-primary-700'
+                                                            : 'bg-gray-50 border-transparent text-gray-600 hover:bg-gray-100'
+                                                        }`}
+                                                >
+                                                    {option.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Category Filter */}
+                                    <div>
+                                        <label className="text-xs font-medium text-gray-500 mb-2 block uppercase tracking-wide">{t("category")}</label>
+                                        <div className="max-h-40 overflow-y-auto space-y-1 custom-scrollbar">
+                                            <button
+                                                onClick={() => setFilterCategory(null)}
+                                                className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center justify-between ${filterCategory === null ? 'bg-primary-50 text-primary-700 font-medium' : 'text-gray-600 hover:bg-gray-50'
+                                                    }`}
+                                            >
+                                                <span>{t("allCategories")}</span>
+                                                {filterCategory === null && <Check className="w-3 h-3" />}
+                                            </button>
+                                            {uniqueCategories.map(cat => (
+                                                <button
+                                                    key={cat}
+                                                    onClick={() => setFilterCategory(cat)}
+                                                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center justify-between ${filterCategory === cat ? 'bg-primary-50 text-primary-700 font-medium' : 'text-gray-600 hover:bg-gray-50'
+                                                        }`}
+                                                >
+                                                    <span>{cat}</span>
+                                                    {filterCategory === cat && <Check className="w-3 h-3" />}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
             </div>
 
             {/* Product List */}
-            <div className="md:bg-white rounded-xl md:shadow-sm md:border md:border-gray-200 overflow-hidden">
+            <div className="md:bg-white rounded-xl md:shadow-sm md:border md:border-gray-200 overflow-hidden relative z-0">
                 {/* Desktop Table */}
                 <div className="hidden md:block overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200">
@@ -118,6 +250,14 @@ export function ProductsScreen({ products, materials }: { products: ProductAdmin
                                     <tr>
                                         <td colSpan={5} className="px-6 py-10 text-center text-gray-500">
                                             {t("noProductsFound")}
+                                            {(filterCategory || filterStock !== 'all' || searchTerm) && (
+                                                <button
+                                                    onClick={clearFilters}
+                                                    className="block mx-auto mt-2 text-primary-600 text-sm hover:underline"
+                                                >
+                                                    {t("clearAllFilters")}
+                                                </button>
+                                            )}
                                         </td>
                                     </tr>
                                 ) : filteredProducts.map((product) => (
@@ -196,6 +336,14 @@ export function ProductsScreen({ products, materials }: { products: ProductAdmin
                         {filteredProducts.length === 0 ? (
                             <div className="text-center py-10 text-gray-500">
                                 {t("noProductsFound")}
+                                {(filterCategory || filterStock !== 'all' || searchTerm) && (
+                                    <button
+                                        onClick={clearFilters}
+                                        className="block mx-auto mt-2 text-primary-600 text-sm hover:underline"
+                                    >
+                                        {t("clearAllFilters")}
+                                    </button>
+                                )}
                             </div>
                         ) : filteredProducts.map((product) => (
                             <motion.div

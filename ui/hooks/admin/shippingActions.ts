@@ -1,6 +1,7 @@
 import { IAdminClientRepository } from "@/data/repositories/client/iAdminRepository";
 import { IAdminServerRepository } from "@/data/repositories/server/iAdminRepository";
 import { Shipment } from "@/domain/entities/shipment/shipment";
+import { ShipmentDetailsEx } from "@/domain/entities/shipment/shipmentDetailsEx";
 import { OrderDetailsView } from "@/domain/entities/views/admin/orderDetailsView";
 import { UpdateOrder } from "@/domain/use-case/admin/orders/updateOrder";
 import { shipmentService } from "@/lib/services/shipmentService";
@@ -47,7 +48,7 @@ export async function getCitiesAction() {
 export async function getShipmentDetailsAction(awb: string) {
     try {
         const result = await shipmentService.getShipmentDetails(awb);
-        return { success: true, data: result };
+        return { success: true, data: result as ShipmentDetailsEx | null };
     } catch (error) {
         console.error("Failed to fetch shipment details:", error);
         return { success: false, error: "Failed to fetch shipment details" };

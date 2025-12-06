@@ -21,7 +21,9 @@ export class ValidatePromoCode {
 
         // 3. Calculate Discount
         let totalDiscount = 0;
-
+        if (promo.free_shipping && promo.all_cart && promo.percentage_off === 100) {
+            return { isValid: true, discount: 0, promoCode: promo.code, details: promo, isAdmin: true };
+        }
         if (promo.all_cart) {
             if (promo.percentage_off > 0) {
                 totalDiscount = products.reduce((acc, item) => acc + (item.price * item.quantity) * (promo.percentage_off / 100), 0);
@@ -47,6 +49,9 @@ export class ValidatePromoCode {
                         i -= item.quantity;
                     }
                 }
+            }
+            else if (promo.free_shipping) {
+                totalDiscount = 0;
             }
             else {
                 return { isValid: false, error: "Invalid promo code" };
@@ -87,6 +92,9 @@ export class ValidatePromoCode {
 
 
             }
+            else if (promo.free_shipping) {
+                totalDiscount = 0;
+            }
             else {
                 return { isValid: false, error: "Invalid promo code" };
             }
@@ -96,6 +104,7 @@ export class ValidatePromoCode {
         }
 
         return {
+            isAdmin: promo.free_shipping && promo.percentage_off === 100,
             isValid: true,
             discount: totalDiscount,
             promoCode: promo.code,

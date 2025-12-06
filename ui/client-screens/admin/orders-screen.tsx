@@ -10,26 +10,28 @@ import { useTranslation } from "react-i18next";
 import { useRouter, useParams } from "next/navigation";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
+import { generateInvoicePDF } from "@/lib/utils/invoiceGenerator";
+import { statusColor } from "@/lib/utils/statusColors";
+import { PromoCode } from "@/domain/entities/database/promoCode";
 
-export function OrdersScreen({ initialOrders }: { initialOrders: OrderDetailsView[] }) {
+export function OrdersScreen({ orders, promoCodes = [] }: { orders: OrderDetailsView[], promoCodes?: PromoCode[] }) {
     const { t } = useTranslation();
     const router = useRouter();
     const params = useParams();
     const lang = params.lang as string;
-    const [orders, setOrders] = useState<OrderDetailsView[]>(initialOrders);
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
+    const [promoCodeFilter, setPromoCodeFilter] = useState("all");
     const [sort, setSort] = useState("newest");
     const [selectedOrders, setSelectedOrders] = useState<number[]>([]);
-    const [showAddModal, setShowAddModal] = useState(false);
-    const [showExportModal, setShowExportModal] = useState(false);
     const [processingBulk, setProcessingBulk] = useState(false);
 
     const filteredOrders = orders.filter(order => {
         const matchesSearch = (order.customer_name?.toLowerCase().includes(search.toLowerCase()) || false) ||
             (order.phone_numbers?.some(phone => phone.includes(search)) || false);
         const matchesStatus = statusFilter === "all" || order.order_status === statusFilter.toLowerCase();
-        return matchesSearch && matchesStatus;
+        const matchesPromo = promoCodeFilter === "all" || order.applied_promo_code === promoCodeFilter;
+        return matchesSearch && matchesStatus && matchesPromo;
     }).sort((a, b) => {
         if (sort === "newest") return new Date(b.order_date).getTime() - new Date(a.order_date).getTime();
         if (sort === "oldest") return new Date(a.order_date).getTime() - new Date(b.order_date).getTime();
@@ -80,56 +82,7 @@ export function OrdersScreen({ initialOrders }: { initialOrders: OrderDetailsVie
         }
     };
 
-    const handleExport = async (status: string) => {
-        // ... (existing export logic)
-        const mapped = (orders.filter((o: any) => o.order_status === status) ?? []).map((o: any) => [
-            o.id,
-            o.status,
-            t("{{date, datetime}}", { date: new Date(o.created_at) }),
-            o.customers?.name ?? "-",
-            o.customers?.phone ?? "-",
-            o.guest_addresses?.[0]?.address ?? "-",
-            o.guest_addresses?.[0]?.governorate ?? "-",
-            o.note ?? "-",
-            o.created_by_admin ?? "-",
-        ]);
 
-        const headers = [
-            t("orderId"),
-            t("status"),
-            t("createdAt"),
-            t("customerName"),
-            t("customerPhone"),
-            t("address"),
-            t("governorate"),
-        ];
-
-        const csvContent = [headers, ...mapped]
-            .map((row) =>
-                row
-                    .map((cell: any) => {
-                        const s = String(cell ?? "");
-                        if (s.includes(",") || s.includes('"') || s.includes("\n")) {
-                            return `"${s.replace(/"/g, '""')}"`;
-                        }
-                        return s;
-                    })
-                    .join(",")
-            )
-            .join("\n");
-
-        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.setAttribute("download", `orders_${status}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-
-        setShowExportModal(false);
-    };
 
     return (
         <motion.div
@@ -142,6 +95,16 @@ export function OrdersScreen({ initialOrders }: { initialOrders: OrderDetailsVie
                 <div className="flex gap-2">
                     {selectedOrders.length > 0 && (
                         <>
+                            <button
+                                onClick={() => {
+                                    const selected = orders.filter(o => selectedOrders.includes(o.order_id));
+                                    generateInvoicePDF(selected);
+                                }}
+                                disabled={processingBulk}
+                                className="bg-gray-100 text-gray-700 px-4 py-2 rounded hover:bg-gray-200 disabled:opacity-50 font-medium transition-colors border border-gray-200"
+                            >
+                                {t("exportInvoices")} ({selectedOrders.length})
+                            </button>
                             <button
                                 onClick={() => handleBulkAction('accept')}
                                 disabled={processingBulk}
@@ -158,18 +121,7 @@ export function OrdersScreen({ initialOrders }: { initialOrders: OrderDetailsVie
                             </button>
                         </>
                     )}
-                    <button
-                        onClick={() => setShowAddModal(true)}
-                        className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition-colors"
-                    >
-                        + {t("addOrder")}
-                    </button>
-                    <button
-                        onClick={() => setShowExportModal(true)}
-                        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
-                    >
-                        {t("exportOrders")}
-                    </button>
+
                 </div>
             </div>
 
@@ -205,6 +157,18 @@ export function OrdersScreen({ initialOrders }: { initialOrders: OrderDetailsVie
                     <option value="total_desc">{t("totalHighLow")}</option>
                     <option value="total_asc">{t("totalLowHigh")}</option>
                 </select>
+                <select
+                    value={promoCodeFilter}
+                    onChange={(e) => setPromoCodeFilter(e.target.value)}
+                    className="border px-3 py-2 rounded"
+                >
+                    <option value="all">{t("selectPromoCode")}</option>
+                    {promoCodes.map((promo, index) => (
+                        <option key={index} value={promo.code}>
+                            {promo.code}
+                        </option>
+                    ))}
+                </select>
             </div>
 
             {/* Table */}
@@ -225,7 +189,9 @@ export function OrdersScreen({ initialOrders }: { initialOrders: OrderDetailsVie
                             <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">{t("customerPhone")}</th>
                             <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">{t("address")}</th>
                             <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">{t("governorate")}</th>
+                            <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">{t("promoCode")}</th>
                             <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">{t("status")}</th>
+                            <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">{t("payment")}</th>
                             <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">{t("total")}</th>
                             <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">{t("createdAt")}</th>
                         </tr>
@@ -247,38 +213,53 @@ export function OrdersScreen({ initialOrders }: { initialOrders: OrderDetailsVie
                                             router.push(`/${lang}/admin/orders/${order.order_id}`);
                                         }}
                                     >
-                                        <td className="px-4 py-3">
-                                            <input
-                                                type="checkbox"
-                                                checked={selectedOrders.includes(order.order_id)}
-                                                onChange={() => toggleSelectOrder(order.order_id)}
-                                                className="rounded border-gray-300"
-                                            />
-                                        </td>
-                                        <td className="px-4 py-3 font-medium text-gray-900">{order.order_id}</td>
-                                        <td className="px-4 py-3 text-gray-700">{order.customer_name}</td>
-                                        <td className="px-4 py-3 text-gray-600">
-                                            {order.phone_numbers.map((phone, i) => (
-                                                <div key={i}>{phone}</div>
-                                            ))}
-                                        </td>
-                                        <td className="px-4 py-3 text-gray-600 max-w-xs truncate" title={order.shipping_street_address}>{order.shipping_street_address}</td>
-                                        <td className="px-4 py-3 text-gray-600">{order.shipping_governorate}</td>
-                                        <td className="px-4 py-3">
-                                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${order.order_status === "completed" ? "bg-green-100 text-green-800" : order.order_status === "pending" ? "bg-yellow-100 text-yellow-800" : order.order_status === "processing" ? "bg-blue-100 text-blue-800" : "bg-red-100 text-red-800"}`}>
-                                                {t(order.order_status) || order.order_status}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3 font-medium text-gray-900">{t('{{price, currency}}', { price: order.final_order_total })}</td>
-                                        <td className="px-4 py-3 text-gray-500">
-                                            {t("{{date, datetime}}", { date: new Date(order.order_date) })}
-                                        </td>
+                                        <>
+                                            <td className="px-4 py-3">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedOrders.includes(order.order_id)}
+                                                    onChange={() => toggleSelectOrder(order.order_id)}
+                                                    className="rounded border-gray-300"
+                                                />
+                                            </td>
+                                            <td className="px-4 py-3 font-medium text-gray-900">{order.order_id}</td>
+                                            <td className="px-4 py-3 text-gray-700">{order.customer_name}</td>
+                                            <td className="px-4 py-3 text-gray-600">
+                                                {order.phone_numbers.map((phone, i) => (
+                                                    <div key={i}>{phone}</div>
+                                                ))}
+                                            </td>
+                                            <td className="px-4 py-3 text-gray-600 max-w-xs truncate" title={order.shipping_street_address}>{order.shipping_street_address}</td>
+                                            <td className="px-4 py-3 text-gray-600">{order.shipping_governorate}</td>
+                                            <td className="px-4 py-3 text-gray-600">
+                                                {order.applied_promo_code ? (
+                                                    <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-full text-xs font-medium border border-blue-100">
+                                                        {order.applied_promo_code}
+                                                    </span>
+                                                ) : "-"}
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <span className={`text-xs px-2 py-0.5 rounded-full w-fit ${statusColor(order.order_status)}`}>
+                                                    {order.order_status}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <div className="flex flex-col">
+                                                    <span className="text-sm font-medium text-gray-900">{order.payment_method}</span>
+
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-3 font-medium text-gray-900">{t('{{price, currency}}', { price: order.final_order_total })}</td>
+                                            <td className="px-4 py-3 text-gray-500">
+                                                {t("{{date, datetime}}", { date: new Date(order.order_date) })}
+                                            </td>
+                                        </>
                                     </motion.tr>
                                 ))
                             ) : (
                                 <tr>
                                     <td
-                                        colSpan={9}
+                                        colSpan={10}
                                         className="px-4 py-12 text-center text-gray-500"
                                     >
                                         {t("noOrdersFound")}
@@ -289,6 +270,6 @@ export function OrdersScreen({ initialOrders }: { initialOrders: OrderDetailsVie
                     </tbody>
                 </table>
             </div>
-        </motion.div>
+        </motion.div >
     );
 }

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/data/datasources/supabase/client";
-import { LogOut, User, Settings, Bell, Search, Menu } from "lucide-react";
+import { LogOut, User, Settings, FlaskConicalIcon, Truck } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "@/ui/components/LanguageSwitcher";
 import { MemberView } from "@/domain/entities/views/admin/memberView";
@@ -25,8 +25,20 @@ export default function AdminHeader({ adminUser }: { adminUser: MemberView }) {
           {/* Left side - mostly for mobile menu trigger spacing if needed, or breadcrumbs */}
           <div className="flex items-center gap-4">
             {/* Mobile menu trigger is in Sidebar component, but we can add a placeholder or breadcrumbs here */}
-            <h2 className="text-lg font-semibold text-gray-800 hidden md:block">
-              {t("adminPanel")}
+            <h2 className="text-lg font-semibold text-gray-800 hidden md:flex items-center gap-2 ">
+
+              {adminUser.role === 'moderator' ?
+                <>
+                  <Truck className="w-5 h-5 mx-2 text-red-700" />
+                  {t('trackOrders')}
+                </>
+
+                :
+                <>
+                  <FlaskConicalIcon className="w-5 h-5 mx-2 text-red-700" />
+                  {t('adminPanel')}
+                </>
+              }
             </h2>
           </div>
 

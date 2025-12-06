@@ -1,7 +1,6 @@
 'use client';
 import { DollarSign, Package, ShoppingCart, TrendingDown, TrendingUp, TrendingUpDown, Users, AlertCircle, Truck, ClipboardList, BrickWall, ArrowRight, Star } from "lucide-react";
 import { DashboardMetricsView } from "@/domain/entities/views/admin/dashboardMetricsView";
-import React from "react";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";

@@ -10,6 +10,7 @@ import { useTranslation, Trans } from "react-i18next";
 
 import { cancelUserOrderAction } from "@/ui/hooks/store/userOrderActions";
 import { toast } from "sonner";
+import { Package } from 'lucide-react';
 
 export default function OrderDetailScreen({ order, fromCheckout }: {
     order: OrderSummaryView | null,
@@ -92,15 +93,15 @@ export default function OrderDetailScreen({ order, fromCheckout }: {
                             <div className="divide-y divide-gray-100 ">
                                 {(order.order_items || []).map((it) => (
                                     <div key={it.slug} className="flex flex-row items-start sm:items-center gap-4 p-4">
-                                        <Image
-                                            src={it.image || ''}
+                                        {it.image ? <Image
+                                            src={it.image}
                                             alt={it.slug}
                                             width={64}
                                             height={64}
                                             className="w-16 h-16 bg-gray-100 rounded-md object-cover"
-                                        ></Image>
+                                        /> : <Package className="w-16 h-16 bg-gray-100 rounded-md object-cover" />}
                                         <div className="flex-1">
-                                            <p className="text-sm font-medium"> {i18n.language === 'ar' ? it.name_ar : it.name_en} </p>
+                                            <p className="text-sm font-medium"> {i18n.language === 'ar' ? it.name_ar ?? it.name_en : it.name_en} </p>
                                             <p className="text-xs text-gray-500 mt-1">{t("ordersScreen.qty")} {it.quantity} </p>
                                         </div>
                                         <div>
@@ -120,18 +121,23 @@ export default function OrderDetailScreen({ order, fromCheckout }: {
                                     <dt>{t("ordersScreen.subtotal")}</dt>
                                     <dd>{t("{{price, currency}}", { price: order.subtotal })}</dd>
                                 </div>
-                                <div className="flex justify-between">
-                                    <dt>{t("ordersScreen.discount")}</dt>
-                                    <dd>-{t("{{price, currency}}", { price: order.discount_total })}</dd>
-                                </div>
+                                {order.discount_total > 0 && (
+                                    <div className="flex justify-between">
+                                        <dt>{t("ordersScreen.discount")}</dt>
+                                        <dd>-{t("{{price, currency}}", { price: order.discount_total })}</dd>
+                                    </div>
+                                )}
                                 <div className="flex justify-between">
                                     <dt>{t("ordersScreen.shipping")}</dt>
                                     <dd>{t("{{price, currency}}", { price: order.shipping_total })}</dd>
                                 </div>
-                                <div className="flex justify-between">
-                                    <dt>{t("ordersScreen.tax")}</dt>
-                                    <dd>{t("{{price, currency}}", { price: order.tax_total })}</dd>
-                                </div>
+                                {order.tax_total > 0 && (
+                                    <div className="flex justify-between">
+                                        <dt>{t("ordersScreen.tax")}</dt>
+                                        <dd>{t("{{price, currency}}", { price: order.tax_total })}</dd>
+                                    </div>
+                                )}
+
                                 <div className="flex justify-between font-semibold text-lg">
                                     <dt>{t("ordersScreen.total")}</dt>
                                     <dd>{t("{{price, currency}}", { price: order.grand_total })}</dd>

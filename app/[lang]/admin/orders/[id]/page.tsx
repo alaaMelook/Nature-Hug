@@ -4,7 +4,8 @@ import { notFound } from "next/navigation";
 
 export default async function OrderPage({ params }: { params: { id: string } }) {
     const ordersUseCase = new Orders();
-    const order = await ordersUseCase.getById(params.id);
+    const id = (await params).id;
+    const order = await ordersUseCase.getById(id);
 
     if (!order) {
         notFound();

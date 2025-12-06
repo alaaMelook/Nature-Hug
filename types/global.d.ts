@@ -14,9 +14,11 @@ declare global {
         promoCode: string | null;
         promoCodeId: number | null;
         discount: number;
+        free_shipping: boolean;
         total: number;
         netTotal: number;
         items: { slug: string, quantity: number }[];
+        isAdmin: boolean;
 
     }
     interface CartContextType {

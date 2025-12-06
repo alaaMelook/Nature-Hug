@@ -18,7 +18,7 @@ export default function NewMaterialPage() {
         stock_grams: 0,
         unit: "gm",
         low_stock_threshold: 0,
-        material_type: "normal",
+        material_type: "chemicals",
     });
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -145,12 +145,15 @@ export default function NewMaterialPage() {
                         onChange={(e) =>
                             setFormData({
                                 ...formData,
-                                material_type: e.target.value as "normal" | "special" | "other",
+                                material_type: e.target.value as "chemicals" | "labels" | "containers" | "packaging" | "other",
                             })
                         }
                     >
-                        <option value="normal">Normal</option>
-                        <option value="special">Special</option>
+
+                        <option value="chemicals">Chemicals</option>
+                        <option value="labels">Labels</option>
+                        <option value="containers">Containers</option>
+                        <option value="packaging">Packaging</option>
                         <option value="other">Other</option>
                     </select>
                 </div>

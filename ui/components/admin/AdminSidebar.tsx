@@ -17,16 +17,23 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { Member } from "@/domain/entities/auth/member";
+import { MemberView } from "@/domain/entities/views/admin/memberView";
 
 export default function AdminSidebar({
-  stats
+  stats,
+  member
 }: {
-  stats?: SidebarStats
+  stats?: SidebarStats;
+  member?: MemberView;
 }) {
   const pathname = usePathname();
   const { t, i18n } = useTranslation();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
+
+  if (member?.role === 'moderator') return null;
+
   console.log(stats);
   const navigation = [
     { name: t("dashboard"), href: "/admin", icon: Home },
@@ -71,7 +78,7 @@ export default function AdminSidebar({
       // ]
     },
     {
-      name: "Promo Codes",
+      name: t("promoCodes"),
       href: "/admin/promo-codes",
       icon: Tag,
     },
@@ -258,4 +265,3 @@ export default function AdminSidebar({
     </>
   );
 }
-

@@ -523,6 +523,10 @@ export const resources = {
           acceptTerms: "You must accept the Terms and Conditions.",
           required: "{{field}} is required",
           invalid: "Enter a valid {{field}}",
+          paymentFailed: "Failed to initiate payment",
+        },
+        success: {
+          orderCreated: "Order created successfully!",
         },
         // Cart Summary
         backToCart: "Back to Cart",
@@ -542,6 +546,8 @@ export const resources = {
         promoCodeHelp: "Customers will enter this code at checkout.",
         remove: "Remove",
       },
+      trackOrders: "Track Orders",
+      exportInvoices: "Export Invoices",
 
       // Orders
       ordersScreen: {
@@ -612,6 +618,9 @@ export const resources = {
       viewAllProducts: "View All Products",
       youMightAlsoLike: "Products you might also like",
       pleaseWait: "Please wait...",
+      freeShipping: "Free Shipping",
+      yes: "Yes",
+      no: "No",
     }
 
   },
@@ -1139,6 +1148,10 @@ export const resources = {
           acceptTerms: "يجب الموافقة على الشروط والأحكام.",
           required: "{{field}} مطلوب",
           invalid: "أدخل {{field}} صحيح",
+          paymentFailed: "فشل الدفع",
+        },
+        success: {
+          orderCreated: "تم إنشاء الطلب بنجاح",
         },
         // Cart Summary
         backToCart: "العودة للعربة",
@@ -1227,6 +1240,11 @@ export const resources = {
       pleaseWait: "برجاء الانتظار...",
       youMightAlsoLike: "منتجات أخري قد تعجبك",
       chooseGovernorate: "اختر المحافظة",
+      freeShipping: "شحن مجاني",
+      yes: "نعم",
+      no: "لا",
+      trackOrders: "تتبع الطلبات",
+      exportInvoices: "تصدير الفواتير",
     }
   }
 };

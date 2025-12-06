@@ -14,7 +14,7 @@ interface PromoCodesScreenProps {
 }
 
 export default function PromoCodesScreen({ initialPromoCodes }: PromoCodesScreenProps) {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const [promoCodes, setPromoCodes] = useState<PromoCode[]>(initialPromoCodes);
     const [isDeleting, setIsDeleting] = useState<number | null>(null);
     const [isUpdating, setIsUpdating] = useState<number | null>(null);
@@ -77,14 +77,14 @@ export default function PromoCodesScreen({ initialPromoCodes }: PromoCodesScreen
                     href="/admin/promo-codes/create"
                     className="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors shadow-sm"
                 >
-                    <Plus className="h-4 w-4 mr-2" />
+                    <Plus className="h-4 w-4 mx-2" />
                     {t("createPromoCode")}
                 </Link>
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm">
+                    <table className="w-full text-start text-sm">
                         <thead>
                             <tr className="bg-gray-50 border-b border-gray-100">
                                 <th className="px-6 py-4 font-semibold text-gray-700">{t("code")}</th>
@@ -92,10 +92,11 @@ export default function PromoCodesScreen({ initialPromoCodes }: PromoCodesScreen
                                 <th className="px-6 py-4 font-semibold text-gray-700">{t("type")}</th>
                                 <th className="px-6 py-4 font-semibold text-gray-700">{t("scope")}</th>
                                 <th className="px-6 py-4 font-semibold text-gray-700">{t("status")}</th>
+                                <th className="px-6 py-4 font-semibold text-gray-700">{t("freeShipping")}</th>
                                 <th className="px-6 py-4 font-semibold text-gray-700 text-right">{t("actions")}</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-50">
+                        <tbody className="divide-y divide-gray-50 justify-center items-center text-center">
                             <AnimatePresence>
                                 {promoCodes.length === 0 ? (
                                     <motion.tr
@@ -119,12 +120,12 @@ export default function PromoCodesScreen({ initialPromoCodes }: PromoCodesScreen
                                             animate={{ opacity: 1, y: 0 }}
                                             exit={{ opacity: 0, y: -10 }}
                                             transition={{ delay: index * 0.05 }}
-                                            className="hover:bg-gray-50 transition-colors"
+                                            className="hover:bg-gray-50 transition-colors justify-center items-center"
                                         >
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center">
-                                                    <div className="h-8 w-8 rounded-full bg-primary-50 flex items-center justify-center mr-3 text-primary-600">
-                                                        <Tag className="h-4 w-4" />
+                                                    <div className="h-8 w-8 rounded-full bg-primary-50 flex items-center justify-center mx-3 text-primary-600">
+                                                        <Tag className="h-4 w-4 " />
                                                     </div>
                                                     <span className="font-medium text-gray-900">{promo.code}</span>
                                                 </div>
@@ -145,13 +146,13 @@ export default function PromoCodesScreen({ initialPromoCodes }: PromoCodesScreen
                                             </td>
                                             <td className="px-6 py-4">
                                                 {promo.all_cart ? (
-                                                    <div className="flex items-center text-gray-600">
-                                                        <ShoppingBag className="h-4 w-4 mr-2 text-gray-400" />
+                                                    <div className="flex justify-center items-center text-gray-600">
+                                                        <ShoppingBag className="h-4 w-4 mx-2 text-gray-400" />
                                                         {t("entireCart")}
                                                     </div>
                                                 ) : (
-                                                    <div className="flex items-center text-gray-600">
-                                                        <Layers className="h-4 w-4 mr-2 text-gray-400" />
+                                                    <div className="flex justify-center items-center text-gray-600">
+                                                        <Layers className="h-4 w-4 mx-2 text-gray-400" />
                                                         {t("specificItems")}
                                                     </div>
                                                 )}
@@ -164,10 +165,22 @@ export default function PromoCodesScreen({ initialPromoCodes }: PromoCodesScreen
                                                         }`}
                                                 >
                                                     <span
-                                                        className={`${promo.is_active ? 'translate-x-6' : 'translate-x-1'
+                                                        className={`${i18n.dir() === "rtl" ? promo.is_active ? '-translate-x-1' : '-translate-x-6'
+                                                            : promo.is_active ? 'translate-x-6' : 'translate-x-1'
                                                             } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
                                                     />
                                                 </button>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                {promo.free_shipping ? (
+                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                        {t("yes")}
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                                        {t("no")}
+                                                    </span>
+                                                )}
                                             </td>
                                             <td className="px-6 py-4 text-right">
                                                 <button

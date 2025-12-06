@@ -108,20 +108,20 @@ export default function Contact() {
                         ,
                         <ContactMethod
                             title={t('contactMethodReply')}
-                            value="naturehug@gmail.com"
-                            link="mailto:naturehug@gmail.com"
+                            value="naturehug.nm@gmail.com"
+                            link="mailto:naturehug.nm@gmail.com"
                         />
                         ,
                         <ContactMethod
                             title={t('contactMethodFollow')}
-                            value="@NatureHugOfficial"
-                            link="https://instagram.com/NatureHugOfficial"
+                            value="@Nature.Hug_NM"
+                            link="https://instagram.com/nature.hug_nm"
                         />
                         ,
                         <ContactMethod
                             title={t('contactMethodShare')}
-                            value="/NatureHugOfficial"
-                            link="https://facebook.com/NatureHugOfficial"
+                            value="Nature's Hug"
+                            link="https://www.facebook.com/profile.php?id=61572088073345"
                         />
                     ].map((method, i) => (
                         <motion.div

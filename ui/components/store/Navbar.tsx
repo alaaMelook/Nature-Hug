@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { FlaskConicalIcon, History, Home, InfoIcon, LogIn, LogOut, Menu, PhoneCall, Settings, ShoppingBag, ShoppingCart, Store, User, X } from "lucide-react";
+import { FlaskConicalIcon, History, Home, InfoIcon, LogIn, LogOut, Menu, PhoneCall, Settings, ShoppingBag, ShoppingCart, Store, Truck, User, X } from "lucide-react";
 
 import { useTranslation } from "react-i18next";
 
@@ -12,7 +12,6 @@ import { useSupabase } from "@/ui/hooks/useSupabase";
 import { useCart } from "@/ui/providers/CartProvider";
 import LanguageSwitcher from "../LanguageSwitcher";
 import { useCurrentLanguage } from "@/ui/hooks/useCurrentLanguage";
-
 
 
 import { usePathname } from "next/navigation";
@@ -36,6 +35,9 @@ export default function Navbar() {
     // Check if we are on the home page (root or language root)
     const isHomePage = pathname === "/" || (pathname?.length === 3 && pathname?.startsWith("/"));
 
+    useEffect(() => {
+
+    }, [member]);
     useEffect(() => {
         const handleScroll = () => {
             if (window.scrollY > 10) {
@@ -91,7 +93,7 @@ export default function Navbar() {
                 <Link href="/" className="flex items-center sm:w-30 sm:h-30 w-20 h-20 relative">
                     <Image
                         src={"https://reqrsmboabgxshacmkst.supabase.co/storage/v1/object/public/product-images/logo%20(4).png"}
-                        priority={true} alt="Logo  Nature"
+                        priority={true} alt="Logo Nature"
                         fill={true}
                         className="transition-all duration-900 ease-in-out" />
                 </Link>
@@ -153,12 +155,22 @@ export default function Navbar() {
                                 </Link>
                                 {member && (
                                     <Link
-                                        href="/admin"
+                                        href={member.role === 'moderator' ? "/admin/shipping/history" : "/admin"}
                                         onClick={() => setIsSettingsOpen(false)}
                                         className="flex items-center px-4 py-2 text-sm text-red-700 hover:bg-red-100"
                                     >
-                                        <FlaskConicalIcon className="w-4 h-4 mx-2" />
-                                        {t('adminPanel')}
+                                        {member.role === 'moderator' ?
+                                            <>
+                                                <Truck className="w-5 h-5 mx-2 text-red-700" />
+                                                {t('trackOrders')}
+                                            </>
+
+                                            :
+                                            <>
+                                                <FlaskConicalIcon className="w-5 h-5 mx-2 text-red-700" />
+                                                {t('adminPanel')}
+                                            </>
+                                        }
                                     </Link>
                                 )}
                                 <Link
@@ -242,12 +254,21 @@ export default function Navbar() {
                             </Link>
                             {member && (
                                 <Link
-                                    href="/admin"
+                                    href={member.role === 'moderator' ? "/admin/shipping/history" : "/admin"}
                                     onClick={() => setIsOpen(false)}
                                     className="text-red-700 hover:text-red-400 text-lg mx-5 flex"
-                                >
-                                    <FlaskConicalIcon className="w-5 h-5 mx-2 text-red-700" />
-                                    {t('adminPanel')}
+                                >{member.role === 'moderator' ?
+                                    <>
+                                        <Truck className="w-5 h-5 mx-2 text-red-700" />
+                                        {t('trackOrders')}
+                                    </>
+
+                                    :
+                                    <>
+                                        <FlaskConicalIcon className="w-5 h-5 mx-2 text-red-700" />
+                                        {t('adminPanel')}
+                                    </>
+                                    }
                                 </Link>
                             )}
                             <Link

@@ -2,7 +2,7 @@
 
 import { supabase } from "@/data/datasources/supabase/client";
 import { ICustomerClientRepository } from "@/data/repositories/client/iCustomerRepository";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Customer } from "@/domain/entities/auth/customer";
 import { Member } from "@/domain/entities/auth/member";
 
@@ -13,78 +13,114 @@ export const useSupabase = () => {
     const [member, setMember] = useState<Member | null>(null);
     const [loading, setLoading] = useState(true);
 
-    // ✅ 1. Ensure Supabase session is hydrated on mount
-    useEffect(() => {
-        const initSession = async () => {
-            try {
-                const session = await CustomerRepoClient.getSession();
-                if (session?.access_token && session?.refresh_token) {
-                    await supabase.auth.setSession({
-                        access_token: session.access_token,
-                        refresh_token: session.refresh_token,
-                    });
-                }
+    /**
+     * Unified function to refresh all auth state (User + Member)
+     * This avoids race conditions by chaining the fetches sequentially.
+     */
+    const refreshSession = useCallback(async () => {
+        try {
+            // 1. Get the current active session from Supabase
+            const { data: { session } } = await supabase.auth.getSession();
 
-                const currentUser = await CustomerRepoClient.getCurrentUser();
-                if (currentUser) {
-                    const fullUser = await CustomerRepoClient.fetchCustomer(currentUser.id);
-                    if (fullUser) {
-                        setUser(fullUser);
-                        setMember(await CustomerRepoClient.fetchMember(fullUser.id));
-                    }
-                }
-            } catch (err) {
-                console.error("[useSupabase] Failed to initialize session:", err);
+            if (!session?.user) {
+                // No session? Clear everything.
                 setUser(null);
-            } finally {
-                setLoading(false);
+                setMember(null);
+                return;
             }
-        };
 
-        initSession();
-    }, []);
-    useEffect(() => {
-        // ✅ 2. Subscribe to session changes
-        const {
-            data: { subscription },
-        } = supabase.auth.onAuthStateChange((_event, session) => {
-            if (!session) {
+            // 2. Fetch Customer Data (Database record)
+            // Note: We use the ID from the session to ensure we are looking up the right user.
+            const customer = await CustomerRepoClient.fetchCustomer(session.user.id);
+
+            if (!customer) {
+                // If we have an auth session but no database record, treat as logged out or incomplete
+                console.warn("[useSupabase] Auth session exists but Customer record not found.");
                 setUser(null);
-            } else {
-                // Optionally refresh user info if you need it here
-                CustomerRepoClient.getCurrentUser()
-                    .then(u => u && CustomerRepoClient.fetchCustomer(u.id))
-                    .then(fetched => setUser(fetched ?? null));
+                setMember(null);
+                return;
+            }
+
+            setUser(customer);
+
+            // 3. Fetch Member Data (Role/Admin info) using the Customer ID
+            const memberData = await CustomerRepoClient.fetchMember(customer.id);
+            setMember(memberData);
+
+        } catch (err) {
+            console.error("[useSupabase] Failed to refresh session:", err);
+            // On critical error, better to clear state than leave it stale
+            setUser(null);
+            setMember(null);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    // Initial Mount & Event Listener
+    useEffect(() => {
+        // Run once on mount
+        refreshSession();
+
+        // Subscribe to Supabase Auth events
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            console.log(`[useSupabase] Auth Event: ${event}`);
+
+            if (event === 'SIGNED_OUT' || !session) {
+                setUser(null);
+                setMember(null);
+                setLoading(false);
+            } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
+                // Re-fetch everything to ensure we have the latest DB data
+                setLoading(true);
+                await refreshSession();
             }
         });
 
-        return () => subscription.unsubscribe();
-    }, []);
+        return () => {
+            subscription.unsubscribe();
+        };
+    }, [refreshSession]);
 
+    /**
+     * Lazy fetcher for member data, just in case expected state is missing.
+     * But effectively just returns current state if valid.
+     */
     const getMember = async () => {
+        if (member) return member;
+        // If we have a user but no member yet, try one last fetch
         if (user) {
-            return await CustomerRepoClient.fetchMember(user.id);
+            const m = await CustomerRepoClient.fetchMember(user.id);
+            if (m) setMember(m);
+            return m;
         }
         return null;
     };
 
     const signOut = async () => {
-        await supabase.auth.signOut();
-        setUser(null);
-        setMember(null);
+        setLoading(true);
+        try {
+            await supabase.auth.signOut();
+            // State clearing is handled by onAuthStateChange('SIGNED_OUT')
+        } finally {
+            setLoading(false);
+        }
     };
+
     const login = async (email: string, password: string) => {
         setLoading(true);
         try {
-            const { data } = await supabase.auth.signInWithPassword({
+            const { data, error } = await supabase.auth.signInWithPassword({
                 email,
                 password,
             });
+
+            if (error) throw error;
+
             if (data.user) {
-                const fullUser = await CustomerRepoClient.fetchCustomer(data.user.id);
-                setUser(fullUser);
-                const fetchedMember = await CustomerRepoClient.fetchMember(fullUser!.id);
-                setMember(fetchedMember);
+                // While onAuthStateChange will trigger, awaiting here ensures
+                // the caller (e.g. Login form) doesn't redirect until data is ready.
+                await refreshSession();
             }
         } catch (err) {
             console.error("[useSupabase] Login failed:", err);
@@ -94,7 +130,7 @@ export const useSupabase = () => {
         } finally {
             setLoading(false);
         }
-    }
+    };
 
     return {
         user,

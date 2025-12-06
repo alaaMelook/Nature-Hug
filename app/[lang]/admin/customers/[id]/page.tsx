@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 
 export default async function CustomerProfilePage({ params }: { params: { id: string } }) {
     const repo = new ICustomerServerRepository();
-    const customerId = parseInt(params.id);
+    const customerId = parseInt((await params).id);
 
     const customer = await repo.viewProfile(customerId);
     const orders = await repo.viewAllOrders(customerId);

@@ -3,14 +3,16 @@
 import { useState, useEffect } from 'react';
 import { getShipmentHistoryAction } from '@/ui/hooks/admin/shippingActions';
 import { useTranslation } from 'react-i18next';
-import { Loader2, Calendar, Search, MapPin, Phone, Package, DollarSign, Truck, FileText, AlertCircle } from 'lucide-react';
+import { Loader2, Calendar, Search, MapPin, Package, DollarSign, Truck, FileText } from 'lucide-react';
 import { toast } from 'sonner';
+import { useSupabase } from '@/ui/hooks/useSupabase';
 import { ShipmentHistoryItem } from '@/domain/entities/shipment/shipmentHistoryItem';
 import { ShipmentDetailsModal } from '@/ui/components/admin/shipment/ShipmentDetailsModal';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export function ShipmentHistoryScreen() {
     const { t } = useTranslation();
+    const { member } = useSupabase();
     const [loading, setLoading] = useState(false);
     const [shipments, setShipments] = useState<ShipmentHistoryItem[]>([]);
     const [fromDate, setFromDate] = useState<string>("");
@@ -36,9 +38,18 @@ export function ShipmentHistoryScreen() {
 
         setLoading(true);
         try {
+
+            if (!member) return;
             const result = await getShipmentHistoryAction(new Date(fromDate), new Date(toDate));
             if (result.success) {
-                const sortedShipments = result.data?.sort((a, b) => new Date(b.PickupDate).getTime() - new Date(a.PickupDate).getTime());
+                let sortedShipments = result.data?.sort((a, b) => new Date(b.PickupDate).getTime() - new Date(a.PickupDate).getTime());
+                if (member?.role !== "admin") {
+                    sortedShipments = sortedShipments?.filter((shipment) => shipment.StatusNameE !== "Delivered");
+                }
+                if (sortedShipments?.length === 0) {
+                    toast.info(t("noShipmentsFound"));
+                }
+
                 setShipments(sortedShipments || []);
                 if (!result.data || result.data.length === 0) {
                     toast.info(t("noShipmentsFound"));
@@ -61,10 +72,11 @@ export function ShipmentHistoryScreen() {
 
     // Trigger search when dates are set initially
     useEffect(() => {
+
         if (mounted && fromDate && toDate && shipments.length === 0) {
             handleSearch();
         }
-    }, [mounted]);
+    }, [mounted, member]);
 
     if (!mounted) return null; // Prevent hydration mismatch
 
@@ -189,12 +201,14 @@ export function ShipmentHistoryScreen() {
                                             {t('{{price, currency}}', { price: shipment.COD })}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); handleViewDetails(shipment.AWB); }}
-                                                className="text-primary-600 hover:text-primary-800 font-medium text-xs flex items-center gap-1"
-                                            >
-                                                <FileText className="h-3 w-3" /> {t("view")}
-                                            </button>
+                                            {shipment.AuditDate ?
+                                                t("{{date, datetime}}", {
+                                                    // Combine the date and time strings with a 'T' separator to create a valid ISO string
+                                                    date: new Date(shipment.AuditDate),
+                                                }).split(",").map((date) => <p key={date}>{date}</p>)
+                                                : <p className="text-gray-500 text-center text-xl">
+                                                    -
+                                                </p>}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                             <button

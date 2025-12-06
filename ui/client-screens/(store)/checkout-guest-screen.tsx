@@ -65,16 +65,17 @@ export function CheckoutGuestScreen({ governorates }: { governorates: Governorat
         }
         setLoading(true);
         const { termsAccepted, ...restData } = data;
+
         const orderPayload: Partial<Order> = {
             ...restData,
             guest_phone2: data.guest_phone2 ? data.guest_phone2.length > 0 ? data.guest_phone2 : null : null,
             status: 'pending',
             subtotal: cart.netTotal,
             discount_total: cart.discount,
-            shipping_total: selectedGovernorate?.fees ?? 0,
+            shipping_total: cart.free_shipping ? 0 : selectedGovernorate?.fees ?? 0,
             tax_total: 0.00,
-            payment_method: selectedPayment === 'cod' ? 'Cash on Delivery' : 'Online Card',
-            grand_total: getCartTotal(selectedGovernorate?.fees ?? 0),
+            payment_method: cart.isAdmin ? 'Online Card' : selectedPayment === 'cod' ? 'Cash on Delivery' : 'Online Card',
+            grand_total: getCartTotal(cart.free_shipping ? 0 : selectedGovernorate?.fees ?? 0),
             guest_address: { ...(data.guest_address || {}), governorate_slug: selectedGovernorate?.slug },
             promo_code_id: cart.promoCodeId
         };
@@ -116,13 +117,13 @@ export function CheckoutGuestScreen({ governorates }: { governorates: Governorat
                     }
                 } catch (err) {
                     console.error(err);
-                    toast.error("Failed to initiate payment");
+                    toast.error("checkout.errors.paymentFailed");
                     setLoading(false);
                     return;
                 }
             }
 
-            toast.success('Order created successfully!');
+            toast.success('checkout.success.orderCreated');
             // navigate first then clear cart to avoid any cart-empty watchers redirecting away
             router.push(`/orders/${result.order_id}`);
             await clearCart();
