@@ -8,5 +8,5 @@ export default async function ShippedOrdersPage() {
     // Filter for orders that have a shipment_id or awb
     const shippedOrders = allOrders.filter(order => order.shipment_id || order.awb);
 
-    return <OrdersScreen initialOrders={shippedOrders} />;
+    return <OrdersScreen orders={shippedOrders} />;
 }
