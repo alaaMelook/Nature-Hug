@@ -1,3 +1,5 @@
+"use server";
+
 import { IAdminClientRepository } from "@/data/repositories/client/iAdminRepository";
 import { IAdminServerRepository } from "@/data/repositories/server/iAdminRepository";
 import { Shipment } from "@/domain/entities/shipment/shipment";
@@ -25,7 +27,7 @@ export async function createShipmentAction(order: OrderDetailsView, shipment: Sh
 
         if (awb) {
             console.log(`Shipment created with AWB: ${awb}`);
-            await new IAdminClientRepository().updateOrder({ ...order, awb });
+            await new IAdminServerRepository().updateOrder({ ...order, awb });
         }
 
         return { success: true, data: result };
@@ -71,5 +73,25 @@ export async function getDashboardLinkAction() {
     } catch (error) {
         console.error("Failed to get dashboard link:", error);
         return { success: false, error: "Failed to get dashboard link" };
+    }
+}
+
+export async function getGovernoratesAction() {
+    try {
+        const governorates = await new IAdminServerRepository().getAllGovernorates();
+        return { success: true, data: governorates };
+    } catch (error) {
+        console.error("Failed to fetch governorates:", error);
+        return { success: false, error: "Failed to fetch governorates" };
+    }
+}
+
+export async function updateGovernorateFeesAction(slug: string, fees: number) {
+    try {
+        await new IAdminServerRepository().updateGovernorateFees(slug, fees);
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to update governorate fees:", error);
+        return { success: false, error: "Failed to update governorate fees" };
     }
 }

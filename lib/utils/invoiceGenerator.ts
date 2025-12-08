@@ -27,7 +27,7 @@ export const generateInvoicePDF = (orders: OrderDetailsView | OrderDetailsView[]
         }
 
         // --- Header ---
-        const logoUrl = "https://reqrsmboabgxshacmkst.supabase.co/storage/v1/object/public/product-images/logo%20(4).png"; // <<< REPLACE THIS LINE
+        const logoUrl = "https://reqrsmboabgxshacmkst.supabase.co/storage/v1/object/public/nature-hug/logos/logo%20(4).png"; // <<< REPLACE THIS LINE
         const logoSize = 50; // Size in mm (slightly larger)
         const logoX = (pageWidth / 2) - (logoSize / 2);
 

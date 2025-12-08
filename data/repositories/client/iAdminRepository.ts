@@ -7,11 +7,37 @@ import { ProductAdminView } from "@/domain/entities/views/admin/productAdminView
 import { Category } from "@/domain/entities/database/category";
 import { Review } from "@/domain/entities/database/review";
 import { ReviewAdminView } from "@/domain/entities/views/admin/reviewAdminView";
+import { Governorate } from "@/domain/entities/database/governorate";
 
 export class IAdminClientRepository implements AdminRepository {
+    async getAllGovernorates(): Promise<Governorate[]> {
+        console.log("[IAdminRepository] getAllGovernorates called.");
+        const { data, status, statusText, error } = await supabase.schema('store')
+            .from('shipping_governorates')
+            .select('*')
+            .order('name_en', { ascending: true });
+        console.log("[IAdminRepository] getAllGovernorates result:", { data, status, statusText });
+        if (error) {
+            console.error("[IAdminRepository] getAllGovernorates error:", error);
+            throw error;
+        }
+        return data || [];
+    }
+    async updateGovernorateFees(slug: string, fees: number): Promise<void> {
+        console.log("[IAdminRepository] updateGovernorateFees called with slug:", slug);
+        const { data, status, statusText, error } = await supabase.schema('store')
+            .from('shipping_governorates')
+            .update({ fees })
+            .eq('slug', slug);
+        console.log("[IAdminRepository] updateGovernorateFees result:", { data, status, statusText });
+        if (error) {
+            console.error("[IAdminRepository] updateGovernorateFees error:", error);
+            throw error;
+        }
+    }
     async createCategory(category: Partial<Category>): Promise<void> {
         console.log("[IAdminRepository] createCategory called with category:", category);
-        const { data, status, statusText, error } = await supabase.schema('admin')
+        const { data, status, statusText, error } = await supabase.schema('store')
             .from("categories")
             .insert(category);
         console.log("[IAdminRepository] createCategory result:", { data, status, statusText });
@@ -22,7 +48,7 @@ export class IAdminClientRepository implements AdminRepository {
     }
     async deleteCategory(id: number): Promise<void> {
         console.log("[IAdminRepository] deleteCategory called with id:", id);
-        const { data, status, statusText, error } = await supabase.schema('admin')
+        const { data, status, statusText, error } = await supabase.schema('store')
             .from("categories")
             .delete()
             .eq('id', id);
@@ -177,10 +203,10 @@ export class IAdminClientRepository implements AdminRepository {
     async uploadImage(file: File): Promise<string> {
         console.log("[IProductRepository] uploadImage called with file:", file.name)
         const fileExt = file.name.split(".").pop();
-        const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+        const fileName = `products/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
 
         const { data, error } = await supabase.storage
-            .from("product-images")
+            .from("nature-hug")
             .upload(fileName, file, { contentType: file.type });
 
         console.log("[IProductRepository] uploadImage result:", { data });
@@ -190,7 +216,7 @@ export class IAdminClientRepository implements AdminRepository {
         }
 
         const { data: urlData } = supabase.storage
-            .from("product-images")
+            .from("nature-hug")
             .getPublicUrl((data as any).path);
 
         console.log("[IProductRepository] getPublicUrl result:", { urlData });
@@ -220,7 +246,12 @@ export class IAdminClientRepository implements AdminRepository {
     async getAllImages(): Promise<{ image: any, url: string }[]> {
         console.log('[IAdminRepository] getAllImages called.');
 
-        const { data, error } = await supabase.storage.from('product-images').list('');
+        const { data, error } = await supabase.storage.from('nature-hug').list('products', {
+            sortBy: {
+                column: 'created_at', // Use 'created_at' for the added date/time
+                order: 'desc',        // Use 'desc' for newest items first (descending)
+            },
+        });
 
         console.log('[IAdminRepository] getAllImages result:', { data });
         if (error) {
@@ -231,7 +262,7 @@ export class IAdminClientRepository implements AdminRepository {
         const images: { image: any, url: string }[] = [];
         if (data && Array.isArray(data)) {
             for (const item of data) {
-                const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(item.name);
+                const { data: urlData } = supabase.storage.from('nature-hug').getPublicUrl('products/' + item.name);
                 if (urlData?.publicUrl) {
                     images.push({ image: item, url: urlData.publicUrl });
                 }
@@ -243,7 +274,7 @@ export class IAdminClientRepository implements AdminRepository {
     async deleteImage(imageName: string): Promise<void> {
         console.log('[IAdminRepository] deleteImage called with imageName:', imageName);
 
-        const { data, error } = await supabase.storage.from('product-images').remove([imageName]);
+        const { data, error } = await supabase.storage.from('nature-hug').remove(['products/' + imageName]);
 
         console.log('[IAdminRepository] deleteImage result:', { data });
         if (error) {

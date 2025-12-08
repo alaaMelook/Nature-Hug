@@ -1,44 +1,52 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { PackageCheck, Plus, Trash2, Upload } from "lucide-react";
 import { Category } from "@/domain/entities/database/category";
 import { createCategoryAction, deleteCategoryAction } from "@/ui/hooks/admin/categories";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useCategories } from "@/ui/hooks/admin/useCategories";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
+import { ImageSelector } from "@/ui/components/admin/imageSelector";
 
-export default function CategoriesScreen({ initialCategories }: { initialCategories: Category[] }) {
+export default function CategoriesScreen({ initialCategories, initialImages }: { initialCategories: Category[]; initialImages: { image: any, url: string }[] }) {
     const { t } = useTranslation();
     const [categories, setCategories] = useState<Category[]>(initialCategories);
     const [nameEnglish, setNameEnglish] = useState("");
     const [nameArabic, setNameArabic] = useState("");
+    const [image, setImage] = useState<string | null>(null);
+    const [openSelector, setOpenSelector] = useState(false);
 
     const refreshCategories = async () => {
         const categories = await useCategories();
         setCategories(categories);
     };
 
-
+    const handleImageSelect = (image: string) => {
+        setImage(image);
+        setOpenSelector(false);
+    };
     const handleAdd = useCallback(async () => {
         if (!nameEnglish.trim()) {
             toast.error(t("englishNameRequired"));
             return;
         }
 
-        const result = await createCategoryAction({ name_en: nameEnglish, name_ar: nameArabic });
+        const result = await createCategoryAction({ name_en: nameEnglish, name_ar: nameArabic, image_url: image || undefined });
 
         if (result.success) {
             toast.success(t("categoryCreatedSuccessfully"));
             setNameEnglish("");
             setNameArabic("");
+            setImage(null);
             refreshCategories();
 
         } else {
             toast.error(result.error || t("failedToCreateCategory"));
         }
-    }, [nameEnglish, nameArabic, t]);
+    }, [nameEnglish, nameArabic, image, t]);
 
     const handleDelete = useCallback(async (id: number) => {
         if (!confirm(t("confirmDeleteCategory"))) return;
@@ -62,21 +70,35 @@ export default function CategoriesScreen({ initialCategories }: { initialCategor
             <h1 className="text-2xl font-bold mb-6">{t("manageCategories")}</h1>
 
             {/* Add Form */}
-            <div className="mb-6 space-y-3 bg-white p-4 rounded-lg shadow-sm border">
-                <input
-                    type="text"
-                    placeholder={t("englishName")}
-                    value={nameEnglish}
-                    onChange={(e) => setNameEnglish(e.target.value)}
-                    className="w-full border px-3 py-2 rounded-md text-sm"
-                />
-                <input
-                    type="text"
-                    placeholder={t("arabicNameOptional")}
-                    value={nameArabic}
-                    onChange={(e) => setNameArabic(e.target.value)}
-                    className="w-full border px-3 py-2 rounded-md text-sm"
-                />
+            <div className="flex flex-col md:flex-row mb-6 space-y-3 items-center bg-white p-4 rounded-lg shadow-sm border">
+                {image ? <Image
+                    src={image}
+                    alt="Category Image"
+                    onClick={() => setOpenSelector(true)}
+                    width={100}
+                    height={100}
+                    className="w-24 h-24 object-cover rounded-lg mx-auto cursor-pointer"
+                /> :
+                    <div className="cursor-pointer flex items-center justify-center w-24 h-24 rounded-lg border-dashed border-2 border-gray-300">
+                        <Upload className="h-12 w-12 text-gray-500" onClick={() => setOpenSelector(true)} />
+                    </div>}
+                <div className="flex flex-col space-y-2 w-full">
+
+                    <input
+                        type="text"
+                        placeholder={t("englishName")}
+                        value={nameEnglish}
+                        onChange={(e) => setNameEnglish(e.target.value)}
+                        className="w-full border px-3 py-2 rounded-md text-sm"
+                    />
+                    <input
+                        type="text"
+                        placeholder={t("arabicNameOptional")}
+                        value={nameArabic}
+                        onChange={(e) => setNameArabic(e.target.value)}
+                        className="w-full border px-3 py-2 rounded-md text-sm"
+                    />
+                </div>
                 <button
                     onClick={handleAdd}
                     className="flex items-center px-3 py-2 bg-primary-600 text-white text-sm rounded-md hover:bg-primary-700 transition-colors w-full justify-center sm:w-auto"
@@ -99,6 +121,15 @@ export default function CategoriesScreen({ initialCategories }: { initialCategor
                                 transition={{ duration: 0.2 }}
                                 className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors"
                             >
+                                {c.image_url ? (
+                                    <Image
+                                        src={c.image_url}
+                                        alt={c.name_en}
+                                        width={50}
+                                        height={50}
+                                        className="rounded-full"
+                                    />
+                                ) : <PackageCheck className="h-6 w-6 text-gray-500" />}
                                 <div>
                                     <p className="font-medium text-gray-900">{c.name_en}</p>
                                     {c.name_ar && (
@@ -125,6 +156,12 @@ export default function CategoriesScreen({ initialCategories }: { initialCategor
                     )}
                 </AnimatePresence>
             </div>
+
+            {openSelector && <ImageSelector
+                images={initialImages}
+                onSelect={handleImageSelect}
+                onClose={() => setOpenSelector(false)}
+            />}
         </motion.div>
     );
 }

@@ -56,7 +56,7 @@ export const CollapsibleSection = ({
                 aria-hidden={!isOpen}
             >
                 <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                    {typeof content === 'string' ? <p>{t(content)}</p> : isOpen && content}
+                    {typeof content === 'string' ? <p className="mb-5">{t(content)}</p> : isOpen && content}
                 </div>
             </div>
         </div>

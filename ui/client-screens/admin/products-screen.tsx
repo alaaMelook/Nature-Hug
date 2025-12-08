@@ -188,8 +188,8 @@ export function ProductsScreen({ products, materials }: { products: ProductAdmin
                                                     key={option.id}
                                                     onClick={() => setFilterStock(option.id as any)}
                                                     className={`px-3 py-2 rounded-lg text-xs font-medium transition-all text-center border ${filterStock === option.id
-                                                            ? 'bg-primary-50 border-primary-200 text-primary-700'
-                                                            : 'bg-gray-50 border-transparent text-gray-600 hover:bg-gray-100'
+                                                        ? 'bg-primary-50 border-primary-200 text-primary-700'
+                                                        : 'bg-gray-50 border-transparent text-gray-600 hover:bg-gray-100'
                                                         }`}
                                                 >
                                                     {option.label}
@@ -237,11 +237,11 @@ export function ProductsScreen({ products, materials }: { products: ProductAdmin
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50">
                             <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t("product")}</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t("category")}</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t("price")}</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t("stock")}</th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"></th>
+                                <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">{t("product")}</th>
+                                <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">{t("category")}</th>
+                                <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">{t("price")}</th>
+                                <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">{t("stock")}</th>
+                                <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center"></th>
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
@@ -291,15 +291,15 @@ export function ProductsScreen({ products, materials }: { products: ProductAdmin
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
+                                        <td className="px-6 py-4 whitespace-nowrap text-center">
                                             <span className="px-2.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-50 text-blue-700">
                                                 {i18n.language === "ar" ? product.category_name_ar ?? product.category_name_en : product.category_name_en}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">
                                             {t('{{price, currency}}', { price: product.price })}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
+                                        <td className="px-6 py-4 whitespace-nowrap text-center justify-center items-center flex ">
                                             <div className="flex items-center gap-2">
                                                 <div className={`h-2.5 w-2.5 rounded-full ${product.stock > 10 ? 'bg-green-500' : product.stock > 0 ? 'bg-yellow-500' : 'bg-red-500'}`}></div>
                                                 <span className="text-sm text-gray-500">{product.stock} {t("leftInStock")}</span>
@@ -312,7 +312,7 @@ export function ProductsScreen({ products, materials }: { products: ProductAdmin
                                                 </button>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                        <td className="px-6 py-4 whitespace-nowrap text-end text-sm font-medium">
                                             <div className="flex items-center justify-end space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <button
                                                     onClick={() => handleDelete(product)}

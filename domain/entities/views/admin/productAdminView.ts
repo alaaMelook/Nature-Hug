@@ -38,7 +38,8 @@ export interface ProductVariantAdminView {
     discount: number;
     description_en: string;
     description_ar: string;
-    type: string;
+    type_en: string;
+    type_ar: string;
     image: string;
     gallery: (string | undefined)[];
     slug: string;

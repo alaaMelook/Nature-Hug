@@ -80,13 +80,12 @@ export class IProductServerRepository implements ProductRepository {
         if (data) {
             return true;
         }
-        return false;
         console.log("[IProductRepository] checkSlug result:", { data, status, statusText });
         if (error) {
             console.error("[IProductRepository] checkSlug error:", error);
             throw error;
         }
-        return data;
+        return false;
     }
     async viewDetailedBySlug(slug: string): Promise<ProductDetailView> {
         console.log("[IProductRepository] viewBySlug called with slug:", slug);

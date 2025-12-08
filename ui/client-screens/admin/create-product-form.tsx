@@ -97,11 +97,14 @@ export function CreateProductForm({ initialImages, initialCategories }: CreatePr
             ...data,
             name_ar: data.name_ar.trim().length > 0 ? data.name_ar.trim() : data.name_en.trim(),
             price: cleanNumber(data.price),
+            image_url: watch("image_url"),
             stock: cleanNumber(data.stock),
             discount: cleanNumber(data.discount),
+            // gallery: data.gallery.slice(1, data.gallery.length),
             category_id: data.category_id ? Number(data.category_id) : undefined,
             variants: data.variants?.map(v => ({
                 ...v,
+                // gallery: v.gallery.slice(1, v.gallery.length),
                 price: cleanNumber(v.price),
                 stock: cleanNumber(v.stock),
                 discount: cleanNumber(v.discount),
@@ -144,20 +147,30 @@ export function CreateProductForm({ initialImages, initialCategories }: CreatePr
             toast.error(t("errorCreatingProduct") + (result.error));
         }
     };
-
+    // --- Locate this function in your CreateProductForm component ---
     const handleImageSelect = (url: string) => {
         if (activeImageField === 'main') {
-            const currentGallery = watch("gallery") || [];
-            setValue("gallery", [...currentGallery, url]);
-            if (!watch("image_url")) {
+            const isImageUrlEmpty = !watch("image_url"); // Check if it's currently empty
+
+            if (isImageUrlEmpty) {
+                // 1. If empty, set as the main image (image_url) and DON'T touch the gallery.
                 setValue("image_url", url);
+            } else {
+                // 2. If NOT empty, set as a gallery image.
+                const currentGallery = watch("gallery") || [];
+                setValue("gallery", [...currentGallery, url]);
             }
+
         } else if (typeof activeImageField === 'number') {
-            // Variant image logic
-            const currentVariantGallery = watch(`variants.${activeImageField}.gallery`) || [];
-            setValue(`variants.${activeImageField}.gallery`, [...currentVariantGallery, url]);
-            if (!watch(`variants.${activeImageField}.image`)) {
+            const isVariantImageEmpty = !watch(`variants.${activeImageField}.image`); // Check if it's currently empty
+
+            if (isVariantImageEmpty) {
+                // 1. If empty, set as the variant main image (variants[i].image).
                 setValue(`variants.${activeImageField}.image`, url);
+            } else {
+                // 2. If NOT empty, set as a variant gallery image.
+                const currentVariantGallery = watch(`variants.${activeImageField}.gallery`) || [];
+                setValue(`variants.${activeImageField}.gallery`, [...currentVariantGallery, url]);
             }
         }
         setShowImageSelector(false);
@@ -357,6 +370,25 @@ export function CreateProductForm({ initialImages, initialCategories }: CreatePr
                                 </h2>
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                     <AnimatePresence>
+                                        {watch("image_url") && (
+                                            <motion.div
+                                                initial={{ opacity: 0, scale: 0.8 }}
+                                                animate={{ opacity: 1, scale: 1 }}
+                                                exit={{ opacity: 0, scale: 0.8 }}
+                                                className="relative aspect-square rounded-lg overflow-hidden border-2 group border-amber-500"
+                                            >
+                                                <img src={watch("image_url")} alt="Product" className="w-full h-full object-cover" />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setValue("image_url", "");
+                                                    }}
+                                                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                >
+                                                    <Trash2 size={12} />
+                                                </button>
+                                            </motion.div>
+                                        )}
                                         {watch("gallery")?.map((url, index) => (
                                             <motion.div
                                                 key={url}
@@ -432,7 +464,7 @@ export function CreateProductForm({ initialImages, initialCategories }: CreatePr
                                     <div className="space-y-3">
                                         <div className="flex justify-between items-center text-sm">
                                             <span className="text-gray-600">{t("sellingPrice")}:</span>
-                                            <span className="font-medium">{t('{{price, currency}}', { price: watch("price") })}</span>
+                                            <span className="font-medium">{t('{{price, currency}}', { price: watch("price") ?? 0.0 })}</span>
                                         </div>
                                         <div className="flex justify-between items-center text-sm">
                                             <span className="text-gray-600">{t("totalMaterialCost")}:</span>
@@ -461,13 +493,31 @@ export function CreateProductForm({ initialImages, initialCategories }: CreatePr
                             <div className="bg-white rounded-xl shadow-sm border p-6">
                                 <div className="flex justify-between items-center mb-4">
                                     <h3 className="text-lg font-semibold text-gray-800">{t("materialsIngredients")}</h3>
-                                    <button
-                                        type="button"
-                                        onClick={() => { setActiveMaterialField('main'); setShowMaterialSelector(true); }}
-                                        className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
-                                    >
-                                        <Plus size={16} /> {t("addMaterial")}
-                                    </button>
+                                    <div className="flex gap-2">
+                                        {variantFields.length > 0 && materialFields.length > 0 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    if (confirm(t("confirmApplyToAll"))) {
+                                                        variantFields.forEach((_, idx) => {
+                                                            setValue(`variants.${idx}.materials`, materialFields);
+                                                        });
+                                                        toast.success(t("materialsApplied"));
+                                                    }
+                                                }}
+                                                className="text-xs bg-purple-50 text-purple-600 px-3 py-1 rounded-full border border-purple-200 hover:bg-purple-100 font-medium"
+                                            >
+                                                {t("applyToAllVariants")}
+                                            </button>
+                                        )}
+                                        <button
+                                            type="button"
+                                            onClick={() => { setActiveMaterialField('main'); setShowMaterialSelector(true); }}
+                                            className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
+                                        >
+                                            <Plus size={16} /> {t("addMaterial")}
+                                        </button>
+                                    </div>
                                 </div>
 
                                 {materialFields.length > 0 ? (
@@ -533,7 +583,7 @@ export function CreateProductForm({ initialImages, initialCategories }: CreatePr
                                     </h2>
                                     <button
                                         type="button"
-                                        onClick={() => appendVariant({ name_en: "", price: 0, stock: 0, gallery: [] } as any)}
+                                        onClick={() => appendVariant({ name_en: "", price: 0, stock: 0, gallery: [], image: "" } as any)} // Ensure 'image' is initialized
                                         className="text-sm bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1 rounded-lg font-medium transition-colors flex items-center gap-1"
                                     >
                                         <Plus size={16} /> {t("addVariant")}
@@ -602,8 +652,12 @@ export function CreateProductForm({ initialImages, initialCategories }: CreatePr
                                                         <input type="number" {...register(`variants.${index}.discount` as const)} className="w-full border-gray-300 rounded shadow-sm p-1.5 border text-sm" />
                                                     </div>
                                                     <div>
-                                                        <label className="text-xs font-medium text-gray-500 uppercase">{t("distinguisher")}</label>
-                                                        <input {...register(`variants.${index}.type` as const)} className="w-full border-gray-300 rounded shadow-sm p-1.5 border text-sm" placeholder="e.g. blue, small, 50 ml, ..." />
+                                                        <label className="text-xs font-medium text-gray-500 uppercase">{t("distinguisherEnglish")}</label>
+                                                        <input {...register(`variants.${index}.type_en` as const)} className="w-full border-gray-300 rounded shadow-sm p-1.5 border text-sm" placeholder="e.g. blue, small, 50 ml, ..." />
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-xs font-medium text-gray-500 uppercase">{t("distinguisherArabic")}</label>
+                                                        <input {...register(`variants.${index}.type_ar` as const)} className="w-full border-gray-300 rounded shadow-sm p-1.5 border text-sm" placeholder="e.g. blue, small, 50 ml, ..." />
                                                     </div>
                                                 </div>
 
@@ -611,6 +665,28 @@ export function CreateProductForm({ initialImages, initialCategories }: CreatePr
                                                 <div className="mb-4">
                                                     <label className="text-xs font-medium text-gray-500 uppercase mb-2 block">{t("images")}</label>
                                                     <div className="flex gap-2 flex-wrap">
+                                                        {watch(`variants.${index}.image`) && ( // 👈 FIX: Check for 'image' field for main image
+                                                            <motion.div
+                                                                key={`main-img-${field.id}`}
+                                                                initial={{ opacity: 0, scale: 0.8 }}
+                                                                animate={{ opacity: 1, scale: 1 }}
+                                                                exit={{ opacity: 0, scale: 0.8 }}
+                                                                className="relative aspect-square rounded-lg overflow-hidden border-2 group border-amber-500"
+                                                            >
+                                                                <img src={watch(`variants.${index}.image`)} alt={`Product_v_${index}`} className="h-12 w-12 object-cover" />
+                                                                <input type="hidden" {...register(`variants.${index}.image` as const)} /> {/* Register field */}
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        setValue(`variants.${index}.image`, ""); // 👈 FIX: Set the correct field
+                                                                    }}
+                                                                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                >
+                                                                    <Trash2 size={12} />
+                                                                </button>
+                                                                <span className="absolute bottom-0 left-0 bg-amber-500 text-white text-xs px-2 py-0.5 rounded-tr-lg">Main</span>
+                                                            </motion.div>
+                                                        )}
                                                         {watch(`variants.${index}.gallery`)?.map((url, imgIndex) => (
                                                             <img key={imgIndex} src={url} alt="Variant" className="h-12 w-12 object-cover rounded border" />
                                                         ))}
@@ -641,10 +717,47 @@ export function CreateProductForm({ initialImages, initialCategories }: CreatePr
                                                             </div>
                                                         </div>
 
-                                                        {/* Variant Materials */}
                                                         <div>
                                                             <div className="flex justify-between items-center mb-2">
-                                                                <h4 className="text-xs font-bold text-gray-700 uppercase">{t("materials")}</h4>
+                                                                <h4 className="text-xs font-bold text-gray-700 uppercase md:flex-row flex-col flex md:items-center gap-2">
+                                                                    {t("materials")}
+                                                                    <div className="flex items-center gap-2">
+                                                                        <select
+                                                                            className="text-xs border rounded px-1.5 py-0.5 font-normal text-gray-600 bg-white"
+                                                                            onChange={(e) => {
+                                                                                if (!e.target.value) return;
+
+                                                                                let sourceMaterials: ProductMaterialAdminView[] = [];
+                                                                                if (e.target.value === 'main') {
+                                                                                    // @ts-ignore
+                                                                                    sourceMaterials = materialFields;
+                                                                                } else {
+                                                                                    const varIndex = parseInt(e.target.value);
+                                                                                    // @ts-ignore
+                                                                                    sourceMaterials = watch(`variants.${varIndex}.materials`) || [];
+                                                                                }
+
+                                                                                // Clone materials nicely
+                                                                                const clonedMaterials = sourceMaterials.map(m => ({
+                                                                                    ...m
+                                                                                }));
+
+                                                                                setValue(`variants.${index}.materials`, clonedMaterials as any);
+                                                                                e.target.value = ""; // Reset
+                                                                                toast.success(t("materialsCopied"));
+                                                                            }}
+                                                                        >
+                                                                            <option value="">{t("copyMaterialsFrom")}...</option>
+                                                                            <option value="main">{t("mainProduct")}</option>
+                                                                            {variantFields.map((v, vIdx) => vIdx !== index && (
+                                                                                <option key={v.id} value={vIdx}>
+                                                                                    {/* @ts-ignore */}
+                                                                                    {v.name_en || `Variant ${vIdx + 1}`}
+                                                                                </option>
+                                                                            ))}
+                                                                        </select>
+                                                                    </div>
+                                                                </h4>
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => { setActiveMaterialField(index); setShowMaterialSelector(true); }}

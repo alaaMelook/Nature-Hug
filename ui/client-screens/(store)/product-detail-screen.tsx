@@ -15,6 +15,7 @@ import { ProductDetailView } from "@/domain/entities/views/shop/productDetailVie
 import { ProductView } from "@/domain/entities/views/shop/productView";
 import SimilarProductsScroll from "@/ui/components/store/SimilarProductsScroll";
 import { motion } from "framer-motion";
+import material from "@mui/x-data-grid/material";
 
 
 export function ProductDetailScreen({ initProduct: product, similarProducts = [] }: { initProduct: ProductDetailView | null, similarProducts?: ProductView[] }) {
@@ -27,26 +28,31 @@ export function ProductDetailScreen({ initProduct: product, similarProducts = []
         setActiveSection(activeSection === id ? null : id);
     }, [activeSection]);
 
-
+    const materials = product?.materials?.filter((material) => material.material_type === 'Chemicals');
     if (!product) {
         return <div className="p-6 text-center text-red-600">{t('productNotFound')}</div>;
     }
     console.log(product);
-    const sections = [
-        { id: 'description', title: t('fullDescription'), content: product.description, icon: Info },
-        {
+    const sections = []
+    if (product.description) {
+        sections.push({ id: 'description', title: t('fullDescription'), content: product.description, icon: Info });
+    }
+    if (materials && materials.length > 0) {
+        sections.push({
             id: 'ingredients',
             title: t('materialsIngredients'),
-            content: product.materials && product.materials.length > 0
-                ? product.materials.map((material, index) => <p key={index}
-                    className="mb-1">{`${material.grams_used}g of ${material.material_name}`}</p>) // Added margin for spacing
+            content: materials && materials.length > 0
+                ? <p>{materials.map((material) => material.material_name).join(', ')}</p> // Added margin for spacing
                 : <p>{t('noMaterialsListed')}</p>,
             icon: CheckCircle,
-        },
-        { id: 'bestfor', title: t('bestFor'), content: (product.faq?.best_for.length ?? 0) > 0 ? product.faq?.best_for : t('noBestFor'), icon: ShoppingBag },
-        { id: 'precautions', title: t('precautions'), content: (product.faq?.precautions.length ?? 0) > 0 ? product.faq?.precautions : t('noPrecautions'), icon: Minus },
-
-    ];
+        });
+    }
+    if (product.faq?.best_for.length ?? 0 > 0) {
+        sections.push({ id: 'bestfor', title: t('bestFor'), content: product.faq?.best_for, icon: ShoppingBag });
+    }
+    if (product.faq?.precautions.length ?? 0 > 0) {
+        sections.push({ id: 'precautions', title: t('precautions'), content: product.faq?.precautions, icon: Minus });
+    }
     return (
         <motion.div
             initial={{ opacity: 0 }}
@@ -100,19 +106,20 @@ export function ProductDetailScreen({ initProduct: product, similarProducts = []
                     </div>
 
                     {/* Price and Variant Selection */}
-                    <div className="flex items-center justify-between mb-8">
+                    <div className="flex flex-col sm:flex-row items-center justify-between mb-8 gap-4">
                         <p className="text-4xl font-extrabold text-primary-900">
                             {t("{{price, currency}}", { price: product.price * quantity })}
                         </p>
-                        <div className="flex gap-2">
+                        <div className="grid grid-cols-2 gap-2 w-full sm:w-1/2">
                             {product.variants?.map(variant => (
                                 <Link
                                     aria-disabled={variant.slug === product.slug}
                                     key={variant.id}
                                     href={`/products/${variant.slug}`}
+                                    className="w-full"
                                 >
                                     <div
-                                        className={`text-sm font-medium px-4 py-2 rounded-full transition duration-200 ease-in-out cursor-pointer ${variant.slug === product.slug ? 'bg-primary-900 text-white shadow-md' : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'}`}>
+                                        className={`text-center text-xs font-medium px-4 py-2 rounded-full transition duration-200 ease-in-out cursor-pointer  ${variant.slug === product.slug ? 'bg-primary-900 text-white shadow-md' : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'}`}>
                                         {variant.type}
                                     </div>
                                 </Link>
@@ -145,6 +152,7 @@ export function ProductDetailScreen({ initProduct: product, similarProducts = []
                                 content={section.content}
                                 icon={section.icon}
                                 isOpen={activeSection === section.id}
+                                className={`${activeSection === section.id ? 'pb-5' : ''}`}
                                 onToggleAction={toggleSection}
                             // iconColor="text-primary-800" // Styling for icons
                             // titleClass="font-semibold text-primary-800 uppercase text-sm tracking-widest" // Styling for titles

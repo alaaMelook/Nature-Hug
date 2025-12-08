@@ -1,3 +1,4 @@
+'use client';
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
@@ -15,7 +16,7 @@ export function MaterialsTable({
 }: {
   initialMaterials: Material[];
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [materials, setMaterials] = useState<Material[]>(initialMaterials || []);
   const [searchTerm, setSearchTerm] = useState("");
   const [priceFilter, setPriceFilter] = useState<number | "">("");
@@ -56,7 +57,7 @@ export function MaterialsTable({
       const matchesPrice = priceFilter === "" || (material.price_per_gram <= priceFilter);
 
       // 3. Type Filter
-      const matchesType = typeFilter ? material.material_type === typeFilter : true;
+      const matchesType = typeFilter ? material.material_type?.toLowerCase() === typeFilter.toLowerCase() : true;
 
       // 4. Stock Filter
       let matchesStock = true;
@@ -124,13 +125,23 @@ export function MaterialsTable({
   const activeFiltersCount = (typeFilter ? 1 : 0) + (stockFilter !== 'all' ? 1 : 0) + (priceFilter !== "" ? 1 : 0);
 
   const columns: GridColDef[] = [
-    { field: "name", headerName: t("materialName") || "Name", flex: 1, minWidth: 150 },
-    { field: "unit", headerName: t("unit") || "Unit", flex: 0.5, minWidth: 100 },
+    {
+      field: "name", headerName: t("materialName") || "Name", flex: 1, minWidth: 150,
+      headerAlign: 'center',
+      align: 'center'
+    },
+    {
+      field: "unit", headerName: t("unit") || "Unit", flex: 0.5, minWidth: 100,
+      headerAlign: 'center',
+      align: 'center'
+    },
     {
       field: "price_per_gram",
       headerName: t("pricePerUnit") || "Price/unit",
       flex: 1,
       minWidth: 120,
+      headerAlign: 'center',
+      align: 'center',
       renderCell: (params) => (
         <span>
           {t('{{price,currency}}', { price: params.row.price_per_gram })}/{params.row.unit || 'g'}
@@ -142,9 +153,11 @@ export function MaterialsTable({
       headerName: t("stockUnits") || "Stock",
       flex: 1,
       minWidth: 140,
+      headerAlign: 'center',
+      align: 'center',
       renderCell: (params) => (
-        <div className="flex items-center gap-2">
-          <span>
+        <div className="flex items-center justify-center gap-2">
+          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${(params.row.stock_grams || 0) > params.row.low_stock_threshold ? 'bg-green-100 text-green-700' : (params.row.stock_grams || 0) <= params.row.low_stock_threshold && (params.row.stock_grams || 0) > 0 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
             {params.row.stock_grams} {t("g")}
           </span>
           <button
@@ -165,6 +178,8 @@ export function MaterialsTable({
       headerName: t("materialType") || "Type",
       flex: 1,
       minWidth: 120,
+      headerAlign: 'center',
+      align: 'center',
     },
     {
       field: "actions",
@@ -172,6 +187,8 @@ export function MaterialsTable({
       sortable: false,
       flex: 0.5,
       minWidth: 100,
+      headerAlign: 'center',
+      align: 'center',
       renderCell: (params) => (
         <button
           onClick={() => handleDelete((params.row as Material).id)}
@@ -199,12 +216,12 @@ export function MaterialsTable({
       </div>
 
       {/* Toolbar */}
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-col sm:flex-row gap-4 justify-between items-center z-20 relative">
+      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-col sm:flex-row gap-4 justify-between items-center relative">
         <div className="relative w-full sm:w-96">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <input
             type="text"
-            placeholder={t("searchMaterials") || "Search materials..."}
+            placeholder={t("searchMaterials")}
             className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -217,7 +234,7 @@ export function MaterialsTable({
             className={`flex items-center justify-center px-3 py-2 border rounded-lg text-sm font-medium transition-colors w-full sm:w-auto ${isFilterOpen || activeFiltersCount > 0 ? 'bg-primary-50 border-primary-200 text-primary-700' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}`}
           >
             <Filter className="w-4 h-4 mx-2" />
-            {t("filter") || "Filter"}
+            {t("filter")}
             {activeFiltersCount > 0 && (
               <span className="ml-2 bg-primary-600 text-white text-[10px] px-1.5 py-0.5 rounded-full">
                 {activeFiltersCount}
@@ -233,18 +250,18 @@ export function MaterialsTable({
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
                 transition={{ duration: 0.1 }}
-                className="absolute top-full right-0 mt-2 w-72 bg-white rounded-xl shadow-lg border border-gray-100 p-4 z-50 origin-top-right"
+                className={`absolute ${i18n.dir() === 'rtl' ? 'left-0' : 'right-0'} top-2 mt-2 w-72 bg-white rounded-xl shadow-lg border border-gray-100 p-4 origin-top-right z-1`}
               >
                 <div className="space-y-4">
                   <div className="flex justify-between items-center pb-2 border-b border-gray-100">
-                    <h3 className="font-semibold text-gray-900 text-sm">{t("filters") || "Filters"}</h3>
+                    <h3 className="font-semibold text-gray-900 text-sm">{t("filters")}</h3>
                     {(typeFilter || stockFilter !== 'all' || priceFilter !== "") && (
                       <button
                         onClick={clearFilters}
                         className="text-xs text-red-500 hover:text-red-600 flex items-center"
                       >
                         <X className="w-3 h-3 mr-1" />
-                        {t("clearAll") || "Clear All"}
+                        {t("clearAll")}
                       </button>
                     )}
                   </div>
@@ -319,7 +336,7 @@ export function MaterialsTable({
         </div>
       </div>
 
-      <div style={{ height: 600, width: "100%" }}>
+      <div style={{ height: 600, width: "100%", display: "flex", justifyContent: "center", alignItems: "center", textAlign: "center" }}>
         <DataGrid
           rows={filteredMaterials}
           columns={columns}
@@ -333,7 +350,7 @@ export function MaterialsTable({
         isOpen={isStockModalOpen}
         onClose={() => setIsStockModalOpen(false)}
         onConfirm={handleAddStock}
-        title={t("addMaterialStock") || "Add Material Stock"}
+        title={t("addMaterialStock")}
         itemName={selectedMaterial?.name || ""}
         currentStock={selectedMaterial?.stock_grams}
       />

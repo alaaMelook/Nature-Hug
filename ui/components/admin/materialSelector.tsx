@@ -243,6 +243,20 @@ export function MaterialSelector({ onSelect, onClose }: MaterialSelectorProps) {
                             {t('cancel')}
                         </button>
                         <button
+                            onClick={() => {
+                                if (selectedMaterial && amount) {
+                                    onSelect(selectedMaterial, parseFloat(amount));
+                                    setSelectedMaterial(null);
+                                    setAmount('');
+                                    toast.success(t('materialAdded'));
+                                }
+                            }}
+                            disabled={!selectedMaterial || !amount}
+                            className="px-4 py-2 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg font-medium disabled:opacity-50"
+                        >
+                            {t('addAndContinue')}
+                        </button>
+                        <button
                             onClick={handleConfirmSelection}
                             disabled={!selectedMaterial || !amount}
                             className="px-6 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-medium disabled:opacity-50 shadow-sm"

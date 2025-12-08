@@ -41,4 +41,7 @@ export interface AdminRepository {
     getAllPromoCodes(): Promise<any[]>;
     createPromoCode(promoCode: any): Promise<void>;
     deletePromoCode(id: number): Promise<void>;
+
+    getAllGovernorates(): Promise<any[]>;
+    updateGovernorateFees(slug: string, fees: number): Promise<void>;
 }

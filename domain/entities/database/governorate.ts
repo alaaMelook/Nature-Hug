@@ -1,9 +1,10 @@
 export interface Governorate {
-    name_en: string,
-    name_ar: string,
-    slug: string,
-    fees: number
-    visible: boolean
+    id?: number;
+    name_en: string;
+    name_ar: string;
+    slug: string;
+    fees: number;
+    visible: boolean;
 }
 
 /*

@@ -7,6 +7,7 @@ import { ProductAdminView } from "@/domain/entities/views/admin/productAdminView
 import { Category } from "@/domain/entities/database/category";
 import { ReviewAdminView } from "@/domain/entities/views/admin/reviewAdminView";
 import { PromoCode } from "@/domain/entities/database/promoCode";
+import { Governorate } from "@/domain/entities/database/governorate";
 
 export class IAdminServerRepository implements AdminRepository {
     async getOrderDetails(): Promise<OrderDetailsView[]> {
@@ -274,10 +275,10 @@ export class IAdminServerRepository implements AdminRepository {
     async uploadImage(file: File): Promise<string> {
         console.log("[IProductRepository] uploadImage called with file:", file.name)
         const fileExt = file.name.split(".").pop();
-        const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+        const fileName = `products/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
 
         const { data, error } = await supabaseAdmin.storage
-            .from("product-images")
+            .from("nature-hug")
             .upload(fileName, file, { contentType: file.type });
 
         console.log("[IProductRepository] uploadImage result:", { data });
@@ -290,7 +291,7 @@ export class IAdminServerRepository implements AdminRepository {
             return '';
         }
         const { data: urlData } = supabaseAdmin.storage
-            .from("product-images")
+            .from("nature-hug")
             .getPublicUrl((data as any).path);
 
         console.log("[IProductRepository] getPublicUrl result:", { urlData });
@@ -326,7 +327,7 @@ export class IAdminServerRepository implements AdminRepository {
     async getAllImages(): Promise<{ image: any, url: string }[]> {
         console.log("[IAdminRepository] getAllImages called.");
 
-        const { data, error } = await supabaseAdmin.storage.from('product-images').list('');
+        const { data, error } = await supabaseAdmin.storage.from('nature-hug').list('products', { sortBy: { column: 'created_at', order: 'desc' } });
 
         console.log("[IAdminRepository] getAllImages result:", { data });
         if (error) {
@@ -337,7 +338,7 @@ export class IAdminServerRepository implements AdminRepository {
         const images: { image: any, url: string }[] = [];
         if (data && Array.isArray(data)) {
             for (const item of data) {
-                const { data: urlData } = supabaseAdmin.storage.from('product-images').getPublicUrl(item.name);
+                const { data: urlData } = supabaseAdmin.storage.from('nature-hug').getPublicUrl('products/' + item.name);
                 if (urlData?.publicUrl) {
                     images.push({ image: item, url: urlData.publicUrl });
                 }
@@ -349,7 +350,7 @@ export class IAdminServerRepository implements AdminRepository {
     async deleteImage(imageName: string): Promise<void> {
         console.log("[IAdminRepository] deleteImage called with imageName:", imageName);
 
-        const { data, error } = await supabaseAdmin.storage.from('product-images').remove([imageName]);
+        const { data, error } = await supabaseAdmin.storage.from('nature-hug').remove(['products/' + imageName]);
 
         console.log("[IAdminRepository] deleteImage result:", { data });
         if (error) {
@@ -518,6 +519,33 @@ export class IAdminServerRepository implements AdminRepository {
 
         if (error) {
             console.error("[IAdminRepository] updatePromoCode error:", error);
+            throw error;
+        }
+    }
+
+    async getAllGovernorates(): Promise<Governorate[]> {
+        console.log("[IAdminRepository] getAllGovernorates called.");
+        const { data, error } = await supabaseAdmin.schema('store')
+            .from('shipping_governorates')
+            .select('*')
+            .order('name_en', { ascending: true });
+
+        if (error) {
+            console.error("[IAdminRepository] getAllGovernorates error:", error);
+            throw error;
+        }
+        return data || [];
+    }
+
+    async updateGovernorateFees(slug: string, fees: number): Promise<void> {
+        console.log(`[IAdminRepository] updateGovernorateFees called for slug: ${slug}, fees: ${fees}`);
+        const { error } = await supabaseAdmin.schema('store')
+            .from('shipping_governorates')
+            .update({ fees })
+            .eq('slug', slug);
+
+        if (error) {
+            console.error("[IAdminRepository] updateGovernorateFees error:", error);
             throw error;
         }
     }

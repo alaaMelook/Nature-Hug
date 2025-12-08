@@ -7,14 +7,12 @@ import { ProductView } from "@/domain/entities/views/shop/productView";
 import { useFeatures } from "@/ui/hooks/store/useFeatures";
 import { motion } from "framer-motion";
 import { Category } from "@/domain/entities/database/category";
-import { useCurrentLanguage } from "@/ui/hooks/useCurrentLanguage";
 
 
 export function HomeScreen({ initialProducts: products, categories }: { initialProducts: ProductView[], categories: Category[] }) {
     const { t, i18n } = useTranslation();
     const features = useFeatures();
-    const lang = useCurrentLanguage();
-
+    const visibleCategories = categories.filter(c => c.image_url);
     const containerVariants = {
         hidden: { opacity: 0 },
         visible: {
@@ -119,7 +117,7 @@ export function HomeScreen({ initialProducts: products, categories }: { initialP
                     <div className="absolute bottom-[10rem] -left-[5rem] w-[35rem] h-[35rem] rounded-full bg-primary-600 blur-[50px] opacity-75"></div>
                 </motion.div>
                 <div className="absolute bottom-0 left-0 w-full h-1/4 z-10 
-                                    bg-gradient-to-t from-primary-50 via-primary-50/70 to-transparent">
+                                    bg-gradient-to-t from-primary-50 via-primary-50/50 to-transparent">
                 </div>
             </div>
             <main className="z-2">
@@ -166,56 +164,14 @@ export function HomeScreen({ initialProducts: products, categories }: { initialP
                         </motion.div>
                     </motion.div>
                 </section>
-
-                {/* Shop by Category Section */}
-                <section className="py-16 h-full z-2">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 z-2">
-                        <motion.h2
-                            initial={{ opacity: 0, y: 20 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true }}
-                            transition={{ duration: 0.6 }}
-                            className="text-center text-3xl md:text-4xl font-serif font-bold mt-5 mb-22 text-primary-950 z-2 text-shadow-black"
-                        >
-                            {t("shopByCategory")}
-                        </motion.h2>
-
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                            {categories?.map((category) => {
-                                return category.image_url ? (
-                                    <Link
-                                        key={category.id}
-                                        href={`/products?category=${encodeURIComponent(category.name_en)}`}
-                                        className="group relative overflow-hidden rounded-2xl shadow-md aspect-[4/5] cursor-pointer"
-                                    >
-                                        <img
-                                            src={category.image_url}
-                                            alt={category.name_en}
-                                            className="z-2 absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                                        />
-                                        <div className="z-3 absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-80 group-hover:opacity-90 transition-opacity duration-300">
-                                            <div className="absolute bottom-0 left-0 w-full p-6 text-center ">
-                                                <h3 className="text-white text-xl font-bold tracking-wide group-hover:text-primary-100 transition-colors">
-                                                    {i18n.language === "ar" ? category.name_ar ?? category.name_en : category.name_en}
-                                                </h3>
-                                            </div>
-                                        </div>
-                                    </Link>
-                                ) : null
-                            })}
-                        </div>
-                    </div>
-                </section>
-
-                {/* Product Grid Section */}
-                <section className="py-16 bg-gradient-to-b from-primary-50 to-white mt-6">
+                <section className={`py-16  mt-6  z-2`}>
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 max-h-fit">
                         <motion.h2
                             initial={{ opacity: 0, y: 20 }}
                             whileInView={{ opacity: 1, y: 0 }}
                             viewport={{ once: true }}
                             transition={{ duration: 0.6 }}
-                            className="text-center text-3xl md:text-4xl font-serif font-bold mb-22 text-primary-900 z-2 text-shadow-black"
+                            className="z-2 text-center text-3xl md:text-4xl font-serif font-bold mb-22 text-primary-900 text-shadow-black"
                         >
                             {t("featuredProducts")}
                         </motion.h2>
@@ -232,9 +188,52 @@ export function HomeScreen({ initialProducts: products, categories }: { initialP
                         </div>
                     </div>
                 </section>
+                {/* Shop by Category Section */}
+                {visibleCategories.length > 0 && (
+                    <section className="py-16 h-full bg-gradient-to-b from-primary-50 to-white ">
+                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 z-2">
+                            <motion.h2
+                                initial={{ opacity: 0, y: 20 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                viewport={{ once: true }}
+                                transition={{ duration: 0.6 }}
+                                className="text-center text-3xl md:text-4xl font-serif font-bold mt-5 mb-22 text-primary-950 z-2 text-shadow-black"
+                            >
+                                {t("shopByCategory")}
+                            </motion.h2>
+
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                                {visibleCategories?.map((category) => {
+                                    return (
+                                        <Link
+                                            key={category.id}
+                                            href={`/products?category=${encodeURIComponent(category.name_en)}`}
+                                            className="group relative overflow-hidden rounded-2xl shadow-md aspect-[4/5] cursor-pointer"
+                                        >
+                                            <img
+                                                src={category.image_url}
+                                                alt={category.name_en}
+                                                className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                            />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-80 group-hover:opacity-90 transition-opacity duration-300">
+                                                <div className="absolute bottom-0 left-0 w-full p-6 text-center ">
+                                                    <h3 className="text-white text-xl font-bold tracking-wide group-hover:text-primary-100 transition-colors">
+                                                        {i18n.language === "ar" ? category.name_ar ?? category.name_en : category.name_en}
+                                                    </h3>
+                                                </div>
+                                            </div>
+                                        </Link>
+                                    )
+                                })}
+                            </div>
+                        </div>
+                    </section>
+                )}
+                {/* Product Grid Section */}
+
 
                 {/* Features Section */}
-                <section className="bg-gradient-to-b from-white to-primary-50 pb-25">
+                <section className={`bg-gradient-to-b from-white to-primary-50 pb-25`}>
                     <div className="max-w-7xl mx-auto px-4 sm:px-6">
                         <motion.div
                             variants={containerVariants}

@@ -110,6 +110,7 @@ export default function AdminSidebar({
       submenu: [
         { name: t("dashboard"), href: "/admin/shipping/" },
         { name: t("history"), href: "/admin/shipping/history" },
+        { name: t("governorates"), href: "/admin/shipping/governorates" },
       ]
     },
     { name: t("gallery"), href: "/admin/gallery", icon: Image },

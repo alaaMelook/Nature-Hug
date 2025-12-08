@@ -79,8 +79,15 @@ export const VariantItem: React.FC<VariantItemProps> = ({
                         <input
                             type="text"
                             placeholder="Type"
-                            value={variant.type}
-                            onChange={(e) => onUpdate(variant.id, "type", e.target.value)}
+                            value={variant.type_en}
+                            onChange={(e) => onUpdate(variant.id, "type_en", e.target.value)}
+                            className="border border-gray-300 rounded-md text-sm px-3 py-2"
+                        />
+                        <input
+                            type="text"
+                            placeholder="Type"
+                            value={variant.type_ar}
+                            onChange={(e) => onUpdate(variant.id, "type_ar", e.target.value)}
                             className="border border-gray-300 rounded-md text-sm px-3 py-2"
                         />
                     </div>

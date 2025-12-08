@@ -19,14 +19,45 @@ export function ProductCard({
 }) {
     const router = useRouter();
     const { t } = useTranslation();
+    const itemVariants = {
+        hidden: { opacity: 0 },
+        show: {
+            opacity: 1,
+            transition: {
+                duration: 0.8,
+                ease: "easeInOut" as const
+            }
+        },
+        exit: {
+            opacity: 0,
+            transition: {
+                duration: 0.5,
+                ease: "easeInOut" as const
+            }
+        }
+    };
+
     return (
         <motion.div
-            layout
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            transition={{ duration: 0.3 }}
-            className={`bg-white rounded-xl shadow-lg overflow-hidden flex flex-col transform transition-transform duration-300 hover:scale-105 cursor-pointer ${compact ? "p-3" : ""
+            variants={{
+                show: {
+                    opacity: 1,
+                    transition: {
+                        duration: 0.8,
+                        ease: "easeInOut" as const
+                    }
+                },
+                exit: {
+                    opacity: 0,
+                    transition: {
+                        duration: 0.5,
+                        ease: "easeInOut" as const
+                    }
+                }
+            }}
+            initial="hidden"
+            animate="show"
+            className={`bg-white rounded-xl shadow-lg overflow-hidden flex flex-col transform transition-transform duration-300 hover:scale-105 cursor-pointer ${compact ? "p-3" : "z-2"
                 }`}
             onClick={() => router.push(`/products/${product.slug}`)}
         >
@@ -111,6 +142,11 @@ export default function ProductGrid({
     const { t } = useTranslation();
     const [page, setPage] = useState(1);
 
+    // Reset page when filtered products change (fixes "freeze" issue)
+    React.useEffect(() => {
+        setPage(1);
+    }, [products]);
+
     const totalPages = useMemo(() => {
         if (!products?.length) return 1;
         return Math.ceil(products.length / perPage);
@@ -134,7 +170,7 @@ export default function ProductGrid({
     return (
         <>
             {isLoading ? (
-                <div className={`grid ${recent ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2 sm:grid-cols-3"} gap-6`}>
+                <div className={`grid ${recent ? "grid-cols-2 sm:grid-cols-4 z-2" : "grid-cols-2 sm:grid-cols-3"} gap-6`}>
                     {[...Array(recent ? 4 : perPage)].map((_, i) => (
                         <Skeleton
                             key={i}
@@ -151,13 +187,31 @@ export default function ProductGrid({
             ) : (products?.length ?? 0) > 0 ? (
                 <>
                     <motion.div
-                        layout
+                        variants={{
+                            hidden: { opacity: 0 },
+                            show: {
+                                opacity: 1,
+                                transition: {
+                                    duration: 0.8,
+                                    ease: "easeInOut" as const
+                                }
+                            },
+                            exit: {
+                                opacity: 0,
+                                transition: {
+                                    duration: 0.5,
+                                    ease: "easeInOut" as const
+                                }
+                            }
+                        }}
+                        initial="hidden"
+                        animate="show"
                         className={`grid ${recent
                             ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4"
                             : "grid-cols-2 sm:grid-cols-2 md:grid-cols-3"
                             } gap-6`}
                     >
-                        <AnimatePresence>
+                        <AnimatePresence >
                             {visibleProducts.map((product) => (
                                 <ProductCard key={product.slug} product={product} compact={!recent} />
                             ))}

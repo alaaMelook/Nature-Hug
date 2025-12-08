@@ -25,7 +25,6 @@ export function ProductsScreen({ initProducts, initCategories }: {
     });
     const [products, setProducts] = useState<ProductView[]>(initProducts);
     const [loading, setLoading] = useState(false);
-    const { i18n } = useTranslation()
 
     const handleFilterChange = (newFilters: any) => {
         console.log(newFilters);
@@ -67,7 +66,7 @@ export function ProductsScreen({ initProducts, initCategories }: {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
-            className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col lg:flex-row sm:gap-8"
+            className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col lg:flex-row sm:gap-8 min-h-screen"
         >
             {/* Filters Column */}
             <motion.div

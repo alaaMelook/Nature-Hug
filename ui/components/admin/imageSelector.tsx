@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CheckCircle, Upload, Trash2, Loader2 } from 'lucide-react';
-import { uploadImageAction, deleteImageAction } from '@/ui/hooks/admin/gallery';
+import { CheckCircle, Upload, Trash2, Loader2, RefreshCwIcon } from 'lucide-react';
+import { uploadImageAction, deleteImageAction, getImagesAction } from '@/ui/hooks/admin/gallery';
 import { toast } from 'sonner';
+import { AnimatePresence, motion } from 'framer-motion';
 
 interface ImageSelectorProps {
     images: { image: any; url: string }[];
@@ -17,6 +18,7 @@ export function ImageSelector({ images, onSelect, selectedUrl, onClose }: ImageS
     const { t } = useTranslation();
     const [selected, setSelected] = useState<string | undefined>(selectedUrl);
     const [localImages, setLocalImages] = useState(images);
+    const [refreshing, setRefreshing] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [deletingUrl, setDeletingUrl] = useState<string | null>(null);
 
@@ -30,7 +32,6 @@ export function ImageSelector({ images, onSelect, selectedUrl, onClose }: ImageS
             onClose();
         }
     };
-
     const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -48,7 +49,18 @@ export function ImageSelector({ images, onSelect, selectedUrl, onClose }: ImageS
         }
         setIsUploading(false);
     };
-
+    const refreshImages = async () => {
+        setRefreshing(true);
+        const result = await getImagesAction();
+        if (result.success) {
+            setLocalImages(result.images);
+            setRefreshing(false);
+        }
+        else {
+            toast.error(t('errorRefreshingImages'));
+            setRefreshing(false);
+        }
+    };
     const handleDelete = async (e: React.MouseEvent, url: string, imageName: string) => {
         e.stopPropagation();
         if (!confirm(t('confirmDeleteImage'))) return;
@@ -69,7 +81,9 @@ export function ImageSelector({ images, onSelect, selectedUrl, onClose }: ImageS
         }
         setDeletingUrl(null);
     };
-
+    useEffect(() => {
+        if (localImages.length === 0) refreshImages();
+    }, []);
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
             <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[80vh] flex flex-col">
@@ -134,22 +148,56 @@ export function ImageSelector({ images, onSelect, selectedUrl, onClose }: ImageS
                         ))}
                     </div>
                 </div>
-
-                <div className="p-4 border-t flex justify-end gap-2">
+                <div className="p-4 flex justify-between ">
                     <button
-                        onClick={onClose}
+                        onClick={refreshImages}
                         className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded"
-                    >
-                        {t('cancel')}
+                    > <AnimatePresence>
+                            {/* 1. Conditionally render the spinner when 'refreshing' is true */}
+                            {refreshing ? (
+                                <motion.div
+                                    key="spinner-icon" // Required key for AnimatePresence
+
+                                    // Defines the initial state (when mounting)
+                                    initial={{ rotate: 0 }}
+
+                                    // Defines the continuous, rotating animation
+                                    animate={{
+                                        rotate: 360, // Target rotation
+                                        transition: {
+                                            // Rotation transition settings:
+                                            repeat: Infinity,
+                                            ease: "linear",
+                                            duration: 1.0,
+                                        },
+                                    }}
+
+                                    // Defines the exit animation (when 'refreshing' becomes false)
+                                    exit={{
+                                        transition: { duration: 0.2 }
+                                    }}
+                                >
+                                    <RefreshCwIcon size={20} />
+                                </motion.div>
+                            ) : <RefreshCwIcon size={20} />}
+                        </AnimatePresence>
                     </button>
-                    <button
-                        onClick={handleConfirm}
-                        disabled={!selected}
-                        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-                    >
-                        {t('selectImage')}
-                    </button>
-                </div>
+
+                    <div className="p-4 flex justify-end gap-2">
+                        <button
+                            onClick={onClose}
+                            className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded"
+                        >
+                            {t('cancel')}
+                        </button>
+                        <button
+                            onClick={handleConfirm}
+                            disabled={!selected}
+                            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                        >
+                            {t('selectImage')}
+                        </button>
+                    </div> </div>
             </div>
         </div>
     );

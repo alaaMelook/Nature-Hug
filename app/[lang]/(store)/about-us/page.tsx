@@ -86,7 +86,7 @@ export default function AboutPage() {
             >
 
                 <div className="bg-primary-100 border border-gray-100 rounded-xl px-10 md:px-15 py-10 text-sm text-gray-800 flex flex-col md:flex-row md:gap-30 items-center justify-center gap-10">
-                    <Image src="https://reqrsmboabgxshacmkst.supabase.co/storage/v1/object/public/product-images/kera-photo.png" alt="Kera Photo"
+                    <Image src="https://reqrsmboabgxshacmkst.supabase.co/storage/v1/object/public/nature-hug/kera-photo.png" alt="Kera Photo"
                         width={200} height={200}
                         style={{ objectFit: 'cover' }}
                         className="rounded-full border-5 border-primary-900 " >

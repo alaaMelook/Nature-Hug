@@ -14,6 +14,7 @@ export async function createProductAction(product: ProductAdminView) {
         if (exists) {
             return { success: false, error: "Product already exists" };
         }
+        console.log(product.variants.map(v => v.materials));
         let id = await new CreateProduct().execute(product);
         return { success: true, id: id };
     } catch (error) {
