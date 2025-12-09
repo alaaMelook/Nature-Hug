@@ -4,11 +4,10 @@ import { useTranslation } from "react-i18next";
 import { useCart } from "@/ui/providers/CartProvider";
 import { Tooltip } from "flowbite-react";
 import Counter from "@/ui/components/store/Counter";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useCartProducts } from "@/ui/hooks/store/useCartProducts";
 
 export default function CartPage() {
-    const pathname = usePathname();
     const router = useRouter();
     const { t } = useTranslation();
     const { cart, removeFromCart, clearCart, updateQuantity } = useCart();

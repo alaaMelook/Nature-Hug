@@ -14,9 +14,6 @@ export default async function MaterialsPage() {
       <Suspense fallback={<Loader2 className=" w-10 h-10 inline-block animate-spin mr-2" size={16} />}>
         <MaterialsTable
           initialMaterials={materials}
-        // units={units}
-        // suppliers={suppliers}
-        // products={products}
         />
       </Suspense>
     </div>

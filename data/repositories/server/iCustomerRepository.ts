@@ -157,6 +157,22 @@ export class ICustomerServerRepository implements CustomerRepository {
         }
         return data || [];
     }
+    async fetchGovernorate(slug: string): Promise<Governorate> {
+        console.log("[ICustomerRepository] fetchGovernorate called with slug:", slug);
+        const supabase = await createSupabaseServerClient();
+        const {
+            data,
+            status,
+            statusText,
+            error
+        } = await supabase.schema('store').from('shipping_governorates').select('*').eq('slug', slug).single();
+        console.log("[ICustomerRepository] fetchGovernorate result:", { data, status, statusText });
+        if (error) {
+            console.error("[ICustomerRepository] fetchGovernorate error:", error);
+            throw error;
+        }
+        return data;
+    }
 
     async updateCustomerData(data: Partial<Customer>): Promise<void> {
         const { id, ...updateData } = data;

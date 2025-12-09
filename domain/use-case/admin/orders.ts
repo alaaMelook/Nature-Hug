@@ -1,5 +1,7 @@
 import { IAdminServerRepository } from "@/data/repositories/server/iAdminRepository";
+import { Shipment } from "@/domain/entities/shipment/shipment";
 import { OrderDetailsView } from "@/domain/entities/views/admin/orderDetailsView";
+import { shipmentService } from "@/lib/services/shipmentService";
 
 export class Orders {
     constructor(private repo = new IAdminServerRepository()) {
@@ -61,39 +63,35 @@ export class Orders {
         return this.update({ order_id: Number(id), order_status: 'cancelled' });
     }
 
-    async markAsOutForDelivery(order: OrderDetailsView, shipmentData: any) {
+    async markAsOutForDelivery(order: OrderDetailsView, shipmentData: Shipment) {
         // 1. Create Shipment
-        const { shipmentService } = await import("@/lib/services/shipmentService");
 
-        // Ensure cityId is a number
-        const cityId = Number(shipmentData.cityId);
-        if (isNaN(cityId)) {
-            throw new Error("Invalid City ID");
-        }
-
-        const shipmentPayload = {
-            ...shipmentData,
-            cityId: cityId
-        };
-
-        const shipmentResult = await shipmentService.createShipment(shipmentPayload);
+        const shipmentResult = await shipmentService.createShipment(shipmentData);
 
         if (!shipmentResult) {
             throw new Error("Failed to create shipment: No response");
         }
 
         // 2. Update Order with AWB and Status
-        let awb = order.awb;
-        let shipmentId = order.shipment_id;
 
-        if (shipmentResult.AWB) awb = shipmentResult.AWB;
-        if (shipmentResult.ShipmentID) shipmentId = shipmentResult.ShipmentID;
+        const awb = shipmentResult.awb;
+
 
         return this.update({
             order_id: order.order_id,
             order_status: 'out for delivery',
             awb: awb,
-            shipment_id: shipmentId
         });
+    }
+
+    async cancelShipped(order: OrderDetailsView) {
+        const result = await shipmentService.cancelShipment(order.awb ?? '');
+        if (!result) {
+            throw new Error("Failed to cancel shipment: No response");
+        }
+        if (result.IsCanceled) {
+            return this.update({ order_id: order.order_id, order_status: 'cancelled' });
+        }
+        throw new Error("Failed to cancel shipment: " + result.ErrorMessage);
     }
 }

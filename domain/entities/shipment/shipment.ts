@@ -1,10 +1,64 @@
 export interface Shipment {
     id?: string;
     clientName: string;
-    cityId: number;
-    address: string;
+    fromAddress: string;
+    toCityName: string;
+    toAddress: string;
+    toConsigneeName: string;
+    toCityId: number;
+    subAccountName: string;
+    clientAccNo: number;
     phone: string;
     codAmount: number;
-    weight: number;
+    pieces: number;
+    fromCityID: number;
     status?: string;
+    shipperNotes: string;
+
+}
+export interface ShipmentDetails {
+    serial: number,
+    sessionID: number,
+    userID: number,
+    clientID: number,
+    subAccountID: number,
+    awb: string,
+    fromCityID: number,
+    fromAddress: string,
+    fromPhone: string,
+    fromContactPerson: string,
+    toCityID: number,
+    toConsigneeName: string,
+    toAddress: string,
+    toPhone: string,
+    toMobile: string,
+    toRef: string,
+    toContactPerson: string,
+    productID: number,
+    coD: number,
+    weight: number,
+    pieces: number,
+    contents: string,
+    specialInstuctions: string,
+    data1: string,
+    data2: string,
+    data3: string,
+    data4: string,
+    data5: string,
+    data6: string,
+    data7: string,
+    data8: string,
+    data9: string,
+    data10: string,
+    transDate: string,
+    fromLat: number,
+    fromLng: number,
+    toLat: number,
+    toLng: number,
+    distance: number,
+    duration: number,
+    route: string,
+    pickupID: number,
+    allowToOpenShipment: boolean,
+    awBxAWB: boolean
 }

@@ -1,4 +1,4 @@
-import { Shipment } from "@/domain/entities/shipment/shipment";
+import { Shipment, ShipmentDetails } from "@/domain/entities/shipment/shipment";
 import { City } from "@/domain/entities/shipment/city";
 import { ShipmentHistoryItem } from "@/domain/entities/shipment/shipmentHistoryItem";
 import { ShipmentDetailsEx } from "@/domain/entities/shipment/shipmentDetailsEx";
@@ -73,7 +73,9 @@ class ShipmentService {
         return {
             "AccessToken": `${this.token}`,
             "Content-Type": "application/json",
-            "CompanyID": COMPANY_ID
+            "CompanyID": COMPANY_ID,
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+
         };
     }
 
@@ -97,11 +99,14 @@ class ShipmentService {
 
         if (!response.ok) {
             const text = await response.text();
+            console.log("[ShipmentService] sent body ", options.body);
             console.error(`[ShipmentService] Request failed: ${response.status} ${url}`, text);
             throw new Error(`API Error: ${response.status} ${text}`);
         }
-
-        return response.json();
+        const text = await response.text();
+        const json = JSON.parse(text);
+        console.log("[ShipmentService] Request Json ", json);
+        return json;
     }
 
 
@@ -120,15 +125,12 @@ class ShipmentService {
         return this.request<ShipmentDetailsEx>(`${API_URL}/api/ClientUsers/V6/GetShipmentDetails/${awb}`);
     }
 
-    public async createShipment(shipment: Shipment): Promise<any> {
-        return this.request(`${API_URL}/api/ClientUsers/V6/SaveShipment`, {
+    public async createShipment(shipment: Shipment): Promise<ShipmentDetails> {
+        const data = await this.request<ShipmentDetails[]>(`${API_URL}/api/ClientUsers/V6/SaveShipment`, {
             method: "POST",
             body: JSON.stringify(shipment)
         });
-    }
-
-    public async getCities(): Promise<City[]> {
-        return this.request<City[]>(`${API_URL}/api/ClientUsers/V6/GetCities`);
+        return data[0];
     }
 
     public async getDashboardLink(): Promise<string | null> {
@@ -136,14 +138,10 @@ class ShipmentService {
         return this.powerBiLink;
     }
 
-    public async getProducts(): Promise<any> {
-        return this.request(`${API_URL}/api/ClientUsers/V6/GetProducts`);
-    }
-
-    public async cancelShipment(shipmentId: string): Promise<any> {
+    public async cancelShipment(awb: string): Promise<any> {
         return this.request(`${API_URL}/api/ClientUsers/V6/CancelShipment`, {
             method: "POST",
-            body: JSON.stringify({ ShipmentNumber: shipmentId })
+            body: JSON.stringify({ awb: awb, notes: "" })
         });
     }
 
@@ -156,20 +154,7 @@ class ShipmentService {
         return response.blob();
     }
 
-    public async uploadExcelFile(file: File): Promise<any> {
-        await this.ensureAuth();
-        const formData = new FormData();
-        formData.append("file", file);
 
-        const response = await fetch(`${API_URL}/api/ClientUsers/V6/UploadExcelFile`, {
-            method: "POST",
-            headers: this.getAuthHeaders(),
-            body: formData
-        });
-
-        if (!response.ok) throw new Error("Failed to upload Excel file");
-        return response.json();
-    }
 }
 
 export const shipmentService = ShipmentService.getInstance(true);

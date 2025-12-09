@@ -17,8 +17,8 @@
 //   constraint materials_stock_grams_check check ((stock_grams >= (0)::numeric))
 // ) TABLESPACE pg_default;
 
-export type Unit = 'gm' | 'ml';
-
+export type Unit = 'gm' | 'ml' | 'piece' | 'bottle' | 'unit';
+export type MaterialType = 'Chemicals' | 'Labels' | 'Containers' | 'Packaging' | 'Others';
 // Supplier
 export interface Material {
     id: number;

@@ -8,5 +8,5 @@ export default async function AllOrdersPage() {
     const orders = await ordersUseCase.getAll();
     const promoCodes = await new GetAllPromoCodes().execute();
 
-    return <OrdersScreen orders={orders} promoCodes={promoCodes} />;
+    return <OrdersScreen initialOrders={orders} promoCodes={promoCodes} />;
 }

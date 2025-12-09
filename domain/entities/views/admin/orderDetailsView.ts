@@ -18,6 +18,7 @@ export interface OrderDetailsView {
     subtotal: number;
     shipping_total: number;
     discount_total: number;
+    governorate_slug: string;
 }
 export interface OrderItemView {
     quantity: number;

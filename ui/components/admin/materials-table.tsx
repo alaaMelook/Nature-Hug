@@ -10,6 +10,7 @@ import { useTranslation } from "react-i18next";
 import { StockUpdateModal } from "./stockUpdateModal";
 import { addStockAction } from "@/ui/hooks/admin/inventory";
 import { motion, AnimatePresence } from "framer-motion";
+import { materialTypes } from "@/lib/utils/enums";
 
 export function MaterialsTable({
   initialMaterials,
@@ -44,9 +45,6 @@ export function MaterialsTable({
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
-
-  // Hardcoded material types
-  const materialTypes = ['Chemicals', 'Labels', 'Containers', 'Packaging', 'Others'];
 
   const filteredMaterials = useMemo(() => {
     return materials.filter((material) => {
@@ -126,37 +124,39 @@ export function MaterialsTable({
 
   const columns: GridColDef[] = [
     {
-      field: "name", headerName: t("materialName") || "Name", flex: 1, minWidth: 150,
+
+      field: "name", headerName: t("materialName"), minWidth: 150,
       headerAlign: 'center',
-      align: 'center'
+      flex: 2,
+
+
     },
     {
-      field: "unit", headerName: t("unit") || "Unit", flex: 0.5, minWidth: 100,
+      field: "unit", headerName: t("unit"), flex: 0.5, minWidth: 100,
       headerAlign: 'center',
       align: 'center'
     },
     {
       field: "price_per_gram",
-      headerName: t("pricePerUnit") || "Price/unit",
+      headerName: t("pricePerUnit"),
       flex: 1,
       minWidth: 120,
       headerAlign: 'center',
       align: 'center',
       renderCell: (params) => (
         <span>
-          {t('{{price,currency}}', { price: params.row.price_per_gram })}/{params.row.unit || 'g'}
+          {t('{{price,currency}}', { price: params.row.price_per_gram })}
         </span>
       )
     },
     {
       field: "stock_grams",
-      headerName: t("stockUnits") || "Stock",
-      flex: 1,
+      headerName: t("stockUnits"),
       minWidth: 140,
       headerAlign: 'center',
       align: 'center',
       renderCell: (params) => (
-        <div className="flex items-center justify-center gap-2">
+        <div className="flex justify-center items-center text-center h-full gap-5">
           <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${(params.row.stock_grams || 0) > params.row.low_stock_threshold ? 'bg-green-100 text-green-700' : (params.row.stock_grams || 0) <= params.row.low_stock_threshold && (params.row.stock_grams || 0) > 0 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
             {params.row.stock_grams} {t("g")}
           </span>
@@ -166,7 +166,7 @@ export function MaterialsTable({
               handleOpenStockModal(params.row as Material);
             }}
             className="p-1 hover:bg-gray-100 rounded-full text-primary-600 transition-colors"
-            title={t("addStock") || "Add Stock"}
+            title={t("addStock")}
           >
             <PlusCircle size={18} />
           </button>
@@ -175,7 +175,7 @@ export function MaterialsTable({
     },
     {
       field: "material_type",
-      headerName: t("materialType") || "Type",
+      headerName: t("materialType"),
       flex: 1,
       minWidth: 120,
       headerAlign: 'center',
@@ -183,16 +183,16 @@ export function MaterialsTable({
     },
     {
       field: "actions",
-      headerName: t("actions") || "Actions",
+      headerName: t("actions"),
       sortable: false,
-      flex: 0.5,
+      flex: 0.1,
       minWidth: 100,
       headerAlign: 'center',
       align: 'center',
       renderCell: (params) => (
         <button
           onClick={() => handleDelete((params.row as Material).id)}
-          className="text-red-600 hover:text-red-800"
+          className={`text-red-600 hover:text-red-800`}
         >
           <Trash2 className="h-4 w-4" />
         </button>
@@ -204,14 +204,14 @@ export function MaterialsTable({
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">{t("materials") || "Materials"}</h1>
-          <p className="text-sm text-gray-500 mt-1">{t("manageMaterials") || "Manage raw materials inventory"}</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t("materials")}</h1>
+          <p className="text-sm text-gray-500 mt-1">{t("manageMaterials")}</p>
         </div>
         <button
           onClick={() => router.push("/admin/materials/create")}
           className="flex items-center justify-center px-4 py-2 bg-amber-700 text-white text-sm font-medium rounded-lg hover:bg-amber-800 focus:ring-4 focus:ring-amber-100 transition-all w-full sm:w-auto"
         >
-          <Plus className="w-4 h-4 mx-2" /> {t("addMaterial") || "Add Material"}
+          <Plus className="w-4 h-4 mx-2" /> {t("addMaterial")}
         </button>
       </div>
 
@@ -268,13 +268,13 @@ export function MaterialsTable({
 
                   {/* Stock Filter */}
                   <div>
-                    <label className="text-xs font-medium text-gray-500 mb-2 block uppercase tracking-wide">{t("stockStatus") || "Stock Status"}</label>
+                    <label className="text-xs font-medium text-gray-500 mb-2 block uppercase tracking-wide">{t("stockStatus")}</label>
                     <div className="grid grid-cols-2 gap-2">
                       {[
-                        { id: 'all', label: t("all") || "All" },
-                        { id: 'in_stock', label: t("inStock") || "In Stock" },
-                        { id: 'low_stock', label: t("lowStock") || "Low Stock" },
-                        { id: 'out_of_stock', label: t("outOfStock") || "Out of Stock" }
+                        { id: 'all', label: t("all") },
+                        { id: 'in_stock', label: t("inStock") },
+                        { id: 'low_stock', label: t("lowStock") },
+                        { id: 'out_of_stock', label: t("outOfStock") }
                       ].map((option) => (
                         <button
                           key={option.id}
@@ -292,14 +292,14 @@ export function MaterialsTable({
 
                   {/* Type Filter */}
                   <div>
-                    <label className="text-xs font-medium text-gray-500 mb-2 block uppercase tracking-wide">{t("materialType") || "Material Type"}</label>
+                    <label className="text-xs font-medium text-gray-500 mb-2 block uppercase tracking-wide">{t("materialType")}</label>
                     <div className="max-h-40 overflow-y-auto space-y-1 custom-scrollbar">
                       <button
                         onClick={() => setTypeFilter(null)}
                         className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center justify-between ${typeFilter === null ? 'bg-primary-50 text-primary-700 font-medium' : 'text-gray-600 hover:bg-gray-50'
                           }`}
                       >
-                        <span>{t("allTypes") || "All Types"}</span>
+                        <span>{t("allTypes")}</span>
                         {typeFilter === null && <Check className="w-3 h-3" />}
                       </button>
                       {materialTypes.map(type => (
@@ -318,7 +318,7 @@ export function MaterialsTable({
 
                   {/* Price Filter */}
                   <div>
-                    <label className="text-xs font-medium text-gray-500 mb-2 block uppercase tracking-wide">{t("maxPrice") || "Max Price"}</label>
+                    <label className="text-xs font-medium text-gray-500 mb-2 block uppercase tracking-wide">{t("maxPrice")}</label>
                     <input
                       type="number"
                       placeholder="0.00"
@@ -340,6 +340,7 @@ export function MaterialsTable({
         <DataGrid
           rows={filteredMaterials}
           columns={columns}
+
           getRowId={(row) => row.id}
           disableRowSelectionOnClick
           className="bg-white rounded-lg shadow-sm border border-gray-200"

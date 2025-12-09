@@ -5,6 +5,7 @@ export interface Governorate {
     slug: string;
     fees: number;
     visible: boolean;
+    cityID: number;
 }
 
 /*

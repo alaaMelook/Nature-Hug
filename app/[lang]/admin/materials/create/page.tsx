@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { insertMaterials } from "@/ui/hooks/admin/useMaterials";
-import { Material, Unit } from "@/domain/entities/database/material";
-import { units } from "@/lib/utils/units";
+import { Material, Unit, MaterialType } from "@/domain/entities/database/material";
+import { units, materialTypes } from "@/lib/utils/enums";
+
 
 export default function NewMaterialPage() {
     const { t } = useTranslation();
@@ -16,9 +17,9 @@ export default function NewMaterialPage() {
         name: "",
         price_per_gram: 0,
         stock_grams: 0,
-        unit: "gm",
+        unit: units[0] as Unit,
         low_stock_threshold: 0,
-        material_type: "chemicals",
+        material_type: materialTypes[0] as MaterialType,
     });
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -29,14 +30,14 @@ export default function NewMaterialPage() {
             // insertMaterials expects an array
             const res = await insertMaterials([formData]);
             if (res.error) {
-                toast.error(t("errorCreatingMaterial") || "Error creating material");
+                toast.error(t("errorCreatingMaterial"));
             } else {
-                toast.success(t("materialCreated") || "Material created successfully");
+                toast.success(t("materialCreated"));
                 router.push("/admin/materials");
             }
         } catch (error) {
             console.error("Error creating material:", error);
-            toast.error(t("errorCreatingMaterial") || "Error creating material");
+            toast.error(t("errorCreatingMaterial"));
         } finally {
             setLoading(false);
         }
@@ -145,16 +146,15 @@ export default function NewMaterialPage() {
                         onChange={(e) =>
                             setFormData({
                                 ...formData,
-                                material_type: e.target.value as "chemicals" | "labels" | "containers" | "packaging" | "other",
+                                material_type: e.target.value as MaterialType,
                             })
                         }
                     >
-
-                        <option value="chemicals">Chemicals</option>
-                        <option value="labels">Labels</option>
-                        <option value="containers">Containers</option>
-                        <option value="packaging">Packaging</option>
-                        <option value="other">Other</option>
+                        {materialTypes.map((type) => (
+                            <option key={type} value={type}>
+                                {type}
+                            </option>
+                        ))}
                     </select>
                 </div>
 

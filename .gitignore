@@ -25,6 +25,7 @@ schemas.sql
 # misc
 .DS_Store
 *.pem
+*.md
 
 # debug
 npm-debug.log*

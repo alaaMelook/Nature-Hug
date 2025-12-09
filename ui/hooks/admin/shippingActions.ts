@@ -8,8 +8,8 @@ import { OrderDetailsView } from "@/domain/entities/views/admin/orderDetailsView
 import { UpdateOrder } from "@/domain/use-case/admin/orders/updateOrder";
 import { shipmentService } from "@/lib/services/shipmentService";
 
-export async function createShipmentAction(order: OrderDetailsView, shipment: Shipment, governorate: string) {
-    if (governorate.toLowerCase().includes("damanhour") || governorate.toLowerCase().includes("دمنهور")) {
+export async function createShipmentAction(order: OrderDetailsView, shipment: Shipment) {
+    if (order.shipping_governorate.toLowerCase().includes("damanhour") || order.shipping_governorate.toLowerCase().includes("دمنهور")) {
         console.log("Skipping shipment creation for Damanhour");
         return { success: true, skipped: true };
     }
@@ -37,15 +37,6 @@ export async function createShipmentAction(order: OrderDetailsView, shipment: Sh
     }
 }
 
-export async function getCitiesAction() {
-    try {
-        const cities = await shipmentService.getCities();
-        return { success: true, cities };
-    } catch (error) {
-        console.error("Failed to fetch cities:", error);
-        return { success: false, error: "Failed to fetch cities" };
-    }
-}
 
 export async function getShipmentDetailsAction(awb: string) {
     try {
