@@ -1,8 +1,7 @@
 'use client';
 import { useState, useRef, useEffect } from "react";
 import { ProductAdminView } from "@/domain/entities/views/admin/productAdminView";
-import { Search, Plus, Filter, Edit, Trash2, Package, PlusCircle, X, Check, ChevronDown } from "lucide-react";
-import { ProductModal } from "@/ui/components/admin/productModal";
+import { Search, Plus, Filter, Trash2, Package, PlusCircle, X, Check, ChevronDown } from "lucide-react";
 import { deleteProduct } from "@/ui/hooks/admin/products";
 import { toast } from "sonner";
 import Image from "next/image";

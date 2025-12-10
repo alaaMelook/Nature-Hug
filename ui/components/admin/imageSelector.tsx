@@ -6,6 +6,7 @@ import { CheckCircle, Upload, Trash2, Loader2, RefreshCwIcon } from 'lucide-reac
 import { uploadImageAction, deleteImageAction, getImagesAction } from '@/ui/hooks/admin/gallery';
 import { toast } from 'sonner';
 import { AnimatePresence, motion } from 'framer-motion';
+import Image from 'next/image';
 
 interface ImageSelectorProps {
     images: { image: any; url: string }[];
@@ -122,7 +123,7 @@ export function ImageSelector({ images, onSelect, selectedUrl, onClose }: ImageS
                                 className={`relative cursor-pointer border-2 rounded-lg overflow-hidden aspect-square group ${selected === img.url ? 'border-blue-500' : 'border-transparent'}`}
                                 onClick={() => handleSelect(img.url)}
                             >
-                                <img
+                                <Image
                                     src={img.url}
                                     alt={`Gallery image ${index}`}
                                     className="w-full h-full object-cover"

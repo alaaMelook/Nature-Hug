@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ReviewAdminView } from "@/domain/entities/views/admin/reviewAdminView";
-import { Search, Filter, Star, User, Package, MessageSquare, Check, X as XIcon } from "lucide-react";
+import { Search, Star, User, Package, Check, X as XIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { updateReviewStatusAction } from "@/ui/hooks/admin/reviewActions";
 import { toast } from "sonner";

@@ -6,6 +6,7 @@ import { Upload, Trash2, Loader2, Image as ImageIcon } from 'lucide-react';
 import { uploadImageAction, deleteImageAction } from '@/ui/hooks/admin/gallery';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
+import Image from 'next/image';
 
 type ImageItem = {
     url: string;
@@ -143,7 +144,7 @@ export function GalleryScreen({ images }: { images: { image: any, url: string }[
                                 transition={{ delay: index * 0.05 }}
                                 className="relative group rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 aspect-square border border-gray-100 bg-white"
                             >
-                                <img
+                                <Image
                                     src={img.url}
                                     alt={img.image.name}
                                     className={`w-full h-full object-cover ${img.status === 'uploading' ? 'opacity-50 blur-[1px]' : ''}`}

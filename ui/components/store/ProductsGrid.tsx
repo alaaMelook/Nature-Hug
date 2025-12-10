@@ -9,6 +9,7 @@ import Skeleton from "@mui/material/Skeleton";
 import { StarRating } from "./StarRating";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 
 export function ProductCard({
     product,
@@ -62,7 +63,7 @@ export function ProductCard({
             onClick={() => router.push(`/products/${product.slug}`)}
         >
             <div className={`relative ${compact ? "aspect-[4/3]" : "aspect-w-4 aspect-h-3"} block`}>
-                <img
+                <Image
                     src={product.image ?? "https://placehold.co/400x400/D1D5DB/4B5563?text=Image+Not+Found"}
                     alt={product.name || "Product image"}
                     className={`w-full ${compact ? "h-40" : "h-50"} object-cover align-middle`}

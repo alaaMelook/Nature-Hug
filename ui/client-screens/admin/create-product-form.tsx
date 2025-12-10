@@ -12,6 +12,7 @@ import { Material } from "@/domain/entities/database/material";
 import { Category } from "@/domain/entities/database/category";
 import { ChevronDown, ChevronUp, Trash2, Plus, Image as ImageIcon, Box, Check, ChevronRight, ChevronLeft } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 
 interface CreateProductFormProps {
     initialImages: { image: any; url: string }[];
@@ -377,7 +378,7 @@ export function CreateProductForm({ initialImages, initialCategories }: CreatePr
                                                 exit={{ opacity: 0, scale: 0.8 }}
                                                 className="relative aspect-square rounded-lg overflow-hidden border-2 group border-amber-500"
                                             >
-                                                <img src={watch("image_url")} alt="Product" className="w-full h-full object-cover" />
+                                                <Image src={watch("image_url")} alt="Product" className="w-full h-full object-cover" />
                                                 <button
                                                     type="button"
                                                     onClick={() => {
@@ -397,7 +398,9 @@ export function CreateProductForm({ initialImages, initialCategories }: CreatePr
                                                 exit={{ opacity: 0, scale: 0.8 }}
                                                 className="relative aspect-square rounded-lg overflow-hidden border group"
                                             >
-                                                <img src={url} alt="Product" className="w-full h-full object-cover" />
+                                                {url ? (
+                                                    <Image src={url} alt="Product" className="w-full h-full object-cover" />
+                                                ) : null}
                                                 <button
                                                     type="button"
                                                     onClick={() => {
@@ -673,7 +676,7 @@ export function CreateProductForm({ initialImages, initialCategories }: CreatePr
                                                                 exit={{ opacity: 0, scale: 0.8 }}
                                                                 className="relative aspect-square rounded-lg overflow-hidden border-2 group border-amber-500"
                                                             >
-                                                                <img src={watch(`variants.${index}.image`)} alt={`Product_v_${index}`} className="h-12 w-12 object-cover" />
+                                                                <Image src={watch(`variants.${index}.image`)} alt={`Product_v_${index}`} className="h-12 w-12 object-cover" />
                                                                 <input type="hidden" {...register(`variants.${index}.image` as const)} /> {/* Register field */}
                                                                 <button
                                                                     type="button"
@@ -688,7 +691,9 @@ export function CreateProductForm({ initialImages, initialCategories }: CreatePr
                                                             </motion.div>
                                                         )}
                                                         {watch(`variants.${index}.gallery`)?.map((url, imgIndex) => (
-                                                            <img key={imgIndex} src={url} alt="Variant" className="h-12 w-12 object-cover rounded border" />
+                                                            url ? (
+                                                                <Image key={imgIndex} src={url} alt="Variant" className="h-12 w-12 object-cover rounded border" />
+                                                            ) : null
                                                         ))}
                                                         <button
                                                             type="button"

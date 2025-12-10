@@ -1,6 +1,7 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 
 const ImageCarousel = ({ images }: { images: (string | null)[] }) => {
     const [activeIndex, setActiveIndex] = useState(0);
@@ -26,7 +27,7 @@ const ImageCarousel = ({ images }: { images: (string | null)[] }) => {
                             : 'border-transparent hover:border-primary-300 '
                             } flex-shrink-0`}
                     >
-                        <img
+                        <Image
                             src={images[index] || 'https://placehold.co/80x80/white/ffffff?text=?'}
                             alt={`Thumbnail ${index + 1}`}
                             className="object-cover w-full h-full"

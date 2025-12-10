@@ -2,6 +2,7 @@
 
 import { useTranslation, Trans } from "react-i18next";
 import { motion } from "framer-motion";
+import Image from "next/image";
 
 export default function VerifyScreen({ email }: { email: string }) {
     const { t } = useTranslation();
@@ -15,7 +16,7 @@ export default function VerifyScreen({ email }: { email: string }) {
             >
                 {/* Illustration */}
                 <div className="flex justify-center mb-6">
-                    <img src={'/email_verify.png'} className="rounded-full"
+                    <Image src={'/email_verify.png'} className="rounded-full"
                         alt={'email_verified_photo'} />
                 </div>
 

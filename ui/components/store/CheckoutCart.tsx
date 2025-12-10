@@ -6,7 +6,7 @@ import { ArrowLeft, Tag } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Governorate } from "@/domain/entities/database/governorate";
 import { useCartProducts } from "@/ui/hooks/store/useCartProducts";
-
+import Image from "next/image";
 
 export function CheckoutCart({ selectedGovernorate, onPurchase }: {
     selectedGovernorate: Governorate | null,
@@ -41,7 +41,7 @@ export function CheckoutCart({ selectedGovernorate, onPurchase }: {
                             <div key={item.slug} className="flex gap-4 py-2">
                                 {/* Image */}
                                 <div className="w-16 h-16 flex-shrink-0 bg-gray-50 rounded-lg overflow-hidden border border-gray-100 relative">
-                                    <img
+                                    <Image
                                         className="w-full h-full object-cover"
                                         src={item.image || "https://placehold.co/100x100/E2E8F0/FFF?text=No+Image"}
                                         alt={item.name}

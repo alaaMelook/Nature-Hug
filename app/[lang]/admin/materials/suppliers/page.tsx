@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
+import Image from "next/image";
 
 interface Supplier {
   id: number;
@@ -496,7 +497,7 @@ export default function SuppliersPage() {
                 {newInvoice.attachments?.length ? (
                   <div className="flex flex-wrap gap-2 mb-2">
                     {newInvoice.attachments.map((url, i) => (
-                      <img
+                      <Image
                         key={i}
                         src={url}
                         className="w-20 h-20 border object-cover"

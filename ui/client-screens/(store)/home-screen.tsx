@@ -1,5 +1,5 @@
 "use client"
-import React from "react";
+import Image from "next/image";
 import { Trans, useTranslation } from "react-i18next";
 import ProductGrid from "@/ui/components/store/ProductsGrid";
 import Link from "next/link";
@@ -210,7 +210,7 @@ export function HomeScreen({ initialProducts: products, categories }: { initialP
                                             href={`/products?category=${encodeURIComponent(category.name_en)}`}
                                             className="group relative overflow-hidden rounded-2xl shadow-md aspect-[4/5] cursor-pointer"
                                         >
-                                            <img
+                                            <Image
                                                 src={category.image_url}
                                                 alt={category.name_en}
                                                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"

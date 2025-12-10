@@ -6,6 +6,7 @@ import { Tooltip } from "flowbite-react";
 import Counter from "@/ui/components/store/Counter";
 import { useRouter } from "next/navigation";
 import { useCartProducts } from "@/ui/hooks/store/useCartProducts";
+import Image from "next/image";
 
 export default function CartPage() {
     const router = useRouter();
@@ -69,7 +70,7 @@ export default function CartPage() {
                                 <div className="flex items-center gap-6 w-full">
                                     <div
                                         className="flex-shrink-0 relative w-24 h-24 rounded-2xl overflow-hidden shadow-inner">
-                                        <img
+                                        <Image
                                             src={
                                                 item.image ||
                                                 "https://placehold.co/100x100/E2E8F0/FFF?text=No+Image"

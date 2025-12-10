@@ -37,16 +37,6 @@ export function ProductDetailScreen({ initProduct: product, similarProducts = []
     if (product.description) {
         sections.push({ id: 'description', title: t('fullDescription'), content: product.description, icon: Info });
     }
-    if (materials && materials.length > 0) {
-        sections.push({
-            id: 'ingredients',
-            title: t('materialsIngredients'),
-            content: materials && materials.length > 0
-                ? <p>{materials.map((material) => material.material_name).join(', ')}</p> // Added margin for spacing
-                : <p>{t('noMaterialsListed')}</p>,
-            icon: CheckCircle,
-        });
-    }
     if (product.faq?.best_for.length ?? 0 > 0) {
         sections.push({ id: 'bestfor', title: t('bestFor'), content: product.faq?.best_for, icon: ShoppingBag });
     }
