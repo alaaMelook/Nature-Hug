@@ -88,7 +88,8 @@ export default function AboutPage() {
                 <div className="bg-primary-100 border border-gray-100 rounded-xl px-10 md:px-15 py-10 text-sm text-gray-800 flex flex-col md:flex-row md:gap-50 items-center justify-center gap-10 md:my-10">
                     <Image src="https://reqrsmboabgxshacmkst.supabase.co/storage/v1/object/public/nature-hug/products/Gemini_Generated_Image_aig2xtaig2xtaig2.png" alt="KeraCream Photo"
                         width={800} height={800}
-
+                        quality={500}
+                        priority
                         className="rounded-full border-2 border-primary-800 scale-180 md:scale-250 w-20 h-20 md:w-24 md:h-24 " >
                     </Image>
                     <span className='w-full md:w-2/5 text-center md:text-start text-lg'>
