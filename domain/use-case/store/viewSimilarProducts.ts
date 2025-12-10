@@ -14,7 +14,7 @@ export class ViewSimilarProducts {
 
             // Optional: Limit the number of similar products (e.g., top 4)
 
-            return [...similarProducts.sort((a, b) => b.stock - a.stock), ...similarProducts.sort((a, b) => b.stock - a.stock)];
+            return [...similarProducts.sort((a, b) => b.stock - a.stock)];
         } catch (error) {
             console.error("[ViewSimilarProducts] Error in execute:", error);
             return [];

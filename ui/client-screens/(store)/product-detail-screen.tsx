@@ -124,11 +124,11 @@ export function ProductDetailScreen({ initProduct: product, similarProducts = []
                             quantity={quantity}
                         // className="w-full py-4 text-xl font-bold bg-primary-800 hover:bg-primary-900 text-white rounded-md shadow-lg transition duration-200" // Styled for "ADD TO BAG"
                         />
-                        <BuyNowButton
+                        {product.stock > 0 && <BuyNowButton
                             product={product}
                             quantity={quantity}
                         // className="w-full py-4 text-xl font-bold bg-white hover:bg-gray-100 text-primary-800 border border-primary-800 rounded-md shadow-sm transition duration-200" // Styled for "BUY NOW"
-                        />
+                        />}
                     </div>
 
                     {/* Collapsible Sections (Features) */}
@@ -198,11 +198,11 @@ export function ProductDetailScreen({ initProduct: product, similarProducts = []
                             quantity={quantity}
                         // className="px-8 py-3 bg-primary-800 hover:bg-primary-900 text-white rounded-full transition duration-200 font-semibold"
                         />
-                        <BuyNowButton
+                        {product.stock > 0 && <BuyNowButton
                             product={product}
                             quantity={quantity}
                         // className="px-8 py-3 bg-white hover:bg-gray-100 text-primary-800 border border-primary-800 rounded-full transition duration-200 font-semibold"
-                        />
+                        />}
                     </div>
                 </div>
             </div>

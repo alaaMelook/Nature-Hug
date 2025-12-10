@@ -127,6 +127,7 @@ export function ImageSelector({ images, onSelect, selectedUrl, onClose }: ImageS
                                     src={img.url}
                                     alt={`Gallery image ${index}`}
                                     className="w-full h-full object-cover"
+                                    fill={true}
                                 />
                                 {selected === img.url && (
                                     <div className="absolute top-2 right-2 bg-blue-500 text-white rounded-full p-1 z-10">

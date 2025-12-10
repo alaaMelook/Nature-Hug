@@ -143,7 +143,7 @@ export function ProductModal({ onClose, materials = [], initial, onSaved }: Prop
                                         updateVariant(idx, { image: url } as any);
                                     }} />
                                     {v.image ? (
-                                        <Image src={v.image} alt={`variant-${idx}-img`} className="mt-2 w-24 h-24 object-cover rounded" />
+                                        <Image src={v.image} alt={`variant-${idx}-img`} className="mt-2 w-24 h-24 object-cover rounded" fill={true} />
                                     ) : null}
                                 </div>
                             </div>

@@ -164,7 +164,7 @@ export function HomeScreen({ initialProducts: products, categories }: { initialP
                         </motion.div>
                     </motion.div>
                 </section>
-                <section className={`py-16  mt-6  z-2`}>
+                <section className={`py-16  mt-6 mb-2  z-2`}>
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 max-h-fit">
                         <motion.h2
                             initial={{ opacity: 0, y: 20 }}
@@ -213,6 +213,7 @@ export function HomeScreen({ initialProducts: products, categories }: { initialP
                                             <Image
                                                 src={category.image_url}
                                                 alt={category.name_en}
+                                                fill={true}
                                                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                                             />
                                             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-80 group-hover:opacity-90 transition-opacity duration-300">
@@ -233,7 +234,7 @@ export function HomeScreen({ initialProducts: products, categories }: { initialP
 
 
                 {/* Features Section */}
-                <section className={`bg-gradient-to-b from-white to-primary-50 pb-25`}>
+                <section className={`bg-gradient-to-b from-white to-primary-50 py-25`}>
                     <div className="max-w-7xl mx-auto px-4 sm:px-6">
                         <motion.div
                             variants={containerVariants}

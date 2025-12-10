@@ -275,7 +275,7 @@ export function ProductsScreen({ products, materials }: { products: ProductAdmin
                                                         <Image
                                                             src={product.image}
                                                             alt={product.name_en}
-                                                            fill
+                                                            fill={true}
                                                             className="object-cover"
                                                         />
                                                     ) : (
@@ -358,7 +358,7 @@ export function ProductsScreen({ products, materials }: { products: ProductAdmin
                                         <Image
                                             src={product.image}
                                             alt={product.name_en}
-                                            fill
+                                            fill={true}
                                             className="object-cover"
                                         />
                                     ) : (

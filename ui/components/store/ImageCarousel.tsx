@@ -35,7 +35,7 @@ const ImageCarousel = ({ images }: { images: (string | null)[] }) => {
                             (e.currentTarget.src =
                                 'https://placehold.co/80x80/94A3B8/ffffff?text=?')
                             }
-
+                            fill={true}
                         />
                         {index !== activeIndex && <div className="absolute inset-0 transition duration-600 bg-gray-300/70  flex-shrink-0 hover:bg-gray-300/40"></div>}
                     </button>
@@ -46,20 +46,23 @@ const ImageCarousel = ({ images }: { images: (string | null)[] }) => {
             <div className="sm:relative flex-1 h-full w-full rounded-xl overflow-hidden  flex flex-col">
                 <div className="relative w-full h-90 rounded-xl overflow-hidden">
                     <AnimatePresence mode="wait">
-                        <motion.img
+                        <motion.div
                             key={activeIndex}
                             initial={{ opacity: 0, x: 20 }}
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0, x: -20 }}
-                            transition={{ duration: 0.3 }}
-                            src={images[activeIndex] || 'https://placehold.co/600x600/94A3B8/ffffff?text=?'}
-                            alt={`Product view ${activeIndex + 1}`}
-                            className="w-full h-full object-contain rounded-xl"
-                            onError={(e) =>
-                            (e.currentTarget.src =
-                                'https://placehold.co/600x600/94A3B8/ffffff?text=Image+Missing')
-                            }
-                        />
+                            transition={{ duration: 0.3 }} >
+                            <Image
+                                src={images[activeIndex] || 'https://placehold.co/600x600/94A3B8/ffffff?text=?'}
+                                alt={`Product view ${activeIndex + 1}`}
+                                className="w-full h-full object-contain rounded-xl"
+                                onError={(e) =>
+                                (e.currentTarget.src =
+                                    'https://placehold.co/600x600/94A3B8/ffffff?text=Image+Missing')
+                                }
+                                fill={true}
+                            />
+                        </motion.div>
                     </AnimatePresence>
                 </div>
 

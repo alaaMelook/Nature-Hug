@@ -43,6 +43,7 @@ export function CheckoutCart({ selectedGovernorate, onPurchase }: {
                                 <div className="w-16 h-16 flex-shrink-0 bg-gray-50 rounded-lg overflow-hidden border border-gray-100 relative">
                                     <Image
                                         className="w-full h-full object-cover"
+                                        fill={true}
                                         src={item.image || "https://placehold.co/100x100/E2E8F0/FFF?text=No+Image"}
                                         alt={item.name}
                                     />

@@ -20,23 +20,6 @@ export function ProductCard({
 }) {
     const router = useRouter();
     const { t } = useTranslation();
-    const itemVariants = {
-        hidden: { opacity: 0 },
-        show: {
-            opacity: 1,
-            transition: {
-                duration: 0.8,
-                ease: "easeInOut" as const
-            }
-        },
-        exit: {
-            opacity: 0,
-            transition: {
-                duration: 0.5,
-                ease: "easeInOut" as const
-            }
-        }
-    };
 
     return (
         <motion.div
@@ -58,7 +41,7 @@ export function ProductCard({
             }}
             initial="hidden"
             animate="show"
-            className={`bg-white rounded-xl shadow-lg overflow-hidden flex flex-col transform transition-transform duration-300 hover:scale-105 cursor-pointer ${compact ? "p-3" : "z-2"
+            className={`bg-white rounded-xl shadow-lg overflow-hidden flex flex-col transform transition-transform duration-300 hover:scale-105 cursor-pointer z-2${compact ? "p-3" : ""
                 }`}
             onClick={() => router.push(`/products/${product.slug}`)}
         >
@@ -66,11 +49,15 @@ export function ProductCard({
                 <Image
                     src={product.image ?? "https://placehold.co/400x400/D1D5DB/4B5563?text=Image+Not+Found"}
                     alt={product.name || "Product image"}
-                    className={`w-full ${compact ? "h-40" : "h-50"} object-cover align-middle`}
+                    className={`w-full object-cover align-middle ${compact ? "aspect-[4/3]" : "aspect-w-4 aspect-h-3"}`}
                     onError={(e) => {
                         (e.target as HTMLImageElement).src =
                             "https://placehold.co/400x400/D1D5DB/4B5563?text=Image+Not+Found";
                     }}
+
+                    width={compact ? 500 : 1000}
+                    height={compact ? 500 : 1000}
+                    priority={!compact}
                 />
 
                 {product.discount != null && product.discount > 0 && (
@@ -119,8 +106,11 @@ export function ProductCard({
                 </div>
 
                 <div className="mt-3 space-y-2" onClick={(e) => e.stopPropagation()}>
+                    {product.stock == 0 && (
+                        <BuyNowButton product={product} quantity={1} className="invisible normalize_cursor z-1" />
+                    )}
                     <AddToCartButton product={product} quantity={1} />
-                    {product.stock != null && product.stock > 0 && (
+                    {product.stock > 0 && (
                         <BuyNowButton product={product} quantity={1} />
                     )}
                 </div>

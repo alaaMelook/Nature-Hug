@@ -500,8 +500,10 @@ export default function SuppliersPage() {
                       <Image
                         key={i}
                         src={url}
-                        className="w-20 h-20 border object-cover"
+                        className="border object-cover"
                         alt=""
+                        width={80}
+                        height={80}
                       />
                     ))}
                   </div>

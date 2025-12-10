@@ -77,6 +77,7 @@ export default function CartPage() {
                                             }
                                             alt={item.name}
                                             className="w-full h-full object-cover"
+                                            fill={true}
                                         />
                                     </div>
                                     <div className="flex-grow">

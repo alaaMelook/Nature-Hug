@@ -17,7 +17,10 @@ export default function VerifyScreen({ email }: { email: string }) {
                 {/* Illustration */}
                 <div className="flex justify-center mb-6">
                     <Image src={'/email_verify.png'} className="rounded-full"
-                        alt={'email_verified_photo'} />
+                        alt={'email_verified_photo'}
+
+                        fill={true}
+                    />
                 </div>
 
                 {/* Title */}

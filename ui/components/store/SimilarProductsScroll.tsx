@@ -5,6 +5,7 @@ import { ProductView } from "@/domain/entities/views/shop/productView";
 import { ProductCard } from "./ProductsGrid";
 import { useTranslation } from "react-i18next";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 
 export default function SimilarProductsScroll({
     products,
@@ -17,11 +18,6 @@ export default function SimilarProductsScroll({
     const scroll = (direction: 'left' | 'right') => {
         if (scrollContainerRef.current) {
             const container = scrollContainerRef.current;
-            // Calculate scroll amount: 4 items * (width of item + gap)
-            // Item width is w-64 (16rem = 256px) or sm:w-72 (18rem = 288px)
-            // Gap is 4 (1rem = 16px)
-            // We'll approximate or measure. Let's use a safe estimate or dynamic measurement if possible.
-            // For simplicity, let's assume sm:w-72 (288px) + gap-4 (16px) = 304px * 4 = 1216px
             const scrollAmount = 304 * 4;
 
             container.scrollBy({
@@ -51,13 +47,36 @@ export default function SimilarProductsScroll({
                 ref={scrollContainerRef}
                 className="w-full overflow-x-scroll px-4 scrollbar-hide scroll-smooth "
             >
-                <div className="flex gap-4 min-w-max py-5">
-                    {products.map((product, index) => (
-                        <div key={product.slug + index} className="w-64 sm:w-72">
-                            <ProductCard product={product} compact={true} />
-                        </div>
-                    ))}
-                </div>
+                <motion.div
+                    variants={{
+                        hidden: { opacity: 0 },
+                        show: {
+                            opacity: 1,
+                            transition: {
+                                duration: 0.8,
+                                ease: "easeInOut" as const
+                            }
+                        },
+                        exit: {
+                            opacity: 0,
+                            transition: {
+                                duration: 0.5,
+                                ease: "easeInOut" as const
+                            }
+                        }
+                    }}
+                    initial="hidden"
+                    animate="show"
+                    className={`flex gap-4 min-w-max py-5 z-2`}
+                >
+                    <AnimatePresence >
+                        {products.map((product, index) => (
+                            <div key={product.slug + index} className="w-64 sm:w-72">
+                                <ProductCard product={product} compact={true} />
+                            </div>
+                        ))}
+                    </AnimatePresence>
+                </motion.div>
             </div>
 
             {/* Right Arrow */}
