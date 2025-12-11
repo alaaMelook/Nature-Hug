@@ -135,7 +135,7 @@ export function CreateProductForm({ initialImages, initialCategories }: CreatePr
             // If variants exist, ALL must have price and image to bypass main price
             const allVariantsValid = cleanedData.variants.every(v => v.price > 0 && (v.image || (v.gallery && v.gallery.length > 0)));
             if (!allVariantsValid) {
-                toast.error("If main price is 0, all variants must have a price and image.");
+                toast.error(t("admin.products.variantsRequired"));
                 return;
             }
         }
@@ -316,11 +316,11 @@ export function CreateProductForm({ initialImages, initialCategories }: CreatePr
                                     </div>
                                     <div>
                                         <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">{t("skinType")}</label>
-                                        <input {...register("skin_type")} className="text-sm w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" placeholder="e.g. Oily, Dry" />
+                                        <input {...register("skin_type")} className="text-sm w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" placeholder={t("admin.products.placeholders.skinType")} />
                                     </div>
                                     <div>
                                         <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">{t("productType")}</label>
-                                        <input {...register("product_type")} className="text-sm w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" placeholder="e.g. Cream, Serum" />
+                                        <input {...register("product_type")} className="text-sm w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" placeholder={t("admin.products.placeholders.productType")} />
                                     </div>
                                 </div>
                             </div>
@@ -329,11 +329,11 @@ export function CreateProductForm({ initialImages, initialCategories }: CreatePr
                                 <h2 className="text-lg md:text-xl font-semibold mb-4 text-gray-800">{t("fullDescription")}</h2>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">English</label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">{t("english")}</label>
                                         <textarea {...register("description_en")} rows={6} className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Arabic</label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">{t("arabic")}</label>
                                         <textarea {...register("description_ar")} rows={6} className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" />
                                     </div>
                                 </div>
@@ -343,12 +343,12 @@ export function CreateProductForm({ initialImages, initialCategories }: CreatePr
                                 <h2 className="text-lg md:text-xl font-semibold mb-4 text-gray-800">{t("highlights")}</h2>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">English</label>
-                                        <textarea {...register("highlight_en")} rows={3} className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" placeholder="Short highlight..." />
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">{t("english")}</label>
+                                        <textarea {...register("highlight_en")} rows={3} className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" placeholder={t("admin.products.placeholders.highlight")} />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Arabic</label>
-                                        <textarea {...register("highlight_ar")} rows={3} className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" placeholder="Short highlight..." />
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">{t("arabic")}</label>
+                                        <textarea {...register("highlight_ar")} rows={3} className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border" placeholder={t("admin.products.placeholders.highlight")} />
                                     </div>
                                 </div>
                             </div>
@@ -378,7 +378,7 @@ export function CreateProductForm({ initialImages, initialCategories }: CreatePr
                                                 exit={{ opacity: 0, scale: 0.8 }}
                                                 className="relative aspect-square rounded-lg overflow-hidden border-2 group border-amber-500"
                                             >
-                                                <Image src={watch("image_url")} alt="Product" className="w-full h-full object-cover" fill={true} />
+                                                <Image src={watch("image_url")} alt={t("admin.products.altProduct")} className="w-full h-full object-cover" fill={true} />
                                                 <button
                                                     type="button"
                                                     onClick={() => {
@@ -399,7 +399,7 @@ export function CreateProductForm({ initialImages, initialCategories }: CreatePr
                                                 className="relative aspect-square rounded-lg overflow-hidden border group"
                                             >
                                                 {url ? (
-                                                    <Image src={url} alt="Product" className="w-full h-full object-cover" fill={true} />
+                                                    <Image src={url} alt={t("admin.products.altProduct")} className="w-full h-full object-cover" fill={true} />
                                                 ) : null}
                                                 <button
                                                     type="button"
@@ -529,8 +529,8 @@ export function CreateProductForm({ initialImages, initialCategories }: CreatePr
                                             <thead className="bg-gray-50 text-gray-500">
                                                 <tr>
                                                     <th className="px-4 py-2">{t("materials")}</th>
-                                                    <th className="px-4 py-2 text-right">Amount</th>
-                                                    <th className="px-4 py-2 text-right">Cost</th>
+                                                    <th className="px-4 py-2 text-right">{t("amount")}</th>
+                                                    <th className="px-4 py-2 text-right">{t("cost")}</th>
                                                     <th className="px-4 py-2"></th>
                                                 </tr>
                                             </thead>
@@ -628,7 +628,7 @@ export function CreateProductForm({ initialImages, initialCategories }: CreatePr
                                                     </div>
                                                     <div>
                                                         <label className="text-xs font-medium text-gray-500 uppercase">{t("slug")}</label>
-                                                        <input {...register(`variants.${index}.slug` as const)} className="w-full border-gray-300 rounded shadow-sm p-1.5 border text-sm" placeholder="Auto-generated" />
+                                                        <input {...register(`variants.${index}.slug` as const)} className="w-full border-gray-300 rounded shadow-sm p-1.5 border text-sm" placeholder={t("admin.products.placeholders.autoGenerated")} />
                                                     </div>
 
                                                     <div>
@@ -637,9 +637,9 @@ export function CreateProductForm({ initialImages, initialCategories }: CreatePr
                                                             <input type="number" {...register(`variants.${index}.price` as const)} className="w-full border-gray-300 rounded shadow-sm p-1.5 border text-sm" />
                                                             {watch(`variants.${index}.materials`)?.length > 0 && (
                                                                 <div className="flex flex-col text-[10px] leading-tight ml-2">
-                                                                    <span className="text-gray-500">Cost: {watch(`variants.${index}.materials`).reduce((acc, m) => acc + ((m.grams_used || 0) * (m.price || 0)), 0).toFixed(2)}</span>
+                                                                    <span className="text-gray-500">{t("cost")}: {watch(`variants.${index}.materials`).reduce((acc, m) => acc + ((m.grams_used || 0) * (m.price || 0)), 0).toFixed(2)}</span>
                                                                     <span className={(Number(watch(`variants.${index}.price`) || 0) - watch(`variants.${index}.materials`).reduce((acc, m) => acc + ((m.grams_used || 0) * (m.price || 0)), 0)) >= 0 ? "text-green-600 font-bold" : "text-red-600 font-bold"}>
-                                                                        Profit: {(Number(watch(`variants.${index}.price`) || 0) - watch(`variants.${index}.materials`).reduce((acc, m) => acc + ((m.grams_used || 0) * (m.price || 0)), 0)).toFixed(2)}
+                                                                        {t("admin.products.profit")}: {(Number(watch(`variants.${index}.price`) || 0) - watch(`variants.${index}.materials`).reduce((acc, m) => acc + ((m.grams_used || 0) * (m.price || 0)), 0)).toFixed(2)}
                                                                         ({(Number(watch(`variants.${index}.price`) || 0) > 0 ? ((Number(watch(`variants.${index}.price`) || 0) - watch(`variants.${index}.materials`).reduce((acc, m) => acc + ((m.grams_used || 0) * (m.price || 0)), 0)) / Number(watch(`variants.${index}.price`) || 0)) * 100 : 0).toFixed(0)}%)
                                                                     </span>
                                                                 </div>
@@ -656,11 +656,11 @@ export function CreateProductForm({ initialImages, initialCategories }: CreatePr
                                                     </div>
                                                     <div>
                                                         <label className="text-xs font-medium text-gray-500 uppercase">{t("distinguisherEnglish")}</label>
-                                                        <input {...register(`variants.${index}.type_en` as const)} className="w-full border-gray-300 rounded shadow-sm p-1.5 border text-sm" placeholder="e.g. blue, small, 50 ml, ..." />
+                                                        <input {...register(`variants.${index}.type_en` as const)} className="w-full border-gray-300 rounded shadow-sm p-1.5 border text-sm" placeholder={t("admin.products.placeholders.distinguisher")} />
                                                     </div>
                                                     <div>
                                                         <label className="text-xs font-medium text-gray-500 uppercase">{t("distinguisherArabic")}</label>
-                                                        <input {...register(`variants.${index}.type_ar` as const)} className="w-full border-gray-300 rounded shadow-sm p-1.5 border text-sm" placeholder="e.g. blue, small, 50 ml, ..." />
+                                                        <input {...register(`variants.${index}.type_ar` as const)} className="w-full border-gray-300 rounded shadow-sm p-1.5 border text-sm" placeholder={t("admin.products.placeholders.distinguisher")} />
                                                     </div>
                                                 </div>
 
@@ -687,12 +687,12 @@ export function CreateProductForm({ initialImages, initialCategories }: CreatePr
                                                                 >
                                                                     <Trash2 size={12} />
                                                                 </button>
-                                                                <span className="absolute bottom-0 left-0 bg-amber-500 text-white text-xs px-2 py-0.5 rounded-tr-lg">Main</span>
+                                                                <span className="absolute bottom-0 left-0 bg-amber-500 text-white text-xs px-2 py-0.5 rounded-tr-lg">{t("admin.products.mainImage")}</span>
                                                             </motion.div>
                                                         )}
                                                         {watch(`variants.${index}.gallery`)?.map((url, imgIndex) => (
                                                             url ? (
-                                                                <Image key={imgIndex} src={url} alt="Variant" className="h-12 w-12 object-cover rounded border" fill={true} />
+                                                                <Image key={imgIndex} src={url} alt={t("admin.products.altVariant")} className="h-12 w-12 object-cover rounded border" fill={true} />
                                                             ) : null
                                                         ))}
                                                         <button
@@ -712,12 +712,12 @@ export function CreateProductForm({ initialImages, initialCategories }: CreatePr
                                                             <h4 className="text-xs font-bold text-gray-700 uppercase mb-2">{t("descriptionOverride")}</h4>
                                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                                 <div>
-                                                                    <label className="block text-xs font-medium text-gray-500 uppercase mb-1">English</label>
-                                                                    <textarea {...register(`variants.${index}.description_en` as const)} rows={3} className="w-full border-gray-300 rounded shadow-sm p-1.5 border text-sm" placeholder="Override main description..." />
+                                                                    <label className="block text-xs font-medium text-gray-500 uppercase mb-1">{t("english")}</label>
+                                                                    <textarea {...register(`variants.${index}.description_en` as const)} rows={3} className="w-full border-gray-300 rounded shadow-sm p-1.5 border text-sm" placeholder={t("admin.products.placeholders.descriptionOverride")} />
                                                                 </div>
                                                                 <div>
-                                                                    <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Arabic</label>
-                                                                    <textarea {...register(`variants.${index}.description_ar` as const)} rows={3} className="w-full border-gray-300 rounded shadow-sm p-1.5 border text-sm" placeholder="Override main description..." />
+                                                                    <label className="block text-xs font-medium text-gray-500 uppercase mb-1">{t("arabic")}</label>
+                                                                    <textarea {...register(`variants.${index}.description_ar` as const)} rows={3} className="w-full border-gray-300 rounded shadow-sm p-1.5 border text-sm" placeholder={t("admin.products.placeholders.descriptionOverride")} />
                                                                 </div>
                                                             </div>
                                                         </div>

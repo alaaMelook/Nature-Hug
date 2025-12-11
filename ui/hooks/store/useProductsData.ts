@@ -15,6 +15,4 @@ export class GetProductsData {
     async bySlug(slug: string) {
         return await this.repo.viewBySlug(slug);
     }
-
-
 }

@@ -29,13 +29,13 @@ export default function OrderDetailScreen({ order, fromCheckout }: {
 
     const handleCancel = async () => {
         if (!order) return;
-        if (!confirm(t("ordersScreen.confirmCancel") || "Are you sure you want to cancel this order?")) return;
+        if (!confirm(t("ordersScreen.confirmCancel"))) return;
 
         const result = await cancelUserOrderAction(order.order_id);
         if (result.success) {
-            toast.success(t("ordersScreen.cancelSuccess") || "Order cancelled successfully");
+            toast.success(t("ordersScreen.cancelSuccess"));
         } else {
-            toast.error(t("ordersScreen.cancelFailed") || "Failed to cancel order");
+            toast.error(t("ordersScreen.cancelFailed"));
         }
     };
 
@@ -76,7 +76,7 @@ export default function OrderDetailScreen({ order, fromCheckout }: {
                             <p className="text-sm text-gray-600">{t("ordersScreen.placed", { date: formatted })}</p>
                             <div
                                 className={`inline-flex items-center mt-3 px-3 py-1 rounded-full text-xs font-medium ${statusColor(order.order_status)}`}>
-                                {order.order_status}
+                                {t(order.order_status)}
                             </div>
                         </div>
 
@@ -159,7 +159,7 @@ export default function OrderDetailScreen({ order, fromCheckout }: {
                         <div className="mt-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-4 bg-gray-50 rounded-md col-span-3">
                             <div>
                                 <p className="text-sm text-gray-600">{t("ordersScreen.paymentStatus")}</p>
-                                <p className="font-medium">{order.payment_status} {order.payment_status === 'unpaid' && (
+                                <p className="font-medium">{t(order.payment_status)} {order.payment_status === 'unpaid' && (
                                     <Link href={'#'} className={'ml-10 text-teal-800'}>{t("ordersScreen.payNow")}</Link>)}</p>
                             </div>
                             <div className="text-left sm:text-right w-full sm:w-auto">
@@ -174,7 +174,7 @@ export default function OrderDetailScreen({ order, fromCheckout }: {
                                 onClick={handleCancel}
                                 className="text-sm text-red-600 hover:text-red-800 underline "
                             >
-                                {t("ordersScreen.cancelOrder") || "Cancel Order"}
+                                {t("ordersScreen.cancelOrder")}
                             </button>
                         </div>
                     )}

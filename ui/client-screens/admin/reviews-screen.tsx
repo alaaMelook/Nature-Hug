@@ -137,7 +137,7 @@ export function ReviewsScreen({ reviews }: { reviews: ReviewAdminView[] }) {
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="flex items-center">
                                                 <div className="h-8 w-8 flex-shrink-0 relative rounded bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-400">
-                                                    {review.product_image ? <Image src={review.product_image} alt="product" fill={true} /> : <Package className="w-4 h-4" />}
+                                                    {review.product_image ? <Image src={review.product_image} alt={t("admin.reviews.altProduct")} fill={true} /> : <Package className="w-4 h-4" />}
                                                 </div>
                                                 <div className="ml-4">
                                                     <div className="text-sm font-medium text-gray-900">{i18n.language === "ar" ? review.product_name_ar : review.product_name_en}</div>

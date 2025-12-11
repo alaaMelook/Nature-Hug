@@ -93,7 +93,7 @@ export default function Navbar() {
                 <Link href="/" className="flex items-center sm:w-30 sm:h-30 w-20 h-20 relative">
                     <Image
                         src={"https://reqrsmboabgxshacmkst.supabase.co/storage/v1/object/public/nature-hug/logos/logo%20(4).png"}
-                        priority={true} alt="Logo Nature"
+                        priority={true} alt={t("components.logoAlt")}
                         fill={true}
                         className="transition-all duration-900 ease-in-out" />
                 </Link>

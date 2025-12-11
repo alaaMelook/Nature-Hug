@@ -73,7 +73,7 @@ export default function CategoriesScreen({ initialCategories, initialImages }: {
             <div className="flex flex-col md:flex-row mb-6 space-y-3 items-center bg-white p-4 rounded-lg shadow-sm border">
                 {image ? <Image
                     src={image}
-                    alt="Category Image"
+                    alt={t("admin.categories.altImage")}
                     onClick={() => setOpenSelector(true)}
                     width={100}
                     height={100}

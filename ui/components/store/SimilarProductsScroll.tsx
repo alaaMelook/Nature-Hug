@@ -37,7 +37,7 @@ export default function SimilarProductsScroll({
             <button
                 onClick={() => scroll('left')}
                 className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white text-primary-900 p-2 rounded-full shadow-md hidden md:flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 disabled:opacity-0 -ml-4"
-                aria-label="Scroll left"
+                aria-label={t("components.scrollLeft")}
             >
                 <ChevronLeft size={24} />
             </button>
@@ -83,7 +83,7 @@ export default function SimilarProductsScroll({
             <button
                 onClick={() => scroll('right')}
                 className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white text-primary-900 p-2 rounded-full shadow-md hidden md:flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 disabled:opacity-0 -mr-4"
-                aria-label="Scroll right"
+                aria-label={t("components.scrollRight")}
             >
                 <ChevronRight size={24} />
             </button>

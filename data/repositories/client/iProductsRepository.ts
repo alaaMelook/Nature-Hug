@@ -64,6 +64,8 @@ export class IProductClientRepository implements ProductRepository {
     }
 
 
+
+
     async viewDetailedBySlug(slug: string): Promise<ProductDetailView> {
         console.log("[IProductRepository] Detailed called with slug:", slug);
         const { data, status, statusText, error } = await supabase

@@ -6,7 +6,7 @@ import { ConfirmDialog } from "@/ui/components/confirmDialog";
 import { Governorate } from "@/domain/entities/database/governorate";
 import { CustomerAddress } from "@/domain/entities/auth/customer";
 import { ViewAddress } from "@/domain/entities/views/shop/profileView";
-import { t } from "i18next";
+import { useTranslation } from "react-i18next";
 
 interface EditablePhoneFieldProps {
     label: string;
@@ -30,6 +30,7 @@ export function EditablePhoneField({
     const [input, setInput] = useState(value);
     const [editing, setEditing] = useState(newItem);
     const [confirmDelete, setConfirmDelete] = useState(false);
+    const { t } = useTranslation();
 
     // Keep local input in sync with external value (in case parent updates)
     useEffect(() => {
@@ -84,8 +85,8 @@ export function EditablePhoneField({
 
             <ConfirmDialog
                 open={confirmDelete}
-                title={`Are you sure you want to delete ${input}?`}
-                description="This action cannot be undone."
+                title={t("components.deleteConfirmTitle", { item: input })}
+                description={t("components.deleteConfirmDesc")}
                 onCancel={() => setConfirmDelete(false)}
                 onConfirm={() => {
                     setConfirmDelete(false);
@@ -118,6 +119,7 @@ export function EditableAddressField({
 }: EditableAddressFieldProps) {
     const [input, setInput] = useState(address);
     const [editing, setEditing] = useState(newItem);
+    const { t } = useTranslation();
 
     // Keep local state synced
     useEffect(() => {
@@ -158,7 +160,7 @@ export function EditableAddressField({
                     }}
                 >
                     <option value="Choose" key="init">
-                        {t("chooseGovernorate")}
+                        {t("components.chooseGovernorate")}
                     </option>
                     {governorates.map((g) => (
                         <option key={g.slug} value={g.slug}>
@@ -193,6 +195,7 @@ export function EditableAddressItem({
     const [editing, setEditing] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState(false);
     const [form, setForm] = useState<Partial<ViewAddress>>(address);
+    const { t } = useTranslation();
 
     const handleSave = async () => {
         await onSaveAction({ ...address, ...form });
@@ -224,8 +227,8 @@ export function EditableAddressItem({
 
                     <ConfirmDialog
                         open={confirmDelete}
-                        title="Delete Address"
-                        description="Are you sure you want to delete this address? This action cannot be undone."
+                        title={t("components.deleteAddressTitle")}
+                        description={t("components.deleteAddressDesc")}
                         onCancel={() => setConfirmDelete(false)}
                         onConfirm={() => {
                             setConfirmDelete(false);
@@ -252,7 +255,7 @@ export function EditableAddressItem({
                         }
                         className="flex-1 rounded border border-gray-300 p-1"
                     >
-                        <option value="Choose">Choose Governorate...</option>
+                        <option value="Choose">{t("components.chooseGovernorate")}</option>
                         {governorates.map((g) => (
                             <option key={g.slug} value={g.slug}>
                                 {g.name_en}

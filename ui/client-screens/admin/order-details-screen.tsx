@@ -54,7 +54,7 @@ export function OrderDetailsScreen({ order, governorate }: { order: OrderDetails
         );
     }
 
-    const handleStatusChange = async (newStatus: string) => {
+    const handleStatusChange = async (newStatus: string, isManual: boolean = false) => {
         setUpdating(true);
         try {
             let result;
@@ -67,7 +67,7 @@ export function OrderDetailsScreen({ order, governorate }: { order: OrderDetails
             } else if (newStatus === 'cancelled' && order.order_status === 'out for delivery') {
 
                 result = await cancelShippedOrderAction(order);
-            } else if (newStatus === 'out for delivery') {
+            } else if (newStatus === 'out for delivery' && !isManual) {
                 // Simplified city lookup for demo
 
                 const shipmentData: Shipment = {
@@ -174,13 +174,25 @@ export function OrderDetailsScreen({ order, governorate }: { order: OrderDetails
                             {t(actions.neg)}
                         </button>
                     )}
+                    {/* Separate Manual and Shipment actions for Processing state */}
+                    {order.order_status === 'processing' && (
+                        <>
+                            <button
+                                onClick={() => handleStatusChange('out for delivery', true)}
+                                disabled={updating}
+                                className="flex-1 sm:flex-none px-4 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 border border-gray-200"
+                            >
+                                {t("markAsOutForDelivery")} ({t("manual") || "Manual"})
+                            </button>
+                        </>
+                    )}
                     {actions.pos && (
                         <button
-                            onClick={() => handleStatusChange(actions.status_pos)}
+                            onClick={() => handleStatusChange(actions.status_pos, false)}
                             disabled={updating}
                             className="flex-1 sm:flex-none px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 shadow-sm"
                         >
-                            {t(actions.pos)}
+                            {order.order_status === 'processing' ? t("sendToShipment") : t(actions.pos)}
                         </button>
                     )}
                 </div>

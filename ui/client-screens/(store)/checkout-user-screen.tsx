@@ -13,7 +13,6 @@ import { useRouter } from "next/navigation";
 import { Loader2, MapPin, Plus, CreditCard, Banknote, CheckCircle2, Phone, User, Mail, Edit2 } from "lucide-react";
 import { useCartProducts } from "@/ui/hooks/store/useCartProducts";
 import { useTranslation, Trans } from "react-i18next";
-import { initiatePaymobPayment } from "@/ui/hooks/store/usePaymobActions";
 
 
 type FormValues = Partial<Order> & {
@@ -26,24 +25,16 @@ export function CheckoutUserScreen({ governorates, user }: { governorates: Gover
     const [selectedGovernorate, setSelectedGovernorate] = useState<Governorate | null>(user?.address?.[0]?.governorate ?? null);
     // index of selected saved address, or 'new' to create another
     const [selectedAddressIndex, setSelectedAddressIndex] = useState<number | 'new'>(user?.address && user.address.length > 0 ? 0 : 'new');
-    const { cart, getCartTotal, clearCart } = useCart();
+    const { cart, getCartTotal, clearCart, syncCart } = useCart();
     const [loading, setLoading] = useState(false);
-    const [selectedPayment, setSelectedPayment] = useState<'cod' | 'paymob'>('cod');
+    const [selectedPayment, setSelectedPayment] = useState<'cod' | 'online'>('cod');
     const { register, handleSubmit, formState: { errors }, setValue, setError } = useForm<FormValues>({
         defaultValues: {
             guest_address: {}
         }
     });
     const router = useRouter();
-    const { data: products = [], isLoading: loadingProducts } = useCartProducts();
-
-    useEffect(() => {
-        if (!loadingProducts && products.length === 0) {
-            if (!loading) {
-                router.push('/'); // ✅ safe here
-            }
-        }
-    }, [products, router, loading, loadingProducts]);
+    const { data: products = [], isLoading: loadingProducts, refresh } = useCartProducts();
 
 
     useEffect(() => {
@@ -110,45 +101,45 @@ export function CheckoutUserScreen({ governorates, user }: { governorates: Gover
             setLoading(false);
             return;
         } else if (result.order_id) {
-            if (selectedPayment === 'paymob') {
-                try {
-                    const responseData = await initiatePaymobPayment(
-                        result.order_id,
-                        payload.grand_total!,
-                        {
-                            first_name: user.name.split(' ')[0],
-                            last_name: user.name.split(' ').slice(1).join(' ') || 'NA',
-                            email: user.email,
-                            phone: user.phone[0] || data.guest_phone!,
-                        },
-                        {
-                            street: payload.guest_address?.address || user.address?.[selectedAddressIndex as number]?.address || 'NA',
-                            city: selectedGovernorate?.name_en || 'NA',
-                            country: 'EG',
-                            state: selectedGovernorate?.name_en || 'NA',
-                        }
-                    );
+            if (selectedPayment === 'online') {
+                // try {
+                //     const responseData = await initiatePaymobPayment(
+                //         result.order_id,
+                //         payload.grand_total!,
+                //         {
+                //             first_name: user.name.split(' ')[0],
+                //             last_name: user.name.split(' ').slice(1).join(' ') || 'NA',
+                //             email: user.email,
+                //             phone: user.phone[0] || data.guest_phone!,
+                //         },
+                //         {
+                //             street: payload.guest_address?.address || user.address?.[selectedAddressIndex as number]?.address || 'NA',
+                //             city: selectedGovernorate?.name_en || 'NA',
+                //             country: 'EG',
+                //             state: selectedGovernorate?.name_en || 'NA',
+                //         }
+                //     );
 
-                    if (responseData.error) {
-                        toast.error(responseData.error);
-                        setLoading(false);
-                        return;
-                    }
+                //     if (responseData.error) {
+                //         toast.error(responseData.error);
+                //         setLoading(false);
+                //         return;
+                //     }
 
-                    if (responseData.iframeUrl) {
-                        await clearCart();
-                        window.location.href = responseData.iframeUrl;
-                        return;
-                    }
-                } catch (err) {
-                    console.error(err);
-                    toast.error("checkout.errors.paymentFailed");
-                    setLoading(false);
-                    return;
-                }
+                //     if (responseData.iframeUrl) {
+                //         await clearCart();
+                //         window.location.href = responseData.iframeUrl;
+                //         return;
+                //     }
+                // } catch (err) {
+                //     console.error(err);
+                //     toast.error("checkout.errors.paymentFailed");
+                //     setLoading(false);
+                //     return;
+                // }
             }
 
-            toast.success('checkout.success.orderCreated');
+            toast.success(t('checkout.success.orderCreated'));
             // navigate first, then clear the cart to avoid in-place redirect from cart-empty watchers
             router.push(`/orders/${result.order_id}`);
             await clearCart();
@@ -221,7 +212,7 @@ export function CheckoutUserScreen({ governorates, user }: { governorates: Gover
                                                         {...register('guest_phone', { required: t('checkout.errors.required', { field: t('checkout.phone') }) })}
                                                         type="text"
                                                         onChange={(e) => setValue('guest_phone', e.target.value)}
-                                                        placeholder={t('checkout.phone')}
+                                                        placeholder={t('checkout.placeholders.phone')}
                                                         className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all"
                                                     />
                                                     <Phone className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -250,7 +241,7 @@ export function CheckoutUserScreen({ governorates, user }: { governorates: Gover
                                                     <input
                                                         type="text"
                                                         onChange={(e) => setValue('guest_phone2', e.target.value)}
-                                                        placeholder={t('checkout.altPhone')}
+                                                        placeholder={t('checkout.placeholders.phone')}
                                                         className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all"
                                                     />
                                                     <Phone className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -331,7 +322,7 @@ export function CheckoutUserScreen({ governorates, user }: { governorates: Gover
                                                             {...register('guest_address.address', { required: t('checkout.errors.required', { field: t('checkout.streetAddress') }) })}
                                                             type="text"
                                                             onChange={(e) => setValue('guest_address.address', e.target.value)}
-                                                            placeholder="123 Main St, Apt 4B"
+                                                            placeholder={t('checkout.placeholders.address')}
                                                             className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all"
                                                         />
                                                         <MapPin className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -395,17 +386,21 @@ export function CheckoutUserScreen({ governorates, user }: { governorates: Gover
                                         </div>
 
                                         <div
-                                            onClick={() => setSelectedPayment('paymob')}
-                                            className={`cursor-pointer border rounded-xl p-4 flex items-center gap-4 transition-all ${selectedPayment === 'paymob' ? 'border-primary-500 bg-primary-50 ring-1 ring-primary-500' : 'border-gray-200 hover:border-primary-200 hover:bg-gray-50'}`}
+                                            onClick={() => { }}
+
+                                            className={`cursor-not-allowed border rounded-xl p-4 flex items-center gap-4 transition-all ${selectedPayment === 'online' ? 'border-primary-500 bg-primary-50 ring-1 ring-primary-500' : 'border-gray-200 hover:border-primary-200 hover:bg-gray-50'}`}
                                         >
-                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${selectedPayment === 'paymob' ? 'bg-primary-100 text-primary-600' : 'bg-gray-100 text-gray-500'}`}>
+                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${selectedPayment === 'online' ? 'bg-primary-100 text-primary-600' : 'bg-gray-100 text-gray-500'}`}>
                                                 <CreditCard size={20} />
                                             </div>
                                             <div className="flex-1">
-                                                <p className={`font-semibold ${selectedPayment === 'paymob' ? 'text-primary-900' : 'text-gray-900'}`}>{t('checkout.online')}</p>
-                                                <p className="text-sm text-gray-500">{t('checkout.onlineDesc')}</p>
+                                                <p className={`font-semibold ${selectedPayment === 'online' ? 'text-primary-900' : 'text-gray-900'}`}>{t('checkout.online')}</p>
+                                                <p className="text-sm text-gray-500">
+                                                    {t('comingSoon')}
+                                                    {/* {t('checkout.onlineDesc')} */}
+                                                </p>
                                             </div>
-                                            {selectedPayment === 'paymob' && <CheckCircle2 className="text-primary-600" size={20} />}
+                                            {selectedPayment === 'online' && <CheckCircle2 className="text-primary-600" size={20} />}
                                         </div>
                                     </div>
                                 </div>

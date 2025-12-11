@@ -1,6 +1,7 @@
 "use client";
 import { ArrowRightIcon, Handbag, Trash2Icon, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useEffect } from "react";
 import { useCart } from "@/ui/providers/CartProvider";
 import { Tooltip } from "flowbite-react";
 import Counter from "@/ui/components/store/Counter";
@@ -11,10 +12,26 @@ import Image from "next/image";
 export default function CartPage() {
     const router = useRouter();
     const { t } = useTranslation();
-    const { cart, removeFromCart, clearCart, updateQuantity } = useCart();
+    const { cart, removeFromCart, clearCart, updateQuantity, syncCart } = useCart();
 
     // Use the new hook for data fetching and caching
-    const { data: products = [], isLoading: loadingProducts } = useCartProducts();
+    const { data: products = [], isLoading: loadingProducts, refresh } = useCartProducts();
+
+    // Keep cart synced with latest stock data
+    useEffect(() => {
+        if (products.length > 0) {
+            syncCart(products);
+        }
+    }, [products, syncCart]);
+
+    // Poll for stock updates every 30 seconds
+    useEffect(() => {
+        const interval = setInterval(() => {
+            refresh();
+        }, 30000); // 30 seconds
+
+        return () => clearInterval(interval);
+    }, [refresh]);
 
     // --- RENDER LOGIC ---
 

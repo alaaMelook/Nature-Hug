@@ -32,6 +32,7 @@ declare global {
         loading: boolean;
         applyPromoCode: (code: string) => Promise<void>;
         removePromoCode: () => Promise<void>;
+        syncCart: (products: any[]) => void;
     }
 
     type SupabaseAuthContextType = {

@@ -2,78 +2,70 @@
 import { useCart } from "@/ui/providers/CartProvider";
 import { GetProductsData } from "@/ui/hooks/store/useProductsData";
 import { useTranslation } from "react-i18next";
-import { CartItem, ProductView } from "@/domain/entities/views/shop/productView";
+import { CartItem } from "@/domain/entities/views/shop/productView";
 import { useEffect, useMemo, useState } from "react";
-
-// Simple in-memory cache: lang:slug -> ProductView
-const productCache = new Map<string, ProductView>();
 
 export function useCartProducts() {
     const { cart, loading: cartLoading } = useCart();
     const { i18n } = useTranslation();
     const lang = i18n.language as LangKey;
     const [isLoading, setIsLoading] = useState(true);
-    // We use a counter to trigger re-renders when cache updates
-    const [_, setTick] = useState(0);
+    // We use a counter to trigger re-renders and re-fetches
+    const [tick, setTick] = useState(0);
+    const [products, setProducts] = useState<CartItem[]>([]);
+
+    const refresh = () => {
+        setTick(prev => prev + 1);
+    };
 
     useEffect(() => {
         let mounted = true;
         const slugs = cart.items.map((item) => item.slug);
 
         if (slugs.length === 0) {
-            setIsLoading(false);
+            if (mounted) {
+                setProducts([]);
+                setIsLoading(false);
+            }
             return;
         }
 
-        const fetchMissing = async () => {
-            const repo = new GetProductsData(lang);
-            // Check cache using composite key
-            const missingSlugs = slugs.filter(slug => !productCache.has(`${lang}:${slug}`));
-
-            if (missingSlugs.length === 0) {
-                if (mounted) setIsLoading(false);
-                return;
-            }
-
+        const fetchData = async () => {
             if (mounted) setIsLoading(true);
+            const repo = new GetProductsData(lang);
 
-            await Promise.all(missingSlugs.map(async (slug) => {
-                try {
-                    const product = await repo.bySlug(slug);
-                    if (product) {
-                        // Store with composite key
-                        productCache.set(`${lang}:${slug}`, product);
+            // Allow bypassing cache if the repo supports it, or just plain fetch
+            // Since we want fresh stock, we fetch all current cart items again
+            const newProducts: CartItem[] = [];
+
+            try {
+                await Promise.all(slugs.map(async (slug) => {
+                    try {
+                        const product = await repo.bySlug(slug);
+                        if (product) {
+                            newProducts.push({
+                                ...product,
+                                quantity: cart.items.find(i => i.slug === slug)?.quantity || 0
+                            });
+                        }
+                    } catch (error) {
+                        console.error(`Failed to fetch product ${slug}`, error);
                     }
-                } catch (error) {
-                    console.error(`Failed to fetch product ${slug}`, error);
+                }));
+            } finally {
+                if (mounted) {
+                    setProducts(newProducts);
                 }
-            }));
-
-            if (mounted) {
                 setIsLoading(false);
-                setTick(t => t + 1); // Force re-render to pick up new cache values
             }
         };
 
-        fetchMissing();
+        fetchData();
 
         return () => {
             mounted = false;
         };
-    }, [cart.items, lang]); // Re-run if cart items or language changes
+    }, [cart.items, lang, tick]); // Re-run if cart items, language, or tick changes
 
-    // Merge product details from cache with current cart quantities
-    const products: CartItem[] = useMemo(() => {
-        return cart.items.map(item => {
-            // Retrieve using composite key
-            const cachedProduct = productCache.get(`${lang}:${item.slug}`);
-            if (!cachedProduct) return null;
-            return {
-                ...cachedProduct,
-                quantity: item.quantity
-            };
-        }).filter((item): item is CartItem => item !== null);
-    }, [cart.items, _, lang]); // Re-calculate when cart items change, cache updates (tick), or language changes
-
-    return { data: products, isLoading: cartLoading || (isLoading && products.length < cart.items.length) };
+    return { data: products, isLoading: cartLoading || isLoading, refresh };
 }
