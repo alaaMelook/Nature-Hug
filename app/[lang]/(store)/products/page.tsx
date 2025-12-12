@@ -4,8 +4,11 @@ import { GetAllCategories } from "@/domain/use-case/store/getAllCategories";
 
 export default async function Products({ params }: { params: Promise<{ lang?: string }> }) {
     const lang = (await params).lang as LangKey || 'ar';
-    const product = await new ViewAllProducts(lang).execute();
-    const categories = await new GetAllCategories().execute();
+
+    const [product, categories] = await Promise.all([
+        new ViewAllProducts(lang).execute(),
+        new GetAllCategories(lang).execute()
+    ]);
     return (
         <ProductsScreen initProducts={product} initCategories={categories} />
     );

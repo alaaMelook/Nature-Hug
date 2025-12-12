@@ -4,9 +4,8 @@ import { OrderDetailsScreen } from "@/ui/client-screens/admin/order-details-scre
 import { notFound } from "next/navigation";
 
 export default async function OrderPage({ params }: { params: { id: string } }) {
-    const ordersUseCase = new Orders();
     const id = (await params).id;
-    const order = await ordersUseCase.getById(id);
+    const order = await new Orders().getById(id);
     const governorate = await new GetAllGovernorates().bySlug(order?.governorate_slug || "");
 
     if (!order) {

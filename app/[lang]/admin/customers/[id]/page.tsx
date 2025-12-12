@@ -7,9 +7,11 @@ export default async function CustomerProfilePage({ params }: { params: { id: st
     const repo = new ICustomerServerRepository();
     const customerId = parseInt((await params).id);
 
-    const customer = await repo.viewProfile(customerId);
-    const orders = await repo.viewAllOrders(customerId);
-    const member = await repo.fetchMember(customerId);
+    const [customer, orders, member] = await Promise.all([
+        repo.viewProfile(customerId),
+        repo.viewAllOrders(customerId),
+        repo.fetchMember(customerId)
+    ]);
 
     const handlePromote = async (role: MemberRole) => {
         'use server';

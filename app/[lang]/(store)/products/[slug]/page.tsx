@@ -6,9 +6,10 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     const resolvedParams = await params;
     const slug = resolvedParams.slug;
     const lang = resolvedParams.lang as LangKey;
-    const initProduct = await new ViewProduct(lang).execute(slug);
-
-    const similarProducts = await new ViewSimilarProducts(lang).execute(slug);
+    const [initProduct, similarProducts] = await Promise.all([
+        new ViewProduct(lang).execute(slug),
+        new ViewSimilarProducts(lang).execute(slug)
+    ]);
 
     return (
         <ProductDetailScreen initProduct={initProduct} similarProducts={similarProducts} />

@@ -4,9 +4,11 @@ import { CheckoutUserScreen } from "@/ui/client-screens/(store)/checkout-user-sc
 import { ViewProfile } from "@/domain/use-case/store/viewProfile";
 
 export default async function CheckoutPage() {
-    let governorates = await new GetAllGovernorates().execute();
+    let [governorates, user] = await Promise.all([
+        new GetAllGovernorates().execute(),
+        new ViewProfile().execute()
+    ]);
     governorates = governorates.sort((a, b) => a.name_en.localeCompare(b.name_en))
-    const user = await new ViewProfile().execute();
 
 
     if (user)
