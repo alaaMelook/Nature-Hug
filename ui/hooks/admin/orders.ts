@@ -10,8 +10,8 @@ const ordersUseCase = new Orders();
 export async function updateOrderAction(order: OrderDetailsView) {
     try {
         await ordersUseCase.update(order);
-        // revalidatePath("/[lang]/admin/orders", "page");
-        // revalidatePath(`/[lang]/admin/orders/${order.order_id}`, "page");
+        revalidatePath("/[lang]/admin/orders", "page");
+        revalidatePath(`/[lang]/admin/orders/${order.order_id}`, "page");
         return { success: true };
     } catch (error) {
         console.error("Failed to update order:", error);

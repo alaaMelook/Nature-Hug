@@ -347,7 +347,7 @@ function orderActions({ status, awb }: { status: string, awb: string | null }) {
         case 'out for delivery':
             return { pos: awb ? null : 'markAsShipped', neg: 'cancelOrder', status_pos: awb ? '' : 'shipped', status_neg: 'cancelled' };
         case 'shipped':
-            return { pos: awb ? null : 'markAsDelivered', neg: 'returnOrder', status_pos: awb ? '' : 'delivered', status_neg: 'returned' };
+            return { pos: awb ? null : 'markAsDelivered', neg: 'returnOrder', status_pos: awb ? '' : 'completed', status_neg: 'returned' };
         default:
             return { pos: null, neg: null, status_pos: '', status_neg: '' };
     }
