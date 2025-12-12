@@ -315,6 +315,7 @@ export const resources = {
       bom: "Bill of Materials",
       costing: "Costing",
       movements: "Movements",
+      loading: "Loading...",
 
       // Orders
       acceptSelected: "Accept Selected",
@@ -778,6 +779,7 @@ export const resources = {
       heroDescription: "حيث كل مكون هو وعد.",
       addedLocal: "تمت الإضافة للعربة المحلية (سجل الدخول للمزامنة).",
       addedServer: "تمت إضافة المنتج للعربة!",
+      loading: "جارٍ تحميل...",
 
       // Features
       features: [

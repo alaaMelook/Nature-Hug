@@ -67,9 +67,10 @@ export function OrderDetailsScreen({ order, governorate }: { order: OrderDetails
             } else if (newStatus === 'cancelled' && order.order_status === 'out for delivery') {
 
                 result = await cancelShippedOrderAction(order);
-            } else if (newStatus === 'out for delivery' && !isManual) {
-                // Simplified city lookup for demo
+            }
 
+            else if (newStatus === 'out for delivery' && !isManual) {
+                // Simplified city lookup for demo
                 const shipmentData: Shipment = {
                     clientName: "Nature Hug",
                     toCityName: governorate.name_ar,
@@ -104,7 +105,7 @@ export function OrderDetailsScreen({ order, governorate }: { order: OrderDetails
         }
     };
 
-    const actions = orderActions({ status: order.order_status });
+    const actions = orderActions({ status: order.order_status, awb: order.awb });
 
     const containerVariants = {
         hidden: { opacity: 0 },
@@ -337,16 +338,16 @@ export function OrderDetailsScreen({ order, governorate }: { order: OrderDetails
 }
 
 
-function orderActions({ status }: { status: string }) {
+function orderActions({ status, awb }: { status: string, awb: string | null }) {
     switch (status) {
         case 'pending':
             return { pos: 'acceptOrder', neg: 'rejectOrder', status_pos: 'processing', status_neg: 'declined' };
         case 'processing':
             return { pos: 'markAsOutForDelivery', neg: 'cancelOrder', status_pos: 'out for delivery', status_neg: 'cancelled' };
         case 'out for delivery':
-            return { pos: null, neg: 'cancelOrder', status_pos: '', status_neg: 'cancelled' };
+            return { pos: awb ? null : 'markAsShipped', neg: 'cancelOrder', status_pos: awb ? '' : 'shipped', status_neg: 'cancelled' };
         case 'shipped':
-            return { pos: null, neg: 'returnOrder', status_pos: '', status_neg: 'returned' };
+            return { pos: awb ? null : 'markAsDelivered', neg: 'returnOrder', status_pos: awb ? '' : 'delivered', status_neg: 'returned' };
         default:
             return { pos: null, neg: null, status_pos: '', status_neg: '' };
     }
