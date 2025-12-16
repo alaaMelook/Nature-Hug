@@ -12,6 +12,8 @@ export const useSupabase = () => {
     const [user, setUser] = useState<Customer | null>(null);
     const [member, setMember] = useState<Member | null>(null);
     const [loading, setLoading] = useState(true);
+    const [sessionToken, setSessionToken] = useState<string | null>(null);
+    const [isAnon, setIsAnon] = useState(false);
 
     /**
      * Unified function to refresh all auth state (User + Member)
@@ -21,9 +23,18 @@ export const useSupabase = () => {
         try {
             // 1. Get the current active session from Supabase
             const { data: { session } } = await supabase.auth.getSession();
-
             if (!session?.user) {
                 // No session? Clear everything.
+                loginAnonymously();
+                setUser(null);
+                setMember(null);
+                return;
+            }
+
+            const isAnonymous = session?.user?.is_anonymous || false;
+            setIsAnon(isAnonymous);
+
+            if (isAnonymous) {
                 setUser(null);
                 setMember(null);
                 return;
@@ -34,6 +45,7 @@ export const useSupabase = () => {
             const customer = await CustomerRepoClient.fetchCustomer(session.user.id);
 
             if (!customer) {
+                // loginAnonymously();
                 // If we have an auth session but no database record, treat as logged out or incomplete
                 console.warn("[useSupabase] Auth session exists but Customer record not found.");
                 setUser(null);
@@ -66,12 +78,11 @@ export const useSupabase = () => {
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
             console.log(`[useSupabase] Auth Event: ${event}`);
 
-            if (event === 'SIGNED_OUT' || !session) {
-                setUser(null);
-                setMember(null);
-                setLoading(false);
+            if (event === 'SIGNED_OUT') {
+                await loginAnonymously();
             } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
                 // Re-fetch everything to ensure we have the latest DB data
+                console.log("[useSupabase] Auth Event: SIGNED_IN with data: ", session);
                 setLoading(true);
                 await refreshSession();
             }
@@ -101,8 +112,11 @@ export const useSupabase = () => {
         setLoading(true);
         try {
             await supabase.auth.signOut();
+            setUser(null);
+            setMember(null);
             // State clearing is handled by onAuthStateChange('SIGNED_OUT')
         } finally {
+            setSessionToken(null);
             setLoading(false);
         }
     };
@@ -120,6 +134,7 @@ export const useSupabase = () => {
             if (data.user) {
                 // While onAuthStateChange will trigger, awaiting here ensures
                 // the caller (e.g. Login form) doesn't redirect until data is ready.
+                setSessionToken(data.user.id);
                 await refreshSession();
             }
         } catch (err) {
@@ -131,8 +146,31 @@ export const useSupabase = () => {
             setLoading(false);
         }
     };
-
+    const loginAnonymously = async () => {
+        setLoading(true);
+        try {
+            const { data, error } = await supabase.auth.signInAnonymously()
+            if (error) throw error;
+            console.log("[useSupabase] Login anonymously:", data.user);
+            if (data.user) {
+                // While onAuthStateChange will trigger, awaiting here ensures
+                // the caller (e.g. Login form) doesn't redirect until data is ready.
+                setIsAnon(true);
+                setSessionToken(data.user.id);
+                await refreshSession();
+            }
+        } catch (err) {
+            console.error("[useSupabase] Login failed:", err);
+            setUser(null);
+            setMember(null);
+            setIsAnon(false);
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    };
     return {
+        sessionToken,
         user,
         member,
         loading,

@@ -6,34 +6,24 @@ import { useCart } from "@/ui/providers/CartProvider";
 import { Tooltip } from "flowbite-react";
 import Counter from "@/ui/components/store/Counter";
 import { useRouter } from "next/navigation";
-import { useCartProducts } from "@/ui/hooks/store/useCartProducts";
 import Image from "next/image";
 
 export default function CartPage() {
     const router = useRouter();
     const { t } = useTranslation();
-    const { cart, removeFromCart, clearCart, updateQuantity, syncCart } = useCart();
+    const { cart, removeFromCart, clearCart, updateQuantity } = useCart();
 
-    // Use the new hook for data fetching and caching
-    const { data: products = [], isLoading: loadingProducts, refresh } = useCartProducts();
+    const products = cart.items;
 
-    // Keep cart synced with latest stock data
-    useEffect(() => {
-        if (products.length > 0) {
-            syncCart(products);
-        }
-    }, [products, syncCart]);
 
-    // Poll for stock updates every 30 seconds
-    useEffect(() => {
-        const interval = setInterval(() => {
-            refresh();
-        }, 30000); // 30 seconds
-
-        return () => clearInterval(interval);
-    }, [refresh]);
 
     // --- RENDER LOGIC ---
+
+
+    // Loading state is now handled by CartProvider's global loading if needed,
+    // or we can skip it since cart is loaded from local storage quickly.
+    // If we want to show loading during initial sync, we can use useCart().loading
+    // But usually rendering the cart immediately is fine.
 
     if (cart.items.length === 0) {
         return (
@@ -58,20 +48,6 @@ export default function CartPage() {
             </div>
         );
     }
-    if (loadingProducts) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-screen bg-white p-8 text-center transition-colors duration-300 ">
-                <Handbag className="h-20 w-20 text-primary-200 mb-6 animate-spin-slow" />
-                <h1 className="text-4xl font-extrabold text-slate-900 mb-2">
-                    {t("loadingCart")}
-                </h1>
-                <p className="text-lg text-slate-600 mb-8 max-w-sm">
-                    {t("pleaseWait")}
-                </p>
-            </div>
-        );
-    }
-
     return (
         <div className="bg-gray-100 min-h-screen py-16 antialiased text-slate-900 transition-colors duration-300">
             <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">

@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import { ProductAdminView } from "@/domain/entities/views/admin/productAdminView";
 import { Search, Plus, Filter, Trash2, Package, PlusCircle, X, Check, ChevronDown } from "lucide-react";
-import { deleteProduct } from "@/ui/hooks/admin/products";
+import { deleteProduct, toggleProductVisibilityAction } from "@/ui/hooks/admin/products";
 import { toast } from "sonner";
 import Image from "next/image";
 import { useTranslation } from "react-i18next";
@@ -85,6 +85,21 @@ export function ProductsScreen({ products, materials }: { products: ProductAdmin
 
         if (result.success) {
             toast.success(t("stockAdded") || "Stock added successfully");
+            router.refresh();
+        } else {
+            toast.error(result.error);
+        }
+    };
+
+    const handleVisibilityToggle = async (product: ProductAdminView) => {
+        const isVariant = !!product.variant_id;
+        const id = isVariant ? product.variant_id! : product.product_id;
+        const newVisibility = !product.visible;
+
+        const result = await toggleProductVisibilityAction(id, isVariant, newVisibility);
+
+        if (result.success) {
+            toast.success(t("visibilityUpdated") || "Visibility updated");
             router.refresh();
         } else {
             toast.error(result.error);
@@ -240,6 +255,7 @@ export function ProductsScreen({ products, materials }: { products: ProductAdmin
                                 <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">{t("category")}</th>
                                 <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">{t("price")}</th>
                                 <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">{t("stock")}</th>
+                                <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">{t("visibility")}</th>
                                 <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center"></th>
                             </tr>
                         </thead>
@@ -311,6 +327,20 @@ export function ProductsScreen({ products, materials }: { products: ProductAdmin
                                                 </button>
                                             </div>
                                         </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                                            <div className="flex items-center justify-center">
+                                                <button
+                                                    onClick={() => handleVisibilityToggle(product)}
+                                                    className={`w-10 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors ${product.visible ? 'bg-green-500' : 'bg-gray-300'}`}
+                                                >
+                                                    <motion.div
+                                                        layout
+                                                        transition={{ type: "spring", stiffness: 700, damping: 30 }}
+                                                        className={`bg-white w-4 h-4 rounded-full shadow-md ${i18n.dir() === 'ltr' ? product.visible ? 'translate-x-4' : 'translate-x-0' : product.visible ? '-translate-x-4' : 'translate-x-0'}`}
+                                                    />
+                                                </button>
+                                            </div>
+                                        </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-end text-sm font-medium">
                                             <div className="flex items-center justify-end space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <button
@@ -369,7 +399,8 @@ export function ProductsScreen({ products, materials }: { products: ProductAdmin
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <div className="flex justify-between items-start">
-                                        <h3 className="text-sm font-semibold text-gray-900 truncate pr-2">{product.name_en}</h3>
+                                        <h3 className="text-sm font-semibold text-gray-900 truncate pr-2">{i18n.language === "ar" ? product.name_ar : product.name_en}</h3>
+
                                         <div className="flex items-center space-x-1">
 
                                             <button
@@ -379,6 +410,21 @@ export function ProductsScreen({ products, materials }: { products: ProductAdmin
                                                 <Trash2 className="w-4 h-4" />
                                             </button>
                                         </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <button
+                                            onClick={() => handleVisibilityToggle(product)}
+                                            className={`w-10 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors ${product.visible ? 'bg-green-500' : 'bg-gray-300'}`}
+                                        >
+                                            <motion.div
+                                                layout
+                                                transition={{ type: "spring", stiffness: 700, damping: 30 }}
+                                                className={`bg-white w-4 h-4 rounded-full shadow-md ${product.visible ? 'translate-x-4' : 'translate-x-0'}`}
+                                            />
+                                        </button>
+                                        <span className={`text-xs font-medium ${product.visible ? 'text-green-600' : 'text-gray-500'}`}>
+                                            {product.visible ? t("visible") : t("hidden")}
+                                        </span>
                                     </div>
                                     <p className="text-xs text-gray-500 mt-0.5">{i18n.language === "ar" ? product.category_name_ar ?? product.category_name_en : product.category_name_en || 'Uncategorized'}</p>
                                     <div className="mt-2 flex items-center justify-between">

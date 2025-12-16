@@ -11,8 +11,9 @@ import { useForm } from "react-hook-form";
 import { createOrder } from "@/ui/hooks/store/useCreateOrderActions";
 import { useRouter } from "next/navigation";
 import { Loader2, MapPin, Plus, CreditCard, Banknote, CheckCircle2, Phone, User, Mail, Edit2 } from "lucide-react";
-import { useCartProducts } from "@/ui/hooks/store/useCartProducts";
+
 import { useTranslation, Trans } from "react-i18next";
+import Link from "next/link";
 
 
 type FormValues = Partial<Order> & {
@@ -25,7 +26,7 @@ export function CheckoutUserScreen({ governorates, user }: { governorates: Gover
     const [selectedGovernorate, setSelectedGovernorate] = useState<Governorate | null>(user?.address?.[0]?.governorate ?? null);
     // index of selected saved address, or 'new' to create another
     const [selectedAddressIndex, setSelectedAddressIndex] = useState<number | 'new'>(user?.address && user.address.length > 0 ? 0 : 'new');
-    const { cart, getCartTotal, clearCart, syncCart } = useCart();
+    const { cart, getCartTotal, clearCart } = useCart();
     const [loading, setLoading] = useState(false);
     const [selectedPayment, setSelectedPayment] = useState<'cod' | 'online'>('cod');
     const { register, handleSubmit, formState: { errors }, setValue, setError } = useForm<FormValues>({
@@ -34,7 +35,8 @@ export function CheckoutUserScreen({ governorates, user }: { governorates: Gover
         }
     });
     const router = useRouter();
-    const { data: products = [], isLoading: loadingProducts, refresh } = useCartProducts();
+    const products = cart.items;
+
 
 
     useEffect(() => {
@@ -290,7 +292,7 @@ export function CheckoutUserScreen({ governorates, user }: { governorates: Gover
                                                     </div>
                                                     <div>
                                                         <p className="font-medium text-gray-900">{addr.address}</p>
-                                                        <p className="text-sm text-gray-500">{addr.governorate?.name_en}</p>
+                                                        <p className="text-sm text-gray-500">{i18n.language === 'ar' ? addr.governorate?.name_ar : addr.governorate?.name_en}</p>
                                                     </div>
                                                 </div>
                                             </div>
@@ -344,7 +346,7 @@ export function CheckoutUserScreen({ governorates, user }: { governorates: Gover
                                                             }}>
                                                             <option value={''}>{t('checkout.selectGovernorate')}</option>
                                                             {governorates.map((gov) => (
-                                                                <option key={gov.slug} value={gov.slug}>{gov.name_en}</option>
+                                                                <option key={gov.slug} value={gov.slug}>{i18n.language === 'ar' ? gov.name_ar : gov.name_en}</option>
                                                             ))}
                                                         </select>
                                                         <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
@@ -388,16 +390,15 @@ export function CheckoutUserScreen({ governorates, user }: { governorates: Gover
                                         <div
                                             onClick={() => { }}
 
-                                            className={`cursor-not-allowed border rounded-xl p-4 flex items-center gap-4 transition-all ${selectedPayment === 'online' ? 'border-primary-500 bg-primary-50 ring-1 ring-primary-500' : 'border-gray-200 hover:border-primary-200 hover:bg-gray-50'}`}
+                                            className={` border rounded-xl p-4 flex items-center gap-4 transition-all ${selectedPayment === 'online' ? 'border-primary-500 bg-primary-50 ring-1 ring-primary-500' : 'border-gray-200'}`}
                                         >
                                             <div className={`w-10 h-10 rounded-full flex items-center justify-center ${selectedPayment === 'online' ? 'bg-primary-100 text-primary-600' : 'bg-gray-100 text-gray-500'}`}>
                                                 <CreditCard size={20} />
                                             </div>
                                             <div className="flex-1">
-                                                <p className={`font-semibold ${selectedPayment === 'online' ? 'text-primary-900' : 'text-gray-900'}`}>{t('checkout.online')}</p>
+                                                <p className={`font-semibold ${selectedPayment === 'online' ? 'text-primary-900' : 'text-gray-900'}`}>{t('checkout.online')}<span className="text-gray-500 mx-2 text-xs">({t('comingSoon')})</span></p>
                                                 <p className="text-sm text-gray-500">
-                                                    {t('comingSoon')}
-                                                    {/* {t('checkout.onlineDesc')} */}
+                                                    <Trans i18nKey={'otherOnlineOptions'} components={{ a: <Link href="https://wa.me/201090998664" target="_blank" className="text-primary-600 hover:underline font-semibold"></Link>, b: <span className="font-semibold"></span> }} />
                                                 </p>
                                             </div>
                                             {selectedPayment === 'online' && <CheckCircle2 className="text-primary-600" size={20} />}
@@ -413,7 +414,7 @@ export function CheckoutUserScreen({ governorates, user }: { governorates: Gover
                                         className="w-5 h-5 border-gray-300 rounded text-primary-600 focus:ring-primary-500"
                                     />
                                     <label htmlFor="terms" className="text-sm text-gray-600 cursor-pointer select-none">
-                                        <Trans i18nKey="checkout.terms" components={{ 1: <span className="text-primary-600 font-medium hover:underline" /> }} />
+                                        <Trans i18nKey="checkout.terms" components={{ 1: <Link href="/contact-us" target="_blank" className="text-primary-600 font-medium hover:underline" /> }} />
                                     </label>
                                 </div>
                                 {errors.termsAccepted && (

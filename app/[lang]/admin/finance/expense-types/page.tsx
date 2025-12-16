@@ -18,27 +18,27 @@ export default function ExpenseTypesPage() {
 
   // ✅ إضافة نوع جديد
   const handleAdd = async () => {
-   if (!newType.name) {
-    alert("⚠️ لازم تدخل اسم النوع");
-    return;
-  }
+    if (!newType.name) {
+      alert("⚠️ لازم تدخل اسم النوع");
+      return;
+    }
 
-  const res = await fetch("/api/admin/finance/expense-types", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(newType),
-  });
+    const res = await fetch("/api/admin/finance/expense-types", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newType),
+    });
 
-  const data = await res.json();
+    const data = await res.json();
 
-  if (res.ok) {
-    setAdding(false);
-    setNewType({ name: "", depreciation_rate: 0 });
-    fetchTypes();
-  } else {
-    alert("❌ خطأ: " + (data.error || "حاول تاني"));
-  }
-};
+    if (res.ok) {
+      setAdding(false);
+      setNewType({ name: "", depreciation_rate: 0 });
+      fetchTypes();
+    } else {
+      alert("❌ خطأ: " + (data.error || "حاول تاني"));
+    }
+  };
 
   // ✅ حذف نوع
   const handleDelete = async (id: number) => {
@@ -102,7 +102,8 @@ export default function ExpenseTypesPage() {
             />
 
             <input
-              type="number"
+              type="text" inputMode="numeric" pattern="[0-9]*"
+
               placeholder="نسبة الاستهلاك (%)"
               value={newType.depreciation_rate}
               onChange={(e) =>

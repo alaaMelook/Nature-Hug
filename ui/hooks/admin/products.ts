@@ -1,4 +1,5 @@
 'use server'
+import { IAdminServerRepository } from "@/data/repositories/server/iAdminRepository";
 
 import { CreateProduct } from "@/domain/use-case/admin/products/createProduct";
 import { ProductAdminView } from "@/domain/entities/views/admin/productAdminView";
@@ -24,10 +25,21 @@ export async function createProductAction(product: ProductAdminView) {
 }
 export async function deleteProduct(product: ProductAdminView) {
     try {
-        await new DeleteProduct().execute(product.slug!)
+        await new DeleteProduct().execute(product)
         return { success: true };
     } catch (error) {
         console.error("Failed to delete product:", error);
         return { success: false, error: "Failed to delete product" };
+    }
+}
+
+
+export async function toggleProductVisibilityAction(id: number, isVariant: boolean, visible: boolean) {
+    try {
+        await new IAdminServerRepository().toggleProductVisibility(id, isVariant, visible);
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to toggle product visibility:", error);
+        return { success: false, error: "Failed to toggle product visibility" };
     }
 }

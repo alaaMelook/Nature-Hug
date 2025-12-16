@@ -1,5 +1,5 @@
 import { Material } from "@/domain/entities/database/material";
-import { DashboardMetricsView } from "@/domain/entities/views/admin/dashboardMetricsView";
+import { DashboardStats } from "@/domain/entities/views/admin/dashboardMetricsView";
 import { OrderDetailsView } from "@/domain/entities/views/admin/orderDetailsView";
 import { ProductAdminView } from "@/domain/entities/views/admin/productAdminView";
 import { ReviewAdminView } from "@/domain/entities/views/admin/reviewAdminView";
@@ -8,7 +8,9 @@ import { Category } from "../entities/database/category";
 export interface AdminRepository {
     getOrderDetails(): Promise<OrderDetailsView[]>;
 
-    getDashboardMetrics(): Promise<DashboardMetricsView>;
+    getDashboardMetrics(startDate: string,
+        endDate: string
+    ): Promise<DashboardStats>;
 
     getAllMaterials(): Promise<Material[]>;
 
@@ -24,7 +26,7 @@ export interface AdminRepository {
 
     updateProduct(product: ProductAdminView): Promise<number>;
 
-    deleteProduct(slug: string): Promise<void>;
+    deleteProduct(product: ProductAdminView): Promise<void>;
 
     uploadImage(file: File): Promise<string>;
 
@@ -44,4 +46,5 @@ export interface AdminRepository {
 
     getAllGovernorates(): Promise<any[]>;
     updateGovernorateFees(slug: string, fees: number): Promise<void>;
+    toggleProductVisibility(id: number, isVariant: boolean, visible: boolean): Promise<void>;
 }

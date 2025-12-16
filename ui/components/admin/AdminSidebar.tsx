@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useParams } from "next/navigation";
 import {
   Home,
   Users,
@@ -28,6 +28,8 @@ export default function AdminSidebar({
   member?: MemberView;
 }) {
   const pathname = usePathname();
+  const params = useParams();
+  const lang = params?.lang as string;
   const { t, i18n } = useTranslation();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
@@ -216,7 +218,7 @@ export default function AdminSidebar({
   return (
     <>
       {/* Mobile Trigger */}
-      <div className={`md:hidden fixed bottom-15 ${i18n.language === 'ar' ? 'right-6' : 'left-6'} z-50`}>
+      <div className={`md:hidden fixed bottom-15 ${lang === 'ar' ? 'right-6' : 'left-6'} z-50`}>
         <button
           onClick={() => setIsMobileOpen(!isMobileOpen)}
           className="bg-primary-600 text-white p-4 rounded-full shadow-lg hover:bg-primary-700 transition-transform active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"

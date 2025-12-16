@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -15,12 +15,19 @@ import { useCurrentLanguage } from "@/ui/hooks/useCurrentLanguage";
 
 
 import { usePathname } from "next/navigation";
-import { useEffect } from "react";
+
 
 export default function Navbar() {
     const [isOpen, setIsOpen] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isScrolled, setIsScrolled] = useState(false);
+
+    // Refs for click outside detection
+    const mobileMenuRef = useRef<HTMLDivElement>(null);
+    const mobileToggleRef = useRef<HTMLButtonElement>(null);
+    const settingsMenuRef = useRef<HTMLDivElement>(null);
+    const settingsToggleRef = useRef<HTMLButtonElement>(null);
+
     const { cart, getCartCount } = useCart();
     const count = useMemo(
         () => getCartCount(),
@@ -35,9 +42,10 @@ export default function Navbar() {
     // Check if we are on the home page (root or language root)
     const isHomePage = pathname === "/" || (pathname?.length === 3 && pathname?.startsWith("/"));
 
-    useEffect(() => {
+    // Fix hydration mismatch
+    const [mounted, setMounted] = useState(false);
 
-    }, [member]);
+
     useEffect(() => {
         const handleScroll = () => {
             if (window.scrollY > 10) {
@@ -51,7 +59,37 @@ export default function Navbar() {
         return () => {
             window.removeEventListener("scroll", handleScroll);
         };
-    }, []);
+    }, [member]);
+
+    // Click outside handler
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            // Close mobile menu if open and click is outside menu and toggle button
+            if (isOpen &&
+                mobileMenuRef.current &&
+                !mobileMenuRef.current.contains(event.target as Node) &&
+                mobileToggleRef.current &&
+                !mobileToggleRef.current.contains(event.target as Node)
+            ) {
+                setIsOpen(false);
+            }
+
+            // Close settings menu if open and click is outside menu and toggle button
+            if (isSettingsOpen &&
+                settingsMenuRef.current &&
+                !settingsMenuRef.current.contains(event.target as Node) &&
+                settingsToggleRef.current &&
+                !settingsToggleRef.current.contains(event.target as Node)
+            ) {
+                setIsSettingsOpen(false);
+            }
+        };
+
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, [isOpen, isSettingsOpen]);
 
     // Toggle mobile menu
     const toggleMobileMenu = useCallback(() => {
@@ -137,6 +175,7 @@ export default function Navbar() {
                 {user ? (
                     <div className="relative">
                         <button
+                            ref={settingsToggleRef}
                             onClick={toggleSettingsMenu}
                             className={`cursor-pointer flex items-center px-3 py-2 ${isHomePage && !isScrolled ? "" : "bg-primary-50 shadow-md  hover:bg-primary-100 transition"} text-primary-950 rounded-lg `}
                         >
@@ -144,7 +183,10 @@ export default function Navbar() {
                         </button>
 
                         {isSettingsOpen && (
-                            <div className={"absolute mt-2 w-48 bg-white rounded-lg shadow-lg border py-2 z-20" + (language == 'en' ? ' right-0' : ' left-0')}>
+                            <div
+                                ref={settingsMenuRef}
+                                className={"absolute mt-2 w-48 bg-white rounded-lg shadow-lg border py-2 z-20" + (language == 'en' ? ' right-0' : ' left-0')}
+                            >
                                 <Link
                                     href="/profile"
                                     onClick={() => setIsSettingsOpen(false)}
@@ -216,7 +258,10 @@ export default function Navbar() {
                         </span>
                     )}
                 </Link>
-                <button onClick={toggleMobileMenu}>
+                <button
+                    ref={mobileToggleRef}
+                    onClick={toggleMobileMenu}
+                >
                     {isOpen ? (
                         <X className="w-6 h-6 text-primary-900" />
                     ) : (
@@ -228,6 +273,7 @@ export default function Navbar() {
             {/* ---- Mobile Menu ---- */}
             {isOpen && (
                 <div
+                    ref={mobileMenuRef}
                     className="md:hidden absolute top-20 left-0 w-full bg-white shadow-md flex flex-col items-start py-4 space-y-2 z-50">
                     {navigationItems.map((item) => (
                         <Link

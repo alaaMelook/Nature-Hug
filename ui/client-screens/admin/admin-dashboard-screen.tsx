@@ -1,17 +1,20 @@
-'use client';
-import { DollarSign, Package, ShoppingCart, TrendingDown, TrendingUp, TrendingUpDown, Users, AlertCircle, Truck, ClipboardList, BrickWall, ArrowRight, Star } from "lucide-react";
-import { DashboardMetricsView } from "@/domain/entities/views/admin/dashboardMetricsView";
+"use client";
+
+import { Users, Package, ShoppingCart, DollarSign, TrendingUp, TrendingDown, TrendingUpDown, ClipboardList, Truck, BrickWall, AlertCircle, Star, ArrowRight, BadgeDollarSignIcon, HandCoins, ShoppingBasket } from "lucide-react";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
+import { useAdminDashboard } from "@/ui/hooks/admin/useAdminDashboard";
 
 interface StatCard {
     title: string;
-    value: number | string;
+    value: string | number;
     parValue: number | string;
     icon: any;
     change: number;
     color: string;
+    isCurrency?: boolean;
+    isCount?: boolean;
 }
 
 interface ActionCard {
@@ -23,46 +26,78 @@ interface ActionCard {
     description: string;
 }
 
-export function AdminDashboardScreen({ dashboard, actionStats }: {
-    dashboard: DashboardMetricsView;
+export function AdminDashboardScreen({ actionStats }: {
     actionStats: SidebarStats;
 }) {
     const { t } = useTranslation();
+    const { data: dashboard, loading, error, startDate, setStartDate, endDate, setEndDate } = useAdminDashboard();
 
     const statCards: StatCard[] = [
         {
             title: t("totalCustomers"),
-            value: dashboard?.total_customers,
-            parValue: dashboard?.current_month_customers,
+            value: dashboard?.total_customers ?? 0,
+            parValue: dashboard?.current_period_customers ?? 0,
             icon: Users,
-            change: dashboard?.customers_change,
+            change: parseFloat(dashboard?.customers_change ?? "0"),
             color: "text-blue-600 bg-blue-50",
+            isCount: true
         },
         {
             title: t("totalProducts"),
-            value: dashboard?.total_product,
-            parValue: dashboard?.current_month_products,
+            value: dashboard?.total_products ?? 0,
+            parValue: dashboard?.current_period_products ?? 0,
             icon: Package,
-            change: dashboard?.products_change,
+            change: parseFloat(dashboard?.products_change ?? "0"),
             color: "text-purple-600 bg-purple-50",
+            isCount: true
         },
         {
             title: t("totalOrders"),
-            value: dashboard?.total_orders,
-            parValue: dashboard?.current_month_orders,
+            value: dashboard?.total_orders ?? 0,
+            parValue: dashboard?.current_period_orders ?? 0,
             icon: ShoppingCart,
-            change: dashboard?.orders_change,
+            change: parseFloat(dashboard?.orders_change ?? "0"),
             color: "text-amber-600 bg-amber-50",
+            isCount: true
         },
         {
             title: t("totalRevenue"),
-            value: dashboard?.total_revenue,
-            parValue: dashboard?.current_month_revenue,
-            icon: DollarSign,
-            change: dashboard?.revenue_change,
+            value: parseFloat(dashboard?.total_revenue ?? "0"),
+            parValue: parseFloat(dashboard?.current_period_revenue ?? "0"),
+            icon: HandCoins,
+            change: parseFloat(dashboard?.revenue_change ?? "0"),
             color: "text-emerald-600 bg-emerald-50",
+            isCurrency: true
         },
+        {
+            title: t("avgOrderValue"),
+            value: parseFloat(dashboard?.current_period_avg_order_value ?? "0"),
+            parValue: 0, // No par value for AOV provided in this view specifically matching others? Or is it current_period? actually standard is comparison. 
+            // In DashboardStats: current_period_avg_order_value exists, avg_order_value_change exists. 
+            // We can display current value and the change.
+            icon: BadgeDollarSignIcon,
+
+            change: parseFloat(dashboard?.avg_order_value_change ?? "0"),
+            color: "text-cyan-600 bg-cyan-50",
+            isCurrency: true
+        },
+        // We can add Conversion Rate if needed, user said "all other parameters"
+        {
+            title: t("conversionRate"),
+            value: parseFloat(dashboard?.current_period_conversion_rate ?? "0"),
+            parValue: 0,
+            icon: ShoppingBasket,
+            change: 0, // conversion_rate_change not in DashboardStats yet? interface had: avg_order_value_change. 
+            // Checking interface DashboardStats: no conversion_rate_change.
+            // I'll display the value, change 0 for now or hide change?
+            color: "text-indigo-600 bg-indigo-50",
+            // It's a percentage value itself
+        }
     ];
+
+    // Remove conversion rate change if 0 means no data? 
+    // Actually user said "add all other parametes". current_period_conversion_rate is one.
+    // I entered 0 for change.
 
     const actionCards: ActionCard[] = [
         {
@@ -129,46 +164,115 @@ export function AdminDashboardScreen({ dashboard, actionStats }: {
         }
     };
 
+    if (error) {
+        return (
+            <div className="p-6 bg-red-50 text-red-600 rounded-lg">
+                <p>Error loading dashboard: {error}</p>
+                <div className="flex items-center gap-2 mt-2">
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="text-sm underline hover:text-red-700"
+                    >
+                        Reload Page
+                    </button>
+                    {/* Add date filters even in error state to allow changing range */}
+                    <div className="flex items-center gap-2 bg-white/50 p-1 rounded border border-red-200 ml-4">
+                        <input
+                            type="date"
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
+                            className="text-sm bg-transparent border-none py-0 focus:ring-0 text-red-700"
+                        />
+                        <span className="text-red-400">-</span>
+                        <input
+                            type="date"
+                            value={endDate}
+                            onChange={(e) => setEndDate(e.target.value)}
+                            className="text-sm bg-transparent border-none py-0 focus:ring-0 text-red-700"
+                        />
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <motion.div
-            initial="hidden"
             animate="visible"
             variants={containerVariants}
             className="space-y-8 pb-20 md:pb-0"
         >
-            <motion.div variants={itemVariants}>
-                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight">{t("dashboard")}</h2>
-                <p className="text-gray-500 mt-1 text-sm md:text-base">{t("dashboardOverview")}</p>
+            <motion.div variants={itemVariants} className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h2 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight">{t("dashboard")}</h2>
+                    <p className="text-gray-500 mt-1 text-sm md:text-base">{t("dashboardOverview")}</p>
+                </div>
+
+                {/* Date Filters */}
+                <div className="flex items-center gap-2 bg-white p-2 rounded-lg shadow-sm border border-gray-200 justify-between px-10 md:px-2">
+                    <input
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        className="border-gray-300 rounded-md text-sm border-none focus:ring-0 text-gray-600"
+                    />
+                    <span className="text-gray-400">-</span>
+                    <input
+                        type="date"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        className="border-gray-300 rounded-md text-sm border-none focus:ring-0 text-gray-600"
+                    />
+                </div>
             </motion.div>
 
             {/* Stat Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-                {statCards.map((stat) => (
-                    <motion.div
-                        key={stat.title}
-                        variants={itemVariants}
-                        className="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200 group"
-                    >
-                        <div className="flex items-start justify-between mb-4">
-                            <div className={`p-2.5 rounded-xl ${stat.color} group-hover:scale-110 transition-transform duration-200`}>
-                                <stat.icon className="h-5 w-5 md:h-6 md:w-6" />
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 md:gap-6">
+                {/* Adjusted grid cols to fit 6 items or responsive */}
+                {loading ? (
+                    // Skeleton Loaders
+                    Array(6).fill(0).map((_, i) => (
+                        <div key={i} className="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-gray-100 animate-pulse">
+                            <div className="flex items-start justify-between mb-4">
+                                <div className="w-10 h-10 bg-gray-200 rounded-xl"></div>
+                                <div className="w-16 h-6 bg-gray-200 rounded-full"></div>
                             </div>
-                            <div className={`flex items-center text-xs font-bold px-2 py-1 rounded-full ${stat.change > 0 ? "text-emerald-700 bg-emerald-50" :
-                                stat.change < 0 ? "text-rose-700 bg-rose-50" :
-                                    "text-gray-600 bg-gray-50"
-                                }`}>
-                                {stat.change > 0 ? <TrendingUp className="h-3 w-3 mr-1" /> :
-                                    stat.change < 0 ? <TrendingDown className="h-3 w-3 mr-1" /> :
-                                        <TrendingUpDown className="h-3 w-3 mr-1" />}
-                                {Math.abs(stat.change)}%
+                            <div>
+                                <div className="w-24 h-4 bg-gray-200 rounded mb-2"></div>
+                                <div className="w-32 h-8 bg-gray-200 rounded"></div>
                             </div>
                         </div>
-                        <div>
-                            <p className="text-xs md:text-sm font-medium text-gray-500">{stat.title}</p>
-                            <h3 className="text-xl md:text-2xl font-bold text-gray-900 mt-1 tracking-tight">{stat.value}</h3>
-                        </div>
-                    </motion.div>
-                ))}
+                    ))
+                ) : (
+                    statCards.map((stat) => (
+                        <motion.div
+                            key={stat.title}
+                            variants={itemVariants}
+                            className="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200 group"
+                        >
+                            <div className="flex items-start justify-between mb-4">
+                                <div className={`p-2.5 rounded-xl ${stat.color} group-hover:scale-110 transition-transform duration-200`}>
+                                    <stat.icon className="h-5 w-5 md:h-6 md:w-6" />
+                                </div>
+                                <div className={`flex items-center text-xs font-bold px-2 py-1 rounded-full ${stat.change > 0 ? "text-emerald-700 bg-emerald-50" :
+                                    stat.change < 0 ? "text-rose-700 bg-rose-50" :
+                                        "text-gray-600 bg-gray-50"
+                                    }`}>
+                                    {!stat.isCount && stat.change > 0 ? <TrendingUp className="h-3 w-3 mr-1" /> :
+                                        !stat.isCount && stat.change < 0 ? <TrendingDown className="h-3 w-3 mr-1" /> :
+                                            !stat.isCount && <TrendingUpDown className="h-3 w-3 mr-1" />}
+                                    {stat.isCount && stat.change > 0 ? '+' : stat.isCount && stat.change < 0 ? '-' : ''}  {Math.abs(stat.change)}{!stat.isCount && '%'}
+                                </div>
+                            </div>
+                            <div>
+                                <p className="text-xs md:text-sm font-medium text-gray-500">{stat.title}</p>
+                                <h3 className="text-lg md:text-xl font-bold text-gray-900 mt-1 tracking-tight">
+                                    {stat.isCurrency ? t("{{price, currency}}", { price: stat.value }) : stat.value}
+                                </h3>
+                            </div>
+                        </motion.div>
+                    ))
+                )}
             </div>
 
             {/* Action Cards */}

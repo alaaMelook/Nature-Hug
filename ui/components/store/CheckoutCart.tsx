@@ -5,7 +5,6 @@ import Link from "next/link";
 import { ArrowLeft, Tag } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Governorate } from "@/domain/entities/database/governorate";
-import { useCartProducts } from "@/ui/hooks/store/useCartProducts";
 import Image from "next/image";
 
 export function CheckoutCart({ selectedGovernorate, onPurchase }: {
@@ -15,11 +14,8 @@ export function CheckoutCart({ selectedGovernorate, onPurchase }: {
     const { t } = useTranslation();
     const { cart, getCartTotal, applyPromoCode, removePromoCode } = useCart()
     const [promoCode, setPromoCode] = useState<string>('');
-    const { data: products = [], isLoading: loadingProducts } = useCartProducts();
+    const products = cart.items;
 
-    useEffect(() => {
-
-    }, [applyPromoCode]);
     return (
         <section className="w-full md:w-1/3 flex flex-col space-y-6">
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8 sticky top-24">
@@ -34,7 +30,7 @@ export function CheckoutCart({ selectedGovernorate, onPurchase }: {
 
                 {/* Cart Items List */}
                 <div className="space-y-4 max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
-                    {!loadingProducts && products.length === 0 ? (
+                    {cart.items.length === 0 ? (
                         <p className="text-gray-400 text-sm text-center py-4">{t('checkout.cartEmpty')}</p>
                     ) : (
                         products.map((item) => (

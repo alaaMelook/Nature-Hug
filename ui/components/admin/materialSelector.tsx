@@ -157,7 +157,8 @@ export function MaterialSelector({ onSelect, onClose }: MaterialSelectorProps) {
                                     </label>
                                     <div className="flex gap-4 items-center">
                                         <input
-                                            type="number"
+                                            type="text" inputMode="numeric" pattern="[0-9]*"
+
                                             value={amount}
                                             onChange={(e) => setAmount(e.target.value)}
                                             placeholder="0.00"
@@ -192,7 +193,8 @@ export function MaterialSelector({ onSelect, onClose }: MaterialSelectorProps) {
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">{t('pricePerGram')}</label>
                                     <input
-                                        type="number"
+                                        type="text" inputMode="numeric" pattern="[0-9]*"
+
                                         step="0.01"
                                         required
                                         value={newMaterialPrice}
@@ -203,7 +205,8 @@ export function MaterialSelector({ onSelect, onClose }: MaterialSelectorProps) {
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">{t('stockGrams')}</label>
                                     <input
-                                        type="number"
+                                        type="text" inputMode="numeric" pattern="[0-9]*"
+
                                         step="0.01"
                                         required
                                         value={newMaterialStock}

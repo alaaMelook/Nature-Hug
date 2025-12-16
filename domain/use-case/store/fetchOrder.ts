@@ -11,7 +11,7 @@ export class FetchOrder {
         if (!userId) {
             const user = await new GetCurrentUser().execute();
             if (!user) {
-                throw new Error("User not authenticated");
+                return null;
             }
             userId = user.id;
         }

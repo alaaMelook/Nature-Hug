@@ -40,7 +40,8 @@ export default function NewPartnerPage() {
         <div>
           <label className="block">Contribution Amount</label>
           <input
-            type="number"
+            type="text" inputMode="numeric" pattern="[0-9]*"
+
             className="border p-2 w-full"
             value={contribution}
             onChange={(e) => setContribution(e.target.value)}
@@ -50,7 +51,8 @@ export default function NewPartnerPage() {
         <div>
           <label className="block">Ownership %</label>
           <input
-            type="number"
+            type="text" inputMode="numeric" pattern="[0-9]*"
+
             className="border p-2 w-full"
             value={ownership}
             onChange={(e) => setOwnership(e.target.value)}

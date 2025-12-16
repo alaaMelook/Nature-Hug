@@ -26,6 +26,7 @@ export interface ProductAdminView {
     gallery: (string | undefined)[];
     variants: ProductVariantAdminView[];
     materials: ProductMaterialAdminView[];
+    visible: boolean;
 }
 
 export interface ProductVariantAdminView {

@@ -19,4 +19,15 @@ export class ViewAllProducts {
             throw error;
         }
     }
+    async bySlug(slug: string): Promise<ProductView> {
+        try {
+            console.log("[ViewAllProducts] bySlug called.");
+            const result = await this.repo.viewBySlug(slug);
+            console.log("[ViewAllProducts] bySlug result:", result);
+            return result;
+        } catch (error) {
+            console.error("[ViewAllProducts] Error in bySlug:", error);
+            throw error;
+        }
+    }
 }

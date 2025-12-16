@@ -2,9 +2,10 @@
 import React, { createContext, ReactNode, useContext, useEffect, useMemo, useState, } from "react";
 import { toast } from "sonner";
 import lz from 'lz-string';
-import { ProductView } from "@/domain/entities/views/shop/productView";
+import { ProductView, CartItem } from "@/domain/entities/views/shop/productView";
 import { useTranslation } from "react-i18next";
 import { validatePromoCodeAction } from "@/ui/hooks/store/usePromoCodeActions";
+import { validateCart } from "../hooks/store/validateCart";
 
 // Note: Ensure 'js-cookie' is installed
 const Cookies = require("js-cookie");
@@ -26,7 +27,11 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
     const [cart, setCart] = useState<Cart>(emptyCart);
     const [loading, setLoading] = useState(true);
     const [isClient, setIsClient] = useState(false);
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const itemsKey = useMemo(
+        () => JSON.stringify(cart.items.map(i => ({ s: i.slug, q: i.quantity }))),
+        [cart.items]
+    )
 
     // --- Effects (Data Loading and Saving) ---
 
@@ -81,6 +86,46 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
     }, [cart.items, cart.promoCode]);
 
     // --- Cart Actions (Simplified Logic) ---
+    // --- Cart Synchronization ---
+    // Exposed function to force sync (e.g. when language changes or user visits cart)
+    const syncCart = async () => {
+        if (loading || cart.items.length === 0) return;
+
+        try {
+            const res = await validateCart(cart.items.map(i => ({ slug: i.slug, quantity: i.quantity })), i18n.language as LangKey);
+
+            setCart(prev => ({
+                ...prev,
+                // Recalculate discount based on VALIDATED items
+                discount: (prev.promoCode ? prev.discount : 0) + res.items.reduce((acc, item) => acc + (item.discount ?? 0) * item.quantity, 0),
+                items: res.items,
+                total: res.items.reduce((acc, item) => acc + (item.price * item.quantity), 0),
+                netTotal: res.items.reduce((acc, item) => acc + (item.price * item.quantity), 0) - (prev.discount || 0),
+            }));
+
+            // Handle removed items
+            if (res.removed.length > 0) {
+                res.removed.forEach(item => {
+                    if (item.reason === 'OUT_OF_STOCK') {
+                        toast.error(t('stockLimitExceededRemove', { product: item.slug })); // ideally use name if available
+                    } else if (item.reason === 'NOT_FOUND') {
+                        // Silent remove or invalid
+                    }
+                });
+            }
+        } catch (error) {
+            console.error("Failed to sync cart:", error);
+        }
+    };
+
+    // Initial sync on mount/load
+    useEffect(() => {
+        if (!loading && cart.items.length > 0) {
+            syncCart();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [loading, i18n.language]); // Run once when loading finishes or local changes
+
 
     const addToCart = async (product: ProductView, quantity: number) => {
         setCart(prevCart => {
@@ -96,17 +141,19 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
                 return prevCart;
             }
 
-            let newItems: { slug: string, quantity: number }[];
+            let newItems: CartItem[];
 
             if (existingItem) {
                 // Item exists: update quantity
-                // We don't call updateQuantity here to avoid double validation/toast, just update state directly
                 newItems = prevCart.items.map((item) =>
                     item.slug === product.slug ? { ...item, quantity: newQty } : item
                 );
             } else {
                 // Item is new: add to cart
-                newItems = [...prevCart.items, { slug: product.slug, quantity: quantity }];
+                // We convert ProductView to CartItem (assuming they are compatible or we explicitly map)
+                // If ProductView doesn't match CartItem exactly, we might need to cast or map.
+                // Assuming CartItem extends ProductView or has same fields.
+                newItems = [...prevCart.items, { ...product, quantity: quantity }];
             }
 
             toast.success(t('addedtoCart', { product: product.name }), { duration: 2000 });
@@ -210,74 +257,7 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
         return (cart.netTotal || 0) + (shipping || 0) - (cart.discount || 0);
     };
 
-    const syncCart = (products: ProductView[]) => {
-        let changed = false;
-        let newItems = [...cart.items];
 
-        products.forEach(product => {
-            const cartItemIndex = newItems.findIndex(item => item.slug === product.slug);
-            if (cartItemIndex > -1) {
-                const cartItem = newItems[cartItemIndex];
-
-                if (product.stock === 0) {
-                    // Out of stock - remove
-                    newItems.splice(cartItemIndex, 1);
-                    toast.error(t('stockLimitExceededRemove', { product: product.name }));
-                    changed = true;
-                } else if (cartItem.quantity > product.stock) {
-                    // Insufficient stock - adjust
-                    newItems[cartItemIndex] = { ...cartItem, quantity: product.stock };
-                    toast.warning(t('stockLimitExceededAdjust', { product: product.name, stock: product.stock }));
-                    changed = true;
-                }
-            }
-        });
-
-        if (changed) {
-            setCart(prev => {
-                // Recalculate netTotal based on new items
-                // This is a bit complex since we don't have all prices in 'cart.items' usually, 
-                // but we likely have them in the 'products' passed in.
-
-                // Better strategy: Use the existing logic or helper to recalculate total.
-                // However, our cart state stores netTotal. 
-                // We should re-calculate it from the NEW items and the products list.
-
-                let newNetTotal = 0;
-                newItems.forEach(item => {
-                    const product = products.find(p => p.slug === item.slug);
-                    // If product not in passed list (rare?), we might need to rely on existing total or fetch? 
-                    // But syncCart is usually called with ALL cart products.
-                    // If we don't have the price, we might break the total.
-                    // Assuming 'products' contains ALL items currently in cart.
-                    if (product) {
-                        newNetTotal += (product.price || 0) * item.quantity;
-                    } else {
-                        // Fallback: This is risky if product logic is strictly separate.
-                        // But usually we sync with fully loaded products.
-                        // If we can't find it, we shouldn't zero it out.
-                        // We'll try to keep existing logic if possible, but 'cart' doesn't store price per item.
-                        // Wait, cart items are { slug, quantity }. Price is not stored.
-                        // So 'netTotal' is stored.
-                        // If we remove an item, we subtract its price * quantity.
-                        // We need the price. 
-                    }
-                });
-
-                // To avoid total corruption, we can just use the implementation from removeFromCart/updateQuantity logic
-                // But doing it in bulk is safer.
-
-                // Let's iterate again and strictly calculate total from the provided products 
-                // (assuming the provided products cover the cart items).
-
-                return {
-                    ...prev,
-                    items: newItems,
-                    netTotal: newNetTotal
-                };
-            });
-        }
-    };
 
     // --- Memoized Context Value ---
 
@@ -292,8 +272,10 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
             removePromoCode,
             getCartTotal,
             getCartCount,
-            syncCart,
+            itemsKey,
             loading,
+            setCart,
+            syncCart
         }),
         [cart, loading]
     );

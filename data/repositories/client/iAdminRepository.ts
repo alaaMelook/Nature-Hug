@@ -1,7 +1,7 @@
 import { supabase } from "@/data/datasources/supabase/client";
 import { AdminRepository } from "@/domain/repositories/adminRepository";
 import { OrderDetailsView } from "@/domain/entities/views/admin/orderDetailsView";
-import { DashboardMetricsView } from "@/domain/entities/views/admin/dashboardMetricsView";
+import { DashboardStats } from "@/domain/entities/views/admin/dashboardMetricsView";
 import { Material } from "@/domain/entities/database/material";
 import { ProductAdminView } from "@/domain/entities/views/admin/productAdminView";
 import { Category } from "@/domain/entities/database/category";
@@ -10,6 +10,19 @@ import { ReviewAdminView } from "@/domain/entities/views/admin/reviewAdminView";
 import { Governorate } from "@/domain/entities/database/governorate";
 
 export class IAdminClientRepository implements AdminRepository {
+    async toggleProductVisibility(id: number, isVariant: boolean, visible: boolean): Promise<void> {
+        console.log("[IAdminRepository] toggleProductVisibility called with id:", id);
+        const table = isVariant ? 'product_variants' : 'products';
+        const { data, status, statusText, error } = await supabase.schema('store')
+            .from(table)
+            .update({ is_visible: visible })
+            .eq('id', id);
+        console.log("[IAdminRepository] toggleProductVisibility result:", { data, status, statusText });
+        if (error) {
+            console.error("[IAdminRepository] toggleProductVisibility error:", error);
+            throw error;
+        }
+    }
     async getAllGovernorates(): Promise<Governorate[]> {
         console.log("[IAdminRepository] getAllGovernorates called.");
         const { data, status, statusText, error } = await supabase.schema('store')
@@ -72,18 +85,19 @@ export class IAdminClientRepository implements AdminRepository {
         return data || [];
     }
 
-    async getDashboardMetrics(): Promise<DashboardMetricsView> {
+    async getDashboardMetrics(startDate: string,
+        endDate: string
+    ): Promise<DashboardStats> {
         console.log("[IAdminRepository] getDashboardMetrics called.");
         const { data, status, statusText, error } = await supabase.schema('admin')
-            .from("monthly_stats_view")
-            .select('*')
+            .rpc('get_dashboard_stats', { p_start_date: startDate, p_end_date: endDate })
             .single();
         console.log("[IAdminRepository] getDashboardMetrics result:", { data, status, statusText });
         if (error) {
             console.error("[IAdminRepository] getDashboardMetrics error:", error);
             throw error;
         }
-        return data as DashboardMetricsView;
+        return data as DashboardStats;
     }
 
     async getAllMaterials(): Promise<Material[]> {
@@ -176,16 +190,30 @@ export class IAdminClientRepository implements AdminRepository {
         return data;
     }
 
-    async deleteProduct(slug: string): Promise<void> {
-        console.log("[IAdminRepository] deleteProduct called with slug:", slug);
+    async deleteProduct(product: ProductAdminView): Promise<void> {
+        console.log("[IAdminRepository] deleteProduct called with slug:", product.slug);
+        const table = product.variant_id ? 'product_variants' : 'products';
         const { data, status, statusText, error } = await supabase.schema('store')
-            .from('products')
+            .from(table)
             .delete()
-            .eq('slug', slug);
+            .eq('slug', product.slug);
         console.log("[IAdminRepository] deleteProduct result:", { data, status, statusText });
         if (error) {
             console.error("[IAdminRepository] deleteProduct error:", error);
             throw error;
+        }
+        if (product.variant_id && product.variants.length <= 1) {
+            const {
+                data,
+                status,
+                statusText,
+                error
+            } = await supabase.schema('store').from('products').delete().eq('id', product.product_id);
+            console.log("[IAdminRepository] deleteProduct result:", { data, status, statusText });
+            if (error) {
+                console.error("[IAdminRepository] deleteProduct error:", error);
+                throw error;
+            }
         }
     }
 

@@ -519,7 +519,8 @@ export default function SuppliersPage() {
 
                 {/* 🟩 Extra Expenses Input */}
                 <input
-                  type="number"
+                  type="text" inputMode="numeric" pattern="[0-9]*"
+
                   className="border p-2 w-full mb-2"
                   placeholder="Extra Expenses (EGP)"
                   value={newInvoice.extra_expenses || 0}
@@ -552,7 +553,8 @@ export default function SuppliersPage() {
                         ))}
                       </select>
                       <input
-                        type="number"
+                        type="text" inputMode="numeric" pattern="[0-9]*"
+
                         className="border p-2 w-24"
                         placeholder="Qty"
                         value={it.quantity}
@@ -561,7 +563,8 @@ export default function SuppliersPage() {
                         }
                       />
                       <input
-                        type="number"
+                        type="text" inputMode="numeric" pattern="[0-9]*"
+
                         className="border p-2 w-32"
                         placeholder="Total Price"
                         value={it.price}

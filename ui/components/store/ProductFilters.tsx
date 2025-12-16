@@ -1,41 +1,49 @@
 'use client';
 
-import { Category } from "@/domain/entities/database/category";
+import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
-import { ArrowDownUp, ListFilter, SortAscIcon } from "lucide-react";
+import { ArrowDownUp, ListFilter } from "lucide-react";
+import { Category } from "@/domain/entities/database/category";
 import { useCurrentLanguage } from "@/ui/hooks/useCurrentLanguage";
 
-export default function ProductFilters({ onFilterChangeAction, initCategories, currentFilters }: {
-    onFilterChangeAction: (filters: any) => void,
-    initCategories: Category[],
-    currentFilters?: { search: string; category: string; sortBy: string; inStock: boolean; onSale: boolean; }
-}) {
+interface ProductFiltersProps {
+    onFilterChangeAction: (filters: any) => void;
+    initCategories: Category[];
+    currentFilters: {
+        search: string;
+        category: string;
+        sortBy: string;
+        inStock: boolean;
+        onSale: boolean;
+    };
+}
+
+export default function ProductFilters({ onFilterChangeAction, initCategories, currentFilters }: ProductFiltersProps) {
     const { t, i18n } = useTranslation();
     const language = useCurrentLanguage();
     const [sortMenuOpen, setSortMenuOpen] = useState(false);
     const [filterMenuOpen, setFilterMenuOpen] = useState(false);
 
-    const toggleSortMenu = () => {
-        setSortMenuOpen(!sortMenuOpen);
-        setFilterMenuOpen(false);
-    }
-    const toggleFilterMenu = () => {
-        setFilterMenuOpen(!filterMenuOpen);
-        setSortMenuOpen(false);
-    }
+    const categories = initCategories;
+
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value, type } = e.target;
-        const isCheckbox = type === 'checkbox';
-        const checked = (e.target as HTMLInputElement).checked;
-        onFilterChangeAction({ [name]: isCheckbox ? checked : value });
+        const newValue = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
+        onFilterChangeAction({ [name]: newValue });
     };
-    let categories: Category[] = initCategories;
-    console.log('Categories:', categories);
+
+    const toggleSortMenu = () => setSortMenuOpen(!sortMenuOpen);
+    const toggleFilterMenu = () => setFilterMenuOpen(!filterMenuOpen);
+
     return (
         <>
-
-            <div className="p-6 rounded-lg shadow-lg h-3/5 hidden sm:block">
+            <motion.div
+                initial={{ x: -20, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ delay: 0.2, duration: 0.5 }}
+                className="p-6 rounded-lg shadow-xl h-3/5 hidden sm:block bg-primary-10 border border-gray-400/15"
+            >
                 <h3 className="text-xl font-semibold mb-4">{t('filters')}</h3>
                 <div className="space-y-4">
                     <div>
@@ -107,7 +115,7 @@ export default function ProductFilters({ onFilterChangeAction, initCategories, c
                         <label htmlFor="onSale" className="ml-2 block text-sm text-gray-900">{t('onSaleOnly')}</label>
                     </div>
                 </div>
-            </div>
+            </motion.div>
             <div className="sm:hidden" >
                 <div>
                     {/* <label htmlFor="search" className="block text-sm font-medium text-gray-700">{t('search')}</label> */}
@@ -238,3 +246,4 @@ export default function ProductFilters({ onFilterChangeAction, initCategories, c
         </>
     );
 }
+

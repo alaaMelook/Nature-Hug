@@ -1,5 +1,5 @@
-import {IAdminServerRepository} from "@/data/repositories/server/iAdminRepository";
-import {ProductAdminView} from "@/domain/entities/views/admin/productAdminView";
+import { IAdminServerRepository } from "@/data/repositories/server/iAdminRepository";
+import { ProductAdminView } from "@/domain/entities/views/admin/productAdminView";
 
 
 export class GetAllProductsWithDetails {
@@ -24,8 +24,8 @@ export class DeleteProduct {
     constructor(private repo = new IAdminServerRepository()) {
     }
 
-    async execute(slug: string): Promise<void> {
-        return await this.repo.deleteProduct(slug);
+    async execute(product: ProductAdminView): Promise<void> {
+        return await this.repo.deleteProduct(product);
     }
 }
 

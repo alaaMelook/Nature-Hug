@@ -132,7 +132,8 @@ export default function ProductionPage() {
               🔢 Quantity
             </label>
             <input
-              type="number"
+              type="text" inputMode="numeric" pattern="[0-9]*"
+
               className="border rounded-lg p-2 w-full bg-gray-50 focus:ring-2 focus:ring-blue-500"
               value={qty}
               min={1}
@@ -146,9 +147,8 @@ export default function ProductionPage() {
           <button
             onClick={handleProduction}
             disabled={loading}
-            className={`flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-blue-700 transition ${
-              loading ? "opacity-70 cursor-not-allowed" : ""
-            }`}
+            className={`flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-blue-700 transition ${loading ? "opacity-70 cursor-not-allowed" : ""
+              }`}
           >
             {loading ? "⏳ Processing..." : "🔍 Preview Requirements"}
           </button>
@@ -156,11 +156,10 @@ export default function ProductionPage() {
           <button
             onClick={handleDone}
             disabled={doneLoading || requirements.length === 0}
-            className={`flex-1 bg-green-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-green-700 transition ${
-              doneLoading || requirements.length === 0
+            className={`flex-1 bg-green-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-green-700 transition ${doneLoading || requirements.length === 0
                 ? "opacity-70 cursor-not-allowed"
                 : ""
-            }`}
+              }`}
           >
             {doneLoading ? "Updating stock..." : "✅ Confirm Production"}
           </button>
@@ -194,11 +193,10 @@ export default function ProductionPage() {
                       <td className="py-2 px-4">{r.name}</td>
                       <td className="py-2 px-4 text-center">{r.needQty}</td>
                       <td
-                        className={`py-2 px-4 text-center font-medium ${
-                          r.available < r.needQty
+                        className={`py-2 px-4 text-center font-medium ${r.available < r.needQty
                             ? "text-red-600"
                             : "text-green-600"
-                        }`}
+                          }`}
                       >
                         {r.available}
                       </td>

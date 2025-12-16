@@ -320,7 +320,8 @@ export function MaterialsTable({
                   <div>
                     <label className="text-xs font-medium text-gray-500 mb-2 block uppercase tracking-wide">{t("maxPrice")}</label>
                     <input
-                      type="number"
+                      type="text" inputMode="numeric" pattern="[0-9]*"
+
                       placeholder="0.00"
                       className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
                       value={priceFilter}

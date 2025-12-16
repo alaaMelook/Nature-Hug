@@ -1,7 +1,7 @@
 import { supabaseAdmin } from "@/data/datasources/supabase/admin";
 import { AdminRepository } from "@/domain/repositories/adminRepository";
 import { OrderDetailsView } from "@/domain/entities/views/admin/orderDetailsView";
-import { DashboardMetricsView } from "@/domain/entities/views/admin/dashboardMetricsView";
+import { DashboardStats } from "@/domain/entities/views/admin/dashboardMetricsView";
 import { Material } from "@/domain/entities/database/material";
 import { ProductAdminView } from "@/domain/entities/views/admin/productAdminView";
 import { Category } from "@/domain/entities/database/category";
@@ -44,18 +44,19 @@ export class IAdminServerRepository implements AdminRepository {
         return data;
     }
 
-    async getDashboardMetrics(): Promise<DashboardMetricsView> {
+    async getDashboardMetrics(startDate: string,
+        endDate: string
+    ): Promise<DashboardStats> {
         console.log("[IAdminRepository] getDashboardMetrics called.");
-
         const { data, status, statusText, error } = await supabaseAdmin.schema('admin')
-            .rpc('select_from_view', { view_name: 'monthly_stats_view' })
-
+            .rpc('get_dashboard_stats', { start_date: startDate, end_date: endDate })
+            .single();
         console.log("[IAdminRepository] getDashboardMetrics result:", { data, status, statusText });
         if (error) {
             console.error("[IAdminRepository] getDashboardMetrics error:", error);
             throw error;
         }
-        return data[0] as DashboardMetricsView;
+        return data as DashboardStats;
     }
 
     async getAllMaterials(): Promise<Material[]> {
@@ -220,20 +221,33 @@ export class IAdminServerRepository implements AdminRepository {
         return data;
     }
 
-    async deleteProduct(slug: string): Promise<void> {
-        console.log("[IAdminRepository] deleteProduct called with slug:", slug);
-
+    async deleteProduct(product: ProductAdminView): Promise<void> {
+        console.log("[IAdminRepository] deleteProduct called with slug:", product.slug);
+        const table = product.variant_id ? 'product_variants' : 'products';
         const {
             data,
             status,
             statusText,
             error
-        } = await supabaseAdmin.schema('store').from('products').delete().eq('slug', slug);
+        } = await supabaseAdmin.schema('store').from(table).delete().eq('slug', product.slug);
 
         console.log("[IAdminRepository] deleteProduct result:", { data, status, statusText });
         if (error) {
             console.error("[IAdminRepository] deleteProduct error:", error);
             throw error;
+        }
+        if (product.variant_id && product.variants.length <= 1) {
+            const {
+                data,
+                status,
+                statusText,
+                error
+            } = await supabaseAdmin.schema('store').from('products').delete().eq('id', product.product_id);
+            console.log("[IAdminRepository] deleteProduct result:", { data, status, statusText });
+            if (error) {
+                console.error("[IAdminRepository] deleteProduct error:", error);
+                throw error;
+            }
         }
     }
     async createCategory(category: Partial<Category>): Promise<void> {
@@ -546,6 +560,20 @@ export class IAdminServerRepository implements AdminRepository {
 
         if (error) {
             console.error("[IAdminRepository] updateGovernorateFees error:", error);
+            throw error;
+        }
+    }
+
+    async toggleProductVisibility(id: number, isVariant: boolean, visible: boolean): Promise<void> {
+        console.log(`[IAdminRepository] toggleProductVisibility called for id: ${id}, isVariant: ${isVariant}, is_visible: ${visible}`);
+        const table = isVariant ? 'product_variants' : 'products';
+        const { error } = await supabaseAdmin.schema('store')
+            .from(table)
+            .update({ is_visible: visible })
+            .eq('id', id);
+
+        if (error) {
+            console.error(`[IAdminRepository] toggleProductVisibility error (table: ${table}):`, error);
             throw error;
         }
     }

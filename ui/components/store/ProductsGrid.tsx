@@ -54,7 +54,8 @@ export function ProductCard({
                         (e.target as HTMLImageElement).src =
                             "https://placehold.co/400x400/D1D5DB/4B5563?text=Image+Not+Found";
                     }}
-                    quality={500}
+                    unoptimized={!product.image ? true : false}
+
                     width={compact ? 500 : 1000}
                     height={compact ? 500 : 1000}
                     priority={!compact}

@@ -175,7 +175,8 @@ export default function ExpensesPage() {
             />
 
             <input
-              type="number"
+              type="text" inputMode="numeric" pattern="[0-9]*"
+
               placeholder="المبلغ"
               value={newExpense.amount}
               onChange={(e) =>
@@ -267,7 +268,8 @@ export default function ExpensesPage() {
               className="border p-2 rounded w-full"
             />
             <input
-              type="number"
+              type="text" inputMode="numeric" pattern="[0-9]*"
+
               value={editing.amount}
               onChange={(e) =>
                 setEditing({ ...editing, amount: Number(e.target.value) })

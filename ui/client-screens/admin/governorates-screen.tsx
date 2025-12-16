@@ -133,7 +133,8 @@ export function GovernoratesScreen() {
                                                     {isEditing ? (
                                                         <input
                                                             autoFocus
-                                                            type="number"
+                                                            type="text" inputMode="numeric" pattern="[0-9]*"
+
                                                             value={editValue}
                                                             onChange={(e) => setEditValue(e.target.value)}
                                                             onKeyDown={(e) => {

@@ -1,3 +1,4 @@
+import { CartItem } from "@/domain/entities/views/shop/productView";
 import React from "react";
 
 export { };
@@ -17,7 +18,7 @@ declare global {
         free_shipping: boolean;
         total: number;
         netTotal: number;
-        items: { slug: string, quantity: number }[];
+        items: CartItem[];
         isAdmin: boolean;
 
     }
@@ -32,7 +33,9 @@ declare global {
         loading: boolean;
         applyPromoCode: (code: string) => Promise<void>;
         removePromoCode: () => Promise<void>;
-        syncCart: (products: any[]) => void;
+        syncCart: () => Promise<void>;
+        setCart: (cart: Cart) => void;
+        itemsKey: string;
     }
 
     type SupabaseAuthContextType = {

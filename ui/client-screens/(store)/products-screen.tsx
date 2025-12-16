@@ -25,6 +25,23 @@ export function ProductsScreen({ initProducts, initCategories }: {
     });
     const [products, setProducts] = useState<ProductView[]>(initProducts);
     const [loading, setLoading] = useState(false);
+    const [itemsPerPage, setItemsPerPage] = useState(6); // Default to mobile to prevent hydration mismatch if possible, or just standard.
+
+    useEffect(() => {
+        const handleResize = () => {
+            if (window.innerWidth >= 1024) {
+                setItemsPerPage(9);
+            } else {
+                setItemsPerPage(6);
+            }
+        };
+
+        // Set initial value
+        handleResize();
+
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     const handleFilterChange = (newFilters: any) => {
         console.log(newFilters);
@@ -69,18 +86,15 @@ export function ProductsScreen({ initProducts, initCategories }: {
             className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col lg:flex-row sm:gap-8 min-h-screen"
         >
             {/* Filters Column */}
-            <motion.div
-                initial={{ x: -20, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                transition={{ delay: 0.2, duration: 0.5 }}
-                className="w-full lg:w-1/4 lg:sticky lg:top-30 h-fit"
+            <div
+                className="w-full lg:w-1/4 lg:sticky lg:top-40 h-fit "
             >
                 <ProductFilters onFilterChangeAction={handleFilterChange} initCategories={initCategories} currentFilters={filters} />
-            </motion.div>
+            </div>
 
             {/* Product Grid Column */}
             <div className="w-full lg:w-3/4">
-                <ProductGrid products={filteredProducts} isLoading={loading} perPage={9} />
+                <ProductGrid products={filteredProducts} isLoading={loading} perPage={itemsPerPage} />
             </div>
         </motion.div>
     );

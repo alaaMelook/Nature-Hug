@@ -83,7 +83,8 @@ export default function NewDistributionPage() {
         <div>
           <label className="block">Profit Share</label>
           <input
-            type="number"
+            type="text" inputMode="numeric" pattern="[0-9]*"
+
             className="border p-2 w-full"
             value={profitShare}
             onChange={(e) => setProfitShare(e.target.value)}

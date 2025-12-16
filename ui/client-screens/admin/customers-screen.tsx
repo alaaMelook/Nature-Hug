@@ -5,6 +5,7 @@ import { Search, Mail, Phone, Calendar, User, MapPin } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
+import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 
 export function CustomersScreen({ allCustomers }: { allCustomers: ProfileView[] | undefined }) {
     const { t } = useTranslation();
@@ -41,6 +42,120 @@ export function CustomersScreen({ allCustomers }: { allCustomers: ProfileView[] 
         });
         setCustomers(filtered);
     }
+
+    const columns: GridColDef[] = [
+        {
+            field: "customer",
+            headerName: t("customer"),
+            flex: 2,
+            minWidth: 250,
+            renderCell: (params: GridRenderCellParams) => (
+                <div className="flex items-center h-full">
+                    <div className="flex-shrink-0 h-10 w-10 mr-4">
+                        <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-bold text-lg">
+                            {params.row.name?.charAt(0)?.toUpperCase() || "?"}
+                        </div>
+                    </div>
+                    <div>
+                        <div className="text-sm font-medium text-gray-900">
+                            {params.row.name || "Unknown"}
+                        </div>
+                        <div className="text-xs text-gray-500 font-mono">
+                            {String(params.row.id).substring(0, 8)}...
+                        </div>
+                    </div>
+                </div>
+            )
+        },
+        {
+            field: "contact",
+            headerName: t("contact"),
+            flex: 2,
+            minWidth: 200,
+            renderCell: (params: GridRenderCellParams) => (
+                <div className="flex flex-col justify-center h-full text-sm text-gray-900 space-y-1 py-1">
+                    <div className="flex items-center">
+                        <Mail className="h-3.5 w-3.5 text-gray-400 mr-2" />
+                        <span className="truncate" title={params.row.email}>
+                            {params.row.email || <span className="text-gray-400 italic">{t("noEmail")}</span>}
+                        </span>
+                    </div>
+                    {params.row.phone && params.row.phone.map((phone: string, index: number) => (
+                        <div className="flex items-center" key={`${phone}-${index}`}>
+                            <Phone className="h-3.5 w-3.5 text-gray-400 mr-2" />
+                            {phone}
+                        </div>
+                    ))}
+                    {(!params.row.phone || params.row.phone.length === 0) && (
+                        <div className="flex items-center text-gray-400 italic text-xs pl-6">
+                            -
+                        </div>
+                    )}
+                </div>
+            )
+        },
+        {
+            field: "governorates",
+            headerName: t("governorates"),
+            flex: 1.5,
+            minWidth: 150,
+            renderCell: (params: GridRenderCellParams) => (
+                <div className="flex flex-col justify-center h-full text-sm">
+                    {(params.row.address?.length ?? 0) > 0 ? (
+                        <div className="flex flex-col gap-1">
+                            {params.row.address?.map((addr: any, idx: number) => (
+                                <div key={idx} className="flex items-center">
+                                    <MapPin className="h-3.5 w-3.5 text-gray-400 mr-2" />
+                                    {addr.governorate.name_en}
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <span className="text-gray-400 italic">{t("noAddresses")}</span>
+                    )}
+                </div>
+            )
+        },
+        {
+            field: "created_at",
+            headerName: t("memberSince"),
+            flex: 1,
+            minWidth: 150,
+            renderCell: (params: GridRenderCellParams) => (
+                <div className="flex items-center h-full text-sm text-gray-900">
+                    <Calendar className="h-3.5 w-3.5 text-gray-400 mr-2" />
+                    {new Date(params.row.created_at).toLocaleDateString()}
+                </div>
+            )
+        },
+        {
+            field: "role",
+            headerName: t("status"),
+            flex: 1,
+            minWidth: 120,
+            renderCell: (params: GridRenderCellParams) => (
+                <div className="flex items-center h-full">
+                    <span className={`inline-flex px-2.5 py-1 text-xs font-semibold rounded-full ${params.row.role ? "bg-purple-100 text-purple-800" : "bg-green-100 text-green-800"}`}>
+                        {params.row.role ? params.row.role : t("active")}
+                    </span>
+                </div>
+            )
+        },
+        {
+            field: "actions",
+            headerName: t("actions"),
+            flex: 1,
+            minWidth: 100,
+            sortable: false,
+            renderCell: (params: GridRenderCellParams) => (
+                <div className="flex items-center h-full">
+                    <a href={`/admin/customers/${params.row.id}`} className="text-primary-600 hover:text-primary-900 hover:underline transition-all">
+                        {t("view")}
+                    </a>
+                </div>
+            )
+        }
+    ];
 
     return (
         <motion.div
@@ -83,133 +198,36 @@ export function CustomersScreen({ allCustomers }: { allCustomers: ProfileView[] 
                 </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50/50">
-                            <tr>
-                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                    {t("customer")}
-                                </th>
-                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                    {t("contact")}
-                                </th>
-                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                    {t("governorates")}
-                                </th>
-                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                    {t("memberSince")}
-                                </th>
-                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                    {t("status")}
-                                </th>
-                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                    {t("actions")}
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                            <AnimatePresence>
-                                {customers?.map((customer: ProfileView, index) => (
-                                    <motion.tr
-                                        key={customer.id}
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: -10 }}
-                                        transition={{ delay: index * 0.05 }}
-                                        className={`${customer.role ? "bg-primary-50/50" : "hover:bg-gray-50/50"} transition-colors`}
-                                    >
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="flex items-center">
-                                                <div className="flex-shrink-0 h-10 w-10">
-                                                    <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-bold text-lg">
-                                                        {customer.name?.charAt(0)?.toUpperCase() || "?"}
-                                                    </div>
-                                                </div>
-                                                <div className="ml-4">
-                                                    <div className="text-sm font-medium text-gray-900">
-                                                        {customer.name || "Unknown"}
-                                                    </div>
-                                                    <div className="text-xs text-gray-500 font-mono">
-                                                        {String(customer.id).substring(0, 8)}...
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm text-gray-900 space-y-1">
-                                                <div className="flex items-center">
-                                                    <Mail className="h-3.5 w-3.5 text-gray-400 mr-2" />
-                                                    {customer.email || <span className="text-gray-400 italic">{t("noEmail")}</span>}
-                                                </div>
-                                                {customer.phone.map((phone: string, index: number) => (
-                                                    <div className="flex items-center" key={`${phone}-${index}`}>
-                                                        <Phone className="h-3.5 w-3.5 text-gray-400 mr-2" />
-                                                        {phone}
-                                                    </div>
-                                                ))}
-                                                {customer.phone.length === 0 && (
-                                                    <div className="flex items-center text-gray-400 italic text-xs pl-6">
-                                                        -
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                            {(customer.address?.length ?? 0) > 0 ? (
-                                                <div className="flex flex-col gap-1">
-                                                    {customer.address?.map((addr, idx) => (
-                                                        <div key={idx} className="flex items-center">
-                                                            <MapPin className="h-3.5 w-3.5 text-gray-400 mr-2" />
-                                                            {addr.governorate.name_en}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            ) : (
-                                                <span className="text-gray-400 italic">{t("noAddresses")}</span>
-                                            )}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="flex items-center text-sm text-gray-900">
-                                                <Calendar className="h-3.5 w-3.5 text-gray-400 mr-2" />
-                                                {new Date(customer.created_at).toLocaleDateString()}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className={`inline-flex px-2.5 py-1 text-xs font-semibold rounded-full ${customer.role ? "bg-purple-100 text-purple-800" : "bg-green-100 text-green-800"}`}>
-                                                {customer.role ? customer.role : t("active")}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                            <a href={`/admin/customers/${customer.id}`} className="text-primary-600 hover:text-primary-900 hover:underline transition-all">
-                                                {t("view")}
-                                            </a>
-                                        </td>
-                                    </motion.tr>
-                                ))}
-                            </AnimatePresence>
-                        </tbody>
-                    </table>
-                </div>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" style={{ height: 650, width: '100%' }}>
+                <DataGrid
+                    rows={customers || []}
+                    columns={columns}
+                    initialState={{
+                        pagination: {
+                            paginationModel: { page: 0, pageSize: 10 },
+                        },
+                    }}
+                    pageSizeOptions={[5, 10, 25, 50]}
+                    disableRowSelectionOnClick
+                    getRowId={(row) => row.id}
+                    getRowHeight={() => 'auto'}
+                    sx={{
+                        '& .MuiDataGrid-cell': {
+                            display: 'flex',
+                            alignItems: 'center',
+                            py: 1,
+                        },
+                        '& .MuiDataGrid-columnHeaders': {
+                            backgroundColor: '#f9fafb',
+                            color: '#6b7280',
+                            fontWeight: 600,
+                            textTransform: 'uppercase',
+                            fontSize: '0.75rem',
+                        },
+                        border: 'none',
+                    }}
+                />
             </div>
-
-            {(!customers || customers.length === 0) && (
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="text-center py-12 bg-white rounded-xl border border-gray-200 border-dashed"
-                >
-                    <div className="text-gray-500 flex flex-col items-center">
-                        <div className="h-12 w-12 bg-gray-100 rounded-full flex items-center justify-center mb-3">
-                            <User className="h-6 w-6 text-gray-400" />
-                        </div>
-                        <h3 className="text-base font-medium text-gray-900">{t("noCustomers")}</h3>
-                        <p className="mt-1 text-sm text-gray-500">
-                            {t("couldntFindCustomers")}
-                        </p>
-                    </div>
-                </motion.div>
-            )}
         </motion.div>
     );
 }

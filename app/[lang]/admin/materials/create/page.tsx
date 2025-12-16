@@ -68,7 +68,8 @@ export default function NewMaterialPage() {
                         {t("pricePerGram") || "Price per gram"}
                     </label>
                     <input
-                        type="number"
+                        type="text" inputMode="numeric" pattern="[0-9]*"
+
                         step="0.0001"
                         required
                         className="w-full border p-2 rounded"
@@ -85,7 +86,8 @@ export default function NewMaterialPage() {
                         {t("stockGrams") || "Stock (grams)"}
                     </label>
                     <input
-                        type="number"
+                        type="text" inputMode="numeric" pattern="[0-9]*"
+
                         step="0.01"
                         required
                         className="w-full border p-2 rounded"
@@ -122,7 +124,8 @@ export default function NewMaterialPage() {
                         {t("lowStockThreshold") || "Low Stock Threshold"}
                     </label>
                     <input
-                        type="number"
+                        type="text" inputMode="numeric" pattern="[0-9]*"
+
                         step="0.01"
                         className="w-full border p-2 rounded"
                         value={formData.low_stock_threshold ?? 0}

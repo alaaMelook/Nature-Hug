@@ -239,7 +239,8 @@ export default function BomPage() {
               <div>
                 <label className="block mb-1">Grams Used</label>
                 <input
-                  type="number"
+                  type="text" inputMode="numeric" pattern="[0-9]*"
+
                   value={grams}
                   onChange={(e) => setGrams(e.target.value)}
                   className="border p-2 w-full"

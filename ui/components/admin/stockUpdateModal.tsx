@@ -57,7 +57,8 @@ export function StockUpdateModal({ isOpen, onClose, onConfirm, title, itemName, 
                             </span>
                         </label>
                         <input
-                            type="number"
+                            type="text" inputMode="numeric" pattern="[0-9]*"
+
                             min="1"
                             value={quantity}
                             onChange={(e) => setQuantity(Number(e.target.value))}

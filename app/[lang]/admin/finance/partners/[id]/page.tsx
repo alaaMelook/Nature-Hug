@@ -85,7 +85,8 @@ export default function PartnerDetailPage() {
 
       <form onSubmit={handleAddContribution} className="mb-4 flex gap-2">
         <input
-          type="number"
+          type="text" inputMode="numeric" pattern="[0-9]*"
+
           min="0"
           step="any"
           value={amount}
