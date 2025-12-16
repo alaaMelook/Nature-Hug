@@ -254,7 +254,7 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
 
     const getCartTotal = (shipping: number) => {
         // Use the existing `total` field from state, which is assumed to be updated externally.
-        return (cart.netTotal || 0) + (shipping || 0) - (cart.discount || 0);
+        return (cart.netTotal || 0) + (shipping || 0) - (cart.isAdmin ? 0 : cart.discount || 0);
     };
 
 
