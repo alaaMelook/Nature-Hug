@@ -97,7 +97,7 @@ export function CheckoutUserScreen({ governorates, user }: { governorates: Gover
             grand_total: getCartTotal(cart.free_shipping ? 0 : selectedGovernorate?.fees ?? 0),
             promo_code_id: cart.promoCodeId
         };
-        const result = await createOrder(payload, products);
+        const result = await createOrder(payload, cart.isAdmin, products);
         if (result.error) {
             toast.error(result.error);
             setLoading(false);

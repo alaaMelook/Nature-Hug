@@ -73,7 +73,7 @@ export function CheckoutGuestScreen({ governorates }: { governorates: Governorat
             guest_address: { ...(data.guest_address || {}), governorate_slug: selectedGovernorate?.slug },
             promo_code_id: cart.promoCodeId
         };
-        const result = await createOrder(orderPayload, products);
+        const result = await createOrder(orderPayload, cart.isAdmin, products);
         if (result.error) {
             toast.error(result.error);
             setLoading(false);

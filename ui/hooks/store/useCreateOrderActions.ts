@@ -8,7 +8,7 @@ import { CreateOrder } from "@/domain/use-case/store/createOrder";
 import { cookies } from "next/headers";
 import { GetCurrentUser } from "@/domain/use-case/store/getCurrentUser";
 
-export async function createOrder(data: Partial<Order>, items: CartItem[]) {
+export async function createOrder(data: Partial<Order>, isAdmin: boolean, items: CartItem[]) {
     if (!data.customer_id && (!data.guest_name || !data.guest_phone || !data.guest_address)) {
         return { error: 'Missing required guest information' };
     }
@@ -22,7 +22,7 @@ export async function createOrder(data: Partial<Order>, items: CartItem[]) {
     }));
     const sentOrder: Partial<Order> = {
         ...data,
-        sessionId: user,
+        sessionId: isAdmin ? null : user,
         items: purchasedItems,
         promo_code_id: data.promo_code_id
     };
