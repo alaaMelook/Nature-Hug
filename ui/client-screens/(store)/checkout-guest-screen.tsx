@@ -63,7 +63,7 @@ export function CheckoutGuestScreen({ governorates }: { governorates: Governorat
             guest_phone2: data.guest_phone2 ? data.guest_phone2.length > 0 ? data.guest_phone2 : null : null,
             status: 'pending',
             subtotal: cart.netTotal,
-            discount_total: cart.discount,
+            discount_total: cart.isAdmin ? 0 : cart.discount,
             shipping_total: cart.isAdmin ? selectedGovernorate.fees ?? 0 : cart.free_shipping ? 0 : selectedGovernorate?.fees ?? 0,
             tax_total: 0.00,
             payment_method: cart.isAdmin ? 'Online Card' : selectedPayment === 'cod' ? 'Cash on Delivery' : 'Online Card',
