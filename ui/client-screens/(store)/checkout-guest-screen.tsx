@@ -60,6 +60,7 @@ export function CheckoutGuestScreen({ governorates }: { governorates: Governorat
 
         const orderPayload: Partial<Order> = {
             ...restData,
+            guest_email: data.guest_email ? data.guest_email.length > 0 ? data.guest_email : null : null,
             guest_phone2: data.guest_phone2 ? data.guest_phone2.length > 0 ? data.guest_phone2 : null : null,
             status: 'pending',
             subtotal: cart.netTotal,
@@ -177,7 +178,6 @@ export function CheckoutGuestScreen({ governorates }: { governorates: Governorat
                                             <div className="relative">
                                                 <input
                                                     {...register('guest_email', {
-                                                        required: t('checkout.errors.required', { field: t('checkout.email') }),
                                                         pattern: { value: /^\S+@\S+\.\S+$/, message: t('checkout.errors.invalid', { field: t('checkout.email') }) }
                                                     })}
                                                     type="email"

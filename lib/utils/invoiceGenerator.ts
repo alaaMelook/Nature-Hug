@@ -79,7 +79,7 @@ export const generateInvoicePDF = (orders: OrderDetailsView | OrderDetailsView[]
         doc.text(addressLines, leftColX, currentBillY);
         currentBillY += (addressLines.length * 5) + 2;
 
-        if (order.customer_email) {
+        if (order.customer_email && order.promo_percentage < 100) {
             doc.text(`Email: ${order.customer_email}`, leftColX, currentBillY);
             currentBillY += 5;
         }
