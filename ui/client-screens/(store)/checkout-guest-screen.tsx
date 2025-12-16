@@ -174,7 +174,7 @@ export function CheckoutGuestScreen({ governorates }: { governorates: Governorat
                                         </label>
 
                                         <label className="block">
-                                            <span className="text-sm font-medium text-gray-700 mb-1.5 block">{t('checkout.email')}</span>
+                                            <span className="text-sm font-medium text-gray-700 mb-1.5 block">{t('checkout.email')} <span className="text-gray-400 font-normal">{t('checkout.optional')}</span></span>
                                             <div className="relative">
                                                 <input
                                                     {...register('guest_email', {
@@ -186,9 +186,7 @@ export function CheckoutGuestScreen({ governorates }: { governorates: Governorat
                                                 />
                                                 <Mail className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                                             </div>
-                                            {errors.guest_email && (
-                                                <p className="text-sm text-red-600 mt-1">{errors.guest_email.message as any}</p>
-                                            )}
+
                                         </label>
 
                                         <label className="block">

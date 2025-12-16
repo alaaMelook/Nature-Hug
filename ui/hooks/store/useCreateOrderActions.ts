@@ -9,7 +9,7 @@ import { cookies } from "next/headers";
 import { GetCurrentUser } from "@/domain/use-case/store/getCurrentUser";
 
 export async function createOrder(data: Partial<Order>, items: CartItem[]) {
-    if (!data.customer_id && (!data.guest_name || !data.guest_email || !data.guest_phone || !data.guest_address)) {
+    if (!data.customer_id && (!data.guest_name || !data.guest_phone || !data.guest_address)) {
         return { error: 'Missing required guest information' };
     }
     const user = await new GetCurrentUser().getAnonymousSessionId();
