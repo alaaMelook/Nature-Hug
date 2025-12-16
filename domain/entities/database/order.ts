@@ -26,5 +26,6 @@ export interface Order {
     promo_code_id?: number | null;
     items?: Partial<OrderItem>[];
     awb: string | null;
+    payment_status: string;
     sessionId: string | null;
 }
