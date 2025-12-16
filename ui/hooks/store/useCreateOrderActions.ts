@@ -18,10 +18,11 @@ export async function createOrder(data: Partial<Order>, isAdmin: boolean, items:
         variant_id: item.variant_id,
         quantity: item.quantity,
         unit_price: item.price,
-        discount: item.discount || 0,
+        discount: isAdmin ? 0 : item.discount || 0,
     }));
     const sentOrder: Partial<Order> = {
         ...data,
+        discount_total: isAdmin ? 0 : data.discount_total,
         sessionId: isAdmin ? null : user,
         items: purchasedItems,
         promo_code_id: data.promo_code_id
