@@ -64,10 +64,10 @@ export function CheckoutGuestScreen({ governorates }: { governorates: Governorat
             status: 'pending',
             subtotal: cart.netTotal,
             discount_total: cart.discount,
-            shipping_total: cart.free_shipping ? 0 : selectedGovernorate?.fees ?? 0,
+            shipping_total: cart.isAdmin ? selectedGovernorate.fees ?? 0 : cart.free_shipping ? 0 : selectedGovernorate?.fees ?? 0,
             tax_total: 0.00,
             payment_method: cart.isAdmin ? 'Online Card' : selectedPayment === 'cod' ? 'Cash on Delivery' : 'Online Card',
-            grand_total: getCartTotal(cart.free_shipping ? 0 : selectedGovernorate?.fees ?? 0),
+            grand_total: getCartTotal(cart.isAdmin ? selectedGovernorate.fees ?? 0 : cart.free_shipping ? 0 : selectedGovernorate?.fees ?? 0),
             guest_address: { ...(data.guest_address || {}), governorate_slug: selectedGovernorate?.slug },
             promo_code_id: cart.promoCodeId
         };

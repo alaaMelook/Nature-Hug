@@ -76,7 +76,7 @@ export function OrderDetailsScreen({ order, governorate }: { order: OrderDetails
                     toCityName: governorate.name_ar,
                     toAddress: order.shipping_street_address,
                     phone: order.phone_numbers[0] || "",
-                    codAmount: order.final_order_total,
+                    codAmount: order.payment_method.toLowerCase() == 'online card' ? 0 : order.final_order_total,
                     fromAddress: "",
                     toConsigneeName: order.customer_name,
                     toCityId: governorate.cityID,
