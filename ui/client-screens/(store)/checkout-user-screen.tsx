@@ -102,7 +102,8 @@ export function CheckoutUserScreen({ governorates, user }: { governorates: Gover
             toast.error(result.error);
             setLoading(false);
             return;
-        } else if (result.order_id) {
+        }
+        else if (result.order_id) {
             if (selectedPayment === 'online') {
                 // try {
                 //     const responseData = await initiatePaymobPayment(
