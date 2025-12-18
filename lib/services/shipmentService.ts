@@ -36,7 +36,8 @@ class ShipmentService {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "CompanyID": COMPANY_ID
+                    "CompanyID": COMPANY_ID,
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
                 },
                 body: JSON.stringify({ "userName": USERNAME, "password": PASSWORD }),
             });
@@ -157,4 +158,4 @@ class ShipmentService {
 
 }
 
-export const shipmentService = ShipmentService.getInstance(true);
+export const shipmentService = ShipmentService.getInstance();

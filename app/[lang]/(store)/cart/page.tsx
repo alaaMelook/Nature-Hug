@@ -7,6 +7,8 @@ import { Tooltip } from "flowbite-react";
 import Counter from "@/ui/components/store/Counter";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { useState } from "react";
+import { Spinner } from "@/ui/components/Spinner";
 
 export default function CartPage() {
     const router = useRouter();
@@ -55,73 +57,13 @@ export default function CartPage() {
                     {/* Cart Items Section */}
                     <div className="lg:col-span-2 space-y-6">
                         {products.map((item) => (
-                            <div
-                                // key now uses the item.slug, which is unique and available
+                            <CartItemRow
                                 key={item.slug}
-                                className="bg-white rounded-3xl shadow-xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between transform transition-all duration-300 hover:scale-[1.01] hover:shadow-2xl border border-slate-100 "
-                            >
-                                <div className="flex items-center gap-6 w-full">
-                                    <div
-                                        className="flex-shrink-0 relative w-24 h-24 rounded-2xl overflow-hidden shadow-inner">
-                                        <Image
-                                            src={
-                                                item.image ||
-                                                "https://placehold.co/100x100/E2E8F0/FFF?text=No+Image"
-                                            }
-                                            alt={item.name}
-                                            className="w-full h-full object-cover"
-                                            fill={true}
-                                        />
-                                    </div>
-                                    <div className="flex-grow">
-                                        <h3 className="text-lg text-primary-950 font-semibold mb-5">
-                                            {item.name}
-                                        </h3>
-
-                                        <Counter
-                                            quantity={item.quantity} // Use item.quantity (no need for ?? 0 since it's a CartItem)
-                                            onIncrease={() => {
-                                                // Pass the CartItem object for update
-                                                updateQuantity(item, item.quantity + 1);
-                                            }}
-                                            onDecrease={() => {
-                                                const newQty = item.quantity - 1;
-                                                // Pass the CartItem object for update
-                                                updateQuantity(item, newQty);
-                                            }}
-                                        />
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-6 mt-4 sm:mt-0 sm:ml-auto">
-                                    {item.discount ? (
-                                        <div className="flex flex-col items-end gap-2">
-                                            <p className="text-sm text-natural-500 line-through text-normal">
-                                                {t("{{price, currency}}", { price: item.price })}
-                                            </p>
-                                            <p className="text-xl text-primary-900 w-28 text-right text-semibold">
-                                                {t("{{price, currency}}", { price: item.quantity * ((item.price || 0) - item.discount) })}
-                                            </p>
-                                        </div>
-                                    ) : (
-                                        <p className="text-xl text-primary-900 w-28 text-right text-semibold">
-                                            {t("{{price, currency}}", { price: item.quantity * (item.price || 0) })}
-                                        </p>
-                                    )}
-                                    <Tooltip
-                                        content="Remove"
-                                        animation="duration-500"
-                                        placement={`bottom`}
-                                    >
-                                        <button
-                                            onClick={() => removeFromCart(item)}
-                                            className="p-2 text-slate-400 hover:text-red-500 transition-colors duration-300"
-                                            aria-label={t("remove")}
-                                        >
-                                            <X className="h-6 w-6 cursor-pointer" />
-                                        </button>
-                                    </Tooltip>
-                                </div>
-                            </div>
+                                item={item}
+                                updateQuantity={updateQuantity}
+                                removeFromCart={removeFromCart}
+                                t={t}
+                            />
                         ))}
                     </div>
 
@@ -138,19 +80,14 @@ export default function CartPage() {
                                 </span>
                             </div>
                             <p className="text-sm text-slate-500 mb-6 flex">{t("checkoutInfo")}</p>
-
-
                             <button
                                 className=" w-full cursor-pointer py-4 bg-primary-800 text-primary-50 font-bold rounded-full text-lg shadow-lg hover:bg-primary-50 hover:text-primary-700 transition-colors duration-300"
                                 onClick={() => {
                                     router.push("/checkout");
                                 }}
                             >
-
                                 {t("proceedToCheckout")}
                             </button>
-
-
                         </div>
                     </div>
                     <button
@@ -159,10 +96,81 @@ export default function CartPage() {
                     >
                         <center>
                             <Trash2Icon></Trash2Icon>
-
                         </center>
                     </button>
                 </div>
+            </div>
+        </div>
+    );
+}
+
+function CartItemRow({ item, updateQuantity, removeFromCart, t }: { item: any, updateQuantity: any, removeFromCart: any, t: any }) {
+    const [updating, setUpdating] = useState(false);
+
+    const handleUpdate = async (newQty: number) => {
+        setUpdating(true);
+        await updateQuantity(item, newQty);
+        setUpdating(false);
+    };
+
+    const handleRemove = async () => {
+        setUpdating(true);
+        await removeFromCart(item);
+        setUpdating(false);
+    };
+
+    return (
+        <div className={`bg-white rounded-3xl shadow-xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between transform transition-all duration-300 hover:scale-[1.01] hover:shadow-2xl border border-slate-100 ${updating ? 'opacity-70 pointer-events-none' : ''}`}>
+            <div className="flex items-center gap-6 w-full">
+                <div className="flex-shrink-0 relative w-24 h-24 rounded-2xl overflow-hidden shadow-inner">
+                    <Image
+                        src={item.image || "https://placehold.co/100x100/E2E8F0/FFF?text=No+Image"}
+                        alt={item.name}
+                        className="w-full h-full object-cover"
+                        fill={true}
+                        sizes="(max-width: 640px) 100px, 150px"
+                    />
+                    {updating && (
+                        <div className="absolute inset-0 bg-white/50 flex items-center justify-center z-10">
+                            <Spinner size="sm" />
+                        </div>
+                    )}
+                </div>
+                <div className="flex-grow">
+                    <h3 className="text-lg text-primary-950 font-semibold mb-5">
+                        {item.name}
+                    </h3>
+                    <Counter
+                        quantity={item.quantity}
+                        onIncrease={() => handleUpdate(item.quantity + 1)}
+                        onDecrease={() => handleUpdate(item.quantity - 1)}
+                    />
+                </div>
+            </div>
+            <div className="flex items-center gap-6 mt-4 sm:mt-0 sm:ml-auto">
+                {item.discount ? (
+                    <div className="flex flex-col items-end gap-2">
+                        <p className="text-sm text-natural-500 line-through text-normal">
+                            {t("{{price, currency}}", { price: item.price })}
+                        </p>
+                        <p className="text-xl text-primary-900 w-28 text-right text-semibold">
+                            {t("{{price, currency}}", { price: item.quantity * ((item.price || 0) - item.discount) })}
+                        </p>
+                    </div>
+                ) : (
+                    <p className="text-xl text-primary-900 w-28 text-right text-semibold">
+                        {t("{{price, currency}}", { price: item.quantity * (item.price || 0) })}
+                    </p>
+                )}
+                <Tooltip content="Remove" animation="duration-500" placement={`bottom`}>
+                    <button
+                        onClick={handleRemove}
+                        className="p-2 text-slate-400 hover:text-red-500 transition-colors duration-300"
+                        aria-label={t("remove")}
+                    >
+                        {updating ? <Spinner size="sm" color="text-red-500" /> : <X className="h-6 w-6 cursor-pointer" />}
+                    </button>
+                </Tooltip>
             </div>
         </div>
     );

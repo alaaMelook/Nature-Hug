@@ -7,6 +7,7 @@ import React from "react";
 import FontProvider from "@/ui/providers/FontProvider";
 import { Toaster } from "sonner";
 import I18nProvider from "@/ui/providers/i18nProvider";
+import NextTopLoader from 'nextjs-toploader';
 
 export const metadata: Metadata = {
     title: "Nature Hug",
@@ -75,6 +76,7 @@ export default async function RootLayoutRootLayout({
 
                     <FontProvider>
                         <main className="flex-grow">
+                            <NextTopLoader color="#166534" showSpinner={false} />
                             {children}
                         </main>
                         <Toaster position="top-center" richColors />

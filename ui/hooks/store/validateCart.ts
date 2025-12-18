@@ -8,7 +8,8 @@ export async function validateCart(cart: { slug: string, quantity: number }[], l
         return { items: [], removed: [] }
     }
 
-    const products = await Promise.all(cart.map(item => new ViewAllProducts(lang).bySlug(item.slug)))
+    const slugs = cart.map(item => item.slug);
+    const products = await new ViewAllProducts(lang).batchBySlugs(slugs);
 
     const productMap = new Map(
         products.map(p => [p.slug, p])

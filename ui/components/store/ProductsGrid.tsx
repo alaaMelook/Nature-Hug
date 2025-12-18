@@ -59,6 +59,7 @@ export function ProductCard({
                     width={compact ? 500 : 1000}
                     height={compact ? 500 : 1000}
                     priority={!compact}
+                    sizes={compact ? "(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" : "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"}
                 />
 
                 {product.discount != null && product.discount > 0 && (

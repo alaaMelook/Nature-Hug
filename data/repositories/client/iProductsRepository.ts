@@ -63,6 +63,24 @@ export class IProductClientRepository implements ProductRepository {
         return data;
     }
 
+    async viewBySlugs(slugs: string[]): Promise<ProductView[]> {
+        console.log("[IProductRepository] viewBySlugs called with slugs:", slugs);
+        if (!slugs.length) return [];
+
+        const { data, status, statusText, error } = await supabase
+            .schema('store')
+            .from(`products_view_${this.lang}`)
+            .select('*')
+            .in('slug', slugs);
+
+        console.log("[IProductRepository] viewBySlugs result:", { data, status, statusText });
+        if (error) {
+            console.error("[IProductRepository] viewBySlugs error:", error);
+            throw error;
+        }
+        return data || [];
+    }
+
 
 
 

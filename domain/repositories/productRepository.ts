@@ -14,6 +14,7 @@ export interface ProductRepository {
     viewAll(): Promise<ProductView[]>;
     viewBySlug(slug: string): Promise<ProductView>;
     viewRecent(count: number): Promise<ProductView[]>;
+    viewBySlugs(slugs: string[]): Promise<ProductView[]>;
 
     viewByCategory(categoryName: string): Promise<ProductView[]>;
 

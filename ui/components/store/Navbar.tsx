@@ -15,6 +15,7 @@ import { useCurrentLanguage } from "@/ui/hooks/useCurrentLanguage";
 
 
 import { usePathname } from "next/navigation";
+import { Spinner } from "../Spinner";
 
 
 export default function Navbar() {
@@ -100,11 +101,14 @@ export default function Navbar() {
     }, []);
 
     // Logout
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
     const handleLogout = useCallback(async () => {
+        setIsLoggingOut(true);
         setIsOpen(false);
         setIsSettingsOpen(false);
         await signOut();
         router.push("/");
+        setIsLoggingOut(false);
     }, [signOut, router]);
 
     const navigationItems = useMemo(
@@ -133,6 +137,7 @@ export default function Navbar() {
                         src={"https://reqrsmboabgxshacmkst.supabase.co/storage/v1/object/public/nature-hug/logos/logo%20(4).png"}
                         priority={true} alt={t("components.logoAlt")}
                         fill={true}
+                        sizes="(max-width: 640px) 80px, 120px"
                         className="transition-all duration-900 ease-in-out" />
                 </Link>
                 <LanguageSwitcher tohover={!(isHomePage && !isScrolled)} />
@@ -227,7 +232,7 @@ export default function Navbar() {
                                     onClick={handleLogout}
                                     className="w-full flex items-center px-4 py-2 text-sm text-primary-900 hover:bg-gray-100 cursor-pointer"
                                 >
-                                    <LogOut className="w-4 h-4 mx-2" />
+                                    {isLoggingOut ? <Spinner size="sm" /> : <LogOut className="w-4 h-4 mx-2" />}
                                     {t('logout')}
                                 </button>
                             </div>

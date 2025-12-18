@@ -214,6 +214,7 @@ export function HomeScreen({ initialProducts: products, categories }: { initialP
                                                 src={category.image_url}
                                                 alt={category.name_en}
                                                 fill={true}
+                                                sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
                                                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                                             />
                                             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-80 group-hover:opacity-90 transition-opacity duration-300">

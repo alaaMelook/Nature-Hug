@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { ProductView } from '@/domain/entities/views/shop/productView';
 import { ProductDetailView } from '@/domain/entities/views/shop/productDetailView';
 import { useTranslation } from 'react-i18next';
+import { Spinner } from '../Spinner';
 
 export default function BuyNowButton({ product, quantity, className }: { product: ProductView | ProductDetailView, quantity: number, className?: string }) {
     const router = useRouter();
@@ -28,7 +29,7 @@ export default function BuyNowButton({ product, quantity, className }: { product
       disabled:opacity-50`}
             disabled={!product.stock}
         >
-            {t("BuyNow")}
+            {loading ? <Spinner size="sm" color="text-white" /> : t("BuyNow")}
         </button>
     );
 }

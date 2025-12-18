@@ -30,4 +30,15 @@ export class ViewAllProducts {
             throw error;
         }
     }
+    async batchBySlugs(slugs: string[]): Promise<ProductView[]> {
+        try {
+            console.log("[ViewAllProducts] batchBySlugs called.");
+            const result = await this.repo.viewBySlugs(slugs);
+            console.log("[ViewAllProducts] batchBySlugs result:", result);
+            return result;
+        } catch (error) {
+            console.error("[ViewAllProducts] Error in batchBySlugs:", error);
+            throw error;
+        }
+    }
 }

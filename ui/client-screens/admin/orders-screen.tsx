@@ -189,9 +189,17 @@ export function OrdersScreen({ initialOrders, promoCodes = [] }: { initialOrders
                     {selectedOrders.length > 0 && (
                         <>
                             <button
-                                onClick={() => {
-                                    const selected = orders.filter(o => selectedOrders.includes(o.order_id));
-                                    generateInvoicePDF(selected);
+                                onClick={async () => {
+                                    setProcessingBulk(true);
+                                    try {
+                                        const selected = orders.filter(o => selectedOrders.includes(o.order_id));
+                                        await generateInvoicePDF(selected);
+                                    } catch (e) {
+                                        console.error(e);
+                                        toast.error(t("errorGeneratingInvoice") || "Error generating invoice");
+                                    } finally {
+                                        setProcessingBulk(false);
+                                    }
                                 }}
                                 disabled={processingBulk}
                                 className="bg-gray-100 text-gray-700 px-4 py-2 rounded hover:bg-gray-200 disabled:opacity-50 font-medium transition-colors border border-gray-200"

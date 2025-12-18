@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { useCart } from "@/ui/providers/CartProvider";
 import { ProductView } from "@/domain/entities/views/shop/productView";
 import { ProductDetailView } from "@/domain/entities/views/shop/productDetailView";
+import { Spinner } from "../Spinner";
 
 
 export default function AddToCartButton({
@@ -36,10 +37,13 @@ export default function AddToCartButton({
       ${loading || isDisabled ? "bg-gray-400 text-gray-200" : " text-primary-900 border-1 border-primary-900 rounded-md"}
       disabled:opacity-50`}
         >
-            {isDisabled ? <BadgeAlert className="sm:w-4 sm:h-4 w-3 h-3 mx-1 -mt-1" /> : <ShoppingCart className="sm:w-4 sm:h-4 w-3 h-3 mx-1 -mt-1" />}
-            {loading ? "..." :
+            {loading ? <Spinner size="sm" color="text-white" /> :
                 isDisabled ? t("outOfStock") :
-                    t("addToCart")}
+                    <span className="flex items-center">
+                        <ShoppingCart className="sm:w-4 sm:h-4 w-3 h-3 mx-1 -mt-1" />
+                        {t("addToCart")}
+                    </span>
+            }
         </button>
     );
 }

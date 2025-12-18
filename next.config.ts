@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 import withFlowbiteReact from "flowbite-react/plugin/nextjs";
 
+const withBundleAnalyzer = require('@next/bundle-analyzer')({
+  enabled: process.env.ANALYZE === 'true',
+})
+
 const nextConfig: NextConfig = {
   /* config options here */
   images: {
@@ -22,4 +26,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withFlowbiteReact(nextConfig);
+export default withBundleAnalyzer(withFlowbiteReact(nextConfig));

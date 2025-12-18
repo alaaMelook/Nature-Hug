@@ -36,6 +36,7 @@ const ImageCarousel = ({ images }: { images: (string | null)[] }) => {
                                 'https://placehold.co/80x80/94A3B8/ffffff?text=?')
                             }
                             fill={true}
+                            sizes="(max-width: 640px) 60px, 80px"
                         />
                         {index !== activeIndex && <div className="absolute inset-0 transition duration-600 bg-gray-300/70  flex-shrink-0 hover:bg-gray-300/40"></div>}
                     </button>
@@ -61,6 +62,7 @@ const ImageCarousel = ({ images }: { images: (string | null)[] }) => {
                                     'https://placehold.co/600x600/94A3B8/ffffff?text=Image+Missing')
                                 }
                                 fill={true}
+                                sizes="(max-width: 640px) 100vw, 600px"
                             />
                         </motion.div>
                     </AnimatePresence>
