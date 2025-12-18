@@ -1,16 +1,31 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { OrderDetailsView } from "@/domain/entities/views/admin/orderDetailsView";
+import '@/public/fonts/NotoSansArabic-Regular.js';
+
 
 // NOTE ON LOGO: The provided code uses a URL. To use your uploaded logo (logo (4).png)
 // you must first convert it to a Base64 string and replace 'YOUR_BASE64_LOGO_STRING_HERE' below.
 // For example: doc.addImage(base64ImageString, 'PNG', ...)
-
+const containsArabic = (text: string) => {
+    if (!text || text.length === 0) return false;
+    const arabicPattern = /[\u0600-\u06FF]/;
+    return arabicPattern.test(text);
+};
 const formatCurrency = (amount: number) => {
     // Assuming EGP from your original code, can be changed.
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'EGP' }).format(amount);
 };
-
+const adjustFor = (doc: jsPDF, text: string) => {
+    if (containsArabic(text)) {
+        doc.setFont("NotoSansArabic-Regular", "normal");
+        doc.setLanguage("ar");
+    }
+    else {
+        doc.setFont("helvetica", "normal");
+        doc.setLanguage("en");
+    }
+}
 export const generateInvoicePDF = (orders: OrderDetailsView | OrderDetailsView[]) => {
     const orderList = Array.isArray(orders) ? orders : [orders];
     // Cast to include autotable methods for stricter TS environments
@@ -72,12 +87,17 @@ export const generateInvoicePDF = (orders: OrderDetailsView | OrderDetailsView[]
         doc.setTextColor(0, 0, 0);
 
         let currentBillY = startY + 6;
-        doc.text(order.customer_name || "Customer Name", leftColX, currentBillY);
-
-        const addressLines = doc.splitTextToSize(`${order.shipping_street_address}, ${order.shipping_governorate}`, (pageWidth / 2) - leftColX - 5);
+        adjustFor(doc, order.customer_name);
+        doc.text(order.customer_name, leftColX, currentBillY, { isOutputRtl: containsArabic(order.customer_name) });
         currentBillY += 5;
-        doc.text(addressLines, leftColX, currentBillY);
-        currentBillY += (addressLines.length * 5) + 2;
+
+        adjustFor(doc, order.shipping_street_address);
+        const address = doc.splitTextToSize(order.shipping_street_address, pageWidth / 2);
+        doc.text(address, leftColX, currentBillY);
+        currentBillY += (address.length * 5);
+        adjustFor(doc, order.shipping_governorate);
+        doc.text(order.shipping_governorate, leftColX, currentBillY, { isOutputRtl: containsArabic(order.shipping_governorate) });
+        currentBillY += 5;
 
         if (order.customer_email && order.promo_percentage < 100) {
             doc.text(`Email: ${order.customer_email}`, leftColX, currentBillY);

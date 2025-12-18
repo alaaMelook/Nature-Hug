@@ -16,7 +16,6 @@
     "@react-pdf/renderer": "^4.3.1",
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.56.0",
-    "arabic-reshaper": "^1.1.0",
     "embla-carousel-react": "^8.6.0",
     "flowbite-react": "^0.12.7",
     "framer-motion": "^12.23.24",
