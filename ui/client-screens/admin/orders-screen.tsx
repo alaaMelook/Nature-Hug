@@ -164,28 +164,29 @@ export function OrdersScreen({ initialOrders, promoCodes = [] }: { initialOrders
             animate={{ opacity: 1 }}
             className="p-6"
         >
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold">{t("allOrders")}</h1>
-                <div className="md:hidden flex gap-2 w-1/2">
+            <div className="flex flex-col md:flex-row justify-between md:items-center mb-6 gap-4">
+                <div className="flex justify-between items-center w-full md:w-auto">
+                    <h1 className="text-2xl font-bold">{t("allOrders")}</h1>
+                </div>
+
+                <div className="md:hidden flex gap-2 w-full">
                     <input
                         type="text"
                         placeholder={t("searchOrdersPlaceholder")}
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className="border px-3 py-2 flex-2 rounded-lg"
+                        className="border px-3 py-2 flex-grow rounded-lg"
                     />
                     <button
                         onClick={toggleFilter}
-                        className="bg-gray-100 text-gray-700 p-2 rounded-lg flex flex-1 flex-shrink hover:bg-gray-200 font-medium transition-colors border border-gray-200"
+                        className="bg-gray-100 text-gray-700 p-2 rounded-lg flex-shrink-0 hover:bg-gray-200 font-medium transition-colors border border-gray-200"
                     >
                         {t("filter")}
                         <FilterIcon className="w-5 h-5 mx-2" />
                     </button>
-
-
                 </div>
 
-                <div className="flex gap-2">
+                <div className="hidden md:flex gap-2">
                     {selectedOrders.length > 0 && (
                         <>
                             <button
@@ -423,7 +424,7 @@ export function OrdersScreen({ initialOrders, promoCodes = [] }: { initialOrders
             </div>
             <div className="md:hidden">
                 {/* mobile view order view should be card-like */}
-                <div className="grid grid-cols-1 gap-4">
+                <div className="grid grid-cols-1 gap-4 pb-32 md:pb-0">
                     <AnimatePresence>
                         {(filteredOrders?.length ?? 0) > 0 ? (
                             filteredOrders.map((order) => (
@@ -498,6 +499,69 @@ export function OrdersScreen({ initialOrders, promoCodes = [] }: { initialOrders
                     </AnimatePresence>
                 </div>
             </div>
+            <AnimatePresence>
+                {selectedOrders.length > 0 && (
+                    <motion.div
+                        initial={{ y: "100%" }}
+                        animate={{ y: 0 }}
+                        exit={{ y: "100%" }}
+                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                        className="md:hidden fixed bottom-4 left-4 right-4 bg-white border border-gray-200 rounded-xl p-4 shadow-2xl z-50 flex flex-col gap-3"
+                        style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}
+                    >
+                        <div className="flex justify-between items-center border-b pb-2">
+                            <span className="font-semibold text-gray-800">{selectedOrders.length} {t("ordersSelected") || "orders selected"}</span>
+                            <button onClick={() => setSelectedOrders([])} className="text-gray-500 text-sm font-medium px-2 py-1 bg-gray-100 rounded">{t("clear") || "Clear"}</button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                            <button
+                                onClick={() => handleBulkAction('accept')}
+                                disabled={processingBulk}
+                                className="bg-green-100 text-green-700 px-2 py-3 rounded-lg hover:bg-green-200 disabled:opacity-50 font-medium text-sm transition-colors text-center"
+                            >
+                                {t("acceptSelected")}
+                            </button>
+                            <button
+                                onClick={() => handleBulkAction('reject')}
+                                disabled={processingBulk}
+                                className="bg-red-100 text-red-700 px-2 py-3 rounded-lg hover:bg-red-200 disabled:opacity-50 font-medium text-sm transition-colors text-center"
+                            >
+                                {t("rejectSelected")}
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    setProcessingBulk(true);
+                                    try {
+                                        const selected = orders.filter(o => selectedOrders.includes(o.order_id));
+                                        await generateInvoicePDF(selected);
+                                    } catch (e) {
+                                        console.error(e);
+                                        toast.error(t("errorGeneratingInvoice") || "Error generating invoice");
+                                    } finally {
+                                        setProcessingBulk(false);
+                                    }
+                                }}
+                                disabled={processingBulk}
+                                className="bg-gray-100 text-gray-700 px-2 py-3 rounded-lg hover:bg-gray-200 disabled:opacity-50 font-medium text-sm transition-colors border border-gray-200 text-center"
+                            >
+                                {t("exportInvoices")}
+                            </button>
+                            <button
+                                onClick={() => {
+                                    const selected = orders.filter(o => selectedOrders.includes(o.order_id));
+                                    exportOrdersToExcel(selected);
+                                    toast.success(t("excelExportStarted"));
+                                }}
+                                disabled={processingBulk}
+                                className="bg-green-100 text-green-700 px-2 py-3 rounded-lg hover:bg-green-200 disabled:opacity-50 font-medium text-sm transition-colors border border-green-200 flex items-center justify-center gap-1 text-center"
+                            >
+                                <FileSpreadsheet className="w-3 h-3" />
+                                {t("exportExcel") || "Export Excel"}
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </motion.div >
     );
 }

@@ -713,6 +713,8 @@ export const resources = {
       excelExportFailed: "Excel export failed",
       excelExportSuccess: "Excel export success",
       exportExcel: "Export Excel",
+      ordersSelected: "orders selected",
+      clear: "Clear",
 
 
     }
@@ -1424,6 +1426,8 @@ export const resources = {
       excelExportStarted: "تصدير إلى ملف Excel",
       excelExportFailed: "تصدير إلى ملف Excel",
       excelExportSuccess: "تصدير إلى ملف Excel",
+      ordersSelected: "طلبات محددة",
+      clear: "مسح",
     }
   }
 };
