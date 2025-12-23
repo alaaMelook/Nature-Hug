@@ -11,7 +11,8 @@ import { generateInvoicePDF } from "@/lib/utils/invoiceGenerator";
 import { Loader2 } from "lucide-react";
 import { statusColor } from "@/lib/utils/statusColors";
 import { PromoCode } from "@/domain/entities/database/promoCode";
-import { FilterIcon } from "lucide-react";
+import { FilterIcon, FileSpreadsheet } from "lucide-react";
+import { exportOrdersToExcel } from "@/lib/utils/excelExporter";
 
 export function OrdersScreen({ initialOrders, promoCodes = [] }: { initialOrders: OrderDetailsView[], promoCodes?: PromoCode[] }) {
     const { t, i18n } = useTranslation();
@@ -204,6 +205,18 @@ export function OrdersScreen({ initialOrders, promoCodes = [] }: { initialOrders
                                 className="bg-gray-100 text-gray-700 px-4 py-2 rounded hover:bg-gray-200 disabled:opacity-50 font-medium transition-colors border border-gray-200"
                             >
                                 {t("exportInvoices")} ({selectedOrders.length})
+                            </button>
+                            <button
+                                onClick={() => {
+                                    const selected = orders.filter(o => selectedOrders.includes(o.order_id));
+                                    exportOrdersToExcel(selected);
+                                    toast.success(t("excelExportStarted"));
+                                }}
+                                disabled={processingBulk}
+                                className="bg-green-100 text-green-700 px-4 py-2 rounded hover:bg-green-200 disabled:opacity-50 font-medium transition-colors border border-green-200 flex items-center gap-2"
+                            >
+                                <FileSpreadsheet className="w-4 h-4" />
+                                {t("exportExcel") || "Export Excel"} ({selectedOrders.length})
                             </button>
                             <button
                                 onClick={() => handleBulkAction('accept')}

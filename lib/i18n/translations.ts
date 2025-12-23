@@ -709,6 +709,10 @@ export const resources = {
       currentStatus: "Current Status",
       statusReason: "Status Reason",
       unassigned: "Unassigned",
+      excelExportStarted: "Excel export started",
+      excelExportFailed: "Excel export failed",
+      excelExportSuccess: "Excel export success",
+      exportExcel: "Export Excel",
 
 
     }
@@ -1416,7 +1420,10 @@ export const resources = {
       currentStatus: "الحالة الحالية",
       statusReason: "سبب الحالة",
       unassigned: "غير معين",
-
+      exportExcel: "تصدير إلى ملف Excel",
+      excelExportStarted: "تصدير إلى ملف Excel",
+      excelExportFailed: "تصدير إلى ملف Excel",
+      excelExportSuccess: "تصدير إلى ملف Excel",
     }
   }
 };
