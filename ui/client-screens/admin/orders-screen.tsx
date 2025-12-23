@@ -92,8 +92,7 @@ export function OrdersScreen({ initialOrders, promoCodes = [] }: { initialOrders
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
                 <div className="bg-white p-6 rounded-lg shadow-xl text-center">
                     <Loader2 className="animate-spin h-10 w-10 text-primary mx-auto mb-4" />
-                    <p className="text-lg font-medium">Syncing Shipment Statuses...</p>
-                    <p className="text-sm text-gray-500">{processedCount} orders check</p>
+                    <p className="text-sm text-gray-500">{processedCount}</p>
                 </div>
             </div>
         );

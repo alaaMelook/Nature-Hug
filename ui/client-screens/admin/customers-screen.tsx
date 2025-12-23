@@ -51,7 +51,7 @@ export function CustomersScreen({ allCustomers }: { allCustomers: ProfileView[] 
             minWidth: 250,
             renderCell: (params: GridRenderCellParams) => (
                 <div className="flex items-center h-full">
-                    <div className="flex-shrink-0 h-10 w-10 mr-4">
+                    <div className="flex-shrink-0 h-10 w-10 mx-4">
                         <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-bold text-lg">
                             {params.row.name?.charAt(0)?.toUpperCase() || "?"}
                         </div>
@@ -75,14 +75,14 @@ export function CustomersScreen({ allCustomers }: { allCustomers: ProfileView[] 
             renderCell: (params: GridRenderCellParams) => (
                 <div className="flex flex-col justify-center h-full text-sm text-gray-900 space-y-1 py-1">
                     <div className="flex items-center">
-                        <Mail className="h-3.5 w-3.5 text-gray-400 mr-2" />
+                        <Mail className="h-3.5 w-3.5 text-gray-400 mx-2" />
                         <span className="truncate" title={params.row.email}>
                             {params.row.email || <span className="text-gray-400 italic">{t("noEmail")}</span>}
                         </span>
                     </div>
                     {params.row.phone && params.row.phone.map((phone: string, index: number) => (
                         <div className="flex items-center" key={`${phone}-${index}`}>
-                            <Phone className="h-3.5 w-3.5 text-gray-400 mr-2" />
+                            <Phone className="h-3.5 w-3.5 text-gray-400 mx-2" />
                             {phone}
                         </div>
                     ))}
@@ -105,7 +105,7 @@ export function CustomersScreen({ allCustomers }: { allCustomers: ProfileView[] 
                         <div className="flex flex-col gap-1">
                             {params.row.address?.map((addr: any, idx: number) => (
                                 <div key={idx} className="flex items-center">
-                                    <MapPin className="h-3.5 w-3.5 text-gray-400 mr-2" />
+                                    <MapPin className="h-3.5 w-3.5 text-gray-400 mx-2" />
                                     {addr.governorate.name_en}
                                 </div>
                             ))}
@@ -123,7 +123,7 @@ export function CustomersScreen({ allCustomers }: { allCustomers: ProfileView[] 
             minWidth: 150,
             renderCell: (params: GridRenderCellParams) => (
                 <div className="flex items-center h-full text-sm text-gray-900">
-                    <Calendar className="h-3.5 w-3.5 text-gray-400 mr-2" />
+                    <Calendar className="h-3.5 w-3.5 text-gray-400 mx-2" />
                     {new Date(params.row.created_at).toLocaleDateString()}
                 </div>
             )

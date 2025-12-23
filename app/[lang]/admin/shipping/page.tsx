@@ -2,11 +2,13 @@
 import { Loader2, Plug } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { getDashboardLinkAction } from "@/ui/hooks/admin/shippingActions";
+import { useTranslation } from "react-i18next";
 
 
 export default function ShipmentDashboard() {
     const [link, setLink] = useState<string | null>()
     const [loading, setLoading] = useState<boolean>(false);
+    const { t } = useTranslation();
     const open = useCallback(async () => {
         setLoading(true)
         const result = await getDashboardLinkAction();
@@ -33,7 +35,7 @@ export default function ShipmentDashboard() {
                 ) : (
                     <Plug className="inline-block mr-2" size={16} />
                 )}
-                {loading ? "Logging in..." : "Login to Shipment Service"}
+                {loading ? t("loggingIn") : t("login")}
             </button>
         </div>
     );

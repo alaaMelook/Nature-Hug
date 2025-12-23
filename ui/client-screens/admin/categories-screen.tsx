@@ -65,24 +65,26 @@ export default function CategoriesScreen({ initialCategories, initialImages }: {
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="p-6 max-w-2xl mx-auto"
+            className="p-6 max-w-2xl mx-auto md:mx-5 md:w-full flex flex-col"
         >
             <h1 className="text-2xl font-bold mb-6">{t("manageCategories")}</h1>
 
             {/* Add Form */}
-            <div className="flex flex-col md:flex-row mb-6 space-y-3 items-center bg-white p-4 rounded-lg shadow-sm border">
-                {image ? <Image
-                    src={image}
-                    alt={t("admin.categories.altImage")}
-                    onClick={() => setOpenSelector(true)}
-                    width={100}
-                    height={100}
-                    className="w-24 h-24 object-cover rounded-lg mx-auto cursor-pointer"
-                /> :
-                    <div className="cursor-pointer flex items-center justify-center w-24 h-24 rounded-lg border-dashed border-2 border-gray-300">
+            <div className="flex flex-col md:flex-row mb-6 space-y-3 items-center bg-white p-4 rounded-lg shadow-sm border md:space-x-5 w-full">
+                <div className="md:flex-2 cursor-pointer flex items-center justify-center w-24 h-24 md:h-30 md:w-30 rounded-lg border-dashed border-2 border-gray-300">
+                    {image ? <Image
+                        src={image}
+                        alt={t("admin.categories.altImage")}
+                        onClick={() => setOpenSelector(true)}
+                        width={100}
+                        height={100}
+                        className="w-24 h-24 object-cover rounded-lg mx-auto cursor-pointer"
+                    /> :
+
                         <Upload className="h-12 w-12 text-gray-500" onClick={() => setOpenSelector(true)} />
-                    </div>}
-                <div className="flex flex-col space-y-2 w-full">
+                    }
+                </div>
+                <div className="md:flex-2 flex flex-col space-y-2 w-full">
 
                     <input
                         type="text"
@@ -97,14 +99,14 @@ export default function CategoriesScreen({ initialCategories, initialImages }: {
                         value={nameArabic}
                         onChange={(e) => setNameArabic(e.target.value)}
                         className="w-full border px-3 py-2 rounded-md text-sm"
-                    />
+                    />    <button
+                        onClick={handleAdd}
+                        className="flex items-center px-3 py-2 bg-primary-600 text-white text-sm rounded-md hover:bg-primary-700 transition-colors w-full justify-center sm:w-auto"
+                    >
+                        <Plus className="h-4 w-4 mr-2" /> {t("addCategory")}
+                    </button>
                 </div>
-                <button
-                    onClick={handleAdd}
-                    className="flex items-center px-3 py-2 bg-primary-600 text-white text-sm rounded-md hover:bg-primary-700 transition-colors w-full justify-center sm:w-auto"
-                >
-                    <Plus className="h-4 w-4 mr-2" /> {t("addCategory")}
-                </button>
+
             </div>
 
             {/* Categories List */}
@@ -125,9 +127,9 @@ export default function CategoriesScreen({ initialCategories, initialImages }: {
                                     <Image
                                         src={c.image_url}
                                         alt={c.name_en}
-                                        width={50}
-                                        height={50}
-                                        className="rounded-full"
+                                        width={100}
+                                        height={100}
+                                        className="rounded-sm"
                                     />
                                 ) : <PackageCheck className="h-6 w-6 text-gray-500" />}
                                 <div>
