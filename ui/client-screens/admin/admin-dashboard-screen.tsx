@@ -9,9 +9,10 @@ import { useAdminDashboard } from "@/ui/hooks/admin/useAdminDashboard";
 interface StatCard {
     title: string;
     value: string | number;
+    name: string;
     parValue: number | string;
     icon: any;
-    change: number;
+    change?: number;
     color: string;
     isCurrency?: boolean;
     isCount?: boolean;
@@ -35,6 +36,7 @@ export function AdminDashboardScreen({ actionStats }: {
     const statCards: StatCard[] = [
         {
             title: t("totalCustomers"),
+            name: "Customer",
             value: dashboard?.total_customers ?? 0,
             parValue: dashboard?.current_period_customers ?? 0,
             icon: Users,
@@ -44,6 +46,7 @@ export function AdminDashboardScreen({ actionStats }: {
         },
         {
             title: t("totalProducts"),
+            name: "Product",
             value: dashboard?.total_products ?? 0,
             parValue: dashboard?.current_period_products ?? 0,
             icon: Package,
@@ -53,6 +56,7 @@ export function AdminDashboardScreen({ actionStats }: {
         },
         {
             title: t("totalOrders"),
+            name: "Order",
             value: dashboard?.total_orders ?? 0,
             parValue: dashboard?.current_period_orders ?? 0,
             icon: ShoppingCart,
@@ -62,34 +66,35 @@ export function AdminDashboardScreen({ actionStats }: {
         },
         {
             title: t("totalRevenue"),
+            name: "",
             value: parseFloat(dashboard?.total_revenue ?? "0"),
             parValue: parseFloat(dashboard?.current_period_revenue ?? "0"),
             icon: HandCoins,
             change: parseFloat(dashboard?.revenue_change ?? "0"),
             color: "text-emerald-600 bg-emerald-50",
-            isCurrency: true
+            isCurrency: true,
+            isCount: true
         },
         {
             title: t("avgOrderValue"),
+            name: "avg_order_value",
             value: parseFloat(dashboard?.current_period_avg_order_value ?? "0"),
             parValue: 0, // No par value for AOV provided in this view specifically matching others? Or is it current_period? actually standard is comparison. 
             // In DashboardStats: current_period_avg_order_value exists, avg_order_value_change exists. 
             // We can display current value and the change.
             icon: BadgeDollarSignIcon,
 
-            change: parseFloat(dashboard?.avg_order_value_change ?? "0"),
             color: "text-cyan-600 bg-cyan-50",
             isCurrency: true
         },
         // We can add Conversion Rate if needed, user said "all other parameters"
         {
             title: t("conversionRate"),
+            name: "conversion_rate",
             value: parseFloat(dashboard?.current_period_conversion_rate ?? "0"),
             parValue: 0,
             icon: ShoppingBasket,
-            change: 0, // conversion_rate_change not in DashboardStats yet? interface had: avg_order_value_change. 
-            // Checking interface DashboardStats: no conversion_rate_change.
-            // I'll display the value, change 0 for now or hide change?
+
             color: "text-indigo-600 bg-indigo-50",
             // It's a percentage value itself
         }
@@ -164,6 +169,25 @@ export function AdminDashboardScreen({ actionStats }: {
         }
     };
 
+    const renderChangeIndicator = (stat: StatCard) => {
+        if (typeof stat.change === 'undefined') return null;
+
+        const change = stat.change;
+        if (stat.isCount) {
+            const sign = change > 0 ? '+' : change < 0 ? '-' : '';
+            return <>{sign} {stat.isCurrency ? t("{{price, currency}}", { price: Math.abs(change) }) : Math.abs(change)} {(Math.abs(change) > 1 && !stat.isCurrency ? stat.name + "s" : stat.name)}</>;
+        }
+
+        const Icon = change > 0 ? TrendingUp : change < 0 ? TrendingDown : TrendingUpDown;
+
+        return (
+            <>
+                <Icon className="h-3 w-3 mr-1" />
+                {Math.abs(change)}%
+            </>
+        );
+    };
+
     if (error) {
         return (
             <div className="p-6 bg-red-50 text-red-600 rounded-lg">
@@ -227,7 +251,7 @@ export function AdminDashboardScreen({ actionStats }: {
             </motion.div>
 
             {/* Stat Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 md:gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-4  gap-4 md:gap-6">
                 {/* Adjusted grid cols to fit 6 items or responsive */}
                 {loading ? (
                     // Skeleton Loaders
@@ -254,15 +278,12 @@ export function AdminDashboardScreen({ actionStats }: {
                                 <div className={`p-2.5 rounded-xl ${stat.color} group-hover:scale-110 transition-transform duration-200`}>
                                     <stat.icon className="h-5 w-5 md:h-6 md:w-6" />
                                 </div>
-                                <div className={`flex items-center text-xs font-bold px-2 py-1 rounded-full ${stat.change > 0 ? "text-emerald-700 bg-emerald-50" :
+                                {stat.change && <div className={`flex items-center text-xs font-bold px-2 py-1 rounded-full ${stat.change > 0 ? "text-emerald-700 bg-emerald-50" :
                                     stat.change < 0 ? "text-rose-700 bg-rose-50" :
                                         "text-gray-600 bg-gray-50"
                                     }`}>
-                                    {!stat.isCount && stat.change > 0 ? <TrendingUp className="h-3 w-3 mr-1" /> :
-                                        !stat.isCount && stat.change < 0 ? <TrendingDown className="h-3 w-3 mr-1" /> :
-                                            !stat.isCount && <TrendingUpDown className="h-3 w-3 mr-1" />}
-                                    {stat.isCount && stat.change > 0 ? '+' : stat.isCount && stat.change < 0 ? '-' : ''}  {Math.abs(stat.change)}{!stat.isCount && '%'}
-                                </div>
+                                    {renderChangeIndicator(stat)}
+                                </div>}
                             </div>
                             <div>
                                 <p className="text-xs md:text-sm font-medium text-gray-500">{stat.title}</p>
