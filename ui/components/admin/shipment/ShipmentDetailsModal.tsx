@@ -241,7 +241,9 @@ export function ShipmentDetailsModal({ awb, isOpen, onClose }: ShipmentDetailsMo
                                             <div>
                                                 <p className="text-xs text-gray-400 mb-1">{t("receiver")}</p>
                                                 <p className="text-sm font-medium text-gray-900">{info.ConsigneeName || info.RecipientName}</p>
-                                                <p className="text-xs text-gray-500 font-mono mt-0.5 dir-ltr text-right">{info.Phone1}</p>
+                                                {[info.Phone1, info.Phone2, info.Phone3].filter(Boolean).map((phone, index) => (
+                                                    <p key={index} className="text-xs text-gray-500 font-mono mt-0.5 dir-ltr text-right">{phone}</p>
+                                                ))}
                                                 <p className="text-xs text-gray-500 mt-1 line-clamp-2">{info.Address}</p>
                                             </div>
                                         </div>

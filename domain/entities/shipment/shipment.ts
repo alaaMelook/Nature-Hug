@@ -8,7 +8,8 @@ export interface Shipment {
     toCityId: number;
     subAccountName: string;
     clientAccNo: number;
-    phone: string;
+    toPhone: string;
+    toMobile: string;
     codAmount: number;
     pieces: number;
     fromCityID: number;

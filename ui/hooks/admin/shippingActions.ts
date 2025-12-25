@@ -9,10 +9,6 @@ import { UpdateOrder } from "@/domain/use-case/admin/orders/updateOrder";
 import { shipmentService } from "@/lib/services/shipmentService";
 
 export async function createShipmentAction(order: OrderDetailsView, shipment: Shipment) {
-    if (order.shipping_governorate.toLowerCase().includes("damanhour") || order.shipping_governorate.toLowerCase().includes("دمنهور")) {
-        console.log("Skipping shipment creation for Damanhour");
-        return { success: true, skipped: true };
-    }
 
     try {
         const result = await shipmentService.createShipment(shipment);
