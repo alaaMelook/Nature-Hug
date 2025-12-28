@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { ProductAdminView, ProductMaterialAdminView } from "@/domain/entities/views/admin/productAdminView";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { createProductAction } from "@/ui/hooks/admin/products";
+import { createProductAction, updateProductAction } from "@/ui/hooks/admin/products";
 import { ImageSelector } from "@/ui/components/admin/imageSelector";
 import { MaterialSelector } from "@/ui/components/admin/materialSelector";
 import { Material } from "@/domain/entities/database/material";
@@ -17,6 +17,8 @@ import Image from "next/image";
 interface CreateProductFormProps {
     initialImages: { image: any; url: string }[];
     initialCategories: Category[];
+    editMode?: boolean;
+    initialProduct?: ProductAdminView;
 }
 
 // Helper component for collapsible sections
@@ -49,7 +51,7 @@ const CollapsibleSection = ({ title, children, defaultOpen = false }: { title: s
     );
 };
 
-export function CreateProductForm({ initialImages, initialCategories }: CreateProductFormProps) {
+export function CreateProductForm({ initialImages, initialCategories, editMode = false, initialProduct }: CreateProductFormProps) {
     const { t, i18n } = useTranslation();
     const router = useRouter();
     const [showImageSelector, setShowImageSelector] = useState(false);
@@ -68,7 +70,15 @@ export function CreateProductForm({ initialImages, initialCategories }: CreatePr
     ];
 
     const { register, control, handleSubmit, setValue, watch, trigger, formState: { errors } } = useForm<ProductAdminView & { image_url: string }>({
-        defaultValues: {
+        defaultValues: editMode && initialProduct ? {
+            ...initialProduct,
+            image_url: initialProduct.image || '',
+            variants: initialProduct.variants || [],
+            gallery: initialProduct.gallery || [],
+            materials: initialProduct.materials || [],
+            faq_en: initialProduct.faq_en || {},
+            faq_ar: initialProduct.faq_ar || {}
+        } : {
             variants: [],
             gallery: [],
             materials: [],
@@ -141,12 +151,26 @@ export function CreateProductForm({ initialImages, initialCategories }: CreatePr
             }
         }
         console.log("[CreateProductForm] Submitting data:", cleanedData);
-        const result = await createProductAction(cleanedData);
-        if (result.success) {
-            toast.success(t("productCreated"));
-            router.push("/admin/products");
+
+        let result;
+        if (editMode && initialProduct?.product_id) {
+            // Update existing product
+            result = await updateProductAction({ ...cleanedData, product_id: initialProduct.product_id });
+            if (result.success) {
+                toast.success(t("productUpdated"));
+                router.push("/admin/products");
+            } else {
+                toast.error(t("errorUpdatingProduct") + (result.error));
+            }
         } else {
-            toast.error(t("errorCreatingProduct") + (result.error));
+            // Create new product
+            result = await createProductAction(cleanedData);
+            if (result.success) {
+                toast.success(t("productCreated"));
+                router.push("/admin/products");
+            } else {
+                toast.error(t("errorCreatingProduct") + (result.error));
+            }
         }
     };
     // --- Locate this function in your CreateProductForm component ---
