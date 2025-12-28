@@ -2,7 +2,7 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
-import { Plus, Trash2, Search, Filter, PlusCircle, Check, X, ChevronDown } from "lucide-react";
+import { Plus, Trash2, Search, Filter, PlusCircle, Check, X, ChevronDown, Pencil } from "lucide-react";
 import { Material } from "@/domain/entities/database/material";
 import { deleteMaterial } from "@/ui/hooks/admin/useMaterials";
 import { toast } from "sonner";
@@ -11,6 +11,7 @@ import { StockUpdateModal } from "./stockUpdateModal";
 import { addStockAction } from "@/ui/hooks/admin/inventory";
 import { motion, AnimatePresence } from "framer-motion";
 import { materialTypes } from "@/lib/utils/enums";
+import { EditMaterialModal } from "./EditMaterialModal";
 
 export function MaterialsTable({
   initialMaterials,
@@ -26,6 +27,10 @@ export function MaterialsTable({
 
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
   const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null);
+
+  // Edit Modal State
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
 
   // Filter UI State
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -92,6 +97,17 @@ export function MaterialsTable({
   const handleOpenStockModal = (material: Material) => {
     setSelectedMaterial(material);
     setIsStockModalOpen(true);
+  };
+
+  const handleOpenEditModal = (material: Material) => {
+    setEditingMaterial(material);
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditSuccess = (updatedMaterial: Material) => {
+    setMaterials(prev => prev.map(m =>
+      m.id === updatedMaterial.id ? updatedMaterial : m
+    ));
   };
 
   const clearFilters = () => {
@@ -185,17 +201,33 @@ export function MaterialsTable({
       field: "actions",
       headerName: t("actions"),
       sortable: false,
-      flex: 0.1,
-      minWidth: 100,
+      flex: 0.5,
+      minWidth: 120,
       headerAlign: 'center',
       align: 'center',
       renderCell: (params) => (
-        <button
-          onClick={() => handleDelete((params.row as Material).id)}
-          className={`text-red-600 hover:text-red-800`}
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
+        <div className="flex items-center justify-center gap-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleOpenEditModal(params.row as Material);
+            }}
+            className="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-full transition-colors"
+            title={t("edit") || "Edit"}
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDelete((params.row as Material).id);
+            }}
+            className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-full transition-colors"
+            title={t("delete") || "Delete"}
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
       ),
     },
   ];
@@ -355,6 +387,13 @@ export function MaterialsTable({
         title={t("addMaterialStock")}
         itemName={selectedMaterial?.name || ""}
         currentStock={selectedMaterial?.stock_grams}
+      />
+
+      <EditMaterialModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        material={editingMaterial}
+        onSuccess={handleEditSuccess}
       />
     </div>
   );
