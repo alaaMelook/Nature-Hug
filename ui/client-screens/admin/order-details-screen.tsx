@@ -69,23 +69,39 @@ export function OrderDetailsScreen({ order, governorate }: { order: OrderDetails
             }
 
             else if (newStatus === 'out for delivery' && !isManual) {
-                // Simplified city lookup for demo
+                // Debug logging for COD issue
+                console.log("[Shipment Debug] Order Data:", {
+                    payment_method: order.payment_method,
+                    final_order_total: order.final_order_total,
+                    subtotal: order.subtotal,
+                    shipping_total: order.shipping_total,
+                    discount_total: order.discount_total
+                });
+
+                const isCOD = order.payment_method.toLowerCase() !== 'online card';
+                const codValue = isCOD ? order.final_order_total : 0;
+
+                console.log("[Shipment Debug] COD Calculation:", {
+                    isCOD,
+                    codValue,
+                    payment_method_lowercase: order.payment_method.toLowerCase()
+                });
+
+                // Create shipment with correct API field names
                 const shipmentData: Shipment = {
-                    clientName: "Nature Hug",
-                    toCityName: governorate.name_ar,
                     toAddress: order.shipping_street_address,
                     toPhone: order.phone_numbers[0] || "",
                     toMobile: order.phone_numbers[0] || "",
-                    codAmount: order.payment_method.toLowerCase() == 'online card' ? 0 : order.final_order_total,
+                    cod: codValue,  // Changed from codAmount to cod
                     fromAddress: "",
                     toConsigneeName: order.customer_name,
-                    toCityId: governorate.cityID,
-                    subAccountName: "Nature Hug",
-                    clientAccNo: 807,
-                    shipperNotes: "في حالة وجود مشكلة 01090998664",
+                    toCityID: governorate.cityID,  // Changed from toCityId to toCityID
+                    specialInstuctions: "في حالة وجود مشكلة 01090998664",  // Changed from shipperNotes
                     pieces: order.items.reduce((acc, item) => acc + item.quantity, 0),
                     fromCityID: 1078
                 };
+
+                console.log("[Shipment Debug] Full Shipment Request:", JSON.stringify(shipmentData, null, 2));
 
                 result = await markAsOutForDeliveryAction(order, shipmentData);
             } else {

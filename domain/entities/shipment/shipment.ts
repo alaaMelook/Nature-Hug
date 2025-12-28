@@ -1,21 +1,24 @@
 export interface Shipment {
     id?: string;
-    clientName: string;
-    fromAddress: string;
-    toCityName: string;
+    clientName?: string;
+    fromAddress?: string;
+    toCityName?: string;
     toAddress: string;
     toConsigneeName: string;
-    toCityId: number;
-    subAccountName: string;
-    clientAccNo: number;
+    toCityID: number;  // Changed from toCityId to match API
+    subAccountName?: string;
+    clientAccNo?: number;
     toPhone: string;
     toMobile: string;
-    codAmount: number;
+    cod: number;  // Changed from codAmount to match API
     pieces: number;
     fromCityID: number;
     status?: string;
-    shipperNotes: string;
-
+    specialInstuctions?: string;  // Changed from shipperNotes to match API
+    toRef?: string;
+    productID?: number;
+    weight?: number;
+    contents?: string;
 }
 export interface ShipmentDetails {
     serial: number,
