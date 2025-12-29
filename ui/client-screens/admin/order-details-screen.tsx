@@ -327,24 +327,38 @@ export function OrderDetailsScreen({ order, governorate }: { order: OrderDetails
                             </table>
                         </div>
                         <div className="bg-gray-50 p-4 sm:p-6 border-t">
-                            <div className="flex flex-col gap-2 text-sm">
-                                <div className="flex justify-between w-full text-gray-600 px-2">
-                                    <span>{t("subtotal")}</span>
-                                    <span>{t('{{price, currency}}', { price: order.subtotal })}</span>
-                                </div>
-                                <div className="flex justify-between w-full text-gray-600 px-2">
-                                    <span>{t("shipping")}</span>
-                                    <span>{t('{{price, currency}}', { price: order.shipping_total })}</span>
-                                </div>
-                                {order.discount_total > 0 && <div className="flex justify-between w-full text-red-600 px-2">
-                                    <span>{t("discount")}</span>
-                                    <span><strong>-</strong> {t('{{price, currency}}', { price: order.discount_total ?? 0 })}</span>
-                                </div>}
-                                <div className="flex justify-between w-full text-lg font-bold text-gray-900 mt-2 pt-2 border-t px-2">
-                                    <span>{t("totalAmount")}</span>
-                                    <span>{t('{{price, currency}}', { price: order.final_order_total })}</span>
-                                </div>
-                            </div>
+                            {(() => {
+                                // Calculate discount from promo_percentage if discount_total is 0 but promo code exists
+                                const calculatedDiscount = order.discount_total > 0
+                                    ? order.discount_total
+                                    : (order.applied_promo_code && order.promo_percentage)
+                                        ? order.subtotal * (order.promo_percentage / 100)
+                                        : 0;
+                                const effectiveTotal = calculatedDiscount > 0 && order.discount_total === 0
+                                    ? order.subtotal - calculatedDiscount + order.shipping_total
+                                    : order.final_order_total;
+
+                                return (
+                                    <div className="flex flex-col gap-2 text-sm">
+                                        <div className="flex justify-between w-full text-gray-600 px-2">
+                                            <span>{t("subtotal")}</span>
+                                            <span>{t('{{price, currency}}', { price: order.subtotal })}</span>
+                                        </div>
+                                        <div className="flex justify-between w-full text-gray-600 px-2">
+                                            <span>{t("shipping")}</span>
+                                            <span>{t('{{price, currency}}', { price: order.shipping_total })}</span>
+                                        </div>
+                                        {calculatedDiscount > 0 && <div className="flex justify-between w-full text-red-600 px-2">
+                                            <span>{t("discount")} {order.applied_promo_code && <span className="text-xs">({order.applied_promo_code} - {order.promo_percentage}%)</span>}</span>
+                                            <span><strong>-</strong> {t('{{price, currency}}', { price: calculatedDiscount })}</span>
+                                        </div>}
+                                        <div className="flex justify-between w-full text-lg font-bold text-gray-900 mt-2 pt-2 border-t px-2">
+                                            <span>{t("totalAmount")}</span>
+                                            <span>{t('{{price, currency}}', { price: effectiveTotal })}</span>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
                         </div>
                     </motion.div>
                 </div>

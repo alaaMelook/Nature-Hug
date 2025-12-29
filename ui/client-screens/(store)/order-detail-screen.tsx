@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { OrderSummaryView } from '@/domain/entities/views/shop/orderSummaryView';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -19,6 +19,20 @@ export default function OrderDetailScreen({ order, fromCheckout }: {
     const { t, i18n } = useTranslation();
     const { user, loading } = useSupabase();
     const [formatted, setFormatted] = useState('');
+
+    // Calculate discount from promo_percentage if discount_total is 0 but promo code exists
+    const { calculatedDiscount, effectiveTotal } = useMemo(() => {
+        if (!order) return { calculatedDiscount: 0, effectiveTotal: 0 };
+        const discount = order.discount_total > 0
+            ? order.discount_total
+            : (order.applied_promo_code && order.promo_percentage)
+                ? order.subtotal * (order.promo_percentage / 100)
+                : 0;
+        const total = discount > 0 && order.discount_total === 0
+            ? order.subtotal - discount + order.shipping_total + order.tax_total
+            : order.grand_total;
+        return { calculatedDiscount: discount, effectiveTotal: total };
+    }, [order]);
 
     useEffect(() => {
         if (order && order.created_at) {
@@ -121,10 +135,10 @@ export default function OrderDetailScreen({ order, fromCheckout }: {
                                     <dt>{t("ordersScreen.subtotal")}</dt>
                                     <dd>{t("{{price, currency}}", { price: order.subtotal })}</dd>
                                 </div>
-                                {order.discount_total > 0 && (
-                                    <div className="flex justify-between">
+                                {calculatedDiscount > 0 && (
+                                    <div className="flex justify-between text-green-600">
                                         <dt>{t("ordersScreen.discount")}</dt>
-                                        <dd>-{t("{{price, currency}}", { price: order.discount_total })}</dd>
+                                        <dd>-{t("{{price, currency}}", { price: calculatedDiscount })}</dd>
                                     </div>
                                 )}
                                 <div className="flex justify-between">
@@ -140,7 +154,7 @@ export default function OrderDetailScreen({ order, fromCheckout }: {
 
                                 <div className="flex justify-between font-semibold text-lg">
                                     <dt>{t("ordersScreen.total")}</dt>
-                                    <dd>{t("{{price, currency}}", { price: order.grand_total })}</dd>
+                                    <dd>{t("{{price, currency}}", { price: effectiveTotal })}</dd>
                                 </div>
                             </dl>
 
@@ -164,7 +178,7 @@ export default function OrderDetailScreen({ order, fromCheckout }: {
                             </div>
                             <div className="text-left sm:text-right w-full sm:w-auto">
                                 <p className="text-sm text-gray-500">{t("ordersScreen.grandTotal")}</p>
-                                <p className="text-2xl font-extrabold">{t("{{price, currency}}", { price: order.grand_total })}</p>
+                                <p className="text-2xl font-extrabold">{t("{{price, currency}}", { price: effectiveTotal })}</p>
                             </div>
                         </div>
                     </div>
