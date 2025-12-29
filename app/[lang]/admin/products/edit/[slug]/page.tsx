@@ -1,22 +1,28 @@
 import { GetAllCategories } from "@/domain/use-case/store/getAllCategories";
-import { EditProductForm } from "@/ui/client-screens/admin/edit-product-form";
+import { CreateProductForm } from "@/ui/client-screens/admin/create-product-form";
 import { GetProductForEdit } from "@/domain/use-case/admin/products/getProductForEdit";
+import { GetAllImages } from "@/domain/use-case/admin/images";
 import { notFound } from "next/navigation";
 
 export default async function EditProductPage({ params }: { params: Promise<{ slug: string }> }) {
     const resolvedParams = await params;
-    const categories = await new GetAllCategories().execute();
-    const product = await new GetProductForEdit().execute(resolvedParams.slug);
+
+    const [categories, product, images] = await Promise.all([
+        new GetAllCategories().execute(),
+        new GetProductForEdit().execute(resolvedParams.slug),
+        new GetAllImages().execute()
+    ]);
 
     if (!product) {
         notFound();
     }
 
     return (
-        <EditProductForm
+        <CreateProductForm
+            initialImages={images}
             initialCategories={categories}
+            editMode={true}
             initialProduct={product}
         />
     );
 }
-

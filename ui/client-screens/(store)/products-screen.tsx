@@ -59,7 +59,16 @@ export function ProductsScreen({ initProducts, initCategories }: {
             return searchMatch && categoryMatch && inStockMatch && onSaleMatch;
         });
 
+        // Sort: Products with offers/discounts first, then by selected criteria
         return filtered.sort((a, b) => {
+            // First priority: Products with discount come first
+            const aHasDiscount = a.discount != null && a.discount > 0;
+            const bHasDiscount = b.discount != null && b.discount > 0;
+
+            if (aHasDiscount && !bHasDiscount) return -1;
+            if (!aHasDiscount && bHasDiscount) return 1;
+
+            // Second priority: Apply selected sort criteria
             switch (filters.sortBy) {
                 case 'name-asc':
                     return a.name.localeCompare(b.name);

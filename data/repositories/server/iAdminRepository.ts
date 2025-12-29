@@ -206,39 +206,183 @@ export class IAdminServerRepository implements AdminRepository {
     async updateProduct(product: ProductAdminView): Promise<number> {
         console.log("[IAdminRepository] updateProduct called with product:", product);
 
-        // Simplified update - only basic fields to avoid errors
-        const updateData: Record<string, any> = {
-            name_en: product.name_en,
-            name_ar: product.name_ar,
-            description_en: product.description_en || '',
-            description_ar: product.description_ar || '',
-            price: product.price,
-            discount: product.discount || 0,
-            stock: product.stock || 0,
-            category_id: product.category_id,
-            is_visible: product.visible ?? true
-        };
-
-        const {
-            data,
-            status,
-            statusText,
-            error
-        } = await supabaseAdmin.schema('store')
+        // 1. Update main product fields directly (avoids gallery type mismatch in RPC)
+        const { error: productError } = await supabaseAdmin.schema('store')
             .from('products')
-            .update(updateData)
-            .eq('id', product.product_id)
-            .select('id')
-            .single();
+            .update({
+                name_en: product.name_en,
+                name_ar: product.name_ar,
+                description_en: product.description_en || '',
+                description_ar: product.description_ar || '',
+                price: product.price,
+                discount: product.discount || 0,
+                stock: product.stock || 0,
+                category_id: product.category_id,
+                image_url: product.image || '',
+                slug: product.slug,
+                skin_type: product.skin_type || 'normal',
+                product_type: product.product_type || 'normal',
+                highlight_en: product.highlight_en || '',
+                highlight_ar: product.highlight_ar || '',
+                faq_en: product.faq_en || {},
+                faq_ar: product.faq_ar || {},
+                gallery: product.gallery || [],
+                is_visible: product.visible ?? true
+            })
+            .eq('id', product.product_id);
 
-        console.log("[IAdminRepository] updateProduct result:", { data, status, statusText });
-
-        if (error) {
-            console.error("[IAdminRepository] updateProduct error:", error);
-            throw error;
+        if (productError) {
+            console.error("[IAdminRepository] updateProduct error:", productError);
+            throw productError;
         }
 
-        return data?.id || product.product_id;
+        // 2. Update main product materials
+        if (product.materials && product.materials.length > 0) {
+            // Track IDs for deletion
+            const materialIds: number[] = [];
+
+            for (const mat of product.materials) {
+                console.log("[IAdminRepository] Updating material:", mat);
+
+                if (mat.id && typeof mat.id === 'number' && mat.id > 0) {
+                    // Update existing material link
+                    const { error: matError } = await supabaseAdmin.schema('store')
+                        .from('product_materials')
+                        .update({
+                            grams_used: mat.grams_used,
+                            measurement_unit: mat.measurement_unit || 'gm'
+                        })
+                        .eq('id', mat.id);
+
+                    if (matError) {
+                        console.error("[IAdminRepository] Material update error:", matError);
+                    } else {
+                        console.log("[IAdminRepository] Material updated successfully, id:", mat.id);
+                        materialIds.push(mat.id);
+                    }
+                } else {
+                    // Insert new material link
+                    const { data: newMat, error: insertError } = await supabaseAdmin.schema('store')
+                        .from('product_materials')
+                        .insert({
+                            product_id: product.product_id,
+                            variant_id: null,
+                            material_id: mat.material_id,
+                            grams_used: mat.grams_used,
+                            measurement_unit: mat.measurement_unit || 'gm'
+                        })
+                        .select('id')
+                        .single();
+
+                    if (insertError) {
+                        console.error("[IAdminRepository] Material insert error:", insertError);
+                    } else {
+                        console.log("[IAdminRepository] Material inserted successfully, id:", newMat?.id);
+                        if (newMat?.id) materialIds.push(newMat.id);
+                    }
+                }
+            }
+
+            // Delete materials not in current list
+            if (materialIds.length > 0) {
+                await supabaseAdmin.schema('store')
+                    .from('product_materials')
+                    .delete()
+                    .eq('product_id', product.product_id)
+                    .is('variant_id', null)
+                    .not('id', 'in', `(${materialIds.join(',')})`);
+            }
+        }
+
+        // 3. Update variants
+        const variantIds: number[] = [];
+        for (const variant of (product.variants || [])) {
+            if (variant.id) {
+                // Update existing variant
+                await supabaseAdmin.schema('store')
+                    .from('product_variants')
+                    .update({
+                        name_en: variant.name_en,
+                        name_ar: variant.name_ar,
+                        price: variant.price,
+                        stock: variant.stock,
+                        discount: variant.discount || 0,
+                        description_en: variant.description_en || '',
+                        description_ar: variant.description_ar || '',
+                        type_en: variant.type_en || '',
+                        type_ar: variant.type_ar || '',
+                        image: variant.image || '',
+                        gallery: variant.gallery || [],
+                        slug: variant.slug
+                    })
+                    .eq('id', variant.id);
+
+                variantIds.push(variant.id);
+
+                // Update variant materials
+                console.log("[IAdminRepository] Variant", variant.id, "materials:", variant.materials);
+                if (variant.materials && variant.materials.length > 0) {
+                    const variantMaterialIds: number[] = [];
+
+                    for (const mat of variant.materials) {
+                        console.log("[IAdminRepository] Processing variant material:", mat);
+                        if (mat.id && typeof mat.id === 'number' && mat.id > 0) {
+                            // Update existing material link
+                            const { error: matError } = await supabaseAdmin.schema('store')
+                                .from('product_materials')
+                                .update({
+                                    grams_used: mat.grams_used,
+                                    measurement_unit: mat.measurement_unit || 'gm'
+                                })
+                                .eq('id', mat.id);
+
+                            if (!matError) {
+                                variantMaterialIds.push(mat.id);
+                            }
+                        } else {
+                            // Insert new material link
+                            console.log("[IAdminRepository] Inserting new variant material:", {
+                                product_id: product.product_id,
+                                variant_id: variant.id,
+                                material_id: mat.material_id,
+                                grams_used: mat.grams_used
+                            });
+                            const { data: newMat, error: insertError } = await supabaseAdmin.schema('store')
+                                .from('product_materials')
+                                .insert({
+                                    product_id: product.product_id,
+                                    variant_id: variant.id,
+                                    material_id: mat.material_id,
+                                    grams_used: mat.grams_used,
+                                    measurement_unit: mat.measurement_unit || 'gm'
+                                })
+                                .select('id')
+                                .single();
+
+                            if (insertError) {
+                                console.error("[IAdminRepository] Variant material insert ERROR:", insertError);
+                            } else {
+                                console.log("[IAdminRepository] Variant material inserted successfully, id:", newMat?.id);
+                                if (newMat?.id) variantMaterialIds.push(newMat.id);
+                            }
+                        }
+                    }
+
+                    // Delete variant materials not in current list
+                    if (variantMaterialIds.length > 0) {
+                        await supabaseAdmin.schema('store')
+                            .from('product_materials')
+                            .delete()
+                            .eq('product_id', product.product_id)
+                            .eq('variant_id', variant.id)
+                            .not('id', 'in', `(${variantMaterialIds.join(',')})`);
+                    }
+                }
+            }
+        }
+
+        console.log("[IAdminRepository] updateProduct completed successfully");
+        return product.product_id;
     }
 
     async deleteProduct(product: ProductAdminView): Promise<void> {
@@ -326,16 +470,43 @@ export class IAdminServerRepository implements AdminRepository {
     async getProductForEdit(slug: string): Promise<ProductAdminView | null> {
         console.log("[IAdminRepository] getProductForEdit called with slug:", slug);
 
-        // 1. Get main product
-        const { data: product, error: productError } = await supabaseAdmin.schema('store')
+        // 1. Try to find in products table first
+        let productId: number | null = null;
+        let { data: product, error: productError } = await supabaseAdmin.schema('store')
             .from('products')
             .select('*, categories(id, name_en, name_ar)')
             .eq('slug', slug)
-            .single();
+            .maybeSingle();
 
-        if (productError) {
-            console.error("[IAdminRepository] getProductForEdit product error:", productError);
-            return null;
+        if (product) {
+            productId = product.id;
+        } else {
+            // 2. If not found in products, search in product_variants and get parent product
+            console.log("[IAdminRepository] Not found in products, searching in variants...");
+            const { data: variant, error: variantError } = await supabaseAdmin.schema('store')
+                .from('product_variants')
+                .select('product_id')
+                .eq('slug', slug)
+                .maybeSingle();
+
+            if (variant) {
+                productId = variant.product_id;
+                // Now fetch the parent product
+                const { data: parentProduct, error: parentError } = await supabaseAdmin.schema('store')
+                    .from('products')
+                    .select('*, categories(id, name_en, name_ar)')
+                    .eq('id', productId)
+                    .single();
+
+                if (parentError) {
+                    console.error("[IAdminRepository] getProductForEdit parent product error:", parentError);
+                    return null;
+                }
+                product = parentProduct;
+            } else {
+                console.error("[IAdminRepository] getProductForEdit: Product not found in products or variants");
+                return null;
+            }
         }
 
         // 2. Get variants for this product

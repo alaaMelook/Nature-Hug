@@ -10,7 +10,7 @@ import { ImageSelector } from "@/ui/components/admin/imageSelector";
 import { MaterialSelector } from "@/ui/components/admin/materialSelector";
 import { Material } from "@/domain/entities/database/material";
 import { Category } from "@/domain/entities/database/category";
-import { ChevronDown, ChevronUp, Trash2, Plus, Image as ImageIcon, Box, Check, ChevronRight, ChevronLeft } from "lucide-react";
+import { ChevronDown, ChevronUp, Trash2, Plus, Image as ImageIcon, Box, Check, ChevronRight, ChevronLeft, Pencil } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 
@@ -104,6 +104,28 @@ export function CreateProductForm({ initialImages, initialCategories, editMode =
             return Number(val);
         };
 
+        // Helper to process materials based on mode
+        const processMaterial = (m: any) => {
+            // Check if this is a NEW material (UUID from useFieldArray or 0)
+            const isNewMaterial = !m.id || typeof m.id === 'string' || m.id === 0;
+
+            if (editMode) {
+                // EDIT mode: 
+                // - Keep original product_materials.id for existing materials (for UPDATE)
+                // - Set null for new materials (so upsert does INSERT using material_id)
+                return {
+                    ...m,
+                    id: isNewMaterial ? null : m.id
+                };
+            } else {
+                // CREATE mode: use material_id as id (create_product reads 'id' as material_id)
+                return {
+                    ...m,
+                    id: m.material_id || 0
+                };
+            }
+        };
+
         let cleanedData = {
             ...data,
             name_ar: data.name_ar.trim().length > 0 ? data.name_ar.trim() : data.name_en.trim(),
@@ -112,14 +134,14 @@ export function CreateProductForm({ initialImages, initialCategories, editMode =
             stock: cleanNumber(data.stock),
             visible: true,
             discount: cleanNumber(data.discount),
-            // gallery: data.gallery.slice(1, data.gallery.length),
             category_id: data.category_id ? Number(data.category_id) : undefined,
+            materials: data.materials?.map(processMaterial) || [],
             variants: data.variants?.map(v => ({
                 ...v,
-                // gallery: v.gallery.slice(1, v.gallery.length),
                 price: cleanNumber(v.price),
                 stock: cleanNumber(v.stock),
                 discount: cleanNumber(v.discount),
+                materials: v.materials?.map(processMaterial) || []
             })) || []
         };
 
@@ -151,6 +173,8 @@ export function CreateProductForm({ initialImages, initialCategories, editMode =
             }
         }
         console.log("[CreateProductForm] Submitting data:", cleanedData);
+        console.log("[CreateProductForm] Materials being sent:", JSON.stringify(cleanedData.materials, null, 2));
+        console.log("[CreateProductForm] Edit mode:", editMode);
 
         let result;
         if (editMode && initialProduct?.product_id) {
@@ -203,8 +227,12 @@ export function CreateProductForm({ initialImages, initialCategories, editMode =
     };
 
     const handleMaterialSelect = (material: Material, amount: number) => {
+        console.log("[handleMaterialSelect] material received:", material);
+        console.log("[handleMaterialSelect] material.id:", material.id);
+
         const materialData: ProductMaterialAdminView = {
-            id: material.id,
+            id: material.id, // This is read by DB as material_id
+            material_id: material.id, // Keep for frontend display
             grams_used: amount,
 
             // @ts-ignore
@@ -213,6 +241,8 @@ export function CreateProductForm({ initialImages, initialCategories, editMode =
             price: material.price_per_gram,
             measurement_unit: material.unit || 'gm'
         };
+
+        console.log("[handleMaterialSelect] materialData created:", materialData);
 
         if (activeMaterialField === 'main') {
             appendMaterial(materialData);
@@ -538,8 +568,17 @@ export function CreateProductForm({ initialImages, initialCategories, editMode =
                                                 type="button"
                                                 onClick={() => {
                                                     if (confirm(t("confirmApplyToAll"))) {
+                                                        // Use watch() to get current form values, not stale materialFields
+                                                        const currentMaterials = watch('materials') || [];
+                                                        // IMPORTANT: Reset id to null for variant copies
+                                                        // This ensures new records are INSERTED for variants
+                                                        // instead of trying to UPDATE the main product's materials
+                                                        const materialsForVariants = currentMaterials.map((mat: any) => ({
+                                                            ...mat,
+                                                            id: null  // Reset id so it gets inserted as new record
+                                                        }));
                                                         variantFields.forEach((_, idx) => {
-                                                            setValue(`variants.${idx}.materials`, materialFields);
+                                                            setValue(`variants.${idx}.materials`, materialsForVariants);
                                                         });
                                                         toast.success(t("materialsApplied"));
                                                     }
@@ -567,7 +606,7 @@ export function CreateProductForm({ initialImages, initialCategories, editMode =
                                                     <th className="px-4 py-2">{t("materials")}</th>
                                                     <th className="px-4 py-2 text-right">{t("amount")}</th>
                                                     <th className="px-4 py-2 text-right">{t("cost")}</th>
-                                                    <th className="px-4 py-2"></th>
+                                                    <th className="px-4 py-2 text-center">{t("actions")}</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y">
@@ -580,9 +619,19 @@ export function CreateProductForm({ initialImages, initialCategories, editMode =
                                                             exit={{ opacity: 0 }}
                                                         >
                                                             <td className="px-4 py-2">{field.material_name || `ID: ${field.material_id}`}</td>
-                                                            <td className="px-4 py-2 text-right">{field.grams_used || 0} {field.measurement_unit || 'g'}</td>
-                                                            <td className="px-4 py-2 text-right">{((field.grams_used || 0) * (field.price || 0)).toFixed(2)}</td>
                                                             <td className="px-4 py-2 text-right">
+                                                                <input
+                                                                    type="text"
+                                                                    inputMode="numeric"
+                                                                    {...register(`materials.${index}.grams_used` as const, { valueAsNumber: true })}
+                                                                    className="w-20 text-right border rounded px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                                />
+                                                                <span className="ml-1 text-gray-500">{field.measurement_unit || 'g'}</span>
+                                                            </td>
+                                                            <td className="px-4 py-2 text-right">
+                                                                {((watch(`materials.${index}.grams_used`) || 0) * (field.price || 0)).toFixed(2)}
+                                                            </td>
+                                                            <td className="px-4 py-2 text-center">
                                                                 <button type="button" onClick={() => removeMaterial(index)} className="text-red-500 hover:text-red-700">
                                                                     <Trash2 size={16} />
                                                                 </button>
@@ -716,9 +765,9 @@ export function CreateProductForm({ initialImages, initialCategories, editMode =
                                                                 initial={{ opacity: 0, scale: 0.8 }}
                                                                 animate={{ opacity: 1, scale: 1 }}
                                                                 exit={{ opacity: 0, scale: 0.8 }}
-                                                                className="relative aspect-square rounded-lg overflow-hidden border-2 group border-amber-500"
+                                                                className="relative h-12 w-12 rounded-lg overflow-hidden border-2 group border-amber-500"
                                                             >
-                                                                <Image src={watch(`variants.${index}.image`)} alt={`Product_v_${index}`} className="h-12 w-12 object-cover" fill={true} />
+                                                                <Image src={watch(`variants.${index}.image`)} alt={`Product_v_${index}`} className="object-cover" width={48} height={48} />
                                                                 <input type="hidden" {...register(`variants.${index}.image` as const)} /> {/* Register field */}
                                                                 <button
                                                                     type="button"
@@ -734,7 +783,9 @@ export function CreateProductForm({ initialImages, initialCategories, editMode =
                                                         )}
                                                         {watch(`variants.${index}.gallery`)?.map((url, imgIndex) => (
                                                             url ? (
-                                                                <Image key={imgIndex} src={url} alt={t("altVariant")} className="h-12 w-12 object-cover rounded border" fill={true} />
+                                                                <div key={imgIndex} className="relative h-12 w-12 rounded border overflow-hidden">
+                                                                    <Image src={url} alt={t("altVariant")} className="object-cover" fill={true} />
+                                                                </div>
                                                             ) : null
                                                         ))}
                                                         <button

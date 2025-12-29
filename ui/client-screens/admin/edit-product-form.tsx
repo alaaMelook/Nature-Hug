@@ -156,6 +156,63 @@ export function EditProductForm({ initialCategories, initialProduct }: EditProdu
                     </select>
                 </div>
 
+                {/* Product & Skin Type Section */}
+                <div className="bg-white rounded-lg shadow-sm border p-6 space-y-4">
+                    <h2 className="text-lg font-semibold text-gray-700 border-b pb-2">{t("productDetails") || "Product Details"}</h2>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        {/* Skin Type */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">{t("skinType") || "Skin Type"}</label>
+                            <input
+                                {...register("skin_type")}
+                                className="w-full border border-gray-300 rounded-lg p-2"
+                                placeholder={t("placeholders.skinType") || "e.g., oily, dry, combination"}
+                            />
+                        </div>
+
+                        {/* Product Type */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">{t("productType") || "Product Type"}</label>
+                            <input
+                                {...register("product_type")}
+                                className="w-full border border-gray-300 rounded-lg p-2"
+                                placeholder={t("placeholders.productType") || "e.g., skincare, haircare"}
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Highlights Section */}
+                <div className="bg-white rounded-lg shadow-sm border p-6 space-y-4">
+                    <h2 className="text-lg font-semibold text-gray-700 border-b pb-2">{t("highlights") || "Highlights"}</h2>
+
+                    {/* Highlight EN */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">{t("highlightEn") || "Highlights (English)"}</label>
+                        <textarea
+                            {...register("highlight_en")}
+                            rows={3}
+                            placeholder={t("highlightPlaceholder") || "Enter product highlights, one per line..."}
+                            className="w-full border border-gray-300 rounded-lg p-2"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">{t("highlightHint") || "Separate each highlight with a new line"}</p>
+                    </div>
+
+                    {/* Highlight AR */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">{t("highlightAr") || "Highlights (Arabic)"}</label>
+                        <textarea
+                            {...register("highlight_ar")}
+                            rows={3}
+                            placeholder={t("highlightPlaceholderAr") || "أدخل مميزات المنتج، واحدة في كل سطر..."}
+                            className="w-full border border-gray-300 rounded-lg p-2"
+                            dir="rtl"
+                        />
+                        <p className="text-xs text-gray-500 mt-1 text-right">{t("highlightHintAr") || "افصل كل ميزة بسطر جديد"}</p>
+                    </div>
+                </div>
+
                 {/* Visibility */}
                 <div className="bg-white rounded-lg shadow-sm border p-6">
                     <label className="flex items-center gap-3 cursor-pointer">

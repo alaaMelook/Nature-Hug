@@ -7,12 +7,26 @@ import { ProductView } from "@/domain/entities/views/shop/productView";
 import { useFeatures } from "@/ui/hooks/store/useFeatures";
 import { motion } from "framer-motion";
 import { Category } from "@/domain/entities/database/category";
+import { useMemo } from "react";
 
 
 export function HomeScreen({ initialProducts: products, categories }: { initialProducts: ProductView[], categories: Category[] }) {
     const { t, i18n } = useTranslation();
     const features = useFeatures();
     const visibleCategories = categories.filter(c => c.image_url);
+
+    // Sort products: discounted products first, then by created_at (already sorted from API)
+    const sortedProducts = useMemo(() => {
+        if (!products) return [];
+        return [...products].sort((a, b) => {
+            const aHasDiscount = a.discount != null && a.discount > 0;
+            const bHasDiscount = b.discount != null && b.discount > 0;
+            if (aHasDiscount && !bHasDiscount) return -1;
+            if (!aHasDiscount && bHasDiscount) return 1;
+            return 0; // Keep original order (by created_at) for same discount status
+        });
+    }, [products]);
+
     const containerVariants = {
         hidden: { opacity: 0 },
         visible: {
@@ -176,7 +190,7 @@ export function HomeScreen({ initialProducts: products, categories }: { initialP
                             {t("featuredProducts")}
                         </motion.h2>
 
-                        <ProductGrid products={products} isLoading={false} recent={true} />
+                        <ProductGrid products={sortedProducts} isLoading={false} recent={true} />
 
                         <div className="mt-12 text-end">
                             <Link
