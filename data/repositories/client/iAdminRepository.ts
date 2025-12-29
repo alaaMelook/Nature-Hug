@@ -71,6 +71,24 @@ export class IAdminClientRepository implements AdminRepository {
             throw error;
         }
     }
+
+    async updateCategory(category: Partial<Category>): Promise<void> {
+        console.log("[IAdminRepository] updateCategory called with:", category);
+        const { id, ...updateData } = category;
+        if (!id) {
+            throw new Error("Category ID is required for update");
+        }
+        const { data, status, statusText, error } = await supabase.schema('store')
+            .from('categories')
+            .update(updateData)
+            .eq('id', id);
+        console.log("[IAdminRepository] updateCategory result:", { data, status, statusText });
+        if (error) {
+            console.error("[IAdminRepository] updateCategory error:", error);
+            throw error;
+        }
+    }
+
     async getOrderDetails(): Promise<OrderDetailsView[]> {
         console.log("[IAdminRepository] getOrderDetails called.");
         const { data, status, statusText, error } = await supabase.schema('admin')
