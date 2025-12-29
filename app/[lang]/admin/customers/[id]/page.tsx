@@ -1,5 +1,6 @@
 import { ICustomerServerRepository } from "@/data/repositories/server/iCustomerRepository";
 import { CustomerProfileScreen } from "@/ui/client-screens/admin/customer-profile-screen";
+import { EmployeePermissions } from "@/domain/entities/auth/permissions";
 
 import { revalidatePath } from "next/cache";
 
@@ -13,7 +14,7 @@ export default async function CustomerProfilePage({ params }: { params: { id: st
         repo.fetchMember(customerId)
     ]);
 
-    const handlePromote = async (role: MemberRole) => {
+    const handlePromote = async (role: MemberRole, permissions?: EmployeePermissions) => {
         'use server';
         const repo = new ICustomerServerRepository();
         const member = await repo.fetchMember(customerId);
@@ -21,12 +22,14 @@ export default async function CustomerProfilePage({ params }: { params: { id: st
         if (member) {
             await repo.updateMember({
                 user_id: customerId,
-                role: role
+                role: role,
+                permissions: permissions
             });
         } else {
             await repo.addMember({
                 user_id: customerId,
-                role: role
+                role: role,
+                permissions: permissions || {}
             });
         }
         revalidatePath(`/admin/customers/${customerId}`);

@@ -7,6 +7,21 @@ import { ReactNode } from "react";
 import { ViewMember } from "@/domain/use-case/admin/members";
 import { GetCurrentUser } from "@/domain/use-case/store/getCurrentUser";
 import { GetSidebarStats } from "@/domain/use-case/admin/getSidebarStats";
+import { hasPermission } from "@/domain/entities/auth/permissions";
+
+// Map URL paths to permission modules
+const pathToPermission: Record<string, keyof import("@/domain/entities/auth/permissions").EmployeePermissions> = {
+    '/admin': 'dashboard',
+    '/admin/customers': 'customers',
+    '/admin/employees': 'employees',
+    '/admin/materials': 'materials',
+    '/admin/products': 'products',
+    '/admin/orders': 'orders',
+    '/admin/promo-codes': 'promoCodes',
+    '/admin/shipping': 'shipping',
+    '/admin/gallery': 'gallery',
+    '/admin/settings': 'settings',
+};
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
 
@@ -19,27 +34,51 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
     if (!member) redirect("/");
 
-    // ⭐️ Moderator Redirect Logic
-    if (member.role === 'moderator') {
-        const headersList = await headers();
-        const fullUrl = headersList.get('x-url') || "";
+    // Get request headers for path checking
+    const headersList = await headers();
+    const fullUrl = headersList.get('x-url') || "";
 
-        let pathname = '/';
-        try {
-            pathname = new URL(fullUrl).pathname;
-        } catch (error) {
-            pathname = fullUrl; // Fallback if regular path structure
+    let pathname = '/';
+    try {
+        pathname = new URL(fullUrl).pathname;
+    } catch (error) {
+        pathname = fullUrl;
+    }
+
+    // 🔐 Permission-based access control
+    // Admin role has full access
+    if (member.role !== 'admin') {
+        // Check if user has permission for this route
+        const permissions = member.permissions || {};
+
+        // Find which module this path belongs to
+        let hasAccess = false;
+
+        // Check each path pattern
+        for (const [pathPattern, module] of Object.entries(pathToPermission)) {
+            // Check if current path starts with this pattern
+            if (pathname.includes(pathPattern)) {
+                // Check if user has view permission for this module
+                if (hasPermission(permissions, module, 'view')) {
+                    hasAccess = true;
+                    break;
+                }
+            }
         }
 
-        // Check if the current path includes the allowed path
-        // Using includes check handles language prefixes (e.g., /en/admin/shipping/history)
-        if (!pathname.includes('/admin/shipping/history')) {
-            // Extract language from the first segment of the pathname default to 'en'
-            const segments = pathname.split('/').filter(Boolean);
-            const lang = segments[0] || 'en';
-
-            // Redirect to the allowed page with the correct language
-            redirect(`/${lang}/admin/shipping/history`);
+        // If no access, redirect to a page they can access or home
+        if (!hasAccess) {
+            // Find first accessible page
+            for (const [pathPattern, module] of Object.entries(pathToPermission)) {
+                if (hasPermission(permissions, module, 'view')) {
+                    // Extract language from URL
+                    const segments = pathname.split('/').filter(Boolean);
+                    const lang = segments[0] || 'en';
+                    redirect(`/${lang}${pathPattern}`);
+                }
+            }
+            // No access to any page, redirect to home
+            redirect("/");
         }
     }
 

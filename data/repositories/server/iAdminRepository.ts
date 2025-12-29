@@ -8,6 +8,9 @@ import { Category } from "@/domain/entities/database/category";
 import { ReviewAdminView } from "@/domain/entities/views/admin/reviewAdminView";
 import { PromoCode } from "@/domain/entities/database/promoCode";
 import { Governorate } from "@/domain/entities/database/governorate";
+import { CreateEmployeeData, CreateEmployeeResponse } from "@/domain/entities/auth/employee";
+import { EmployeePermissions, DEFAULT_EMPLOYEE_PERMISSIONS } from "@/domain/entities/auth/permissions";
+import { MemberView } from "@/domain/entities/views/admin/memberView";
 
 export class IAdminServerRepository implements AdminRepository {
     async getOrderDetails(): Promise<OrderDetailsView[]> {
@@ -966,5 +969,300 @@ export class IAdminServerRepository implements AdminRepository {
             console.error(`[IAdminRepository] toggleProductVisibility error (table: ${table}):`, error);
             throw error;
         }
+    }
+
+    // ==================== EMPLOYEE MANAGEMENT ====================
+
+    /**
+     * Generate a random password for auto-generation option
+     */
+    private generateRandomPassword(length: number = 12): string {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%';
+        let password = '';
+        for (let i = 0; i < length; i++) {
+            password += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return password;
+    }
+
+    /**
+     * Create a new employee with auth user, customer, and member records
+     */
+    async createEmployee(data: CreateEmployeeData): Promise<CreateEmployeeResponse> {
+        console.log("[IAdminRepository] createEmployee called with:", { ...data, password: '[HIDDEN]' });
+
+        // 0. Check if email already exists in customers table
+        const { data: existingCustomer, error: checkError } = await supabaseAdmin.schema('store')
+            .from('customers')
+            .select('id, email')
+            .eq('email', data.email)
+            .maybeSingle();
+
+        if (checkError) {
+            console.error("[IAdminRepository] Check existing customer error:", checkError);
+        }
+
+        if (existingCustomer) {
+            console.log("[IAdminRepository] Email already exists in customers:", existingCustomer.email);
+            throw new Error(`Email ${data.email} is already registered as a customer. Use a different email.`);
+        }
+
+        // Also check if email exists in auth.users
+        const { data: existingAuthUsers, error: authCheckError } = await supabaseAdmin.auth.admin.listUsers();
+        if (!authCheckError && existingAuthUsers?.users) {
+            const emailExists = existingAuthUsers.users.some(u => u.email?.toLowerCase() === data.email.toLowerCase());
+            if (emailExists) {
+                console.log("[IAdminRepository] Email already exists in auth.users:", data.email);
+                throw new Error(`Email ${data.email} is already registered. Use a different email.`);
+            }
+        }
+
+        console.log("[IAdminRepository] Email is available, proceeding to create...");
+
+        // 1. Generate password if auto-generate is requested
+        let password = data.password;
+        let generatedPassword: string | undefined;
+
+        if (data.autoGeneratePassword || !password) {
+            password = this.generateRandomPassword();
+            generatedPassword = password;
+        }
+
+        // 2. Create auth user using Supabase Admin API
+        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+            email: data.email,
+            password: password,
+            email_confirm: true, // Auto-confirm email for admin-created users
+            user_metadata: {
+                name: data.name,
+                created_by_admin: true
+            }
+        });
+
+        if (authError) {
+            console.error("[IAdminRepository] createEmployee auth error:", authError);
+            throw new Error(`Failed to create auth user: ${authError.message}`);
+        }
+
+        if (!authData.user) {
+            throw new Error("Failed to create auth user: No user returned");
+        }
+
+        const authUserId = authData.user.id;
+        console.log("[IAdminRepository] Auth user created with id:", authUserId);
+
+        try {
+            // 3. Create customer record
+            const { data: customerData, error: customerError } = await supabaseAdmin.schema('store')
+                .from('customers')
+                .insert({
+                    auth_user_id: authUserId,
+                    name: data.name,
+                    email: data.email,
+                    phone: data.phone || null,
+                })
+                .select('id, name, email, phone')
+                .single();
+
+            if (customerError) {
+                console.error("[IAdminRepository] createEmployee customer error:", customerError);
+                // Rollback: delete auth user
+                await supabaseAdmin.auth.admin.deleteUser(authUserId);
+                throw new Error(`Failed to create customer: ${customerError.message}`);
+            }
+
+            console.log("[IAdminRepository] Customer created with id:", customerData.id);
+
+            // 4. Create member record with permissions
+            const permissions = data.permissions || DEFAULT_EMPLOYEE_PERMISSIONS;
+            const { data: memberData, error: memberError } = await supabaseAdmin.schema('store')
+                .from('members')
+                .insert({
+                    user_id: customerData.id,
+                    role: data.role,
+                    permissions: permissions,
+                })
+                .select('id, user_id, role, permissions')
+                .single();
+
+            if (memberError) {
+                console.error("[IAdminRepository] createEmployee member error:", memberError);
+                // Rollback: delete customer and auth user
+                await supabaseAdmin.schema('store').from('customers').delete().eq('id', customerData.id);
+                await supabaseAdmin.auth.admin.deleteUser(authUserId);
+                throw new Error(`Failed to create member: ${memberError.message}`);
+            }
+
+            console.log("[IAdminRepository] Member created with id:", memberData.id);
+
+            return {
+                member: {
+                    id: memberData.id,
+                    user_id: memberData.user_id,
+                    role: memberData.role,
+                    permissions: memberData.permissions,
+                },
+                customer: {
+                    id: customerData.id,
+                    name: customerData.name,
+                    email: customerData.email,
+                    phone: customerData.phone,
+                },
+                generatedPassword: generatedPassword,
+            };
+
+        } catch (error) {
+            // Cleanup auth user if any step fails
+            console.error("[IAdminRepository] createEmployee error, cleaning up auth user:", error);
+            await supabaseAdmin.auth.admin.deleteUser(authUserId);
+            throw error;
+        }
+    }
+
+    /**
+     * Get all employees (members with their customer info)
+     */
+    async getAllEmployees(): Promise<MemberView[]> {
+        console.log("[IAdminRepository] getAllEmployees called.");
+
+        const { data, error } = await supabaseAdmin.schema('store')
+            .from('members')
+            .select(`
+                id,
+                user_id,
+                role,
+                created_at,
+                permissions,
+                customers!inner (
+                    id,
+                    name,
+                    email,
+                    phone
+                )
+            `)
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error("[IAdminRepository] getAllEmployees error:", error);
+            throw error;
+        }
+
+        // Transform to MemberView format
+        const employees: MemberView[] = (data || []).map((member: any) => ({
+            id: member.id,
+            name: member.customers?.name || 'Unknown',
+            email: member.customers?.email || '',
+            role: member.role,
+            created_at: member.created_at,
+            permissions: member.permissions,
+            phone: member.customers?.phone,
+            customer_id: member.customers?.id,
+        }));
+
+        console.log("[IAdminRepository] getAllEmployees result:", employees.length, "employees");
+        return employees;
+    }
+
+    /**
+     * Update an employee's permissions
+     */
+    async updateMemberPermissions(memberId: number, permissions: EmployeePermissions): Promise<void> {
+        console.log(`[IAdminRepository] updateMemberPermissions called for member ${memberId}`);
+
+        const { error } = await supabaseAdmin.schema('store')
+            .from('members')
+            .update({ permissions })
+            .eq('id', memberId);
+
+        if (error) {
+            console.error("[IAdminRepository] updateMemberPermissions error:", error);
+            throw error;
+        }
+
+        console.log("[IAdminRepository] Member permissions updated successfully");
+    }
+
+    /**
+     * Update an employee's role
+     */
+    async updateMemberRole(memberId: number, role: MemberRole): Promise<void> {
+        console.log(`[IAdminRepository] updateMemberRole called for member ${memberId}, new role: ${role}`);
+
+        const { error } = await supabaseAdmin.schema('store')
+            .from('members')
+            .update({ role })
+            .eq('id', memberId);
+
+        if (error) {
+            console.error("[IAdminRepository] updateMemberRole error:", error);
+            throw error;
+        }
+
+        console.log("[IAdminRepository] Member role updated successfully");
+    }
+
+    /**
+     * Delete an employee (member, customer, and auth user)
+     */
+    async deleteEmployee(memberId: number): Promise<void> {
+        console.log(`[IAdminRepository] deleteEmployee called for member ${memberId}`);
+
+        // 1. Get member and customer info
+        const { data: memberData, error: memberError } = await supabaseAdmin.schema('store')
+            .from('members')
+            .select(`
+                id,
+                user_id,
+                customers!inner (
+                    id,
+                    auth_user_id
+                )
+            `)
+            .eq('id', memberId)
+            .single();
+
+        if (memberError || !memberData) {
+            console.error("[IAdminRepository] deleteEmployee: Member not found", memberError);
+            throw new Error("Employee not found");
+        }
+
+        const customerId = memberData.user_id;
+        const authUserId = (memberData as any).customers?.auth_user_id;
+
+        console.log("[IAdminRepository] deleteEmployee: Found customer:", customerId, "auth:", authUserId);
+
+        // 2. Delete member record (CASCADE will handle this if foreign key is set up)
+        const { error: deleteMemberError } = await supabaseAdmin.schema('store')
+            .from('members')
+            .delete()
+            .eq('id', memberId);
+
+        if (deleteMemberError) {
+            console.error("[IAdminRepository] deleteEmployee member delete error:", deleteMemberError);
+            throw deleteMemberError;
+        }
+
+        // 3. Delete customer record - this should CASCADE delete the member if FK is set up
+        // But we already deleted member, so just delete customer
+        const { error: deleteCustomerError } = await supabaseAdmin.schema('store')
+            .from('customers')
+            .delete()
+            .eq('id', customerId);
+
+        if (deleteCustomerError) {
+            console.error("[IAdminRepository] deleteEmployee customer delete error:", deleteCustomerError);
+            // Continue anyway to try to delete auth user
+        }
+
+        // 4. Delete auth user
+        if (authUserId) {
+            const { error: deleteAuthError } = await supabaseAdmin.auth.admin.deleteUser(authUserId);
+            if (deleteAuthError) {
+                console.error("[IAdminRepository] deleteEmployee auth delete error:", deleteAuthError);
+                // Log but don't throw - main records are deleted
+            }
+        }
+
+        console.log("[IAdminRepository] Employee deleted successfully");
     }
 }
