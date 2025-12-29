@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { PackageCheck, Plus, Trash2, Upload } from "lucide-react";
+import { PackageCheck, Plus, Trash2, Upload, Edit2 } from "lucide-react";
 import { Category } from "@/domain/entities/database/category";
-import { createCategoryAction, deleteCategoryAction } from "@/ui/hooks/admin/categories";
+import { createCategoryAction, deleteCategoryAction, updateCategoryAction } from "@/ui/hooks/admin/categories";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useCategories } from "@/ui/hooks/admin/useCategories";
@@ -19,6 +19,13 @@ export default function CategoriesScreen({ initialCategories, initialImages }: {
     const [image, setImage] = useState<string | null>(null);
     const [openSelector, setOpenSelector] = useState(false);
 
+    // Edit modal state
+    const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+    const [editNameEn, setEditNameEn] = useState("");
+    const [editNameAr, setEditNameAr] = useState("");
+    const [editImage, setEditImage] = useState<string | null>(null);
+    const [editSelectorOpen, setEditSelectorOpen] = useState(false);
+
     const refreshCategories = async () => {
         const categories = await useCategories();
         setCategories(categories);
@@ -28,6 +35,12 @@ export default function CategoriesScreen({ initialCategories, initialImages }: {
         setImage(image);
         setOpenSelector(false);
     };
+
+    const handleEditImageSelect = (image: string) => {
+        setEditImage(image);
+        setEditSelectorOpen(false);
+    };
+
     const handleAdd = useCallback(async () => {
         if (!nameEnglish.trim()) {
             toast.error(t("englishNameRequired"));
@@ -60,6 +73,36 @@ export default function CategoriesScreen({ initialCategories, initialImages }: {
             toast.error(result.error || t("failedToDeleteCategory"));
         }
     }, [t]);
+
+    const openEditModal = (category: Category) => {
+        setEditingCategory(category);
+        setEditNameEn(category.name_en);
+        setEditNameAr(category.name_ar || "");
+        setEditImage(category.image_url || null);
+    };
+
+    const handleUpdate = useCallback(async () => {
+        if (!editingCategory) return;
+        if (!editNameEn.trim()) {
+            toast.error(t("englishNameRequired"));
+            return;
+        }
+
+        const result = await updateCategoryAction({
+            id: editingCategory.id,
+            name_en: editNameEn,
+            name_ar: editNameAr,
+            image_url: editImage || undefined
+        });
+
+        if (result.success) {
+            toast.success(t("categoryUpdatedSuccessfully") || "Category updated successfully");
+            setEditingCategory(null);
+            refreshCategories();
+        } else {
+            toast.error(result.error || t("failedToUpdateCategory") || "Failed to update category");
+        }
+    }, [editingCategory, editNameEn, editNameAr, editImage, t]);
 
     return (
         <motion.div
@@ -132,19 +175,28 @@ export default function CategoriesScreen({ initialCategories, initialImages }: {
                                         className="rounded-sm"
                                     />
                                 ) : <PackageCheck className="h-6 w-6 text-gray-500" />}
-                                <div>
+                                <div className="flex-1 mx-4">
                                     <p className="font-medium text-gray-900">{c.name_en}</p>
                                     {c.name_ar && (
                                         <p className="text-sm text-gray-500">{c.name_ar}</p>
                                     )}
                                 </div>
-                                <button
-                                    onClick={() => handleDelete(c.id)}
-                                    className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors"
-                                    title={t("delete")}
-                                >
-                                    <Trash2 className="h-4 w-4" />
-                                </button>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => openEditModal(c)}
+                                        className="p-2 text-blue-500 hover:bg-blue-50 rounded-full transition-colors"
+                                        title={t("edit")}
+                                    >
+                                        <Edit2 className="h-4 w-4" />
+                                    </button>
+                                    <button
+                                        onClick={() => handleDelete(c.id)}
+                                        className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                                        title={t("delete")}
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </button>
+                                </div>
                             </motion.div>
                         ))
                     ) : (
@@ -163,6 +215,94 @@ export default function CategoriesScreen({ initialCategories, initialImages }: {
                 images={initialImages}
                 onSelect={handleImageSelect}
                 onClose={() => setOpenSelector(false)}
+            />}
+
+            {/* Edit Modal */}
+            <AnimatePresence>
+                {editingCategory && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+                        onClick={() => setEditingCategory(null)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl"
+                        >
+                            <h2 className="text-xl font-bold mb-4">{t("editCategory") || "Edit Category"}</h2>
+
+                            {/* Edit Image */}
+                            <div className="flex justify-center mb-4">
+                                <div
+                                    className="cursor-pointer flex items-center justify-center w-24 h-24 rounded-lg border-dashed border-2 border-gray-300 hover:border-primary-500 transition-colors"
+                                    onClick={() => setEditSelectorOpen(true)}
+                                >
+                                    {editImage ? (
+                                        <Image
+                                            src={editImage}
+                                            alt="Category"
+                                            width={100}
+                                            height={100}
+                                            className="w-24 h-24 object-cover rounded-lg"
+                                        />
+                                    ) : (
+                                        <Upload className="h-12 w-12 text-gray-500" />
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Edit Name EN */}
+                            <div className="mb-3">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">{t("englishName")}</label>
+                                <input
+                                    type="text"
+                                    value={editNameEn}
+                                    onChange={(e) => setEditNameEn(e.target.value)}
+                                    className="w-full border px-3 py-2 rounded-md text-sm"
+                                />
+                            </div>
+
+                            {/* Edit Name AR */}
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">{t("arabicNameOptional")}</label>
+                                <input
+                                    type="text"
+                                    value={editNameAr}
+                                    onChange={(e) => setEditNameAr(e.target.value)}
+                                    className="w-full border px-3 py-2 rounded-md text-sm"
+                                />
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setEditingCategory(null)}
+                                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
+                                >
+                                    {t("cancel")}
+                                </button>
+                                <button
+                                    onClick={handleUpdate}
+                                    className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
+                                >
+                                    {t("save")}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Edit Image Selector */}
+            {editSelectorOpen && <ImageSelector
+                images={initialImages}
+                onSelect={handleEditImageSelect}
+                onClose={() => setEditSelectorOpen(false)}
             />}
         </motion.div>
     );

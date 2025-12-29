@@ -206,19 +206,39 @@ export class IAdminServerRepository implements AdminRepository {
     async updateProduct(product: ProductAdminView): Promise<number> {
         console.log("[IAdminRepository] updateProduct called with product:", product);
 
+        // Simplified update - only basic fields to avoid errors
+        const updateData: Record<string, any> = {
+            name_en: product.name_en,
+            name_ar: product.name_ar,
+            description_en: product.description_en || '',
+            description_ar: product.description_ar || '',
+            price: product.price,
+            discount: product.discount || 0,
+            stock: product.stock || 0,
+            category_id: product.category_id,
+            is_visible: product.visible ?? true
+        };
+
         const {
             data,
             status,
             statusText,
             error
-        } = await supabaseAdmin.schema('admin').rpc('update_product', { product_data: product });
+        } = await supabaseAdmin.schema('store')
+            .from('products')
+            .update(updateData)
+            .eq('id', product.product_id)
+            .select('id')
+            .single();
 
         console.log("[IAdminRepository] updateProduct result:", { data, status, statusText });
+
         if (error) {
             console.error("[IAdminRepository] updateProduct error:", error);
             throw error;
         }
-        return data;
+
+        return data?.id || product.product_id;
     }
 
     async deleteProduct(product: ProductAdminView): Promise<void> {
@@ -259,6 +279,22 @@ export class IAdminServerRepository implements AdminRepository {
         }
     }
 
+    async updateCategory(category: Partial<Category>): Promise<void> {
+        console.log("[IAdminRepository] updateCategory called with:", category);
+        const { id, ...updateData } = category;
+        if (!id) {
+            throw new Error("Category ID is required for update");
+        }
+        const { error } = await supabaseAdmin.schema('store')
+            .from('categories')
+            .update(updateData)
+            .eq('id', id);
+        if (error) {
+            console.error("[IAdminRepository] updateCategory error:", error);
+            throw error;
+        }
+    }
+
     async deleteCategory(id: number): Promise<void> {
         console.log("[IProductRepository] deleteCategory called with id:", id);
         const { error } = await supabaseAdmin.schema('store').from('categories').delete().eq('id', id);
@@ -267,6 +303,7 @@ export class IAdminServerRepository implements AdminRepository {
             throw error;
         }
     }
+
 
     async viewAllWithDetails(): Promise<ProductAdminView[]> {
         console.log("[IAdminRepository] viewAllWithDetails called.");
@@ -284,6 +321,153 @@ export class IAdminServerRepository implements AdminRepository {
             throw error;
         }
         return data || [];
+    }
+
+    async getProductForEdit(slug: string): Promise<ProductAdminView | null> {
+        console.log("[IAdminRepository] getProductForEdit called with slug:", slug);
+
+        // 1. Get main product
+        const { data: product, error: productError } = await supabaseAdmin.schema('store')
+            .from('products')
+            .select('*, categories(id, name_en, name_ar)')
+            .eq('slug', slug)
+            .single();
+
+        if (productError) {
+            console.error("[IAdminRepository] getProductForEdit product error:", productError);
+            return null;
+        }
+
+        // 2. Get variants for this product
+        const { data: variants, error: variantsError } = await supabaseAdmin.schema('store')
+            .from('product_variants')
+            .select('*')
+            .eq('product_id', product.id);
+
+        if (variantsError) {
+            console.error("[IAdminRepository] getProductForEdit variants error:", variantsError);
+        }
+
+        // 3. Get materials for main product (variant_id IS NULL)
+        // Note: product_materials is in store schema, materials is in admin schema
+        // We can't use Supabase's foreign key join across schemas, so we fetch separately
+        const { data: productMaterialLinks, error: productMaterialsError } = await supabaseAdmin.schema('store')
+            .from('product_materials')
+            .select('*')
+            .eq('product_id', product.id)
+            .is('variant_id', null);
+
+        if (productMaterialsError) {
+            console.error("[IAdminRepository] getProductForEdit product materials error:", productMaterialsError);
+        }
+
+        // Fetch all material details from admin schema
+        const materialIds = (productMaterialLinks || []).map((pm: any) => pm.material_id).filter(Boolean);
+        let materialsMap: Record<number, any> = {};
+
+        if (materialIds.length > 0) {
+            const { data: materialsData } = await supabaseAdmin.schema('admin')
+                .from('materials')
+                .select('id, name, material_type, price_per_gram')
+                .in('id', materialIds);
+
+            materialsMap = (materialsData || []).reduce((acc: Record<number, any>, mat: any) => {
+                acc[mat.id] = mat;
+                return acc;
+            }, {});
+        }
+
+        // 4. Get materials for each variant
+        const variantsWithMaterials = await Promise.all((variants || []).map(async (variant: any) => {
+            const { data: variantMaterialLinks } = await supabaseAdmin.schema('store')
+                .from('product_materials')
+                .select('*')
+                .eq('variant_id', variant.id);
+
+            // Fetch variant material details
+            const variantMaterialIds = (variantMaterialLinks || []).map((pm: any) => pm.material_id).filter(Boolean);
+            let variantMaterialsMap: Record<number, any> = {};
+
+            if (variantMaterialIds.length > 0) {
+                const { data: variantMaterialsData } = await supabaseAdmin.schema('admin')
+                    .from('materials')
+                    .select('id, name, material_type, price_per_gram')
+                    .in('id', variantMaterialIds);
+
+                variantMaterialsMap = (variantMaterialsData || []).reduce((acc: Record<number, any>, mat: any) => {
+                    acc[mat.id] = mat;
+                    return acc;
+                }, {});
+            }
+
+            return {
+                ...variant,
+                materials: (variantMaterialLinks || []).map((pm: any) => ({
+                    id: pm.id,
+                    material_id: pm.material_id,
+                    grams_used: pm.grams_used,
+                    measurement_unit: pm.measurement_unit,
+                    material_name: variantMaterialsMap[pm.material_id]?.name,
+                    material_type: variantMaterialsMap[pm.material_id]?.material_type,
+                    price: variantMaterialsMap[pm.material_id]?.price_per_gram
+                }))
+            };
+        }));
+
+        // 5. Format the result to match ProductAdminView
+        const result: ProductAdminView = {
+            product_id: product.id,
+            variant_id: null,
+            name_en: product.name_en || '',
+            name_ar: product.name_ar || '',
+            description_en: product.description_en || '',
+            description_ar: product.description_ar || '',
+            price: product.price || 0,
+            discount: product.discount || 0,
+            image: product.image_url || '',
+            category_id: product.category_id,
+            category_name_en: product.categories?.name_en,
+            category_name_ar: product.categories?.name_ar,
+            skin_type: product.skin_type || 'normal',
+            slug: product.slug,
+            stock: product.stock || 0,
+            product_type: product.product_type || 'normal',
+            highlight_en: product.highlight_en || '',
+            highlight_ar: product.highlight_ar || '',
+            faq_en: product.faq_en || {},
+            faq_ar: product.faq_ar || {},
+            gallery: product.gallery || [],
+            variants: variantsWithMaterials.map((v: any) => ({
+                id: v.id,
+                product_id: product.id,
+                name_en: v.name_en || '',
+                name_ar: v.name_ar || '',
+                price: v.price || 0,
+                stock: v.stock || 0,
+                discount: v.discount || 0,
+                description_en: v.description_en || '',
+                description_ar: v.description_ar || '',
+                type_en: v.type_en || '',
+                type_ar: v.type_ar || '',
+                image: v.image || '',
+                gallery: v.gallery || [],
+                slug: v.slug || '',
+                materials: v.materials || []
+            })),
+            materials: (productMaterialLinks || []).map((pm: any) => ({
+                id: pm.id,
+                material_id: pm.material_id,
+                grams_used: pm.grams_used,
+                measurement_unit: pm.measurement_unit,
+                material_name: materialsMap[pm.material_id]?.name,
+                material_type: materialsMap[pm.material_id]?.material_type,
+                price: materialsMap[pm.material_id]?.price_per_gram
+            })),
+            visible: product.is_visible ?? true
+        };
+
+        console.log("[IAdminRepository] getProductForEdit result:", result);
+        return result;
     }
 
     async uploadImage(file: File): Promise<string> {
@@ -417,22 +601,46 @@ export class IAdminServerRepository implements AdminRepository {
     }
 
     async addProductStock(product: ProductAdminView, quantity: number): Promise<void> {
-        console.log(`[IAdminRepository] addProductStock called for productId: ${product.product_id}, quantity: ${quantity}`);
+        console.log(`[IAdminRepository] addProductStock called for productId: ${product.product_id}, variantId: ${product.variant_id}, quantity: ${quantity}`);
 
+        // 1. Fetch materials from database (don't rely on product.materials which may be empty)
+        // Note: .is() only works with null/true/false, use .eq() for numeric values
+        let query = supabaseAdmin.schema('store')
+            .from('product_materials')
+            .select('material_id, grams_used, measurement_unit')
+            .eq('product_id', product.product_id);
 
-        // Main product materials
-        let materialsNeeded = product.materials.map(m => ({
-            material_id: m.id,
-            amount: (m.grams_used || 0) * quantity
-        }));
+        // Apply variant filter correctly
+        if (product.variant_id !== null && product.variant_id !== undefined) {
+            query = query.eq('variant_id', product.variant_id);
+        } else {
+            query = query.is('variant_id', null);
+        }
 
+        const { data: productMaterialLinks, error: pmError } = await query;
+
+        if (pmError) {
+            console.error("[IAdminRepository] addProductStock fetch materials error:", pmError);
+            throw pmError;
+        }
+
+        console.log("[IAdminRepository] Product materials fetched:", productMaterialLinks);
+
+        // 2. Calculate materials needed
+        const materialsNeeded = (productMaterialLinks || [])
+            .filter((pm: any) => pm.material_id && pm.grams_used)
+            .map((pm: any) => ({
+                material_id: pm.material_id,
+                amount: (pm.grams_used || 0) * quantity
+            }));
+
+        console.log("[IAdminRepository] Materials needed:", materialsNeeded);
 
         if (materialsNeeded.length === 0) {
-            // No materials needed, just update stock
+            // No materials linked to this product, just update stock
             console.log("[IAdminRepository] No materials linked, updating stock directly.");
         } else {
             // 3. Check Material Availability
-            console.log("[IAdminRepository] Checking material availability:", materialsNeeded);
             const materialIds = materialsNeeded.map(m => m.material_id);
             const { data: currentMaterials, error: matError } = await supabaseAdmin.schema('admin')
                 .from("materials")
@@ -441,21 +649,32 @@ export class IAdminServerRepository implements AdminRepository {
 
             if (matError) throw matError;
 
+            // Check if all materials have sufficient stock
+            const insufficientMaterials: string[] = [];
             for (const need of materialsNeeded) {
                 const mat = currentMaterials?.find(m => m.id === need.material_id);
-                if (!mat) throw new Error(`Material ID ${need.material_id} not found`);
-
+                if (!mat) {
+                    throw new Error(`Material ID ${need.material_id} not found`);
+                }
                 if ((mat.stock_grams || 0) < need.amount) {
-                    throw new Error(`Insufficient stock for material: ${mat.name}. Required: ${need.amount}, Available: ${mat.stock_grams}`);
+                    insufficientMaterials.push(`${mat.name}: Required ${need.amount}g, Available ${mat.stock_grams || 0}g`);
                 }
             }
+
+            // If any material is insufficient, throw error and don't proceed
+            if (insufficientMaterials.length > 0) {
+                throw new Error(`Insufficient material stock:\n${insufficientMaterials.join('\n')}`);
+            }
+
             console.log("[IAdminRepository] Material availability checked successfully.");
+
             // 4. Deduct Materials
-            console.log("[IAdminRepository] Deducting materials:", materialsNeeded);
+            console.log("[IAdminRepository] Deducting materials...");
             for (const need of materialsNeeded) {
                 const mat = currentMaterials?.find(m => m.id === need.material_id)!;
                 const newStock = (mat.stock_grams || 0) - need.amount;
-                console.log("[IAdminRepository] Deducting material:", mat.name, "New stock:", newStock);
+                console.log(`[IAdminRepository] Deducting ${need.amount}g from ${mat.name}, new stock: ${newStock}g`);
+
                 const { error: deductError } = await supabaseAdmin.schema('admin')
                     .from("materials")
                     .update({ stock_grams: newStock })

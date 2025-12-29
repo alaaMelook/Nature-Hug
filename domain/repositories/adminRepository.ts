@@ -21,6 +21,7 @@ export interface AdminRepository {
     deleteMaterial(id: number): Promise<void>;
 
     createCategory(category: Partial<Category>): Promise<void>;
+    updateCategory(category: Partial<Category>): Promise<void>;
     deleteCategory(id: number): Promise<void>;
     createProduct(product: ProductAdminView): Promise<number>;
 

@@ -49,6 +49,7 @@ export interface ProductVariantAdminView {
 
 export interface ProductMaterialAdminView {
     id: number;
+    material_id?: number; // The actual material ID from the materials table
     measurement_unit?: string;
     grams_used?: number; // Keep for compatibility if needed
     // UI helper fields

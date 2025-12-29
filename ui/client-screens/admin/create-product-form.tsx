@@ -309,7 +309,12 @@ export function CreateProductForm({ initialImages, initialCategories, editMode =
                                         <input
                                             {...register("name_en", {
                                                 required: true,
-                                                onChange: (e) => setValue("slug", generateSlug(e.target.value))
+                                                onChange: (e) => {
+                                                    // Only auto-generate slug in create mode, not in edit mode
+                                                    if (!editMode) {
+                                                        setValue("slug", generateSlug(e.target.value));
+                                                    }
+                                                }
                                             })}
                                             className={`w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border ${errors.name_en ? 'border-red-500' : ''}`}
                                         />

@@ -1,7 +1,7 @@
 'use client';
 import { useState, useRef, useEffect } from "react";
 import { ProductAdminView } from "@/domain/entities/views/admin/productAdminView";
-import { Search, Plus, Filter, Trash2, Package, PlusCircle, X, Check, ChevronDown } from "lucide-react";
+import { Search, Plus, Filter, Trash2, Package, PlusCircle, X, Check, ChevronDown, Pencil } from "lucide-react";
 import { deleteProduct, toggleProductVisibilityAction } from "@/ui/hooks/admin/products";
 import { toast } from "sonner";
 import Image from "next/image";
@@ -344,8 +344,15 @@ export function ProductsScreen({ products, materials }: { products: ProductAdmin
                                         <td className="px-6 py-4 whitespace-nowrap text-end text-sm font-medium">
                                             <div className="flex items-center justify-end space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <button
+                                                    onClick={() => router.push(`/admin/products/edit/${product.slug}`)}
+                                                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                                                    title={t("edit")}
+                                                >
+                                                    <Pencil className="w-4 h-4" />
+                                                </button>
+                                                <button
                                                     onClick={() => handleDelete(product)}
-                                                    className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                                                    className="p-1.5 text-red-600 hover:bg-red-50 rounded-full transition-colors"
                                                     title={t("delete")}
                                                 >
                                                     <Trash2 className="w-4 h-4" />
@@ -402,10 +409,15 @@ export function ProductsScreen({ products, materials }: { products: ProductAdmin
                                         <h3 className="text-sm font-semibold text-gray-900 truncate pr-2">{i18n.language === "ar" ? product.name_ar : product.name_en}</h3>
 
                                         <div className="flex items-center space-x-1">
-
+                                            <button
+                                                onClick={() => router.push(`/admin/products/edit/${product.slug}`)}
+                                                className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-full"
+                                            >
+                                                <Pencil className="w-4 h-4" />
+                                            </button>
                                             <button
                                                 onClick={() => handleDelete(product)}
-                                                className="p-1 text-gray-400 hover:text-red-600"
+                                                className="p-1.5 text-red-600 hover:bg-red-50 rounded-full"
                                             >
                                                 <Trash2 className="w-4 h-4" />
                                             </button>
@@ -455,7 +467,8 @@ export function ProductsScreen({ products, materials }: { products: ProductAdmin
                 title={t("addProductStock") || "Add Product Stock"}
                 itemName={i18n.language === 'ar' ? selectedProduct?.name_ar || "" : selectedProduct?.name_en || ""}
                 currentStock={selectedProduct?.stock}
-
+                productId={selectedProduct?.product_id}
+                variantId={selectedProduct?.variant_id}
             />
         </motion.div>
     );
