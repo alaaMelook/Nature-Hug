@@ -67,7 +67,7 @@ export function StockUpdateModal({
 
     const hasMaterials = previewData && previewData.materials.length > 0;
     const maxUnits = previewData?.maxProducibleUnits ?? Infinity;
-    const isOverLimit = hasMaterials && quantity > maxUnits;
+    const isOverLimit = !!(hasMaterials && quantity > maxUnits);
 
     // Check which materials would run out
     const insufficientMaterials = hasMaterials
