@@ -94,4 +94,15 @@ export class Orders {
         }
         throw new Error("Failed to cancel shipment: " + result.ErrorMessage);
     }
+
+    async delete(orderId: number) {
+        try {
+            console.log("[deleteOrder] Deleting order:", orderId);
+            await this.repo.deleteOrder(orderId);
+            console.log("[deleteOrder] Order deleted successfully");
+        } catch (error) {
+            console.error("[deleteOrder] Error:", error);
+            throw error;
+        }
+    }
 }

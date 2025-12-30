@@ -349,6 +349,7 @@ export function OrdersScreen({ initialOrders, promoCodes = [] }: { initialOrders
                             <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase ">{t("status")}</th>
                             <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase ">{t("payment")}</th>
                             <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase ">{t("total")}</th>
+                            <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase ">{t("createdBy")}</th>
                             <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase ">{t("createdAt")}</th>
                         </tr>
                     </thead>
@@ -400,6 +401,22 @@ export function OrdersScreen({ initialOrders, promoCodes = [] }: { initialOrders
                                                 </div>
                                             </td>
                                             <td className="px-4 py-3 font-medium text-gray-900">{t('{{price, currency}}', { price: order.final_order_total })}</td>
+                                            <td className="px-4 py-3 text-gray-600">
+                                                {order.created_by_user_name ? (
+                                                    <div className="flex items-center gap-1">
+                                                        <span className={`text-xs px-2 py-1 rounded-full ${order.created_by_user_role === 'admin'
+                                                                ? 'bg-purple-50 text-purple-700'
+                                                                : 'bg-blue-50 text-blue-700'
+                                                            }`}>
+                                                            {order.created_by_user_role === 'admin' && '👤'}
+                                                            {order.created_by_user_role === 'moderator' && '👔'}
+                                                            {' '}{order.created_by_user_name}
+                                                        </span>
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-gray-400 text-sm">{t("customer")}</span>
+                                                )}
+                                            </td>
                                             <td className="px-4 py-3 text-gray-500">
                                                 {t("{{date, datetime}}", { date: new Date(order.order_date) }).split(",").map((item, index) => (
                                                     <p key={index}>{item}</p>
@@ -477,6 +494,20 @@ export function OrdersScreen({ initialOrders, promoCodes = [] }: { initialOrders
                                                 </div>
                                             )}
                                         </div>
+
+                                        {order.created_by_user_name && (
+                                            <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm text-gray-700 mb-3">
+                                                <div>
+                                                    <span className="font-medium">{t("createdBy")}:</span>{" "}
+                                                    <span className={`text-xs px-2 py-1 rounded-full ${order.created_by_user_role === 'admin'
+                                                            ? 'bg-purple-50 text-purple-700'
+                                                            : 'bg-blue-50 text-blue-700'
+                                                        }`}>
+                                                        {order.created_by_user_name}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        )}
 
                                         <div className="flex items-end justify-between pt-3 border-t border-gray-100 mt-3">
                                             <p className="text-gray-500 text-xs">

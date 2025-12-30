@@ -716,6 +716,55 @@ export const resources = {
       ordersSelected: "orders selected",
       clear: "Clear",
 
+      // Admin Orders
+      adminOrders: {
+        createOrder: "Create Order",
+        createOrderDesc: "Create a new order manually as admin",
+        customerInfo: "Customer Information",
+        customerName: "Customer Name",
+        phone: "Phone Number",
+        phone2: "Alternative Phone",
+        email: "Email",
+        address: "Delivery Address",
+        governorate: "Governorate",
+        selectGovernorate: "Select Governorate",
+        optional: "Optional",
+        orderItems: "Order Items",
+        addProduct: "Add Product",
+        noItemsYet: "No items yet",
+        orderSummary: "Order Summary",
+        promoCode: "Promo Code",
+        enterPromoCode: "Enter promo code",
+        selectProduct: "Select Product",
+        searchProducts: "Search products...",
+        noProductsFound: "No products found",
+        creating: "Creating order...",
+        createOrderBtn: "Create Order",
+        orderCreated: "Order created successfully",
+        errors: {
+          nameRequired: "Customer name is required",
+          phoneRequired: "Phone number is required",
+          addressRequired: "Delivery address is required",
+          governorateRequired: "Please select a governorate",
+          noProducts: "Please add at least one product",
+          createFailed: "Failed to create order"
+        },
+        placeholders: {
+          name: "Enter customer name",
+          address: "Enter full delivery address"
+        }
+      },
+
+      // Created By & Reports
+      createdBy: "Created By",
+      accountPerformance: "Account Performance",
+      topProducts: "Top Products",
+      generateReport: "Generate Report",
+      accountName: "Account Name",
+      role: "Role",
+      units: "units",
+      salesPercentage: "Sales %",
+      noDataForPeriod: "No data available for this period",
 
     }
   },
@@ -1428,6 +1477,55 @@ export const resources = {
       excelExportSuccess: "تصدير إلى ملف Excel",
       ordersSelected: "طلبات محددة",
       clear: "مسح",
+
+      // Admin Orders
+      adminOrders: {
+        createOrder: "إنشاء طلب",
+        createOrderDesc: "إنشاء طلب جديد يدويًا كمسؤول",
+        customerInfo: "معلومات العميل",
+        customerName: "اسم العميل",
+        phone: "رقم الهاتف",
+        phone2: "رقم هاتف بديل",
+        email: "البريد الإلكتروني",
+        address: "عنوان التوصيل",
+        governorate: "المحافظة",
+        selectGovernorate: "اختر المحافظة",
+        optional: "اختياري",
+        orderItems: "منتجات الطلب",
+        addProduct: "إضافة منتج",
+        noItemsYet: "لا توجد منتجات بعد",
+        orderSummary: "ملخص الطلب",
+        promoCode: "كود الخصم",
+        enterPromoCode: "أدخل كود الخصم",
+        selectProduct: "اختر منتج",
+        searchProducts: "ابحث عن منتجات...",
+        noProductsFound: "لا توجد منتجات",
+        creating: "جارٍ إنشاء الطلب...",
+        createOrderBtn: "إنشاء الطلب",
+        orderCreated: "تم إنشاء الطلب بنجاح",
+        errors: {
+          nameRequired: "اسم العميل مطلوب",
+          phoneRequired: "رقم الهاتف مطلوب",
+          addressRequired: "عنوان التوصيل مطلوب",
+          governorateRequired: "يرجى اختيار المحافظة",
+          noProducts: "يرجى إضافة منتج واحد على الأقل",
+          createFailed: "فشل إنشاء الطلب"
+        },
+        placeholders: {
+          name: "أدخل اسم العميل",
+          address: "أدخل عنوان التوصيل الكامل"
+        }
+      },
+
+      // Created By & Reports
+      createdBy: "من قبل",
+      accountPerformance: "أداء الحسابات",
+      topProducts: "أكثر المنتجات مبيعًا",
+      generateReport: "إنشاء التقرير",
+      accountName: "اسم الحساب",
+      salesPercentage: "نسبة المبيعات",
+      noDataForPeriod: "لا توجد بيانات لهذه الفترة",
+
     }
   }
 };

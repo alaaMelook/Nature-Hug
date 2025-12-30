@@ -1,7 +1,7 @@
 import { OrderItem } from "./orderItem";
 import { CustomerAddress } from "@/domain/entities/auth/customer";
 
-export type OrderStatus = 'pending' | 'processing' | 'completed' | 'cancelled' | 'refunded' | 'failed';
+export type OrderStatus = 'pending' | 'processing' | 'completed' | 'cancelled' | 'refunded' | 'failed' | 'delivered' | 'shipped' | 'returned' | 'declined' | 'out for delivery';
 
 export interface Order {
     // Common
@@ -22,6 +22,7 @@ export interface Order {
     payment_method: string;
     grand_total: number;
     customer_id: number | null;
+    created_by_customer_id?: number | null; // ID of admin/moderator who created this order
     shipping_address_id?: number | null;
     promo_code_id?: number | null;
     items?: Partial<OrderItem>[];

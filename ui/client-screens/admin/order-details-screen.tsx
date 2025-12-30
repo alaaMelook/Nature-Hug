@@ -10,9 +10,10 @@ import {
     cancelOrderAction,
     markAsOutForDeliveryAction,
     updateOrderAction,
-    cancelShippedOrderAction
+    cancelShippedOrderAction,
+    deleteOrderAction
 } from "@/ui/hooks/admin/orders";
-import { User, MapPin, Phone, Package, Calendar, ArrowLeft, X, CreditCard, Mail, Loader2 } from "lucide-react";
+import { User, MapPin, Phone, Package, Calendar, ArrowLeft, X, CreditCard, Mail, Loader2, Trash2, Edit2, Save } from "lucide-react";
 import { ShipmentTracking } from "@/ui/components/admin/ShipmentTracking";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -25,6 +26,20 @@ export function OrderDetailsScreen({ order, governorate }: { order: OrderDetails
     const router = useRouter();
     const [updating, setUpdating] = useState(false);
     const [isSyncing, setIsSyncing] = useState(true);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [deleting, setDeleting] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [editForm, setEditForm] = useState({
+        customer_name: order.customer_name,
+        customer_email: order.customer_email || '',
+        phone_numbers: [...order.phone_numbers],
+        shipping_street_address: order.shipping_street_address,
+        subtotal: order.subtotal,
+        shipping_total: order.shipping_total,
+        discount_total: order.discount_total,
+        final_order_total: order.final_order_total,
+    });
 
     useEffect(() => {
         if (order.awb && order.order_status !== 'cancelled' && order.order_status !== 'returned' && !(order.order_status === 'delivered' && order.payment_status === 'paid')) {
@@ -121,6 +136,83 @@ export function OrderDetailsScreen({ order, governorate }: { order: OrderDetails
         }
     };
 
+    const handleDelete = async () => {
+        setDeleting(true);
+        try {
+            const result = await deleteOrderAction(order.order_id);
+            if (result.success) {
+                toast.success(t("orderDeleted"));
+                router.push(`/admin/orders`);
+            } else {
+                toast.error(result.error || t("failedToDeleteOrder"));
+            }
+        } catch (error) {
+            console.error("Failed to delete order:", error);
+            toast.error(t("failedToDeleteOrder"));
+        } finally {
+            setDeleting(false);
+            setShowDeleteConfirm(false);
+        }
+    };
+
+    const handleSaveChanges = async () => {
+        setSaving(true);
+        try {
+            const result = await updateOrderAction({
+                order_id: order.order_id,
+                customer_name: editForm.customer_name,
+                customer_email: editForm.customer_email,
+                phone_numbers: editForm.phone_numbers,
+                shipping_street_address: editForm.shipping_street_address,
+                subtotal: editForm.subtotal,
+                shipping_total: editForm.shipping_total,
+                discount_total: editForm.discount_total,
+                final_order_total: editForm.final_order_total,
+            });
+            if (result.success) {
+                toast.success(t("orderUpdated"));
+                setIsEditing(false);
+                router.refresh();
+            } else {
+                toast.error(result.error || t("failedToUpdateOrder"));
+            }
+        } catch (error) {
+            console.error("Failed to update order:", error);
+            toast.error(t("failedToUpdateOrder"));
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handlePhoneChange = (index: number, value: string) => {
+        const newPhones = [...editForm.phone_numbers];
+        newPhones[index] = value;
+        setEditForm({ ...editForm, phone_numbers: newPhones });
+    };
+
+    const addPhone = () => {
+        setEditForm({ ...editForm, phone_numbers: [...editForm.phone_numbers, ''] });
+    };
+
+    const removePhone = (index: number) => {
+        const newPhones = editForm.phone_numbers.filter((_, i) => i !== index);
+        setEditForm({ ...editForm, phone_numbers: newPhones });
+    };
+
+    const cancelEdit = () => {
+        setEditForm({
+            customer_name: order.customer_name,
+            customer_email: order.customer_email || '',
+            phone_numbers: [...order.phone_numbers],
+            shipping_street_address: order.shipping_street_address,
+            subtotal: order.subtotal,
+            shipping_total: order.shipping_total,
+            discount_total: order.discount_total,
+            final_order_total: order.final_order_total,
+        });
+        setIsEditing(false);
+    };
+
     const actions = orderActions({ status: order.order_status, awb: order.awb });
 
     const containerVariants = {
@@ -212,6 +304,45 @@ export function OrderDetailsScreen({ order, governorate }: { order: OrderDetails
                             {order.order_status === 'processing' ? t("sendToShipment") : t(actions.pos)}
                         </button>
                     )}
+                    {/* Delete Order Button */}
+                    <button
+                        onClick={() => setShowDeleteConfirm(true)}
+                        disabled={updating || deleting || isEditing}
+                        className="flex-1 sm:flex-none px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 shadow-sm flex items-center justify-center gap-2"
+                        aria-label={t("deleteOrder")}
+                    >
+                        <Trash2 size={16} />
+                        {t("deleteOrder")}
+                    </button>
+                    {/* Edit Order Button */}
+                    {!isEditing ? (
+                        <button
+                            onClick={() => setIsEditing(true)}
+                            disabled={updating || deleting}
+                            className="flex-1 sm:flex-none px-4 py-2 bg-amber-500 text-white hover:bg-amber-600 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 shadow-sm flex items-center justify-center gap-2"
+                        >
+                            <Edit2 size={16} />
+                            {t("editOrder")}
+                        </button>
+                    ) : (
+                        <>
+                            <button
+                                onClick={cancelEdit}
+                                disabled={saving}
+                                className="flex-1 sm:flex-none px-4 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 border border-gray-200"
+                            >
+                                {t("cancel")}
+                            </button>
+                            <button
+                                onClick={handleSaveChanges}
+                                disabled={saving}
+                                className="flex-1 sm:flex-none px-4 py-2 bg-green-600 text-white hover:bg-green-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 shadow-sm flex items-center justify-center gap-2"
+                            >
+                                {saving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
+                                {saving ? t("saving") : t("saveChanges")}
+                            </button>
+                        </>
+                    )}
                 </div>
             </motion.div>
 
@@ -223,20 +354,76 @@ export function OrderDetailsScreen({ order, governorate }: { order: OrderDetails
                             <User size={14} /> {t("customerDetails")}
                         </h3>
 
-                        <div>
-                            <p className="font-medium text-gray-900 text-base sm:text-lg">{order.customer_name}</p> {/* Adjusted font size */}
-                            {order.customer_email && (
-                                <div className="flex items-center gap-2 text-gray-500 mt-1 text-sm"> {/* Added text-sm */}
-                                    <Mail size={14} />
-                                    {order.customer_email}
-                                </div>
+                        <div className="space-y-3">
+                            {isEditing ? (
+                                <>
+                                    <div>
+                                        <label className="text-xs text-gray-500 mb-1 block">{t("customerName")}</label>
+                                        <input
+                                            type="text"
+                                            value={editForm.customer_name}
+                                            onChange={(e) => setEditForm({ ...editForm, customer_name: e.target.value })}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-gray-500 mb-1 block">{t("email")}</label>
+                                        <div className="flex items-center gap-2">
+                                            <Mail size={14} className="text-gray-400" />
+                                            <input
+                                                type="email"
+                                                value={editForm.customer_email}
+                                                onChange={(e) => setEditForm({ ...editForm, customer_email: e.target.value })}
+                                                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-gray-500 mb-1 block">{t("phoneNumbers")}</label>
+                                        {editForm.phone_numbers.map((phone, index) => (
+                                            <div key={index} className="flex items-center gap-2 mt-2">
+                                                <Phone size={14} className="text-gray-400" />
+                                                <input
+                                                    type="tel"
+                                                    value={phone}
+                                                    onChange={(e) => handlePhoneChange(index, e.target.value)}
+                                                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                />
+                                                {editForm.phone_numbers.length > 1 && (
+                                                    <button
+                                                        onClick={() => removePhone(index)}
+                                                        className="p-1 text-red-500 hover:bg-red-50 rounded"
+                                                    >
+                                                        <X size={16} />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        ))}
+                                        <button
+                                            onClick={addPhone}
+                                            className="mt-2 text-sm text-blue-600 hover:text-blue-700"
+                                        >
+                                            + {t("addPhone")}
+                                        </button>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <p className="font-medium text-gray-900 text-base sm:text-lg">{order.customer_name}</p>
+                                    {order.customer_email && (
+                                        <div className="flex items-center gap-2 text-gray-500 mt-1 text-sm">
+                                            <Mail size={14} />
+                                            {order.customer_email}
+                                        </div>
+                                    )}
+                                    {order.phone_numbers.map((phone, index) => (
+                                        <div key={index} className="flex items-center gap-2 text-gray-500 mt-1 text-sm">
+                                            <Phone size={14} />
+                                            {phone}
+                                        </div>
+                                    ))}
+                                </>
                             )}
-                            {order.phone_numbers.map((phone, index) => (
-                                <div key={index} className="flex items-center gap-2 text-gray-500 mt-1 text-sm"> {/* Added text-sm */}
-                                    <Phone size={14} />
-                                    {phone}
-                                </div>
-                            ))}
                         </div>
 
                     </motion.section>
@@ -245,8 +432,17 @@ export function OrderDetailsScreen({ order, governorate }: { order: OrderDetails
                         <h3 className="text-xs font-semibold text-gray-500 uppercase  mb-4 flex items-center gap-2">
                             <MapPin size={14} /> {t("shippingAddress")}
                         </h3>
-                        <div className="text-gray-700 space-y-2 text-sm"> {/* Added text-sm */}
-                            <p className="font-medium text-base sm:text-lg">{order.shipping_street_address}</p> {/* Adjusted font size */}
+                        <div className="text-gray-700 space-y-2 text-sm">
+                            {isEditing ? (
+                                <textarea
+                                    value={editForm.shipping_street_address}
+                                    onChange={(e) => setEditForm({ ...editForm, shipping_street_address: e.target.value })}
+                                    rows={3}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                />
+                            ) : (
+                                <p className="font-medium text-base sm:text-lg">{order.shipping_street_address}</p>
+                            )}
                             <p className="text-gray-500">{order.shipping_governorate}</p>
                         </div>
                     </motion.section>
@@ -327,42 +523,130 @@ export function OrderDetailsScreen({ order, governorate }: { order: OrderDetails
                             </table>
                         </div>
                         <div className="bg-gray-50 p-4 sm:p-6 border-t">
-                            {(() => {
-                                // Calculate discount from promo_percentage if discount_total is 0 but promo code exists
-                                const calculatedDiscount = order.discount_total > 0
-                                    ? order.discount_total
-                                    : (order.applied_promo_code && order.promo_percentage)
-                                        ? order.subtotal * (order.promo_percentage / 100)
-                                        : 0;
-                                const effectiveTotal = calculatedDiscount > 0 && order.discount_total === 0
-                                    ? order.subtotal - calculatedDiscount + order.shipping_total
-                                    : order.final_order_total;
-
-                                return (
-                                    <div className="flex flex-col gap-2 text-sm">
-                                        <div className="flex justify-between w-full text-gray-600 px-2">
-                                            <span>{t("subtotal")}</span>
-                                            <span>{t('{{price, currency}}', { price: order.subtotal })}</span>
-                                        </div>
-                                        <div className="flex justify-between w-full text-gray-600 px-2">
-                                            <span>{t("shipping")}</span>
-                                            <span>{t('{{price, currency}}', { price: order.shipping_total })}</span>
-                                        </div>
-                                        {calculatedDiscount > 0 && <div className="flex justify-between w-full text-red-600 px-2">
-                                            <span>{t("discount")} {order.applied_promo_code && <span className="text-xs">({order.applied_promo_code} - {order.promo_percentage}%)</span>}</span>
-                                            <span><strong>-</strong> {t('{{price, currency}}', { price: calculatedDiscount })}</span>
-                                        </div>}
-                                        <div className="flex justify-between w-full text-lg font-bold text-gray-900 mt-2 pt-2 border-t px-2">
-                                            <span>{t("totalAmount")}</span>
-                                            <span>{t('{{price, currency}}', { price: effectiveTotal })}</span>
-                                        </div>
+                            {isEditing ? (
+                                <div className="flex flex-col gap-3 text-sm">
+                                    <div className="flex justify-between items-center w-full text-gray-600 px-2">
+                                        <span>{t("subtotal")}</span>
+                                        <input
+                                            type="number"
+                                            value={editForm.subtotal}
+                                            onChange={(e) => setEditForm({ ...editForm, subtotal: Number(e.target.value) })}
+                                            className="w-32 px-3 py-1 border border-gray-300 rounded-lg text-sm text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        />
                                     </div>
-                                );
-                            })()}
+                                    <div className="flex justify-between items-center w-full text-gray-600 px-2">
+                                        <span>{t("shipping")}</span>
+                                        <input
+                                            type="number"
+                                            value={editForm.shipping_total}
+                                            onChange={(e) => setEditForm({ ...editForm, shipping_total: Number(e.target.value) })}
+                                            className="w-32 px-3 py-1 border border-gray-300 rounded-lg text-sm text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        />
+                                    </div>
+                                    <div className="flex justify-between items-center w-full text-red-600 px-2">
+                                        <span>{t("discount")}</span>
+                                        <input
+                                            type="number"
+                                            value={editForm.discount_total}
+                                            onChange={(e) => setEditForm({ ...editForm, discount_total: Number(e.target.value) })}
+                                            className="w-32 px-3 py-1 border border-gray-300 rounded-lg text-sm text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        />
+                                    </div>
+                                    <div className="flex justify-between items-center w-full text-lg font-bold text-gray-900 mt-2 pt-2 border-t px-2">
+                                        <span>{t("totalAmount")}</span>
+                                        <input
+                                            type="number"
+                                            value={editForm.final_order_total}
+                                            onChange={(e) => setEditForm({ ...editForm, final_order_total: Number(e.target.value) })}
+                                            className="w-32 px-3 py-2 border border-gray-300 rounded-lg text-base font-bold text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        />
+                                    </div>
+                                </div>
+                            ) : (
+                                (() => {
+                                    // Calculate discount from promo_percentage if discount_total is 0 but promo code exists
+                                    const calculatedDiscount = order.discount_total > 0
+                                        ? order.discount_total
+                                        : (order.applied_promo_code && order.promo_percentage)
+                                            ? order.subtotal * (order.promo_percentage / 100)
+                                            : 0;
+                                    const effectiveTotal = calculatedDiscount > 0 && order.discount_total === 0
+                                        ? order.subtotal - calculatedDiscount + order.shipping_total
+                                        : order.final_order_total;
+
+                                    return (
+                                        <div className="flex flex-col gap-2 text-sm">
+                                            <div className="flex justify-between w-full text-gray-600 px-2">
+                                                <span>{t("subtotal")}</span>
+                                                <span>{t('{{price, currency}}', { price: order.subtotal })}</span>
+                                            </div>
+                                            <div className="flex justify-between w-full text-gray-600 px-2">
+                                                <span>{t("shipping")}</span>
+                                                <span>{t('{{price, currency}}', { price: order.shipping_total })}</span>
+                                            </div>
+                                            {calculatedDiscount > 0 && <div className="flex justify-between w-full text-red-600 px-2">
+                                                <span>{t("discount")} {order.applied_promo_code && <span className="text-xs">({order.applied_promo_code} - {order.promo_percentage}%)</span>}</span>
+                                                <span><strong>-</strong> {t('{{price, currency}}', { price: calculatedDiscount })}</span>
+                                            </div>}
+                                            <div className="flex justify-between w-full text-lg font-bold text-gray-900 mt-2 pt-2 border-t px-2">
+                                                <span>{t("totalAmount")}</span>
+                                                <span>{t('{{price, currency}}', { price: effectiveTotal })}</span>
+                                            </div>
+                                        </div>
+                                    );
+                                })()
+                            )}
                         </div>
                     </motion.div>
                 </div>
             </div>
+
+            {/* Delete Confirmation Modal */}
+            {showDeleteConfirm && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                    <motion.div
+                        initial={{ scale: 0.95, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4"
+                    >
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="p-3 bg-red-100 rounded-full">
+                                <Trash2 className="text-red-600" size={24} />
+                            </div>
+                            <h3 className="text-lg font-semibold text-gray-900">{t("confirmDeleteOrder")}</h3>
+                        </div>
+                        <p className="text-gray-600 mb-6">
+                            {t("deleteOrderWarning", { orderId: order.order_id })}
+                        </p>
+                        <div className="flex gap-3 justify-end">
+                            <button
+                                onClick={() => setShowDeleteConfirm(false)}
+                                disabled={deleting}
+                                className="px-4 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                            >
+                                {t("cancel")}
+                            </button>
+                            <button
+                                onClick={handleDelete}
+                                disabled={deleting}
+                                className="px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
+                            >
+                                {deleting ? (
+                                    <>
+                                        <Loader2 className="animate-spin" size={16} />
+                                        {t("deleting")}
+                                    </>
+                                ) : (
+                                    <>
+                                        <Trash2 size={16} />
+                                        {t("deleteOrder")}
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
         </motion.div>
     );
 }

@@ -1,7 +1,5 @@
-"use client";
-
-import NotImplemented from "@/ui/components/admin/NotImplemented";
+import AdminReportsScreen from "@/ui/client-screens/admin/reports-screen";
 
 export default function ReportsPage() {
-    return <NotImplemented />;
+    return <AdminReportsScreen />;
 }

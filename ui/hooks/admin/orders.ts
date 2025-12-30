@@ -7,7 +7,7 @@ import { shipmentService } from "@/lib/services/shipmentService";
 
 const ordersUseCase = new Orders();
 
-export async function updateOrderAction(order: OrderDetailsView) {
+export async function updateOrderAction(order: Partial<OrderDetailsView> & { order_id: number }) {
     try {
         await ordersUseCase.update(order);
         revalidatePath("/[lang]/admin/orders", "page");
@@ -118,5 +118,16 @@ export async function syncOrderStatusAction(order: OrderDetailsView) {
     } catch (error) {
         console.error("Failed to sync order status:", error);
         return { success: false, error: "Failed to sync status" };
+    }
+}
+
+export async function deleteOrderAction(orderId: number) {
+    try {
+        await ordersUseCase.delete(orderId);
+        revalidatePath("/[lang]/admin/orders", "page");
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to delete order:", error);
+        return { success: false, error: "Failed to delete order" };
     }
 }

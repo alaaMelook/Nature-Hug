@@ -8,6 +8,7 @@ import { Category } from "@/domain/entities/database/category";
 import { ReviewAdminView } from "@/domain/entities/views/admin/reviewAdminView";
 import { PromoCode } from "@/domain/entities/database/promoCode";
 import { Governorate } from "@/domain/entities/database/governorate";
+import { AccountReportView, ProductSalesReport, ReportSummary } from "@/domain/entities/views/admin/reportViews";
 
 export class IAdminServerRepository implements AdminRepository {
     async getOrderDetails(): Promise<OrderDetailsView[]> {
@@ -32,15 +33,14 @@ export class IAdminServerRepository implements AdminRepository {
             .from('order_details')
             .select('*')
             .eq('order_id', id)
-            .single();
+            .maybeSingle();
 
         if (error) {
             console.error("[IAdminRepository] getOrderById error:", error);
-            // Fallback: fetch all and find
-            // const all = await this.getOrderDetails();
-            // return all.find(o => o.order_id.toString() === id) || null;
             throw error;
         }
+
+        // Return null if no order found (not an error, just not found)
         return data;
     }
 
@@ -677,9 +677,31 @@ export class IAdminServerRepository implements AdminRepository {
 
     async updateOrder(order: Partial<OrderDetailsView>) {
         console.log("[IAdminRepository] updateOrder called with order:", order);
-        const updateData: any = { status: order.order_status };
+        const updateData: any = {};
+
+        // Status updates
+        if (order.order_status !== undefined) updateData.status = order.order_status;
         if (order.shipment_id) updateData.shipment_id = order.shipment_id;
         if (order.awb) updateData.awb = order.awb;
+
+        // Customer details updates (map view fields to actual table columns)
+        if (order.customer_name !== undefined) updateData.guest_name = order.customer_name;
+        if (order.customer_email !== undefined) updateData.guest_email = order.customer_email || null;
+
+        // Shipping address updates (stored in guest_address JSON column)
+        if (order.shipping_street_address !== undefined) {
+            updateData.guest_address = { street_address: order.shipping_street_address };
+        }
+
+        // Price updates (map view fields to actual table columns)
+        if (order.subtotal !== undefined) updateData.subtotal = order.subtotal;
+        if (order.shipping_total !== undefined) updateData.shipping_total = order.shipping_total;
+        if (order.discount_total !== undefined) updateData.discount_total = order.discount_total;
+        if (order.final_order_total !== undefined) updateData.grand_total = order.final_order_total;
+
+        // Payment info
+        if (order.payment_method !== undefined) updateData.payment_method = order.payment_method;
+        if (order.payment_status !== undefined) updateData.payment_status = order.payment_status;
 
         const {
             data,
@@ -692,6 +714,64 @@ export class IAdminServerRepository implements AdminRepository {
             console.error("[IAdminRepository] updateOrder error:", error);
             throw error;
         }
+
+        // Update phone numbers if provided
+        if (order.phone_numbers && order.phone_numbers.length > 0) {
+            // Delete existing phone numbers
+            await supabaseAdmin.schema('store').from('order_phone_numbers').delete().eq('order_id', order.order_id);
+
+            // Insert new phone numbers
+            const phoneRecords = order.phone_numbers.map(phone => ({
+                order_id: order.order_id,
+                phone_number: phone
+            }));
+            const { error: phoneError } = await supabaseAdmin.schema('store')
+                .from('order_phone_numbers')
+                .insert(phoneRecords);
+
+            if (phoneError) {
+                console.error("[IAdminRepository] updateOrder phone numbers error:", phoneError);
+            }
+        }
+    }
+
+    async deleteOrder(orderId: number): Promise<void> {
+        console.log("[IAdminRepository] deleteOrder called with orderId:", orderId);
+
+        // First delete order items
+        const { error: itemsError } = await supabaseAdmin.schema('store')
+            .from('order_items')
+            .delete()
+            .eq('order_id', orderId);
+
+        if (itemsError) {
+            console.error("[IAdminRepository] deleteOrder items error:", itemsError);
+            throw itemsError;
+        }
+
+        // Delete phone numbers
+        const { error: phonesError } = await supabaseAdmin.schema('store')
+            .from('order_phone_numbers')
+            .delete()
+            .eq('order_id', orderId);
+
+        if (phonesError) {
+            console.error("[IAdminRepository] deleteOrder phones error:", phonesError);
+            // Don't throw, table might not exist or have FK constraint
+        }
+
+        // Finally delete the order
+        const { error } = await supabaseAdmin.schema('store')
+            .from('orders')
+            .delete()
+            .eq('id', orderId);
+
+        if (error) {
+            console.error("[IAdminRepository] deleteOrder error:", error);
+            throw error;
+        }
+
+        console.log("[IAdminRepository] deleteOrder completed successfully");
     }
     async getAllImages(): Promise<{ image: any, url: string }[]> {
         console.log("[IAdminRepository] getAllImages called.");
@@ -966,5 +1046,63 @@ export class IAdminServerRepository implements AdminRepository {
             console.error(`[IAdminRepository] toggleProductVisibility error (table: ${table}):`, error);
             throw error;
         }
+    }
+
+    // ============================================
+    // REPORTS METHODS
+    // ============================================
+
+    async getAccountsReport(startDate: string, endDate: string): Promise<AccountReportView[]> {
+        console.log(`[IAdminRepository] getAccountsReport called for period: ${startDate} to ${endDate}`);
+
+        const { data, error } = await supabaseAdmin.schema('admin')
+            .rpc("get_accounts_performance_report", {
+                start_date: startDate,
+                end_date: endDate
+            });
+
+        if (error) {
+            console.error("[IAdminRepository] getAccountsReport error:", error);
+            throw error;
+        }
+        return data || [];
+    }
+
+    async getProductSalesReport(startDate: string, endDate: string): Promise<ProductSalesReport[]> {
+        console.log(`[IAdminRepository] getProductSalesReport called for period: ${startDate} to ${endDate}`);
+
+        const { data, error } = await supabaseAdmin.schema('admin')
+            .rpc("get_product_sales_report", {
+                start_date: startDate,
+                end_date: endDate
+            });
+
+        if (error) {
+            console.error("[IAdminRepository] getProductSalesReport error:", error);
+            throw error;
+        }
+        return data || [];
+    }
+
+    async getReportSummary(startDate: string, endDate: string): Promise<ReportSummary> {
+        console.log(`[IAdminRepository] getReportSummary called for period: ${startDate} to ${endDate}`);
+
+        const { data, error } = await supabaseAdmin.schema('admin')
+            .rpc("get_report_summary", {
+                start_date: startDate,
+                end_date: endDate
+            });
+
+        if (error) {
+            console.error("[IAdminRepository] getReportSummary error:", error);
+            throw error;
+        }
+        return data || {
+            total_orders: 0,
+            total_revenue: 0,
+            average_order_value: 0,
+            period_start: new Date(startDate),
+            period_end: new Date(endDate)
+        };
     }
 }

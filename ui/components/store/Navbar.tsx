@@ -48,6 +48,10 @@ export default function Navbar() {
 
 
     useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    useEffect(() => {
         const handleScroll = () => {
             if (window.scrollY > 10) {
                 setIsScrolled(true);
@@ -127,6 +131,9 @@ export default function Navbar() {
             : "fixed top-0 w-full bg-transparent shadow-none py-4"
         : "sticky top-0 bg-white shadow-md py-2"
         }`;
+
+    // Prevent hydration mismatch
+    if (!mounted) return null;
 
     return (
         <nav className={navbarClasses}>

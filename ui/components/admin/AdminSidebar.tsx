@@ -13,7 +13,8 @@ import {
   Menu,
   X,
   Truck,
-  Tag
+  Tag,
+  BarChart3
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
@@ -33,10 +34,9 @@ export default function AdminSidebar({
   const { t, i18n } = useTranslation();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
+  const [mounted, setMounted] = useState(false);
 
-  if (member?.role === 'moderator') return null;
-
-  console.log(stats);
+  // Navigation defined before hooks that depend on it
   const navigation = [
     { name: t("dashboard"), href: "/admin", icon: Home },
     { name: t("customers"), href: "/admin/customers", icon: Users },
@@ -45,16 +45,6 @@ export default function AdminSidebar({
       href: "/admin/materials",
       icon: BrickWall,
       badge: stats?.materialsWarningCount,
-      // submenu: [
-      //   { name: t("materials"), href: "/admin/materials", icon: BrickWall },
-      //   // { name: "BOM", href: "/admin/materials/bom", icon: List },
-      //   // { name: "Inventory", href: "/admin/materials/inventory", icon: Package },
-      //   // { name: "Production", href: "/admin/materials/production", icon: Factory },
-      //   // { name: "Movements", href: "/admin/materials/movements", icon: Repeat },
-      //   // { name: "Reports", href: "/admin/materials/reports", icon: ClipboardList },
-      //   // { name: "Suppliers", href: "/admin/materials/suppliers", icon: Truck },
-      //   // { name: "Missing Items", href: "/admin/materials/missing-items", icon: DollarSign },
-      // ]
     },
     {
       name: t("products"),
@@ -72,39 +62,16 @@ export default function AdminSidebar({
       href: "/admin/orders",
       icon: ShoppingCart,
       badge: (stats?.ordersWarningCount?.pending ?? 0) + (stats?.ordersWarningCount?.processing ?? 0),
-      // submenu: [
-      //   { name: t("allOrders"), href: "/admin/orders" },
-      //   // { name: "Missed Orders", href: "/admin/orders/missed" },
-      // { name: "Blocked Numbers", href: "/admin/orders/blocked" },
-      // { name: "Blocked OTP", href: "/admin/orders/blocked-otp" },
-      // ]
+      submenu: [
+        { name: t("allOrders"), href: "/admin/orders" },
+        { name: t("createOrder"), href: "/admin/orders/create" },
+      ]
     },
     {
       name: t("promoCodes"),
       href: "/admin/promo-codes",
       icon: Tag,
     },
-    // {
-    //   name: t("finance"),
-    //   href: "/admin/finance",
-    //   icon: DollarSign,
-    //   submenu: [
-    //     { name: "Distributions", href: "/admin/finance/distributions", icon: Repeat },
-    //     { name: "Expenses", href: "/admin/finance/expenses", icon: ClipboardList },
-    //     { name: "Expense Types", href: "/admin/finance/expense-types", icon: Tag },
-    //     { name: "Partners", href: "/admin/finance/partners", icon: UserCheck },
-    //   ]
-    // },
-    // {
-    //   name: t("people"),
-    //   href: "/admin/people",
-    //   icon: Users2,
-    //   submenu: [
-    //     { name: "Couriers", href: "/admin/people/couriers" },
-    //     { name: "Team Members", href: "/admin/people/team-members" },
-    //     { name: "Customers", href: "/admin/people/customers" },
-    //   ]
-    // },
     {
       name: t("shipping"),
       href: "/admin/shipping",
@@ -115,8 +82,14 @@ export default function AdminSidebar({
         { name: t("governorates"), href: "/admin/shipping/governorates" },
       ]
     },
+    { name: t("reports"), href: "/admin/reports", icon: BarChart3 },
     { name: t("gallery"), href: "/admin/gallery", icon: Image },
   ];
+
+  // Prevent hydration mismatch by only rendering after mount
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Initialize expanded menus based on current path
   useEffect(() => {
@@ -127,6 +100,10 @@ export default function AdminSidebar({
       setExpandedMenus(prev => [...new Set([...prev, activeParent.name])]);
     }
   }, [pathname]);
+
+  // All hooks above - conditional returns below
+  if (member?.role === 'moderator') return null;
+  if (!mounted) return null;
 
   const toggleMenu = (name: string) => {
     setExpandedMenus(prev =>
