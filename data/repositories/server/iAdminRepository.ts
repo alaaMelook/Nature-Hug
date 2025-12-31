@@ -261,16 +261,16 @@ export class IAdminServerRepository implements AdminRepository {
                         materialIds.push(mat.id);
                     }
                 } else {
-                    // Insert new material link
+                    // Upsert new material link (handles duplicate key)
                     const { data: newMat, error: insertError } = await supabaseAdmin.schema('store')
                         .from('product_materials')
-                        .insert({
+                        .upsert({
                             product_id: product.product_id,
                             variant_id: null,
                             material_id: mat.material_id,
                             grams_used: mat.grams_used,
                             measurement_unit: mat.measurement_unit || 'gm'
-                        })
+                        }, { onConflict: 'product_id, variant_id, material_id' })
                         .select('id')
                         .single();
 
@@ -340,8 +340,8 @@ export class IAdminServerRepository implements AdminRepository {
                                 variantMaterialIds.push(mat.id);
                             }
                         } else {
-                            // Insert new material link
-                            console.log("[IAdminRepository] Inserting new variant material:", {
+                            // Upsert new material link (handles duplicate key)
+                            console.log("[IAdminRepository] Upserting variant material:", {
                                 product_id: product.product_id,
                                 variant_id: variant.id,
                                 material_id: mat.material_id,
@@ -349,13 +349,13 @@ export class IAdminServerRepository implements AdminRepository {
                             });
                             const { data: newMat, error: insertError } = await supabaseAdmin.schema('store')
                                 .from('product_materials')
-                                .insert({
+                                .upsert({
                                     product_id: product.product_id,
                                     variant_id: variant.id,
                                     material_id: mat.material_id,
                                     grams_used: mat.grams_used,
                                     measurement_unit: mat.measurement_unit || 'gm'
-                                })
+                                }, { onConflict: 'product_id, variant_id, material_id' })
                                 .select('id')
                                 .single();
 
