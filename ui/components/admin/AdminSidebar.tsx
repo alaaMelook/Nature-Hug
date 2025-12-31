@@ -14,12 +14,16 @@ import {
   X,
   Truck,
   Tag,
-  BarChart3
+  BarChart3,
+  Bell,
+  BellRing,
+  Loader2
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Member } from "@/domain/entities/auth/member";
 import { MemberView } from "@/domain/entities/views/admin/memberView";
+import { usePushNotifications } from "@/ui/hooks/usePushNotifications";
 
 export default function AdminSidebar({
   stats,
@@ -35,6 +39,9 @@ export default function AdminSidebar({
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
   const [mounted, setMounted] = useState(false);
+
+  // Push notifications
+  const { isSupported, permission, requestPermission, isLoading } = usePushNotifications();
 
   // Navigation defined before hooks that depend on it
   const navigation = [
@@ -236,7 +243,50 @@ export default function AdminSidebar({
           ))}
         </nav>
 
-        <div className="p-4 border-t border-gray-100 mt-auto">
+        <div className="p-4 border-t border-gray-100 mt-auto space-y-3">
+          {/* Notification Enable Button */}
+          {isSupported && permission !== 'granted' && (
+            <button
+              onClick={requestPermission}
+              disabled={isLoading}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 bg-primary-50 text-primary-700 hover:bg-primary-100 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>جاري التفعيل...</span>
+                </>
+              ) : (
+                <>
+                  <Bell className="h-4 w-4" />
+                  <span>تفعيل الإشعارات 🔔</span>
+                </>
+              )}
+            </button>
+          )}
+
+          {/* Notification Status - Already Enabled (clickable to refresh) */}
+          {isSupported && permission === 'granted' && (
+            <button
+              onClick={requestPermission}
+              disabled={isLoading}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm text-green-600 bg-green-50 rounded-lg hover:bg-green-100 transition-all duration-200 disabled:opacity-50"
+              title="اضغط لتجديد الاشتراك"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>جاري التحديث...</span>
+                </>
+              ) : (
+                <>
+                  <BellRing className="h-4 w-4" />
+                  <span>الإشعارات مفعلة ✓</span>
+                </>
+              )}
+            </button>
+          )}
+
           <div className="px-3 py-2">
             <p className="text-xs text-gray-400 text-center">© 2025 Nature Hug</p>
           </div>

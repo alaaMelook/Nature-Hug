@@ -27,6 +27,8 @@ export function HomeScreen({ initialProducts: products, categories }: { initialP
         });
     }, [products]);
 
+
+
     const containerVariants = {
         hidden: { opacity: 0 },
         visible: {
@@ -204,7 +206,7 @@ export function HomeScreen({ initialProducts: products, categories }: { initialP
                 </section>
                 {/* Shop by Category Section */}
                 {visibleCategories.length > 0 && (
-                    <section className="py-16 h-full bg-gradient-to-b from-primary-50 to-white ">
+                    <section id="categories" className="py-16 h-full bg-gradient-to-b from-primary-50 to-white ">
                         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 z-2">
                             <motion.h2
                                 initial={{ opacity: 0, y: 20 }}
@@ -245,8 +247,6 @@ export function HomeScreen({ initialProducts: products, categories }: { initialP
                         </div>
                     </section>
                 )}
-                {/* Product Grid Section */}
-
 
                 {/* Features Section */}
                 <section className={`bg-gradient-to-b from-white to-primary-50 py-25`}>

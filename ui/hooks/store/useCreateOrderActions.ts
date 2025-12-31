@@ -7,6 +7,7 @@ import { OrderItem } from "@/domain/entities/database/orderItem";
 import { CreateOrder } from "@/domain/use-case/store/createOrder";
 import { cookies } from "next/headers";
 import { GetCurrentUser } from "@/domain/use-case/store/getCurrentUser";
+import { sendOrderNotificationToAdmins } from "@/lib/services/fcmService";
 
 export async function createOrder(data: Partial<Order>, isAdmin: boolean, items: CartItem[]) {
     if (!data.customer_id && (!data.guest_name || !data.guest_phone || !data.guest_address)) {
@@ -45,6 +46,12 @@ export async function createOrder(data: Partial<Order>, isAdmin: boolean, items:
             path: '/',
             maxAge: 60 * 30
         });
+
+        // Send push notification to all admins
+        const customerName = data.guest_name || 'Customer';
+        const totalAmount = data.grand_total || data.subtotal || 0;
+        sendOrderNotificationToAdmins(createdOrder.order_id, customerName, totalAmount)
+            .catch(err => console.error("[FCM] Failed to send notification:", err));
 
         revalidatePath('/', 'layout');
         return { order_id: createdOrder.order_id }

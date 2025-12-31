@@ -13,7 +13,6 @@ import { useCart } from "@/ui/providers/CartProvider";
 import LanguageSwitcher from "../LanguageSwitcher";
 import { useCurrentLanguage } from "@/ui/hooks/useCurrentLanguage";
 
-
 import { usePathname } from "next/navigation";
 import { Spinner } from "../Spinner";
 
@@ -118,7 +117,7 @@ export default function Navbar() {
     const navigationItems = useMemo(
         () => [
             { href: "/", key: "home", icon: <Home className="w-5 h-5 mx-2 text-primary-900" /> },
-            { href: "/products", key: "shop", icon: <Store className="w-5 h-5 mx-2 text-primary-900" /> },
+            { href: "/products", key: "shop", icon: <Store className="w-5 h-5 mx-2 text-primary-900" />, hasDropdown: true },
             { href: "/about-us", key: "about", icon: <InfoIcon className="w-5 h-5 mx-2 text-primary-900" /> },
             { href: "/contact-us", key: "contact", icon: <PhoneCall className="w-5 h-5 mx-2 text-primary-900" /> },
         ],
@@ -152,15 +151,58 @@ export default function Navbar() {
 
             {/* ---- Desktop Menu ---- */}
 
-            <div className="hidden md:flex space-x-16 ">
+            <div className="hidden md:flex space-x-16 items-center">
                 {navigationItems.map((item) => (
-                    <Link
-                        key={item.href}
-                        href={item.href}
-                        className="text-primary-950 hover:text-primary-300 transition-colors duration-300 text-lg"
-                    >
-                        {t(item.key)}
-                    </Link>
+                    item.hasDropdown ? (
+                        <>
+                            {/* Shop Link */}
+                            <Link
+                                key={item.href}
+                                href={item.href}
+                                className="text-primary-950 hover:text-primary-300 transition-colors duration-300 text-lg"
+                            >
+                                {t(item.key)}
+                            </Link>
+                            {/* Category Link - scrolls to categories section */}
+                            <button
+                                key="category"
+                                onClick={() => {
+                                    const element = document.getElementById('categories');
+                                    if (element) {
+                                        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                    } else {
+                                        // If not on home page, navigate there first
+                                        window.location.href = '/#categories';
+                                    }
+                                }}
+                                className="text-primary-950 hover:text-primary-300 transition-colors duration-300 text-lg cursor-pointer"
+                            >
+                                {t('category')}
+                            </button>
+                        </>
+                    ) : item.key === 'home' ? (
+                        <button
+                            key={item.href}
+                            onClick={() => {
+                                if (isHomePage) {
+                                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                                } else {
+                                    router.push('/');
+                                }
+                            }}
+                            className="text-primary-950 hover:text-primary-300 transition-colors duration-300 text-lg cursor-pointer"
+                        >
+                            {t(item.key)}
+                        </button>
+                    ) : (
+                        <Link
+                            key={item.href}
+                            href={item.href}
+                            className="text-primary-950 hover:text-primary-300 transition-colors duration-300 text-lg"
+                        >
+                            {t(item.key)}
+                        </Link>
+                    )
                 ))}
             </div>
 
