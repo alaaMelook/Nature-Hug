@@ -33,6 +33,8 @@ messaging.onBackgroundMessage((payload) => {
         tag: 'order-notification',
         data: payload.data,
         requireInteraction: true,
+        // Custom sound for background notifications (if browser supports it)
+        sound: '/sounds/ka-ching.mp3',
         // Sound - browser will use default notification sound
         silent: false,
         // Vibration pattern for mobile [vibrate, pause, vibrate, pause, vibrate]

@@ -677,6 +677,53 @@ export class IAdminServerRepository implements AdminRepository {
 
     async updateOrder(order: Partial<OrderDetailsView>) {
         console.log("[IAdminRepository] updateOrder called with order:", order);
+
+        // 1. Fetch existing order to get FKs
+        const { data: existingOrder, error: fetchError } = await supabaseAdmin.schema('store')
+            .from('orders')
+            .select('customer_id, shipping_address_id')
+            .eq('id', order.order_id)
+            .single();
+
+        if (fetchError || !existingOrder) {
+            console.error("[IAdminRepository] updateOrder failed to fetch existing order:", fetchError);
+            throw fetchError || new Error("Order not found");
+        }
+
+        // 2. Update Customer Details (if provided)
+        if (existingOrder.customer_id && (order.customer_name !== undefined || order.customer_email !== undefined)) {
+            const customerUpdate: any = {};
+            if (order.customer_name !== undefined) customerUpdate.name = order.customer_name;
+            if (order.customer_email !== undefined) customerUpdate.email = order.customer_email;
+
+            if (Object.keys(customerUpdate).length > 0) {
+                const { error: customerError } = await supabaseAdmin.schema('store')
+                    .from('customers')
+                    .update(customerUpdate)
+                    .eq('id', existingOrder.customer_id);
+
+                if (customerError) {
+                    console.error("[IAdminRepository] updateOrder customer update error:", customerError);
+                    // Decide if this should be fatal. Typically yes for data integrity.
+                    throw customerError;
+                }
+            }
+        }
+
+        // 3. Update Shipping Address (if provided)
+        if (existingOrder.shipping_address_id && order.shipping_street_address !== undefined) {
+            const { error: addressError } = await supabaseAdmin.schema('store')
+                .from('customer_addresses')
+                .update({ address: order.shipping_street_address })
+                .eq('id', existingOrder.shipping_address_id);
+
+            if (addressError) {
+                console.error("[IAdminRepository] updateOrder address update error:", addressError);
+                throw addressError;
+            }
+        }
+
+        // 4. Update Order Table (Status, Totals, Payments ONLY)
         const updateData: any = {};
 
         // Status updates
@@ -684,14 +731,8 @@ export class IAdminServerRepository implements AdminRepository {
         if (order.shipment_id) updateData.shipment_id = order.shipment_id;
         if (order.awb) updateData.awb = order.awb;
 
-        // Customer details updates (map view fields to actual table columns)
-        if (order.customer_name !== undefined) updateData.guest_name = order.customer_name;
-        if (order.customer_email !== undefined) updateData.guest_email = order.customer_email || null;
-
-        // Shipping address updates (stored in guest_address JSON column)
-        if (order.shipping_street_address !== undefined) {
-            updateData.guest_address = { street_address: order.shipping_street_address };
-        }
+        // NOTE: guest_name, guest_email, guest_address REMOVED because columns don't exist.
+        // We updated the linked customer/address records above instead.
 
         // Price updates (map view fields to actual table columns)
         if (order.subtotal !== undefined) updateData.subtotal = order.subtotal;
@@ -703,16 +744,18 @@ export class IAdminServerRepository implements AdminRepository {
         if (order.payment_method !== undefined) updateData.payment_method = order.payment_method;
         if (order.payment_status !== undefined) updateData.payment_status = order.payment_status;
 
-        const {
-            data,
-            status,
-            statusText,
-            error,
-        } = await supabaseAdmin.schema('store').from('orders').update(updateData).eq('id', order.order_id);
-        console.log("[IAdminRepository] updateOrder result:", { data, status, statusText });
-        if (error) {
-            console.error("[IAdminRepository] updateOrder error:", error);
-            throw error;
+        if (Object.keys(updateData).length > 0) {
+            const {
+                data,
+                status,
+                statusText,
+                error,
+            } = await supabaseAdmin.schema('store').from('orders').update(updateData).eq('id', order.order_id);
+            console.log("[IAdminRepository] updateOrder result:", { data, status, statusText });
+            if (error) {
+                console.error("[IAdminRepository] updateOrder error:", error);
+                throw error;
+            }
         }
 
         // Update phone numbers if provided

@@ -1,3 +1,4 @@
+// ui/hooks/usePushNotifications.ts 
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -79,28 +80,70 @@ export function usePushNotifications(): UsePushNotificationsReturn {
                 throw new Error('Failed to get FCM token');
             }
 
-            // Listen for foreground messages
-            onMessage(messaging, (payload) => {
-                console.log('[Push] Foreground message:', payload);
-
-                // Show toast notification for foreground messages
-                toast(payload.notification?.title || 'New Notification', {
-                    description: payload.notification?.body,
-                    action: payload.data?.order_id ? {
-                        label: 'View',
-                        onClick: () => {
-                            window.location.href = `/en/admin/orders/${payload.data?.order_id}`;
-                        }
-                    } : undefined,
-                });
-            });
-
         } catch (error) {
             console.error('[Push] Error:', error);
             toast.error('فشل تفعيل الإشعارات');
         } finally {
             setIsLoading(false);
         }
+    }, [isSupported]);
+
+    // Listen for foreground messages and handle audio unlocking
+    useEffect(() => {
+        let messagingInstance: any = null;
+
+        const setupListener = async () => {
+            try {
+                const messaging = await getFirebaseMessaging();
+                if (!messaging) return;
+                messagingInstance = messaging;
+
+                onMessage(messaging, (payload) => {
+                    console.log('[Push] Foreground message:', payload);
+
+                    // Play notification sound
+                    try {
+                        const audio = new Audio('/sounds/ka-ching.mp3');
+                        audio.play().catch(e => {
+                            console.warn('[Push] Audio play failed, likely blocked by browser:', e);
+                            // Fallback: toast will still show
+                        });
+                    } catch (error) {
+                        console.error('Error initializing audio:', error);
+                    }
+
+                    // Show toast notification
+                    toast(payload.notification?.title || 'New Notification', {
+                        description: payload.notification?.body,
+                        action: payload.data?.order_id ? {
+                            label: 'View',
+                            onClick: () => {
+                                window.location.href = `/en/admin/orders/${payload.data?.order_id}`;
+                            }
+                        } : undefined,
+                    });
+                });
+            } catch (err) {
+                console.error('[Push] Listener setup error:', err);
+            }
+        };
+
+        if (isSupported) {
+            setupListener();
+        }
+
+        // Global click listener to "unlock" audio for the browser
+        const unlockAudio = () => {
+            const audio = new Audio('/sounds/ka-ching.mp3');
+            audio.volume = 0;
+            audio.play().then(() => {
+                console.log('[Push] Audio unlocked');
+                window.removeEventListener('click', unlockAudio);
+            }).catch(() => { });
+        };
+
+        window.addEventListener('click', unlockAudio);
+        return () => window.removeEventListener('click', unlockAudio);
     }, [isSupported]);
 
     return {

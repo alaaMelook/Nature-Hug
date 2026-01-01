@@ -15,33 +15,87 @@ interface FCMResponse {
     error?: string;
 }
 
+// Diagnostic info for debugging
+let initStatus = {
+    initialized: false,
+    usingServiceAccount: false,
+    error: null as string | null,
+    parseSuccess: false,
+    privateKeyDetails: {
+        length: 0,
+        hasNewlines: false,
+        hasLiteralNL: false,
+        startsWith: '',
+        endsWith: ''
+    }
+};
+
 // Initialize Firebase Admin SDK (singleton)
 function getFirebaseAdmin(): admin.app.App {
-    if (admin.apps.length > 0) {
-        return admin.apps[0]!;
-    }
-
-    // Check if we have a service account key as JSON string
     const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 
-    if (serviceAccountJson) {
-        try {
-            const serviceAccount = JSON.parse(serviceAccountJson);
-            return admin.initializeApp({
-                credential: admin.credential.cert(serviceAccount),
-                projectId: serviceAccount.project_id || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-            });
-        } catch (error) {
-            console.error('[FCM] Failed to parse service account JSON:', error);
+    if (admin.apps.length > 0) {
+        // Force re-init if we have a service account now but weren't using one
+        if (serviceAccountJson && !initStatus.usingServiceAccount) {
+            console.log('[FCM] Found service account but current app is not using it. Re-initializing...');
+            try {
+                admin.apps[0]?.delete();
+            } catch (e) {
+                console.error('[FCM] Error deleting app:', e);
+            }
+        } else {
+            initStatus.initialized = true;
+            return admin.apps[0]!;
         }
     }
 
-    // Fallback: Initialize with project ID only (for testing)
-    // This won't work for sending messages but allows the app to start
-    console.warn('[FCM] No service account configured. Push notifications will not work.');
-    return admin.initializeApp({
+    if (serviceAccountJson) {
+        try {
+            // Remove surrounding single/double quotes if they exist
+            let sanitizedJson = serviceAccountJson.trim();
+            if ((sanitizedJson.startsWith("'") && sanitizedJson.endsWith("'")) ||
+                (sanitizedJson.startsWith('"') && sanitizedJson.endsWith('"'))) {
+                sanitizedJson = sanitizedJson.slice(1, -1);
+            }
+
+            const serviceAccount = JSON.parse(sanitizedJson);
+            initStatus.parseSuccess = true;
+
+            // Normalize private key
+            if (serviceAccount.private_key) {
+                const pk = serviceAccount.private_key;
+                initStatus.privateKeyDetails = {
+                    length: pk.length,
+                    hasNewlines: pk.includes('\n'),
+                    hasLiteralNL: pk.includes('\\n'),
+                    startsWith: pk.substring(0, 25),
+                    endsWith: pk.substring(pk.length - 25)
+                };
+
+                serviceAccount.private_key = pk.replace(/\\n/g, '\n');
+            }
+
+            const app = admin.initializeApp({
+                credential: admin.credential.cert(serviceAccount),
+                projectId: serviceAccount.project_id || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+            });
+
+            initStatus.initialized = true;
+            initStatus.usingServiceAccount = true;
+            return app;
+        } catch (error: any) {
+            initStatus.error = error.message;
+            console.error('[FCM] Initialization error:', error);
+        }
+    }
+
+    // Fallback
+    const app = admin.initializeApp({
         projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
     });
+    initStatus.initialized = true;
+    initStatus.usingServiceAccount = false;
+    return app;
 }
 
 /**
@@ -138,7 +192,7 @@ export async function sendOrderNotificationToAdmins(
 
     if (error || !tokens || tokens.length === 0) {
         console.log("[FCM] No tokens found or error:", error);
-        return { sent: 0, failed: 0 };
+        return { sent: 0, failed: 0, debug_info: "No tokens or error" } as any;
     }
 
     const notification: NotificationPayload = {
@@ -148,11 +202,13 @@ export async function sendOrderNotificationToAdmins(
             order_id: orderId.toString(),
             url: `/admin/orders/${orderId}`,
             type: "new_order",
+            sound: "/sounds/ka-ching.mp3"
         },
     };
 
     let sent = 0;
     let failed = 0;
+    let errors: string[] = [];
 
     // Send to all tokens
     const results = await Promise.allSettled(
@@ -164,6 +220,9 @@ export async function sendOrderNotificationToAdmins(
             sent++;
         } else {
             failed++;
+            const errorMsg = result.status === "fulfilled" ? result.value.error : String((result as any).reason);
+            if (errors.length < 5) errors.push(`${tokens[index].token.substring(0, 10)}...: ${errorMsg}`);
+
             // Remove invalid tokens
             if (result.status === "fulfilled" && result.value.error === "NotRegistered") {
                 supabase.from("fcm_tokens").delete().eq("token", tokens[index].token);
@@ -172,5 +231,5 @@ export async function sendOrderNotificationToAdmins(
     });
 
     console.log(`[FCM] Notifications sent: ${sent}, failed: ${failed}`);
-    return { sent, failed };
+    return { sent, failed, errors, diag: initStatus } as any;
 }
