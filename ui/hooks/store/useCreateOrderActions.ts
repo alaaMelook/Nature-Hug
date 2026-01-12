@@ -7,7 +7,8 @@ import { OrderItem } from "@/domain/entities/database/orderItem";
 import { CreateOrder } from "@/domain/use-case/store/createOrder";
 import { cookies } from "next/headers";
 import { GetCurrentUser } from "@/domain/use-case/store/getCurrentUser";
-import { sendOrderNotificationToAdmins } from "@/lib/services/fcmService";
+import { sendOrderNotificationTelegram } from "@/lib/services/telegramService";
+
 
 export async function createOrder(data: Partial<Order>, isAdmin: boolean, items: CartItem[]) {
     if (!data.customer_id && (!data.guest_name || !data.guest_phone || !data.guest_address)) {
@@ -47,11 +48,24 @@ export async function createOrder(data: Partial<Order>, isAdmin: boolean, items:
             maxAge: 60 * 30
         });
 
-        // Send push notification to all admins
+        // Send push notification via Telegram
         const customerName = data.guest_name || 'Customer';
         const totalAmount = data.grand_total || data.subtotal || 0;
-        sendOrderNotificationToAdmins(createdOrder.order_id, customerName, totalAmount)
-            .catch(err => console.error("[FCM] Failed to send notification:", err));
+        const itemsForNotification = items.map(item => ({
+            name: item.name,
+            quantity: item.quantity,
+            price: item.price - (item.discount || 0)
+        }));
+
+        sendOrderNotificationTelegram({
+            orderId: createdOrder.order_id,
+            customerName,
+            totalAmount,
+            phone: data.guest_phone,
+            governorate: data.guest_address?.governorate_slug,
+            address: data.guest_address?.address,
+            items: itemsForNotification
+        }).catch(err => console.error("[Telegram] Failed to send notification:", err));
 
         revalidatePath('/', 'layout');
         return { order_id: createdOrder.order_id }
