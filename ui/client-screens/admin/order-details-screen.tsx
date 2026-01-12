@@ -90,15 +90,30 @@ export function OrderDetailsScreen({ order, governorate }: { order: OrderDetails
                     final_order_total: order.final_order_total,
                     subtotal: order.subtotal,
                     shipping_total: order.shipping_total,
-                    discount_total: order.discount_total
+                    discount_total: order.discount_total,
+                    applied_promo_code: order.applied_promo_code,
+                    promo_percentage: order.promo_percentage
                 });
 
                 const isCOD = order.payment_method.toLowerCase() !== 'online card';
-                const codValue = isCOD ? order.final_order_total : 0;
+
+                // Calculate effective total with discount (same logic as display)
+                const calculatedDiscount = order.discount_total > 0
+                    ? order.discount_total
+                    : (order.applied_promo_code && order.promo_percentage)
+                        ? order.subtotal * (order.promo_percentage / 100)
+                        : 0;
+                const effectiveTotal = calculatedDiscount > 0 && order.discount_total === 0
+                    ? order.subtotal - calculatedDiscount + order.shipping_total
+                    : order.final_order_total;
+
+                const codValue = isCOD ? effectiveTotal : 0;
 
                 console.log("[Shipment Debug] COD Calculation:", {
                     isCOD,
                     codValue,
+                    calculatedDiscount,
+                    effectiveTotal,
                     payment_method_lowercase: order.payment_method.toLowerCase()
                 });
 
@@ -120,7 +135,8 @@ export function OrderDetailsScreen({ order, governorate }: { order: OrderDetails
 
                 result = await markAsOutForDeliveryAction(order, shipmentData);
             } else {
-                result = await updateOrderAction({ ...order, order_status: newStatus });
+                // Only send order_id and order_status to avoid sending fields that don't exist in DB
+                result = await updateOrderAction({ order_id: order.order_id, order_status: newStatus });
             }
 
             if (result.success) {

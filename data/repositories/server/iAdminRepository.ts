@@ -745,6 +745,7 @@ export class IAdminServerRepository implements AdminRepository {
         if (order.payment_status !== undefined) updateData.payment_status = order.payment_status;
 
         if (Object.keys(updateData).length > 0) {
+            console.log("[IAdminRepository] updateOrder - Final updateData before call:", JSON.stringify(updateData, null, 2));
             const {
                 data,
                 status,

@@ -7,13 +7,19 @@ import { ProductView } from "@/domain/entities/views/shop/productView";
 import { useFeatures } from "@/ui/hooks/store/useFeatures";
 import { motion } from "framer-motion";
 import { Category } from "@/domain/entities/database/category";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 
 export function HomeScreen({ initialProducts: products, categories }: { initialProducts: ProductView[], categories: Category[] }) {
     const { t, i18n } = useTranslation();
     const features = useFeatures();
     const visibleCategories = categories.filter(c => c.image_url);
+
+    // Fix hydration mismatch - wait for client mount before applying dynamic classes
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     // Sort products: discounted products first, then by created_at (already sorted from API)
     const sortedProducts = useMemo(() => {
@@ -148,7 +154,7 @@ export function HomeScreen({ initialProducts: products, categories }: { initialP
                         transition={{ duration: 0.5, ease: "easeOut" }}
                         className=" relative z-3 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center "
                     >
-                        <h1 className={`text-4xl sm:text-5xl lg:text-7xl font-bold text-primary-900 leading-tight mb-6 font-${i18n.language === "ar" ? "arabic" : "serif"}`}>
+                        <h1 className={`text-4xl sm:text-5xl lg:text-7xl font-bold text-primary-900 leading-tight mb-6 ${mounted ? (i18n.language === "ar" ? "font-arabic" : "font-serif") : "font-serif"}`}>
                             {t("heroTitle")}
                         </h1>
                         <motion.p

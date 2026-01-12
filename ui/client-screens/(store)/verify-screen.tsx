@@ -3,9 +3,18 @@
 import { useTranslation, Trans } from "react-i18next";
 import { motion } from "framer-motion";
 import Image from "next/image";
+import { useEffect, useState } from "react";
 
 export default function VerifyScreen({ email }: { email: string }) {
     const { t } = useTranslation();
+
+    // Fix hydration mismatch - wait for client mount before rendering translated content
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    if (!mounted) return null;
     return (
         <div className="min-h-screen bg-primary-100 flex items-center justify-center px-4">
             <motion.div

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -154,10 +154,9 @@ export default function Navbar() {
             <div className="hidden md:flex space-x-16 items-center">
                 {navigationItems.map((item) => (
                     item.hasDropdown ? (
-                        <>
+                        <Fragment key={item.href}>
                             {/* Shop Link */}
                             <Link
-                                key={item.href}
                                 href={item.href}
                                 className="text-primary-950 hover:text-primary-300 transition-colors duration-300 text-lg"
                             >
@@ -165,7 +164,6 @@ export default function Navbar() {
                             </Link>
                             {/* Category Link - scrolls to categories section */}
                             <button
-                                key="category"
                                 onClick={() => {
                                     const element = document.getElementById('categories');
                                     if (element) {
@@ -179,7 +177,7 @@ export default function Navbar() {
                             >
                                 {t('category')}
                             </button>
-                        </>
+                        </Fragment>
                     ) : item.key === 'home' ? (
                         <button
                             key={item.href}
