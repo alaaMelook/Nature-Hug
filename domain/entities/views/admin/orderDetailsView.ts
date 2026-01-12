@@ -25,6 +25,7 @@ export interface OrderDetailsView {
     created_by_user_role: 'admin' | 'moderator' | null;
 }
 export interface OrderItemView {
+    id?: number; // Order item ID for database updates
     quantity: number;
     unit_price: number;
     item_discount_per_unit: number;

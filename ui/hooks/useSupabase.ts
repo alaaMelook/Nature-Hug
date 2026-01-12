@@ -79,7 +79,11 @@ export const useSupabase = () => {
             console.log(`[useSupabase] Auth Event: ${event}`);
 
             if (event === 'SIGNED_OUT') {
-                await loginAnonymously();
+                // Just clear state, don't login anonymously (causes slow logout)
+                setUser(null);
+                setMember(null);
+                setSessionToken(null);
+                setLoading(false);
             } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
                 // Re-fetch everything to ensure we have the latest DB data
                 console.log("[useSupabase] Auth Event: SIGNED_IN with data: ", session);

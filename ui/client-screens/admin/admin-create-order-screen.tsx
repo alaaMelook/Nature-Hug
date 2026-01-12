@@ -69,9 +69,11 @@ export function AdminCreateOrderScreen({ products, governorates, promoCodes }: A
     }, [orderItems]);
 
     const shipping = useMemo(() => {
+        // Free shipping promo code overrides everything
+        if (appliedPromo?.free_shipping) return 0;
         if (shippingOverride !== null) return shippingOverride;
         return selectedGovernorate?.fees ?? 0;
-    }, [selectedGovernorate, shippingOverride]);
+    }, [selectedGovernorate, shippingOverride, appliedPromo]);
 
     const discount = useMemo(() => {
         if (!appliedPromo) return 0;
@@ -435,7 +437,12 @@ export function AdminCreateOrderScreen({ products, governorates, promoCodes }: A
                                         <div className="flex items-center gap-2">
                                             <Tag className="w-4 h-4 text-green-600" />
                                             <span className="font-medium text-green-700">{appliedPromo.code}</span>
-                                            <span className="text-sm text-green-600">({appliedPromo.percentage_off}% off)</span>
+                                            <span className="text-sm text-green-600">
+                                                {appliedPromo.free_shipping
+                                                    ? t("freeShipping") || "Free Shipping"
+                                                    : `(${appliedPromo.percentage_off}% off)`
+                                                }
+                                            </span>
                                         </div>
                                         <button
                                             onClick={() => setAppliedPromo(null)}

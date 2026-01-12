@@ -777,6 +777,105 @@ export class IAdminServerRepository implements AdminRepository {
                 console.error("[IAdminRepository] updateOrder phone numbers error:", phoneError);
             }
         }
+
+        // Update order items if provided
+        if ((order as any).items && Array.isArray((order as any).items)) {
+            const items = (order as any).items as Array<{
+                id?: number;
+                quantity: number;
+                unit_price: number;
+                product_id?: number | null;
+                variant_id?: number | null;
+                isNew?: boolean;
+            }>;
+
+            for (const item of items) {
+                if (item.isNew && item.product_id) {
+                    // INSERT new item
+                    console.log("[IAdminRepository] Inserting new order item:", item);
+
+                    // First, get the product name for item_name
+                    let itemName = "Product";
+                    const { data: productData } = await supabaseAdmin.schema('store')
+                        .from('products')
+                        .select('name_en')
+                        .eq('id', item.product_id)
+                        .single();
+
+                    if (productData) {
+                        itemName = productData.name_en;
+                    }
+
+                    // If there's a variant, get its name too
+                    if (item.variant_id) {
+                        const { data: variantData } = await supabaseAdmin.schema('store')
+                            .from('product_variants')
+                            .select('name_en')
+                            .eq('id', item.variant_id)
+                            .single();
+
+                        if (variantData) {
+                            itemName = `${itemName} - ${variantData.name_en}`;
+                        }
+                    }
+
+                    const { error: insertError } = await supabaseAdmin.schema('store')
+                        .from('order_items')
+                        .insert({
+                            order_id: order.order_id,
+                            product_id: item.product_id,
+                            variant_id: item.variant_id || null,
+                            quantity: item.quantity,
+                            unit_price: item.unit_price,
+                            discount: 0,
+                            total: item.quantity * item.unit_price
+                        });
+
+                    if (insertError) {
+                        console.error("[IAdminRepository] updateOrder item insert error:", insertError);
+                        throw insertError;
+                    }
+                    console.log("[IAdminRepository] New order item inserted successfully");
+                } else if (item.id) {
+                    // UPDATE existing item
+                    console.log("[IAdminRepository] Updating order item:", item.id, "quantity:", item.quantity, "price:", item.unit_price);
+
+                    const { error: itemError } = await supabaseAdmin.schema('store')
+                        .from('order_items')
+                        .update({
+                            quantity: item.quantity,
+                            unit_price: item.unit_price,
+                            total: item.quantity * item.unit_price
+                        })
+                        .eq('id', item.id);
+
+                    if (itemError) {
+                        console.error("[IAdminRepository] updateOrder item update error:", itemError);
+                        throw itemError;
+                    }
+                    console.log("[IAdminRepository] Order item", item.id, "updated successfully");
+                }
+            }
+        }
+
+        // Delete removed items if provided
+        const removedItemIds = (order as any).removed_item_ids as number[] | undefined;
+        if (removedItemIds && removedItemIds.length > 0) {
+            console.log("[IAdminRepository] Deleting removed order items:", removedItemIds);
+
+            const { error: deleteError } = await supabaseAdmin.schema('store')
+                .from('order_items')
+                .delete()
+                .in('id', removedItemIds);
+
+            if (deleteError) {
+                console.error("[IAdminRepository] updateOrder item delete error:", deleteError);
+                throw deleteError;
+            }
+            console.log("[IAdminRepository] Removed order items deleted successfully");
+        }
+
+        console.log("[IAdminRepository] Order update completed successfully");
     }
 
     async deleteOrder(orderId: number): Promise<void> {

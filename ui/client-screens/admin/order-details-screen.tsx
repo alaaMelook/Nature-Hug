@@ -1,9 +1,10 @@
 "use client";
 
-import { OrderDetailsView } from "@/domain/entities/views/admin/orderDetailsView";
+import { OrderDetailsView, OrderItemView } from "@/domain/entities/views/admin/orderDetailsView";
+import { ProductView } from "@/domain/entities/views/shop/productView";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
     acceptOrderAction,
     rejectOrderAction,
@@ -13,7 +14,7 @@ import {
     cancelShippedOrderAction,
     deleteOrderAction
 } from "@/ui/hooks/admin/orders";
-import { User, MapPin, Phone, Package, Calendar, ArrowLeft, X, CreditCard, Mail, Loader2, Trash2, Edit2, Save } from "lucide-react";
+import { User, MapPin, Phone, Package, Calendar, ArrowLeft, X, CreditCard, Mail, Loader2, Trash2, Edit2, Save, Plus, Search } from "lucide-react";
 import { ShipmentTracking } from "@/ui/components/admin/ShipmentTracking";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -21,7 +22,7 @@ import { statusColor } from "@/lib/utils/statusColors";
 import { Shipment } from "@/domain/entities/shipment/shipment";
 import { Governorate } from "@/domain/entities/database/governorate";
 
-export function OrderDetailsScreen({ order, governorate }: { order: OrderDetailsView, governorate: Governorate }) {
+export function OrderDetailsScreen({ order, governorate, products }: { order: OrderDetailsView, governorate: Governorate, products: ProductView[] }) {
     const { t } = useTranslation();
     const router = useRouter();
     const [updating, setUpdating] = useState(false);
@@ -39,7 +40,29 @@ export function OrderDetailsScreen({ order, governorate }: { order: OrderDetails
         shipping_total: order.shipping_total,
         discount_total: order.discount_total,
         final_order_total: order.final_order_total,
+        items: order.items.map(item => ({
+            id: item.id,
+            item_name: item.item_name,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            product_id: null as number | null,
+            variant_id: null as number | null,
+            isNew: false,
+        })),
     });
+
+    // Product modal state
+    const [showProductModal, setShowProductModal] = useState(false);
+    const [productSearch, setProductSearch] = useState("");
+
+    const filteredProducts = useMemo(() => {
+        if (!productSearch.trim()) return products;
+        const search = productSearch.toLowerCase();
+        return products.filter(p =>
+            p.name.toLowerCase().includes(search) ||
+            p.slug.toLowerCase().includes(search)
+        );
+    }, [products, productSearch]);
 
     useEffect(() => {
         if (order.awb && order.order_status !== 'cancelled' && order.order_status !== 'returned' && !(order.order_status === 'delivered' && order.payment_status === 'paid')) {
@@ -174,6 +197,12 @@ export function OrderDetailsScreen({ order, governorate }: { order: OrderDetails
     const handleSaveChanges = async () => {
         setSaving(true);
         try {
+            // Debug: Log what we're sending
+            console.log("[OrderEdit] Saving changes with items:", editForm.items);
+            console.log("[OrderEdit] removed_item_ids:", order.items
+                .filter(originalItem => !editForm.items.some(editItem => editItem.id === originalItem.id))
+                .map(item => item.id));
+
             const result = await updateOrderAction({
                 order_id: order.order_id,
                 customer_name: editForm.customer_name,
@@ -184,7 +213,20 @@ export function OrderDetailsScreen({ order, governorate }: { order: OrderDetails
                 shipping_total: editForm.shipping_total,
                 discount_total: editForm.discount_total,
                 final_order_total: editForm.final_order_total,
-            });
+                items: editForm.items.map((item) => ({
+                    id: item.id, // undefined for new items
+                    quantity: item.quantity,
+                    unit_price: item.unit_price,
+                    product_id: item.product_id,
+                    variant_id: item.variant_id,
+                    isNew: item.isNew,
+                })),
+                // Track which original items were removed
+                removed_item_ids: order.items
+                    .filter(originalItem => !editForm.items.some(editItem => editItem.id === originalItem.id))
+                    .map(item => item.id)
+                    .filter((id): id is number => id !== undefined),
+            } as any);
             if (result.success) {
                 toast.success(t("orderUpdated"));
                 setIsEditing(false);
@@ -215,6 +257,63 @@ export function OrderDetailsScreen({ order, governorate }: { order: OrderDetails
         setEditForm({ ...editForm, phone_numbers: newPhones });
     };
 
+    // Item editing helper functions
+    const handleItemQuantityChange = (index: number, quantity: number) => {
+        const newItems = [...editForm.items];
+        newItems[index] = { ...newItems[index], quantity: Math.max(1, quantity) };
+        recalculateTotals(newItems);
+    };
+
+    const handleItemPriceChange = (index: number, price: number) => {
+        const newItems = [...editForm.items];
+        newItems[index] = { ...newItems[index], unit_price: Math.max(0, price) };
+        recalculateTotals(newItems);
+    };
+
+    const recalculateTotals = (items: typeof editForm.items) => {
+        const newSubtotal = items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
+        const newFinalTotal = newSubtotal + editForm.shipping_total - editForm.discount_total;
+        setEditForm(prev => ({
+            ...prev,
+            items,
+            subtotal: newSubtotal,
+            final_order_total: newFinalTotal
+        }));
+    };
+
+    const handleShippingChange = (shipping: number) => {
+        const newFinalTotal = editForm.subtotal + shipping - editForm.discount_total;
+        setEditForm({ ...editForm, shipping_total: shipping, final_order_total: newFinalTotal });
+    };
+
+    const handleDiscountChange = (discount: number) => {
+        const newFinalTotal = editForm.subtotal + editForm.shipping_total - discount;
+        setEditForm({ ...editForm, discount_total: discount, final_order_total: newFinalTotal });
+    };
+
+    // Add new product to order
+    const addItemToOrder = (product: ProductView) => {
+        const newItem = {
+            id: undefined as number | undefined,
+            item_name: product.name,
+            quantity: 1,
+            unit_price: product.price,
+            product_id: product.id,
+            variant_id: product.variant_id || null,
+            isNew: true,
+        };
+        const newItems = [...editForm.items, newItem];
+        recalculateTotals(newItems);
+        setShowProductModal(false);
+        setProductSearch("");
+    };
+
+    // Remove item from order
+    const removeItemFromOrder = (index: number) => {
+        const newItems = editForm.items.filter((_, i) => i !== index);
+        recalculateTotals(newItems);
+    };
+
     const cancelEdit = () => {
         setEditForm({
             customer_name: order.customer_name,
@@ -225,9 +324,21 @@ export function OrderDetailsScreen({ order, governorate }: { order: OrderDetails
             shipping_total: order.shipping_total,
             discount_total: order.discount_total,
             final_order_total: order.final_order_total,
+            items: order.items.map(item => ({
+                id: item.id,
+                item_name: item.item_name,
+                quantity: item.quantity,
+                unit_price: item.unit_price,
+                product_id: null,
+                variant_id: null,
+                isNew: false,
+            })),
         });
         setIsEditing(false);
+        setShowProductModal(false);
+        setProductSearch("");
     };
+
 
     const actions = orderActions({ status: order.order_status, awb: order.awb });
 
@@ -507,10 +618,18 @@ export function OrderDetailsScreen({ order, governorate }: { order: OrderDetails
                 {/* Right Column: Order Items & Summary - Takes full width on mobile */}
                 <div className="lg:col-span-2 flex flex-col h-full">
                     <motion.div variants={itemVariants} className="bg-white rounded-xl shadow-sm border flex-1 flex flex-col overflow-hidden">
-                        <div className="p-4 sm:p-6 border-b">
-                            <h3 className="text-xs font-semibold text-gray-500 uppercase  flex items-center gap-2">
+                        <div className="p-4 sm:p-6 border-b flex items-center justify-between">
+                            <h3 className="text-xs font-semibold text-gray-500 uppercase flex items-center gap-2">
                                 <Package size={14} /> {t("orderItems")}
                             </h3>
+                            {isEditing && (
+                                <button
+                                    onClick={() => setShowProductModal(true)}
+                                    className="flex items-center gap-2 px-3 py-1.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium"
+                                >
+                                    <Plus size={14} /> {t("addProduct") || "Add Product"}
+                                </button>
+                            )}
                         </div>
                         <div className="flex-1 overflow-x-auto">
                             <table className="w-full text-xs sm:text-sm text-left">
@@ -520,21 +639,67 @@ export function OrderDetailsScreen({ order, governorate }: { order: OrderDetails
                                         <th className="px-4 sm:px-6 py-3 font-medium text-right">{t("qty")}</th>
                                         <th className="px-4 sm:px-6 py-3 font-medium text-right">{t("price")}</th>
                                         <th className="px-4 sm:px-6 py-3 font-medium text-right">{t("total")}</th>
+                                        {isEditing && <th className="px-4 sm:px-6 py-3 font-medium text-center w-16"></th>}
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
-                                    {order.items.map((item, index) => (
-                                        <tr key={index} className="hover:bg-gray-50 transition-colors">
-                                            <td className="px-4 sm:px-6 py-4 font-medium text-gray-900">
-                                                <div className="flex items-center gap-3">
-                                                    {item.item_name}
-                                                </div>
-                                            </td>
-                                            <td className="px-4 sm:px-6 py-4 text-right text-gray-600">{item.quantity}</td>
-                                            <td className="px-4 sm:px-6 py-4 text-right text-gray-600">{t('{{price, currency}}', { price: item.unit_price })}</td>
-                                            <td className="px-4 sm:px-6 py-4 text-right font-medium text-gray-900">{t('{{price, currency}}', { price: item.quantity * item.unit_price })}</td>
-                                        </tr>
-                                    ))}
+                                    {isEditing ? (
+                                        // Editable mode - use editForm.items
+                                        editForm.items.map((item, index) => (
+                                            <tr key={index} className="hover:bg-gray-50 transition-colors">
+                                                <td className="px-4 sm:px-6 py-4 font-medium text-gray-900">
+                                                    <div className="flex items-center gap-3">
+                                                        {item.item_name}
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 sm:px-6 py-4 text-right">
+                                                    <input
+                                                        type="number"
+                                                        min="1"
+                                                        value={item.quantity}
+                                                        onChange={(e) => handleItemQuantityChange(index, Number(e.target.value))}
+                                                        className="w-20 px-2 py-1 border border-gray-300 rounded-lg text-sm text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                    />
+                                                </td>
+                                                <td className="px-4 sm:px-6 py-4 text-right">
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        step="0.01"
+                                                        value={item.unit_price}
+                                                        onChange={(e) => handleItemPriceChange(index, Number(e.target.value))}
+                                                        className="w-24 px-2 py-1 border border-gray-300 rounded-lg text-sm text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                    />
+                                                </td>
+                                                <td className="px-4 sm:px-6 py-4 text-right font-medium text-gray-900">
+                                                    {t('{{price, currency}}', { price: item.quantity * item.unit_price })}
+                                                </td>
+                                                <td className="px-4 sm:px-6 py-4 text-center">
+                                                    <button
+                                                        onClick={() => removeItemFromOrder(index)}
+                                                        className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                        title={t("remove") || "Remove"}
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        // View mode - use order.items
+                                        order.items.map((item, index) => (
+                                            <tr key={index} className="hover:bg-gray-50 transition-colors">
+                                                <td className="px-4 sm:px-6 py-4 font-medium text-gray-900">
+                                                    <div className="flex items-center gap-3">
+                                                        {item.item_name}
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 sm:px-6 py-4 text-right text-gray-600">{item.quantity}</td>
+                                                <td className="px-4 sm:px-6 py-4 text-right text-gray-600">{t('{{price, currency}}', { price: item.unit_price })}</td>
+                                                <td className="px-4 sm:px-6 py-4 text-right font-medium text-gray-900">{t('{{price, currency}}', { price: item.quantity * item.unit_price })}</td>
+                                            </tr>
+                                        ))
+                                    )}
                                 </tbody>
                             </table>
                         </div>
@@ -542,20 +707,16 @@ export function OrderDetailsScreen({ order, governorate }: { order: OrderDetails
                             {isEditing ? (
                                 <div className="flex flex-col gap-3 text-sm">
                                     <div className="flex justify-between items-center w-full text-gray-600 px-2">
-                                        <span>{t("subtotal")}</span>
-                                        <input
-                                            type="number"
-                                            value={editForm.subtotal}
-                                            onChange={(e) => setEditForm({ ...editForm, subtotal: Number(e.target.value) })}
-                                            className="w-32 px-3 py-1 border border-gray-300 rounded-lg text-sm text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        />
+                                        <span>{t("subtotal")} <span className="text-xs text-gray-400">({t("autoCalculated")})</span></span>
+                                        <span className="font-medium">{t('{{price, currency}}', { price: editForm.subtotal })}</span>
                                     </div>
                                     <div className="flex justify-between items-center w-full text-gray-600 px-2">
                                         <span>{t("shipping")}</span>
                                         <input
                                             type="number"
+                                            min="0"
                                             value={editForm.shipping_total}
-                                            onChange={(e) => setEditForm({ ...editForm, shipping_total: Number(e.target.value) })}
+                                            onChange={(e) => handleShippingChange(Number(e.target.value))}
                                             className="w-32 px-3 py-1 border border-gray-300 rounded-lg text-sm text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                         />
                                     </div>
@@ -563,19 +724,15 @@ export function OrderDetailsScreen({ order, governorate }: { order: OrderDetails
                                         <span>{t("discount")}</span>
                                         <input
                                             type="number"
+                                            min="0"
                                             value={editForm.discount_total}
-                                            onChange={(e) => setEditForm({ ...editForm, discount_total: Number(e.target.value) })}
+                                            onChange={(e) => handleDiscountChange(Number(e.target.value))}
                                             className="w-32 px-3 py-1 border border-gray-300 rounded-lg text-sm text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                         />
                                     </div>
                                     <div className="flex justify-between items-center w-full text-lg font-bold text-gray-900 mt-2 pt-2 border-t px-2">
                                         <span>{t("totalAmount")}</span>
-                                        <input
-                                            type="number"
-                                            value={editForm.final_order_total}
-                                            onChange={(e) => setEditForm({ ...editForm, final_order_total: Number(e.target.value) })}
-                                            className="w-32 px-3 py-2 border border-gray-300 rounded-lg text-base font-bold text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        />
+                                        <span>{t('{{price, currency}}', { price: editForm.final_order_total })}</span>
                                     </div>
                                 </div>
                             ) : (
@@ -659,6 +816,68 @@ export function OrderDetailsScreen({ order, governorate }: { order: OrderDetails
                                     </>
                                 )}
                             </button>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
+
+            {/* Product Selection Modal */}
+            {showProductModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[80vh] overflow-hidden m-4"
+                    >
+                        <div className="p-4 border-b flex items-center justify-between">
+                            <h3 className="text-lg font-semibold">{t("selectProduct") || "Select Product"}</h3>
+                            <button
+                                onClick={() => {
+                                    setShowProductModal(false);
+                                    setProductSearch("");
+                                }}
+                                className="p-2 hover:bg-gray-100 rounded-full"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="p-4 border-b">
+                            <div className="relative">
+                                <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                                <input
+                                    type="text"
+                                    value={productSearch}
+                                    onChange={(e) => setProductSearch(e.target.value)}
+                                    className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none"
+                                    placeholder={t("searchProducts") || "Search products..."}
+                                    autoFocus
+                                />
+                            </div>
+                        </div>
+
+                        <div className="overflow-y-auto max-h-[50vh] p-2">
+                            {filteredProducts.length === 0 ? (
+                                <p className="text-center text-gray-400 py-8">{t("noProductsFound") || "No products found"}</p>
+                            ) : (
+                                <div className="space-y-1">
+                                    {filteredProducts.map(product => (
+                                        <button
+                                            key={product.slug}
+                                            onClick={() => addItemToOrder(product)}
+                                            className="w-full flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors text-left"
+                                        >
+                                            <div>
+                                                <p className="font-medium text-gray-900">{product.name}</p>
+                                                <p className="text-xs text-gray-500">{product.slug} • Stock: {product.stock}</p>
+                                            </div>
+                                            <span className="font-semibold text-primary-600">
+                                                {t("{{price, currency}}", { price: product.price })}
+                                            </span>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </motion.div>
                 </div>
