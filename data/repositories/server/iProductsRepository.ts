@@ -37,33 +37,65 @@ export class IProductServerRepository implements ProductRepository {
         }
 
         // Fetch category names for all products from junction table
-        const productIds = [...new Set(data.map((p: any) => p.product_id))];
+        const productIds = [...new Set(data.map((p: any) => p.product_id).filter((id: any) => id !== undefined && id !== null))];
 
         console.log("[IProductRepository] viewAll - productIds:", productIds);
 
-        // Query product_categories with joined category data
-        const { data: productCategoriesData, error: pcError } = await supabase.schema('store')
-            .from('product_categories')
-            .select('product_id, category_id, categories:category_id(id, name_en, name_ar)')
-            .in('product_id', productIds);
-
-        console.log("[IProductRepository] viewAll - productCategoriesData:", JSON.stringify(productCategoriesData));
-        if (pcError) {
-            console.error("[IProductRepository] viewAll - productCategories error:", pcError);
+        // If no valid product IDs, return products with empty category_names
+        if (productIds.length === 0) {
+            return data.map((product: any) => ({
+                ...product,
+                category_names: []
+            }));
         }
 
-        // Create a map of product_id to category names array
+        // Step 1: Get product-category links (use service client to bypass RLS)
+        const { createSupabaseServiceClient } = await import("@/data/datasources/supabase/server");
+        const serviceSupabase = await createSupabaseServiceClient();
+
+        const { data: productCategoryLinks, error: pcError } = await serviceSupabase.schema('store')
+            .from('product_categories')
+            .select('product_id, category_id')
+            .in('product_id', productIds);
+
+        console.log("[IProductRepository] viewAll - productCategoryLinks count:", productCategoryLinks?.length || 0);
+        // Only log error if it has a meaningful message
+        if (pcError?.message) {
+            console.error("[IProductRepository] viewAll - productCategories error:", pcError.message);
+        }
+
+        // Step 2: Get all categories
+        const categoryIds = [...new Set((productCategoryLinks || []).map(pc => pc.category_id))];
+        let categoriesMap: Record<number, { name_en: string; name_ar: string }> = {};
+
+        if (categoryIds.length > 0) {
+            const { data: categoriesData, error: catError } = await supabase.schema('store')
+                .from('categories')
+                .select('id, name_en, name_ar')
+                .in('id', categoryIds);
+
+            if (catError) {
+                console.error("[IProductRepository] viewAll - categories fetch error:", catError);
+            }
+
+            for (const cat of (categoriesData || [])) {
+                categoriesMap[cat.id] = { name_en: cat.name_en, name_ar: cat.name_ar };
+            }
+        }
+
+        console.log("[IProductRepository] viewAll - categoriesMap:", JSON.stringify(categoriesMap));
+
+        // Step 3: Build map of product_id to category names
         const categoryNamesMap: Record<number, string[]> = {};
         const categoryColumn = this.lang === 'ar' ? 'name_ar' : 'name_en';
 
-        for (const pc of (productCategoriesData || [])) {
+        for (const pc of (productCategoryLinks || [])) {
             if (!categoryNamesMap[pc.product_id]) {
                 categoryNamesMap[pc.product_id] = [];
             }
-            // The categories join returns an object (single row from categories table)
-            const catData = pc.categories as unknown as { id: number; name_en: string; name_ar: string } | null;
-            if (catData && typeof catData === 'object' && !Array.isArray(catData)) {
-                const catName = catData[categoryColumn as keyof typeof catData] as string;
+            const catData = categoriesMap[pc.category_id];
+            if (catData) {
+                const catName = catData[categoryColumn as keyof typeof catData];
                 if (catName && !categoryNamesMap[pc.product_id].includes(catName)) {
                     categoryNamesMap[pc.product_id].push(catName);
                 }

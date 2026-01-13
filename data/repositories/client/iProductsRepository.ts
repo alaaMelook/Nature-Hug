@@ -36,24 +36,42 @@ export class IProductClientRepository implements ProductRepository {
         // Fetch category names for all products from junction table
         const productIds = [...new Set(data.map((p: any) => p.product_id))];
 
-        // Query product_categories with joined category data
-        const { data: productCategoriesData } = await supabase.schema('store')
+        // Step 1: Get product-category links (simple query, no join)
+        const { data: productCategoryLinks, error: pcError } = await supabase.schema('store')
             .from('product_categories')
-            .select('product_id, category_id, categories:category_id(id, name_en, name_ar)')
+            .select('product_id, category_id')
             .in('product_id', productIds);
 
-        // Create a map of product_id to category names array
+        if (pcError) {
+            console.error("[IProductRepository] viewAll - productCategories error:", pcError);
+        }
+
+        // Step 2: Get all categories
+        const categoryIds = [...new Set((productCategoryLinks || []).map(pc => pc.category_id))];
+        let categoriesMap: Record<number, { name_en: string; name_ar: string }> = {};
+
+        if (categoryIds.length > 0) {
+            const { data: categoriesData } = await supabase.schema('store')
+                .from('categories')
+                .select('id, name_en, name_ar')
+                .in('id', categoryIds);
+
+            for (const cat of (categoriesData || [])) {
+                categoriesMap[cat.id] = { name_en: cat.name_en, name_ar: cat.name_ar };
+            }
+        }
+
+        // Step 3: Build map of product_id to category names
         const categoryNamesMap: Record<number, string[]> = {};
         const categoryColumn = this.lang === 'ar' ? 'name_ar' : 'name_en';
 
-        for (const pc of (productCategoriesData || [])) {
+        for (const pc of (productCategoryLinks || [])) {
             if (!categoryNamesMap[pc.product_id]) {
                 categoryNamesMap[pc.product_id] = [];
             }
-            // The categories join returns an object (single row from categories table)
-            const catData = pc.categories as unknown as { id: number; name_en: string; name_ar: string } | null;
-            if (catData && typeof catData === 'object' && !Array.isArray(catData)) {
-                const catName = catData[categoryColumn as keyof typeof catData] as string;
+            const catData = categoriesMap[pc.category_id];
+            if (catData) {
+                const catName = catData[categoryColumn as keyof typeof catData];
                 if (catName && !categoryNamesMap[pc.product_id].includes(catName)) {
                     categoryNamesMap[pc.product_id].push(catName);
                 }
