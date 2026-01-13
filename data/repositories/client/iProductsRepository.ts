@@ -28,7 +28,43 @@ export class IProductClientRepository implements ProductRepository {
             console.error("[IProductRepository] viewAll error:", error);
             throw error;
         }
-        return data || [];
+
+        if (!data || data.length === 0) {
+            return [];
+        }
+
+        // Fetch category names for all products from junction table
+        const productIds = [...new Set(data.map((p: any) => p.product_id))];
+
+        // Query product_categories with joined category data
+        const { data: productCategoriesData } = await supabase.schema('store')
+            .from('product_categories')
+            .select('product_id, category_id, categories:category_id(id, name_en, name_ar)')
+            .in('product_id', productIds);
+
+        // Create a map of product_id to category names array
+        const categoryNamesMap: Record<number, string[]> = {};
+        const categoryColumn = this.lang === 'ar' ? 'name_ar' : 'name_en';
+
+        for (const pc of (productCategoriesData || [])) {
+            if (!categoryNamesMap[pc.product_id]) {
+                categoryNamesMap[pc.product_id] = [];
+            }
+            // The categories join returns an object (single row from categories table)
+            const catData = pc.categories as unknown as { id: number; name_en: string; name_ar: string } | null;
+            if (catData && typeof catData === 'object' && !Array.isArray(catData)) {
+                const catName = catData[categoryColumn as keyof typeof catData] as string;
+                if (catName && !categoryNamesMap[pc.product_id].includes(catName)) {
+                    categoryNamesMap[pc.product_id].push(catName);
+                }
+            }
+        }
+
+        // Attach category_names to each product
+        return data.map((product: any) => ({
+            ...product,
+            category_names: categoryNamesMap[product.product_id] || []
+        }));
     }
 
     async viewRecent(count: number): Promise<ProductView[]> {
@@ -101,12 +137,43 @@ export class IProductClientRepository implements ProductRepository {
 
     async viewByCategory(categoryName: string): Promise<ProductView[]> {
         console.log("[IProductRepository] viewByCategory called with categoryName:", categoryName);
+
+        // First, get the category ID by name
+        const categoryColumn = this.lang === 'ar' ? 'name_ar' : 'name_en';
+        const { data: categoryData } = await supabase.schema('store')
+            .from('categories')
+            .select('id')
+            .eq(categoryColumn, categoryName)
+            .single();
+
+        if (!categoryData) {
+            console.log("[IProductRepository] Category not found:", categoryName);
+            return [];
+        }
+
+        // Get product IDs that have this category
+        const { data: productCategoryLinks } = await supabase.schema('store')
+            .from('product_categories')
+            .select('product_id')
+            .eq('category_id', categoryData.id);
+
+        const productIds = (productCategoryLinks || []).map(pc => pc.product_id);
+
+        if (productIds.length === 0) {
+            console.log("[IProductRepository] No products found for category:", categoryName);
+            return [];
+        }
+
+        // Get products from the view that match these IDs
         const {
             data,
             status,
             statusText,
             error
-        } = await supabase.schema('store').from(`products_view_${this.lang}`).select('*').eq('category_name', categoryName);
+        } = await supabase.schema('store')
+            .from(`products_view_${this.lang}`)
+            .select('*')
+            .in('product_id', productIds);
 
         console.log("[IProductRepository] viewByCategory result:", { data, status, statusText });
         if (error) {

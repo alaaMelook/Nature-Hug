@@ -51,9 +51,34 @@ export function ProductsScreen({ initProducts, initCategories }: {
     const filteredProducts = useMemo(() => {
         if (!products) return [];
 
+        // Debug: Log products with their category_names
+        console.log("[ProductsScreen] Products with category_names:", products.map(p => ({
+            name: p.name,
+            category_names: p.category_names,
+            category_name: p.category_name
+        })));
+        console.log("[ProductsScreen] Current filter category:", filters.category);
+
         let filtered = products.filter(product => {
             const searchMatch = product.name.toLowerCase().includes(filters.search.toLowerCase());
-            const categoryMatch = filters.category ? product.category_name?.toLowerCase() === filters.category.toLowerCase() : true;
+
+            // Category matching: check both category_names array and legacy category_name
+            let categoryMatch = true;
+            if (filters.category) {
+                const filterCategoryLower = filters.category.toLowerCase();
+                // Check if product has category_names array (multi-category)
+                if (product.category_names && product.category_names.length > 0) {
+                    categoryMatch = product.category_names.some(
+                        catName => catName.toLowerCase() === filterCategoryLower
+                    );
+                    console.log(`[ProductsScreen] ${product.name}: category_names=${JSON.stringify(product.category_names)}, filter=${filterCategoryLower}, match=${categoryMatch}`);
+                } else {
+                    // Fallback to legacy single category_name
+                    categoryMatch = product.category_name?.toLowerCase() === filterCategoryLower;
+                    console.log(`[ProductsScreen] ${product.name}: category_name=${product.category_name}, filter=${filterCategoryLower}, match=${categoryMatch}`);
+                }
+            }
+
             const inStockMatch = filters.inStock ? product.stock != null && product.stock > 0 : true;
             const onSaleMatch = filters.onSale ? product.discount != null && product.discount > 0 : true;
             return searchMatch && categoryMatch && inStockMatch && onSaleMatch;

@@ -307,6 +307,7 @@ export function ProductsScreen({ products, materials }: { products: ProductAdmin
                                                             src={product.image}
                                                             alt={product.name_en}
                                                             fill={true}
+                                                            sizes="40px"
                                                             className="object-cover"
                                                         />
                                                     ) : (
@@ -411,6 +412,7 @@ export function ProductsScreen({ products, materials }: { products: ProductAdmin
                                             src={product.image}
                                             alt={product.name_en}
                                             fill={true}
+                                            sizes="80px"
                                             className="object-cover"
                                         />
                                     ) : (

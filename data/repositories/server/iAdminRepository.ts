@@ -207,6 +207,11 @@ export class IAdminServerRepository implements AdminRepository {
         console.log("[IAdminRepository] updateProduct called with product:", product);
 
         // 1. Update main product fields directly (avoids gallery type mismatch in RPC)
+        // Also update legacy category_id for backwards compatibility with store views
+        const primaryCategoryId = product.category_ids && product.category_ids.length > 0
+            ? product.category_ids[0]
+            : null;
+
         const { error: productError } = await supabaseAdmin.schema('store')
             .from('products')
             .update({
@@ -217,7 +222,7 @@ export class IAdminServerRepository implements AdminRepository {
                 price: product.price,
                 discount: product.discount || 0,
                 stock: product.stock || 0,
-                // category_id removed - using junction table now
+                category_id: primaryCategoryId, // Keep legacy column updated for backwards compatibility
                 image_url: product.image || '',
                 slug: product.slug,
                 skin_type: product.skin_type || 'normal',
@@ -236,30 +241,64 @@ export class IAdminServerRepository implements AdminRepository {
             throw productError;
         }
 
+
         // 1.5. Update product_categories junction table
-        if (product.category_ids && product.category_ids.length > 0) {
-            // Delete existing category relationships
-            await supabaseAdmin.schema('store')
+        // Always handle categories - even if empty array (to clear categories)
+        // File logging for debugging
+        const fs = require('fs');
+        const logPath = 'd:/Desktop/Nature Hug/System/Nature-Hug/debug-log.txt';
+        const log = (msg: string) => {
+            const timestamp = new Date().toISOString();
+            fs.appendFileSync(logPath, `[${timestamp}] ${msg}\n`);
+        };
+
+        log(`=== CATEGORY UPDATE START for product_id: ${product.product_id} ===`);
+        log(`category_ids received: ${JSON.stringify(product.category_ids)}`);
+        log(`category_ids !== undefined: ${product.category_ids !== undefined}`);
+
+        if (product.category_ids !== undefined) {
+            log(`Deleting existing categories for product_id: ${product.product_id}`);
+
+            // Delete existing category relationships first
+            const { error: deleteError, data: deleteData, count: deleteCount } = await supabaseAdmin.schema('store')
                 .from('product_categories')
                 .delete()
                 .eq('product_id', product.product_id);
 
-            // Insert new category relationships
-            const categoryRecords = product.category_ids.map(categoryId => ({
-                product_id: product.product_id,
-                category_id: categoryId
-            }));
+            log(`Delete result - error: ${JSON.stringify(deleteError)}, count: ${deleteCount}`);
 
-            const { error: categoryError } = await supabaseAdmin.schema('store')
-                .from('product_categories')
-                .insert(categoryRecords);
-
-            if (categoryError) {
-                console.error("[IAdminRepository] updateProduct category error:", categoryError);
-            } else {
-                console.log("[IAdminRepository] Product categories updated:", product.category_ids);
+            if (deleteError) {
+                log(`ERROR deleting categories: ${JSON.stringify(deleteError)}`);
             }
+
+            // Insert new category relationships only if there are categories to add
+            if (product.category_ids && product.category_ids.length > 0) {
+                const categoryRecords = product.category_ids.map(categoryId => ({
+                    product_id: product.product_id,
+                    category_id: categoryId
+                }));
+
+                log(`Inserting category records: ${JSON.stringify(categoryRecords)}`);
+
+                const { error: categoryError, data: insertData } = await supabaseAdmin.schema('store')
+                    .from('product_categories')
+                    .insert(categoryRecords)
+                    .select();
+
+                log(`Insert result - error: ${JSON.stringify(categoryError)}, data: ${JSON.stringify(insertData)}`);
+
+                if (categoryError) {
+                    log(`ERROR inserting categories: ${JSON.stringify(categoryError)}`);
+                } else {
+                    log(`SUCCESS: Categories inserted for product_id: ${product.product_id}`);
+                }
+            } else {
+                log(`No categories to insert (empty array)`);
+            }
+        } else {
+            log(`category_ids is undefined, skipping category update`);
         }
+        log(`=== CATEGORY UPDATE END ===\n`);
 
         // 2. Update main product materials
         if (product.materials && product.materials.length > 0) {
@@ -489,7 +528,35 @@ export class IAdminServerRepository implements AdminRepository {
             console.error("[IAdminRepository] viewAllWithDetails error:", error);
             throw error;
         }
-        return data || [];
+
+        if (!data || data.length === 0) {
+            return [];
+        }
+
+        // Fetch all product_categories in one query for efficiency
+        const productIds = [...new Set(data.map((p: any) => p.product_id))];
+        const { data: allProductCategories } = await supabaseAdmin.schema('store')
+            .from('product_categories')
+            .select('product_id, category_id, categories:category_id(id, name_en, name_ar)')
+            .in('product_id', productIds);
+
+        // Create a map of product_id to categories array
+        const categoriesMap: Record<number, any[]> = {};
+        for (const pc of (allProductCategories || [])) {
+            if (!categoriesMap[pc.product_id]) {
+                categoriesMap[pc.product_id] = [];
+            }
+            if (pc.categories) {
+                categoriesMap[pc.product_id].push(pc.categories);
+            }
+        }
+
+        // Attach categories to each product
+        return data.map((product: any) => ({
+            ...product,
+            categories: categoriesMap[product.product_id] || [],
+            category_ids: (categoriesMap[product.product_id] || []).map((c: any) => c.id)
+        }));
     }
 
     async getProductForEdit(slug: string): Promise<ProductAdminView | null> {

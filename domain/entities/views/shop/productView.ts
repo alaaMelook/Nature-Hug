@@ -7,12 +7,14 @@ export interface ProductView {
     stock: number;
     discount: number | null;
     image: string | null;
-    category_name: string | null;
+    category_name: string | null; // Primary category (legacy)
+    category_names?: string[]; // All category names (for multi-category support)
     skin_type: string;
     slug: string;
     product_type: string;
     created_at: string;
     avg_rating: number;
+    product_id?: number; // Added for junction table queries
 }
 
 export interface CartItem extends ProductView {

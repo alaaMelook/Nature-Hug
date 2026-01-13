@@ -77,12 +77,14 @@ export function CreateProductForm({ initialImages, initialCategories, editMode =
             variants: initialProduct.variants || [],
             gallery: initialProduct.gallery || [],
             materials: initialProduct.materials || [],
+            category_ids: initialProduct.category_ids || [],
             faq_en: initialProduct.faq_en || {},
             faq_ar: initialProduct.faq_ar || {}
         } : {
             variants: [],
             gallery: [],
             materials: [],
+            category_ids: [],
             faq_en: {},
             faq_ar: {}
         }
@@ -174,6 +176,7 @@ export function CreateProductForm({ initialImages, initialCategories, editMode =
             }
         }
         console.log("[CreateProductForm] Submitting data:", cleanedData);
+        console.log("[CreateProductForm] Category IDs being sent:", cleanedData.category_ids);
         console.log("[CreateProductForm] Materials being sent:", JSON.stringify(cleanedData.materials, null, 2));
         console.log("[CreateProductForm] Edit mode:", editMode);
 
