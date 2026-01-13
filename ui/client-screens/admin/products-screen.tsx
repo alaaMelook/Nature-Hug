@@ -38,10 +38,23 @@ export function ProductsScreen({ products, materials }: { products: ProductAdmin
         };
     }, []);
 
+    // Helper to get category names from categories array
+    const getCategoryNames = (product: ProductAdminView): string => {
+        if (!product.categories || product.categories.length === 0) return '';
+        return product.categories
+            .map(c => i18n.language === 'ar' ? (c.name_ar ?? c.name_en) : c.name_en)
+            .filter(Boolean)
+            .join(', ');
+    };
+
     // Extract unique categories for filter
-    const uniqueCategories = Array.from(new Set(products.map(p =>
-        i18n.language === 'ar' ? (p.category_name_ar ?? p.category_name_en) : p.category_name_en
-    ))).filter(Boolean) as string[];
+    const uniqueCategories = Array.from(new Set(
+        products.flatMap(p =>
+            (p.categories || []).map(c =>
+                i18n.language === 'ar' ? (c.name_ar ?? c.name_en) : c.name_en
+            )
+        )
+    )).filter(Boolean) as string[];
 
     const filteredProducts = (products || []).filter((product) => {
         // 1. Search Filter
@@ -49,8 +62,10 @@ export function ProductsScreen({ products, materials }: { products: ProductAdmin
             product.name_ar.toLowerCase().includes(searchTerm.toLowerCase());
 
         // 2. Category Filter
-        const productCategory = i18n.language === 'ar' ? (product.category_name_ar ?? product.category_name_en) : product.category_name_en;
-        const matchesCategory = filterCategory ? productCategory === filterCategory : true;
+        const productCategories = (product.categories || []).map(c =>
+            i18n.language === 'ar' ? (c.name_ar ?? c.name_en) : c.name_en
+        );
+        const matchesCategory = filterCategory ? productCategories.includes(filterCategory) : true;
 
         // 3. Stock Filter
         let matchesStock = true;
@@ -308,7 +323,7 @@ export function ProductsScreen({ products, materials }: { products: ProductAdmin
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-center">
                                             <span className="px-2.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-50 text-blue-700">
-                                                {i18n.language === "ar" ? product.category_name_ar ?? product.category_name_en : product.category_name_en}
+                                                {getCategoryNames(product) || 'Uncategorized'}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">
@@ -438,7 +453,7 @@ export function ProductsScreen({ products, materials }: { products: ProductAdmin
                                             {product.visible ? t("visible") : t("hidden")}
                                         </span>
                                     </div>
-                                    <p className="text-xs text-gray-500 mt-0.5">{i18n.language === "ar" ? product.category_name_ar ?? product.category_name_en : product.category_name_en || 'Uncategorized'}</p>
+                                    <p className="text-xs text-gray-500 mt-0.5">{getCategoryNames(product) || 'Uncategorized'}</p>
                                     <div className="mt-2 flex items-center justify-between">
                                         <span className="text-sm font-bold text-gray-900">{t('{{price, currency}}', { price: product.price })}</span>
                                         <div className="flex items-center gap-2">

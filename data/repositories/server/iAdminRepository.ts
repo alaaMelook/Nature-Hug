@@ -217,7 +217,7 @@ export class IAdminServerRepository implements AdminRepository {
                 price: product.price,
                 discount: product.discount || 0,
                 stock: product.stock || 0,
-                category_id: product.category_id,
+                // category_id removed - using junction table now
                 image_url: product.image || '',
                 slug: product.slug,
                 skin_type: product.skin_type || 'normal',
@@ -234,6 +234,31 @@ export class IAdminServerRepository implements AdminRepository {
         if (productError) {
             console.error("[IAdminRepository] updateProduct error:", productError);
             throw productError;
+        }
+
+        // 1.5. Update product_categories junction table
+        if (product.category_ids && product.category_ids.length > 0) {
+            // Delete existing category relationships
+            await supabaseAdmin.schema('store')
+                .from('product_categories')
+                .delete()
+                .eq('product_id', product.product_id);
+
+            // Insert new category relationships
+            const categoryRecords = product.category_ids.map(categoryId => ({
+                product_id: product.product_id,
+                category_id: categoryId
+            }));
+
+            const { error: categoryError } = await supabaseAdmin.schema('store')
+                .from('product_categories')
+                .insert(categoryRecords);
+
+            if (categoryError) {
+                console.error("[IAdminRepository] updateProduct category error:", categoryError);
+            } else {
+                console.log("[IAdminRepository] Product categories updated:", product.category_ids);
+            }
         }
 
         // 2. Update main product materials
@@ -585,7 +610,15 @@ export class IAdminServerRepository implements AdminRepository {
             };
         }));
 
-        // 5. Format the result to match ProductAdminView
+        // 5. Fetch product categories from junction table
+        const { data: productCategoriesData } = await supabaseAdmin.schema('store')
+            .from('product_categories')
+            .select('category_id')
+            .eq('product_id', product.id);
+
+        const categoryIds = (productCategoriesData || []).map((pc: any) => pc.category_id);
+
+        // 6. Format the result to match ProductAdminView
         const result: ProductAdminView = {
             product_id: product.id,
             variant_id: null,
@@ -596,9 +629,7 @@ export class IAdminServerRepository implements AdminRepository {
             price: product.price || 0,
             discount: product.discount || 0,
             image: product.image_url || '',
-            category_id: product.category_id,
-            category_name_en: product.categories?.name_en,
-            category_name_ar: product.categories?.name_ar,
+            category_ids: categoryIds,
             skin_type: product.skin_type || 'normal',
             slug: product.slug,
             stock: product.stock || 0,

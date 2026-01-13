@@ -1,12 +1,13 @@
 "use client";
 import React from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { ProductAdminView } from "@/domain/entities/views/admin/productAdminView";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { updateProductAction } from "@/ui/hooks/admin/products";
 import { Category } from "@/domain/entities/database/category";
+import { CategoryMultiSelect } from "@/ui/components/admin/CategoryMultiSelect";
 
 interface EditProductFormProps {
     initialCategories: Category[];
@@ -18,9 +19,10 @@ export function EditProductForm({ initialCategories, initialProduct }: EditProdu
     const { t, i18n } = useTranslation();
     const router = useRouter();
 
-    const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<ProductAdminView>({
+    const { register, control, handleSubmit, formState: { errors, isSubmitting } } = useForm<ProductAdminView>({
         defaultValues: {
-            ...initialProduct
+            ...initialProduct,
+            category_ids: initialProduct.category_ids || []
         }
     });
 
@@ -34,7 +36,8 @@ export function EditProductForm({ initialCategories, initialProduct }: EditProdu
                 slug: initialProduct.slug,
                 gallery: initialProduct.gallery || [],
                 variants: initialProduct.variants || [],
-                materials: initialProduct.materials || []
+                materials: initialProduct.materials || [],
+                category_ids: data.category_ids || []
             });
 
             if (result?.error) {
@@ -143,17 +146,18 @@ export function EditProductForm({ initialCategories, initialProduct }: EditProdu
                 <div className="bg-white rounded-lg shadow-sm border p-6 space-y-4">
                     <h2 className="text-lg font-semibold text-gray-700 border-b pb-2">{t("category")}</h2>
 
-                    <select
-                        {...register("category_id")}
-                        className="w-full border border-gray-300 rounded-lg p-2"
-                    >
-                        <option value="">{t("selectCategory")}</option>
-                        {initialCategories.map((cat) => (
-                            <option key={cat.id} value={cat.id}>
-                                {i18n.language === 'ar' ? cat.name_ar || cat.name_en : cat.name_en}
-                            </option>
-                        ))}
-                    </select>
+                    <Controller
+                        name="category_ids"
+                        control={control}
+                        render={({ field }) => (
+                            <CategoryMultiSelect
+                                categories={initialCategories}
+                                selectedIds={field.value || []}
+                                onChange={field.onChange}
+                                language={i18n.language}
+                            />
+                        )}
+                    />
                 </div>
 
                 {/* Product & Skin Type Section */}

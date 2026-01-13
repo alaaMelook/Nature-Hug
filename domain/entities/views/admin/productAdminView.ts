@@ -11,10 +11,8 @@ export interface ProductAdminView {
     price: number;
     discount: number;
     image: string;
-    category_id?: number;
-    category_name_en?: string;
-    category_name_ar?: string;
-    category?: Category;
+    category_ids?: number[]; // Changed from category_id to support multiple categories
+    categories?: Category[]; // Array of category objects
     skin_type: string;
     slug: string;
     stock: number;

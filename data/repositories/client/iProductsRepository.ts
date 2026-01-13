@@ -116,14 +116,26 @@ export class IProductClientRepository implements ProductRepository {
         return data || [];
     }
 
-    async addReview(review: Review): Promise<void> {
+    async addReview(review: Partial<Review>): Promise<number> {
         console.log("[IProductRepository] addReview called with review:", review);
-        const { data, status, statusText, error } = await supabase.schema('store').from('reviews').insert(review);
+        const { data, status, statusText, error } = await supabase
+            .schema('store')
+            .from('reviews')
+            .insert({
+                product_id: review.product_id,
+                customer_id: review.customer_id,
+                rating: review.rating,
+                comment: review.comment,
+                status: 'approved',
+            })
+            .select('id')
+            .single();
         console.log("[IProductRepository] addReview result:", { data, status, statusText });
         if (error) {
             console.error("[IProductRepository] addReview error:", error);
             throw error;
         }
+        return data.id;
     }
 
     async getAllCategories(): Promise<Category[]> {

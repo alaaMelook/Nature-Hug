@@ -10,6 +10,7 @@ import { ImageSelector } from "@/ui/components/admin/imageSelector";
 import { MaterialSelector } from "@/ui/components/admin/materialSelector";
 import { Material } from "@/domain/entities/database/material";
 import { Category } from "@/domain/entities/database/category";
+import { CategoryMultiSelect } from "@/ui/components/admin/CategoryMultiSelect";
 import { ChevronDown, ChevronUp, Trash2, Plus, Image as ImageIcon, Box, Check, ChevronRight, ChevronLeft, Pencil } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
@@ -134,7 +135,7 @@ export function CreateProductForm({ initialImages, initialCategories, editMode =
             stock: cleanNumber(data.stock),
             visible: true,
             discount: cleanNumber(data.discount),
-            category_id: data.category_id ? Number(data.category_id) : undefined,
+            category_ids: data.category_ids || [],
             materials: data.materials?.map(processMaterial) || [],
             variants: data.variants?.map(v => ({
                 ...v,
@@ -266,7 +267,7 @@ export function CreateProductForm({ initialImages, initialCategories, editMode =
     const nextStep = async () => {
         let isValid = false;
         if (currentStep === 0) {
-            isValid = await trigger(["name_en", "slug", "category_id"]);
+            isValid = await trigger(["name_en", "slug", "category_ids"]);
         } else {
             isValid = true;
         }
@@ -360,19 +361,21 @@ export function CreateProductForm({ initialImages, initialCategories, editMode =
                                     </div>
                                     <div>
                                         <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">{t("category")} <span className="text-red-500">*</span></label>
-                                        <select
-                                            {...register("category_id", { required: true })}
-                                            className={`w-full border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2 border ${errors.category_id ? 'border-red-500' : ''}`}
-                                        >
-                                            <option value="">{t("selectCategory")}</option>
-                                            {initialCategories.map((category) => (
-                                                <option key={category.id} value={category.id}>
-                                                    {i18n.language === 'ar'
-                                                        ? (category.name_ar && category.name_en ? `${category.name_ar} (${category.name_en})` : (category.name_ar || category.name_en))
-                                                        : (category.name_en && category.name_ar ? `${category.name_en} (${category.name_ar})` : (category.name_en || category.name_ar))}
-                                                </option>
-                                            ))}
-                                        </select>
+                                        <Controller
+                                            name="category_ids"
+                                            control={control}
+                                            rules={{ required: true, validate: (v) => v && v.length > 0 }}
+                                            render={({ field }) => (
+                                                <CategoryMultiSelect
+                                                    categories={initialCategories}
+                                                    selectedIds={field.value || []}
+                                                    onChange={field.onChange}
+                                                    language={i18n.language}
+                                                    error={!!errors.category_ids}
+                                                />
+                                            )}
+                                        />
+                                        {errors.category_ids && <span className="text-xs text-red-500">{t("errors.required", { field: t("category") })}</span>}
                                     </div>
                                     <div>
                                         <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">{t("skinType")}</label>

@@ -69,9 +69,11 @@ export default function CreatePromoCodeForm({ products }: CreatePromoCodeFormPro
 
     const filteredProducts = products.filter(p =>
         p.name_en.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.category_name_en?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.name_ar.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.category_name_ar?.toLowerCase().includes(searchTerm.toLowerCase())
+        (p.categories || []).some(c =>
+            c.name_en?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            c.name_ar?.toLowerCase().includes(searchTerm.toLowerCase())
+        ) ||
+        p.name_ar.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     return (
