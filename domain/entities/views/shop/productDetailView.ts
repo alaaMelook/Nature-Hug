@@ -1,6 +1,6 @@
 // src/domain/entities/views/ProductDetailView.ts
 
-import {FAQs} from "../../database/faq";
+import { FAQs } from "../../database/faq";
 
 export interface ProductDetailView {
 
@@ -41,6 +41,9 @@ export interface ProductReviewView {
     created_at: string;
     customer_name: string | null;
     customer_governorate: string | null;
+    customer_id?: number; // For identifying user's own reviews
+    images?: string[]; // Review image URLs
+    status?: 'pending' | 'approved' | 'rejected' | string; // Review moderation status
 }
 
 /**

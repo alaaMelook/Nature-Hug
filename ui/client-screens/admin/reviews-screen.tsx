@@ -1,19 +1,45 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ReviewAdminView } from "@/domain/entities/views/admin/reviewAdminView";
-import { Search, Star, User, Package, Check, X as XIcon } from "lucide-react";
+import { Search, Star, User, Package, Check, X as XIcon, Trash2, ImageIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { updateReviewStatusAction } from "@/ui/hooks/admin/reviewActions";
+import { updateReviewStatusAction, deleteReviewImageAction } from "@/ui/hooks/admin/reviewActions";
 import { toast } from "sonner";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
+import { getReviewImages } from "@/lib/services/reviewImageService";
 
 export function ReviewsScreen({ reviews }: { reviews: ReviewAdminView[] }) {
     const { t, i18n } = useTranslation();
     const [activeTab, setActiveTab] = useState<'pending' | 'approved' | 'rejected'>('pending');
     const [searchTerm, setSearchTerm] = useState("");
     const [updating, setUpdating] = useState<number | null>(null);
+    const [reviewImages, setReviewImages] = useState<{ [reviewId: number]: string[] }>({});
+    const [selectedImage, setSelectedImage] = useState<string | null>(null);
+    const [deletingImage, setDeletingImage] = useState<string | null>(null);
+
+    // Fetch images for all reviews
+    useEffect(() => {
+        const fetchAllImages = async () => {
+            const imagesMap: { [reviewId: number]: string[] } = {};
+            for (const review of reviews) {
+                try {
+                    const images = await getReviewImages(review.id);
+                    if (images.length > 0) {
+                        imagesMap[review.id] = images;
+                    }
+                } catch (error) {
+                    console.error(`Failed to fetch images for review ${review.id}:`, error);
+                }
+            }
+            setReviewImages(imagesMap);
+        };
+
+        if (reviews.length > 0) {
+            fetchAllImages();
+        }
+    }, [reviews]);
 
     const handleStatusUpdate = async (reviewId: number, newStatus: 'approved' | 'rejected' | 'pending') => {
         setUpdating(reviewId);
@@ -28,6 +54,27 @@ export function ReviewsScreen({ reviews }: { reviews: ReviewAdminView[] }) {
             toast.error(t("statusUpdateFailed"));
         } finally {
             setUpdating(null);
+        }
+    };
+
+    const handleDeleteImage = async (reviewId: number, imageUrl: string) => {
+        setDeletingImage(imageUrl);
+        try {
+            const result = await deleteReviewImageAction(reviewId, imageUrl);
+            if (result.success) {
+                // Update local state
+                setReviewImages(prev => ({
+                    ...prev,
+                    [reviewId]: prev[reviewId].filter(url => url !== imageUrl)
+                }));
+                toast.success(t("imageDeleted") || "تم حذف الصورة");
+            } else {
+                toast.error(result.error || t("imageDeleteFailed") || "فشل حذف الصورة");
+            }
+        } catch (error) {
+            toast.error(t("imageDeleteFailed") || "فشل حذف الصورة");
+        } finally {
+            setDeletingImage(null);
         }
     };
 
@@ -109,6 +156,7 @@ export function ReviewsScreen({ reviews }: { reviews: ReviewAdminView[] }) {
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t("customer")}</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t("rating")}</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t("comment")}</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t("images") || "الصور"}</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t("date")}</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t("actions")}</th>
                             </tr>
@@ -121,7 +169,7 @@ export function ReviewsScreen({ reviews }: { reviews: ReviewAdminView[] }) {
                                         animate={{ opacity: 1 }}
                                         exit={{ opacity: 0 }}
                                     >
-                                        <td colSpan={6} className="px-6 py-10 text-center text-gray-500">
+                                        <td colSpan={7} className="px-6 py-10 text-center text-gray-500">
                                             {t("noReviewsFound")}
                                         </td>
                                     </motion.tr>
@@ -164,6 +212,35 @@ export function ReviewsScreen({ reviews }: { reviews: ReviewAdminView[] }) {
                                             <div className="text-sm text-gray-500 max-w-xs truncate" title={review.comment}>
                                                 {review.comment}
                                             </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            {/* Review Images with delete option */}
+                                            {reviewImages[review.id] && reviewImages[review.id].length > 0 ? (
+                                                <div className="flex gap-1 flex-wrap max-w-[150px]">
+                                                    {reviewImages[review.id].map((imageUrl, imgIndex) => (
+                                                        <div key={imgIndex} className="relative group">
+                                                            <button
+                                                                onClick={() => setSelectedImage(imageUrl)}
+                                                                className="relative w-10 h-10 rounded overflow-hidden border border-gray-200"
+                                                            >
+                                                                <Image src={imageUrl} alt="" fill className="object-cover" />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleDeleteImage(review.id, imageUrl)}
+                                                                disabled={deletingImage === imageUrl}
+                                                                className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
+                                                            >
+                                                                <Trash2 className="w-3 h-3" />
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <span className="text-gray-400 text-sm flex items-center gap-1">
+                                                    <ImageIcon className="w-4 h-4" />
+                                                    {t("noImages") || "لا يوجد"}
+                                                </span>
+                                            )}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                             {new Date(review.created_at).toLocaleDateString()}
@@ -262,6 +339,29 @@ export function ReviewsScreen({ reviews }: { reviews: ReviewAdminView[] }) {
                                     <p className="text-sm text-gray-700 italic">"{review.comment}"</p>
                                 </div>
 
+                                {/* Images in mobile view */}
+                                {reviewImages[review.id] && reviewImages[review.id].length > 0 && (
+                                    <div className="flex gap-2 mb-3 flex-wrap">
+                                        {reviewImages[review.id].map((imageUrl, imgIndex) => (
+                                            <div key={imgIndex} className="relative group">
+                                                <button
+                                                    onClick={() => setSelectedImage(imageUrl)}
+                                                    className="relative w-12 h-12 rounded overflow-hidden border border-gray-200"
+                                                >
+                                                    <Image src={imageUrl} alt="" fill className="object-cover" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeleteImage(review.id, imageUrl)}
+                                                    disabled={deletingImage === imageUrl}
+                                                    className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5"
+                                                >
+                                                    <Trash2 className="w-3 h-3" />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
                                 <div className="flex justify-between items-center text-xs text-gray-500 border-t border-gray-100 pt-3">
                                     <span>{new Date(review.created_at).toLocaleDateString()}</span>
                                     <div className="flex gap-2">
@@ -308,6 +408,29 @@ export function ReviewsScreen({ reviews }: { reviews: ReviewAdminView[] }) {
                     </AnimatePresence>
                 </div>
             </div>
+
+            {/* Lightbox Modal */}
+            {selectedImage && (
+                <div
+                    className="fixed inset-0 bg-black bg-opacity-80 z-50 flex items-center justify-center p-4"
+                    onClick={() => setSelectedImage(null)}
+                >
+                    <div className="relative max-w-4xl max-h-[90vh] w-full h-full">
+                        <Image
+                            src={selectedImage}
+                            alt="Review image"
+                            fill
+                            className="object-contain"
+                        />
+                        <button
+                            onClick={() => setSelectedImage(null)}
+                            className="absolute top-4 right-4 text-white bg-black bg-opacity-50 rounded-full p-2 hover:bg-opacity-70"
+                        >
+                            ✕
+                        </button>
+                    </div>
+                </div>
+            )}
         </motion.div>
     );
 }

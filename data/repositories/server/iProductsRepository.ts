@@ -137,15 +137,56 @@ export class IProductServerRepository implements ProductRepository {
         return data || [];
     }
 
-    async addReview(review: Partial<Review>): Promise<void> {
+    async addReview(review: Partial<Review>): Promise<number> {
         console.log("[IProductRepository] addReview called with review:", review);
-        const supabase = await createSupabaseServerClient();
-        const { data, status, statusText, error } = await supabase.schema('store').from('reviews').insert(review);
+        // Use service role client to bypass RLS
+        const { createSupabaseServiceClient } = await import("@/data/datasources/supabase/server");
+        const supabase = await createSupabaseServiceClient();
+        const { data, status, statusText, error } = await supabase
+            .schema('store')
+            .from('reviews')
+            .insert({
+                product_id: review.product_id,
+                customer_id: review.customer_id,
+                rating: review.rating,
+                comment: review.comment,
+                status: 'approved', // Auto-approve so reviews show immediately
+            })
+            .select('id')
+            .single();
         console.log("[IProductRepository] addReview result:", { data, status, statusText });
         if (error) {
             console.error("[IProductRepository] addReview error:", error);
             throw error;
         }
+        return data.id;
+    }
+
+    async updateReview(reviewId: number, customerId: number, updateData: { rating?: number; comment?: string }): Promise<boolean> {
+        console.log("[IProductRepository] updateReview called with:", { reviewId, customerId, updateData });
+        const { createSupabaseServiceClient } = await import("@/data/datasources/supabase/server");
+        const supabase = await createSupabaseServiceClient();
+
+        // Update only if the review belongs to the customer
+        const { data, error } = await supabase
+            .schema('store')
+            .from('reviews')
+            .update({
+                rating: updateData.rating,
+                comment: updateData.comment,
+            })
+            .eq('id', reviewId)
+            .eq('customer_id', customerId) // Security: only update own review
+            .select('id')
+            .single();
+
+        if (error) {
+            console.error("[IProductRepository] updateReview error:", error);
+            throw error;
+        }
+
+        console.log("[IProductRepository] updateReview result:", data);
+        return !!data;
     }
 
     async getAllCategories(): Promise<Category[]> {

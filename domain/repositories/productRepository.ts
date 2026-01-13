@@ -29,7 +29,7 @@ export interface ProductRepository {
 
     getBySlug(slug: string): Promise<Product>;
 
-    addReview(review: Review): Promise<void>;
+    addReview(review: Partial<Review>): Promise<number>;
 
     getPromoCode(code: string): Promise<PromoCode | null>;
 }

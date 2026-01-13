@@ -6,4 +6,6 @@ export interface Review {
     comment?: string;
     status: 'pending' | 'approved' | 'rejected' | string;
     created_at: string;
+    images?: string[]; // URLs of uploaded review images
 }
+

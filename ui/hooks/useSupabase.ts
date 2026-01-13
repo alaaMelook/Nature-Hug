@@ -23,8 +23,16 @@ export const useSupabase = () => {
         try {
             // 1. Get the current active session from Supabase
             const { data: { session } } = await supabase.auth.getSession();
+            console.log("[useSupabase] Session check:", {
+                hasSession: !!session,
+                userId: session?.user?.id,
+                isAnonymous: session?.user?.is_anonymous,
+                email: session?.user?.email
+            });
+
             if (!session?.user) {
                 // No session? Clear everything.
+                console.log("[useSupabase] No session, logging in anonymously");
                 loginAnonymously();
                 setUser(null);
                 setMember(null);
@@ -35,6 +43,7 @@ export const useSupabase = () => {
             setIsAnon(isAnonymous);
 
             if (isAnonymous) {
+                console.log("[useSupabase] User is anonymous, clearing user state");
                 setUser(null);
                 setMember(null);
                 return;
@@ -42,7 +51,9 @@ export const useSupabase = () => {
 
             // 2. Fetch Customer Data (Database record)
             // Note: We use the ID from the session to ensure we are looking up the right user.
+            console.log("[useSupabase] Fetching customer for auth_user_id:", session.user.id);
             const customer = await CustomerRepoClient.fetchCustomer(session.user.id);
+            console.log("[useSupabase] Customer fetch result:", customer);
 
             if (!customer) {
                 // loginAnonymously();
@@ -54,10 +65,12 @@ export const useSupabase = () => {
             }
 
             setUser(customer);
+            console.log("[useSupabase] User state set:", customer);
 
             // 3. Fetch Member Data (Role/Admin info) using the Customer ID
             const memberData = await CustomerRepoClient.fetchMember(customer.id);
             setMember(memberData);
+            console.log("[useSupabase] Member state set:", memberData);
 
         } catch (err) {
             console.error("[useSupabase] Failed to refresh session:", err);

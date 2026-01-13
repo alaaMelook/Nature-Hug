@@ -5,11 +5,12 @@ export class AddProductReview {
     constructor(private lang: LangKey = 'ar', private repo = new IProductServerRepository(lang)) {
     }
 
-    async execute(review: Partial<Review>): Promise<void> {
+    async execute(review: Partial<Review>): Promise<number> {
         try {
             console.log("[AddProductReview] execute called with review:", review);
-            await this.repo.addReview(review);
-            console.log("[AddProductReview] addReview completed.");
+            const reviewId = await this.repo.addReview(review);
+            console.log("[AddProductReview] addReview completed, ID:", reviewId);
+            return reviewId;
         } catch (error) {
             console.error("[AddProductReview] Error in execute:", error);
             throw error;
