@@ -6,12 +6,14 @@ import { ConfirmDialog } from "@/ui/components/confirmDialog";
 import { Plus, User, Mail, Phone, MapPin, Sparkles } from "lucide-react";
 import { ProfileView } from "@/domain/entities/views/shop/profileView";
 import { Governorate } from "@/domain/entities/database/governorate";
+import { PromoCode } from "@/domain/entities/database/promoCode";
 import { useState } from "react";
 import { deleteAddress, updateAddress } from "@/ui/hooks/store/useProfileActions";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+import { PromoCodesSection } from "@/ui/components/store/PromoCodesSection";
 
-export function ProfileScreen({ profile, governorates }: { profile: ProfileView, governorates: Governorate[] }) {
+export function ProfileScreen({ profile, governorates, promoCodes = [] }: { profile: ProfileView, governorates: Governorate[], promoCodes?: PromoCode[] }) {
     const { t } = useTranslation();
     const {
         loading,
@@ -70,6 +72,11 @@ export function ProfileScreen({ profile, governorates }: { profile: ProfileView,
                         </div>
                     </div>
                 </div>
+
+                {/* Promo Codes Section - Displayed prominently after header */}
+                {promoCodes && promoCodes.length > 0 && (
+                    <PromoCodesSection promoCodes={promoCodes} />
+                )}
 
                 {/* Main Content Grid */}
                 <div className="grid gap-6 md:grid-cols-2">

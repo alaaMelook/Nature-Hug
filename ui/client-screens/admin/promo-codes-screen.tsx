@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { PromoCode } from "@/domain/entities/database/promoCode";
 import { deletePromoCodeAction, updatePromoCodeAction } from "@/ui/hooks/admin/promo-codes";
-import { Trash2, Plus, Tag, ShoppingBag, Layers, Check, X } from "lucide-react";
+import { Trash2, Plus, Tag, ShoppingBag, Layers, Check, X, Pencil, Calendar } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
@@ -183,14 +183,23 @@ export default function PromoCodesScreen({ initialPromoCodes }: PromoCodesScreen
                                                 )}
                                             </td>
                                             <td className="px-6 py-4 text-right">
-                                                <button
-                                                    onClick={() => handleDelete(promo.id)}
-                                                    disabled={isDeleting === promo.id}
-                                                    className="text-gray-400 hover:text-red-600 transition-colors p-2 hover:bg-red-50 rounded-full"
-                                                    title={t("deletePromo")}
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </button>
+                                                <div className="flex justify-end gap-1">
+                                                    <Link
+                                                        href={`/admin/promo-codes/edit/${promo.id}`}
+                                                        className="text-gray-400 hover:text-primary-600 transition-colors p-2 hover:bg-primary-50 rounded-full"
+                                                        title={t("editPromo") || "Edit"}
+                                                    >
+                                                        <Pencil className="h-4 w-4" />
+                                                    </Link>
+                                                    <button
+                                                        onClick={() => handleDelete(promo.id)}
+                                                        disabled={isDeleting === promo.id}
+                                                        className="text-gray-400 hover:text-red-600 transition-colors p-2 hover:bg-red-50 rounded-full"
+                                                        title={t("deletePromo")}
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </button>
+                                                </div>
                                             </td>
                                         </motion.tr>
                                     ))

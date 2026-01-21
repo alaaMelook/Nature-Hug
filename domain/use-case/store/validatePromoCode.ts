@@ -3,11 +3,18 @@ import { IProductServerRepository } from "@/data/repositories/server/iProductsRe
 export class ValidatePromoCode {
     constructor(private repo = new IProductServerRepository()) { }
 
-    async execute(code: string, cartItems: { slug: string, quantity: number }[]) {
+    async execute(code: string, cartItems: { slug: string, quantity: number }[], customerId?: number) {
         // 1. Get Promo Code
         const promo = await this.repo.getPromoCode(code);
         if (!promo || !promo.is_active) {
             return { isValid: false, error: "Invalid promo code" };
+        }
+
+        // 2. Check customer eligibility (if promo code is restricted to specific customers)
+        if (promo.eligible_customer_ids && promo.eligible_customer_ids.length > 0) {
+            if (!customerId || !promo.eligible_customer_ids.includes(customerId)) {
+                return { isValid: false, error: "This promo code is not available for your account" };
+            }
         }
 
         // 2. Fetch Products to get prices and IDs

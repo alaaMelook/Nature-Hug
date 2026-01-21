@@ -427,7 +427,7 @@ export function CheckoutUserScreen({ governorates, user }: { governorates: Gover
                     </section>
 
                     {/* Right: Cart Summary */}
-                    <CheckoutCart selectedGovernorate={selectedGovernorate} onPurchase={async () => {
+                    <CheckoutCart selectedGovernorate={selectedGovernorate} customerId={user.id} onPurchase={async () => {
                         // trigger form submission via react-hook-form
                         await handleSubmit(onSubmit)();
                     }} />

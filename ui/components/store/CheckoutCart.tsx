@@ -7,9 +7,10 @@ import { useTranslation } from "react-i18next";
 import { Governorate } from "@/domain/entities/database/governorate";
 import Image from "next/image";
 
-export function CheckoutCart({ selectedGovernorate, onPurchase }: {
+export function CheckoutCart({ selectedGovernorate, onPurchase, customerId }: {
     selectedGovernorate: Governorate | null,
     onPurchase: () => void,
+    customerId?: number,
 }) {
     const { t } = useTranslation();
     const { cart, getCartTotal, applyPromoCode, removePromoCode } = useCart()
@@ -98,7 +99,7 @@ export function CheckoutCart({ selectedGovernorate, onPurchase }: {
                             <Tag className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                             <button
                                 className="absolute right-1.5 top-1.5 bottom-1.5 px-3 bg-white text-primary-600 text-xs font-semibold rounded-lg border border-gray-100 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
-                                onClick={() => applyPromoCode(promoCode)}
+                                onClick={() => applyPromoCode(promoCode, customerId)}
                                 disabled={promoCode.trim().length === 0}
                             >
                                 {t("checkout.applyButton")}

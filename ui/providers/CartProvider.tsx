@@ -202,8 +202,8 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
 
     // --- Promo Code Actions (New Simple Logic) ---
 
-    const applyPromoCode = async (code: string) => {
-        const result = await validatePromoCodeAction(code, cart.items);
+    const applyPromoCode = async (code: string, customerId?: number) => {
+        const result = await validatePromoCodeAction(code, cart.items, customerId);
         if (result.isValid && 'isAdmin' in result && result.isAdmin) {
             setCart(prevCart => ({
                 ...prevCart,

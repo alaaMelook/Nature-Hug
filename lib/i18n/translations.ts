@@ -452,6 +452,18 @@ export const resources = {
       productsSelected: "{{count}} products selected",
       failedToCreatePromo: "Failed to create promo code",
 
+      // Customer Promo Codes Section
+      yourExclusivePromoCodes: "Your Exclusive Promo Codes",
+      exclusivePromoCodesDesc: "These codes are exclusively available for you!",
+      exclusiveForYou: "Exclusive for You",
+      expiresIn: "Expires in",
+      noExpiry: "No Expiry",
+      clickToCopy: "Click to copy",
+      appliesToEntireCart: "Applies to entire cart",
+      buy: "Buy",
+      get: "Get",
+      free: "Free",
+
       newOrders: "New Orders",
       processing: "Processing",
       shipped: "Shipped",
@@ -1225,6 +1237,18 @@ export const resources = {
       selectProducts: "اختر المنتجات",
       productsSelected: "تم اختيار {{count}} منتجات",
       failedToCreatePromo: "فشل إنشاء كود الخصم",
+
+      // Customer Promo Codes Section
+      yourExclusivePromoCodes: "أكواد الخصم الحصرية",
+      exclusivePromoCodesDesc: "هذه الأكواد متاحة حصرياً لك!",
+      exclusiveForYou: "حصري لك",
+      expiresIn: "ينتهي خلال",
+      noExpiry: "بدون انتهاء",
+      clickToCopy: "اضغط للنسخ",
+      appliesToEntireCart: "يطبق على كل العربة",
+      buy: "اشترِ",
+      get: "واحصل على",
+      free: "مجاناً",
 
       newOrders: "طلبات جديدة",
       processing: "قيد المعالجة",

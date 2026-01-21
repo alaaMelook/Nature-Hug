@@ -286,7 +286,7 @@ export class IProductServerRepository implements ProductRepository {
                 customer_id: review.customer_id,
                 rating: review.rating,
                 comment: review.comment,
-                status: 'approved', // Auto-approve so reviews show immediately
+                status: 'pending', // Reviews show immediately but need admin approval
             })
             .select('id')
             .single();

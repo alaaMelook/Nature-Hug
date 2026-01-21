@@ -31,7 +31,7 @@ declare global {
         getCartTotal: (shipping: number) => number;
         getCartCount: () => number;
         loading: boolean;
-        applyPromoCode: (code: string) => Promise<void>;
+        applyPromoCode: (code: string, customerId?: number) => Promise<void>;
         removePromoCode: () => Promise<void>;
         syncCart: () => Promise<void>;
         setCart: (cart: Cart) => void;

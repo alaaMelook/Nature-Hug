@@ -10,4 +10,7 @@ export interface PromoCode {
     bogo_get_count: number;
     is_active: boolean;
     free_shipping: boolean;
+    eligible_customer_ids?: number[]; // null or empty = all customers can use this code
+    valid_from?: string; // When the promo code becomes active
+    valid_until?: string; // When the promo code expires
 }

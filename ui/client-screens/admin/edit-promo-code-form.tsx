@@ -1,42 +1,57 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { createPromoCodeAction } from "@/ui/hooks/admin/promo-codes";
+import { updatePromoCodeAction } from "@/ui/hooks/admin/promo-codes";
 import { ProductAdminView } from "@/domain/entities/views/admin/productAdminView";
 import { ProfileView } from "@/domain/entities/views/shop/profileView";
-import { Save, ArrowLeft, Check, Search, Users } from "lucide-react";
+import { Save, ArrowLeft, Check, Search, Users, Calendar } from "lucide-react";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import { PromoCode } from "@/domain/entities/database/promoCode";
 import { motion } from "framer-motion";
 
-interface CreatePromoCodeFormProps {
+interface EditPromoCodeFormProps {
+    promoCode: PromoCode;
     products: ProductAdminView[];
     customers?: ProfileView[];
 }
 
-export default function CreatePromoCodeForm({ products, customers = [] }: CreatePromoCodeFormProps) {
+export default function EditPromoCodeForm({ promoCode, products, customers = [] }: EditPromoCodeFormProps) {
     const router = useRouter();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const { t, i18n } = useTranslation();
-    // Form State
-    const [code, setCode] = useState<string>("");
-    const [isBogo, setIsBogo] = useState<boolean>(false);
-    const [percentageOff, setPercentageOff] = useState<number>(0);
-    const [freeShipping, setFreeShipping] = useState<boolean>(false);
-    const [bogoBuy, setBogoBuy] = useState<number>(1);
-    const [bogoGet, setBogoGet] = useState<number>(1);
-    const [allCart, setAllCart] = useState<boolean>(true);
-    const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
+
+    // Initialize form state with existing promo code data
+    const [code, setCode] = useState<string>(promoCode.code);
+    const [isBogo, setIsBogo] = useState<boolean>(promoCode.is_bogo);
+    const [percentageOff, setPercentageOff] = useState<number>(promoCode.percentage_off);
+    const [freeShipping, setFreeShipping] = useState<boolean>(promoCode.free_shipping);
+    const [bogoBuy, setBogoBuy] = useState<number>(promoCode.bogo_buy_count || 1);
+    const [bogoGet, setBogoGet] = useState<number>(promoCode.bogo_get_count || 1);
+    const [allCart, setAllCart] = useState<boolean>(promoCode.all_cart);
+    const [selectedProducts, setSelectedProducts] = useState<string[]>(promoCode.eligible_product_slugs || []);
     const [searchTerm, setSearchTerm] = useState<string>("");
+
     // Customer restriction state
-    const [allCustomers, setAllCustomers] = useState<boolean>(true);
-    const [selectedCustomerIds, setSelectedCustomerIds] = useState<number[]>([]);
+    const [allCustomers, setAllCustomers] = useState<boolean>(!promoCode.eligible_customer_ids?.length);
+    const [selectedCustomerIds, setSelectedCustomerIds] = useState<number[]>(promoCode.eligible_customer_ids || []);
     const [customerSearchTerm, setCustomerSearchTerm] = useState<string>("");
-    // Time validity state
-    const [validFrom, setValidFrom] = useState<string>("");
-    const [validUntil, setValidUntil] = useState<string>("");
+
+    // Time validity state - convert UTC to local for display
+    const toLocalDatetimeString = (isoString: string | undefined) => {
+        if (!isoString) return "";
+        const date = new Date(isoString);
+        // Format as YYYY-MM-DDTHH:mm for datetime-local input
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    };
+    const [validFrom, setValidFrom] = useState<string>(toLocalDatetimeString(promoCode.valid_from));
+    const [validUntil, setValidUntil] = useState<string>(toLocalDatetimeString(promoCode.valid_until));
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -49,7 +64,8 @@ export default function CreatePromoCodeForm({ products, customers = [] }: Create
                 return new Date(dateStr).toISOString();
             };
 
-            const result = await createPromoCodeAction({
+            const result = await updatePromoCodeAction({
+                id: promoCode.id,
                 code,
                 is_bogo: isBogo,
                 percentage_off: isBogo ? 0 : percentageOff,
@@ -67,15 +83,16 @@ export default function CreatePromoCodeForm({ products, customers = [] }: Create
                 router.push("/admin/promo-codes");
                 router.refresh();
             } else {
-                alert(result.error || t("failedToCreatePromo"));
+                alert(result.error || t("failedToUpdatePromo"));
             }
         } catch (error) {
-            console.error("Failed to create promo code:", error);
-            alert(t("failedToCreatePromo"));
+            console.error("Failed to update promo code:", error);
+            alert(t("failedToUpdatePromo"));
         } finally {
             setIsSubmitting(false);
         }
     };
+
     const toggleProduct = (slug: string) => {
         setSelectedProducts(prev =>
             prev.includes(slug)
@@ -123,8 +140,8 @@ export default function CreatePromoCodeForm({ products, customers = [] }: Create
                         <ArrowLeft className="h-5 w-5 text-gray-500" />
                     </Link>
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-900">{t("createPromoCode")}</h1>
-                        <p className="text-sm text-gray-500">{t("addPromoCodeDesc")}</p>
+                        <h1 className="text-2xl font-bold text-gray-900">{t("editPromoCode") || "Edit Promo Code"}</h1>
+                        <p className="text-sm text-gray-500">{t("editPromoCodeDesc") || "Update promo code settings"}</p>
                     </div>
                 </div>
                 <button
@@ -140,7 +157,7 @@ export default function CreatePromoCodeForm({ products, customers = [] }: Create
                     ) : (
                         <span className="flex items-center">
                             <Save className="h-4 w-4 mx-2" />
-                            {t("createCode")}
+                            {t("saveChanges") || "Save Changes"}
                         </span>
                     )}
                 </button>
@@ -168,7 +185,6 @@ export default function CreatePromoCodeForm({ products, customers = [] }: Create
                                 placeholder={t("promoCodePlaceholder")}
                                 className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all uppercase font-mono tracking-wider"
                             />
-                            <p className="text-xs text-gray-500 mt-1">{t("promoCodeHelp")}</p>
                         </div>
 
                         <div className="pt-4 border-t border-gray-100">
@@ -195,7 +211,6 @@ export default function CreatePromoCodeForm({ products, customers = [] }: Create
                                     <label className="block text-sm font-medium text-purple-900 mb-1">{t("buyQuantity")}</label>
                                     <input
                                         type="text" inputMode="numeric" pattern="[0-9]*"
-
                                         min="1"
                                         value={bogoBuy}
                                         onChange={(e) => setBogoBuy(parseInt(e.target.value))}
@@ -206,7 +221,6 @@ export default function CreatePromoCodeForm({ products, customers = [] }: Create
                                     <label className="block text-sm font-medium text-purple-900 mb-1">{t("getQuantity")}</label>
                                     <input
                                         type="text" inputMode="numeric" pattern="[0-9]*"
-
                                         min="1"
                                         value={bogoGet}
                                         onChange={(e) => setBogoGet(parseInt(e.target.value))}
@@ -220,7 +234,6 @@ export default function CreatePromoCodeForm({ products, customers = [] }: Create
                                 <div className="relative">
                                     <input
                                         type="text" inputMode="numeric"
-
                                         required
                                         value={percentageOff ?? "0"}
                                         onChange={(e) => setPercentageOff(parseFloat(e.target.value === '' ? "0" : e.target.value) ?? 0)}
@@ -230,16 +243,14 @@ export default function CreatePromoCodeForm({ products, customers = [] }: Create
                                 </div>
                             </div>
                         )}
-                        <div className="flex items-center gap-2">
 
+                        <div className="flex items-center gap-2">
                             {t("freeShipping")}
                             <button
                                 type="button"
                                 onClick={() => setFreeShipping(!freeShipping)}
-                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${freeShipping ? 'bg-primary-600' : 'bg-gray-200'
-                                    }`}
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${freeShipping ? 'bg-primary-600' : 'bg-gray-200'}`}
                             >
-
                                 <span
                                     className={`${i18n.dir() === "rtl" ? freeShipping ? '-translate-x-1' : '-translate-x-6'
                                         : freeShipping ? 'translate-x-6' : 'translate-x-1'
@@ -250,7 +261,10 @@ export default function CreatePromoCodeForm({ products, customers = [] }: Create
 
                         {/* Time Validity Section */}
                         <div className="pt-4 border-t border-gray-100">
-                            <h3 className="text-sm font-medium text-gray-900 mb-3">{t("timeValidity") || "Time Validity (Optional)"}</h3>
+                            <h3 className="text-sm font-medium text-gray-900 mb-3 flex items-center gap-2">
+                                <Calendar className="h-4 w-4 text-primary-600" />
+                                {t("timeValidity") || "Time Validity (Optional)"}
+                            </h3>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">{t("validFrom") || "Valid From"}</label>
@@ -260,7 +274,6 @@ export default function CreatePromoCodeForm({ products, customers = [] }: Create
                                         onChange={(e) => setValidFrom(e.target.value)}
                                         className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none text-sm"
                                     />
-                                    <p className="text-xs text-gray-500 mt-1">{t("validFromDesc") || "Leave empty for immediate activation"}</p>
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">{t("validUntil") || "Valid Until"}</label>
@@ -270,7 +283,6 @@ export default function CreatePromoCodeForm({ products, customers = [] }: Create
                                         onChange={(e) => setValidUntil(e.target.value)}
                                         className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none text-sm"
                                     />
-                                    <p className="text-xs text-gray-500 mt-1">{t("validUntilDesc") || "Leave empty for no expiration"}</p>
                                 </div>
                             </div>
                         </div>
@@ -360,101 +372,99 @@ export default function CreatePromoCodeForm({ products, customers = [] }: Create
                     </motion.div>
                 </div>
 
-                {/* Right Column - Product Selection (Conditional) */}
-                {!allCart && (
-                    <motion.div
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.3 }}
-                        className="lg:col-span-1 bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col h-[600px]"
-                    >
-                        <div className="p-4 border-b border-gray-100">
-                            <h3 className="font-semibold text-gray-900 mb-2">{t("selectProducts")}</h3>
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                <input
-                                    type="text"
-                                    placeholder={t("searchProducts")}
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-                                />
-                            </div>
-                        </div>
+                {/* Right Column - Selection Panels */}
+                {(!allCart || !allCustomers) && (
+                    <div className="lg:col-span-1 space-y-6">
+                        {/* Product Selection Panel */}
+                        {!allCart && (
+                            <motion.div
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: 0.3 }}
+                                className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col h-[400px]"
+                            >
+                                <div className="p-4 border-b border-gray-100">
+                                    <h3 className="font-semibold text-gray-900 mb-2">{t("selectProducts")}</h3>
+                                    <div className="relative">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                        <input
+                                            type="text"
+                                            placeholder={t("searchProducts")}
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                            className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                                        />
+                                    </div>
+                                </div>
 
-                        <div className="flex-1 overflow-y-auto p-2 space-y-1">
-                            {filteredProducts.map(product => (
-                                <div key={product.variant_id ?? product.product_id} className="space-y-1">
-                                    <div
-                                        onClick={() => toggleProduct(product.slug)}
-                                        className={`flex items-center p-2 rounded-lg cursor-pointer text-sm ${selectedProducts.includes(product.slug) ? 'bg-primary-50 text-primary-900' : 'hover:bg-gray-50 text-gray-700'}`}
-                                    >
-                                        <div className={`w-4 h-4 rounded border flex items-center justify-center mr-3 transition-colors ${selectedProducts.includes(product.slug) ? 'bg-primary-600 border-primary-600' : 'border-gray-300 bg-white'}`}>
-                                            {selectedProducts.includes(product.slug) && <Check className="h-3 w-3 text-white" />}
-                                        </div>
-                                        <div className="flex-1">
+                                <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                                    {filteredProducts.map(product => (
+                                        <div
+                                            key={product.variant_id ?? product.product_id}
+                                            onClick={() => toggleProduct(product.slug)}
+                                            className={`flex items-center p-2 rounded-lg cursor-pointer text-sm ${selectedProducts.includes(product.slug) ? 'bg-primary-50 text-primary-900' : 'hover:bg-gray-50 text-gray-700'}`}
+                                        >
+                                            <div className={`w-4 h-4 rounded border flex items-center justify-center mr-3 transition-colors ${selectedProducts.includes(product.slug) ? 'bg-primary-600 border-primary-600' : 'border-gray-300 bg-white'}`}>
+                                                {selectedProducts.includes(product.slug) && <Check className="h-3 w-3 text-white" />}
+                                            </div>
                                             <span className="font-medium">{i18n.language === 'ar' ? product.name_ar : product.name_en}</span>
-
                                         </div>
-                                    </div>
-
+                                    ))}
                                 </div>
-                            ))}
-                        </div>
 
-                        <div className="p-4 border-t border-gray-100 bg-gray-50 text-xs text-gray-500">
-                            {t("productsSelected", { count: selectedProducts.length })}
-                        </div>
-                    </motion.div>
-                )}
+                                <div className="p-4 border-t border-gray-100 bg-gray-50 text-xs text-gray-500">
+                                    {t("productsSelected", { count: selectedProducts.length })}
+                                </div>
+                            </motion.div>
+                        )}
 
-                {/* Customer Selection Panel (Conditional) */}
-                {!allCustomers && (
-                    <motion.div
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.35 }}
-                        className="lg:col-span-1 bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col h-[600px]"
-                    >
-                        <div className="p-4 border-b border-gray-100">
-                            <h3 className="font-semibold text-gray-900 mb-2">{t("selectCustomers") || "Select Customers"}</h3>
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                <input
-                                    type="text"
-                                    placeholder={t("searchCustomers") || "Search customers..."}
-                                    value={customerSearchTerm}
-                                    onChange={(e) => setCustomerSearchTerm(e.target.value)}
-                                    className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="flex-1 overflow-y-auto p-2 space-y-1">
-                            {filteredCustomers.map(customer => (
-                                <div key={customer.id} className="space-y-1">
-                                    <div
-                                        onClick={() => toggleCustomer(customer.id)}
-                                        className={`flex items-center p-2 rounded-lg cursor-pointer text-sm ${selectedCustomerIds.includes(customer.id) ? 'bg-primary-50 text-primary-900' : 'hover:bg-gray-50 text-gray-700'}`}
-                                    >
-                                        <div className={`w-4 h-4 rounded border flex items-center justify-center mr-3 transition-colors ${selectedCustomerIds.includes(customer.id) ? 'bg-primary-600 border-primary-600' : 'border-gray-300 bg-white'}`}>
-                                            {selectedCustomerIds.includes(customer.id) && <Check className="h-3 w-3 text-white" />}
-                                        </div>
-                                        <div className="flex-1">
-                                            <span className="font-medium block">{customer.name || "Unknown"}</span>
-                                            <span className="text-xs text-gray-500">{customer.email || customer.phone?.[0] || "-"}</span>
-                                        </div>
+                        {/* Customer Selection Panel */}
+                        {!allCustomers && (
+                            <motion.div
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: 0.35 }}
+                                className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col h-[400px]"
+                            >
+                                <div className="p-4 border-b border-gray-100">
+                                    <h3 className="font-semibold text-gray-900 mb-2">{t("selectCustomers") || "Select Customers"}</h3>
+                                    <div className="relative">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                        <input
+                                            type="text"
+                                            placeholder={t("searchCustomers") || "Search customers..."}
+                                            value={customerSearchTerm}
+                                            onChange={(e) => setCustomerSearchTerm(e.target.value)}
+                                            className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                                        />
                                     </div>
                                 </div>
-                            ))}
-                        </div>
 
-                        <div className="p-4 border-t border-gray-100 bg-gray-50 text-xs text-gray-500">
-                            {t("customersSelected", { count: selectedCustomerIds.length }) || `${selectedCustomerIds.length} customers selected`}
-                        </div>
-                    </motion.div>
+                                <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                                    {filteredCustomers.map(customer => (
+                                        <div
+                                            key={customer.id}
+                                            onClick={() => toggleCustomer(customer.id)}
+                                            className={`flex items-center p-2 rounded-lg cursor-pointer text-sm ${selectedCustomerIds.includes(customer.id) ? 'bg-primary-50 text-primary-900' : 'hover:bg-gray-50 text-gray-700'}`}
+                                        >
+                                            <div className={`w-4 h-4 rounded border flex items-center justify-center mr-3 transition-colors ${selectedCustomerIds.includes(customer.id) ? 'bg-primary-600 border-primary-600' : 'border-gray-300 bg-white'}`}>
+                                                {selectedCustomerIds.includes(customer.id) && <Check className="h-3 w-3 text-white" />}
+                                            </div>
+                                            <div className="flex-1">
+                                                <span className="font-medium block">{customer.name || "Unknown"}</span>
+                                                <span className="text-xs text-gray-500">{customer.email || customer.phone?.[0] || "-"}</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className="p-4 border-t border-gray-100 bg-gray-50 text-xs text-gray-500">
+                                    {t("customersSelected", { count: selectedCustomerIds.length }) || `${selectedCustomerIds.length} customers selected`}
+                                </div>
+                            </motion.div>
+                        )}
+                    </div>
                 )}
-
             </div>
         </motion.form>
     );

@@ -8,7 +8,8 @@ export interface ProfileView {
     address?: ViewAddress[];
     created_at: string;
     role: string | null;
-
+    total_orders?: number;
+    has_account?: boolean;
 }
 
 export interface ViewAddress {

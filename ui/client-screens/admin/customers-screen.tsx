@@ -1,7 +1,7 @@
 'use client';
 
 import { ProfileView } from "@/domain/entities/views/shop/profileView";
-import { Search, Mail, Phone, Calendar, User, MapPin } from "lucide-react";
+import { Search, Mail, Phone, Calendar, User, MapPin, UserCheck, ShoppingBag } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
@@ -12,36 +12,67 @@ export function CustomersScreen({ allCustomers }: { allCustomers: ProfileView[] 
     const [filters, setFilters] = useState({
         search: "",
         excludeMembers: true,
+        customerType: "all" as "all" | "withAccount" | "guestOnly",
     });
     const [customers, setCustomers] = useState(allCustomers);
 
-    useEffect(() => {
-        if (filters.excludeMembers) {
-            setCustomers(allCustomers?.filter((customer) => customer.role === null));
-        } else {
-            setCustomers(allCustomers);
+    // Check if customer has an account vs guest (made order without account)
+    // Uses has_account field from database if available, otherwise falls back to email check
+    const hasAccount = (customer: ProfileView) => {
+        // If has_account is explicitly set, use it
+        if (customer.has_account !== undefined) {
+            return customer.has_account;
         }
-    }, [filters.excludeMembers, allCustomers]);
+        // Fallback: check if they have an email (registered users typically have email)
+        return !!(customer.email && customer.email.trim() !== "");
+    };
+
+    // Filter out "Unknown" customers with no useful data
+    const isValidCustomer = (customer: ProfileView) => {
+        const hasName = customer.name && customer.name.trim() !== "" && customer.name !== "Unknown";
+        const hasEmail = customer.email && customer.email.trim() !== "";
+        const hasOrders = (customer.total_orders ?? 0) > 0;
+        const hasPhone = customer.phone && customer.phone.some(p => p && p.trim() !== "");
+        // Customer is valid if they have orders, or have (name or email) and orders/phone
+        // Show ONLY customers with orders OR customers with accounts
+        return hasOrders || hasEmail;
+    };
+
+    useEffect(() => {
+        let filtered = allCustomers?.filter(isValidCustomer) || [];
+
+        // Filter by exclude members
+        if (filters.excludeMembers) {
+            filtered = filtered.filter((customer) => customer.role === null);
+        }
+
+        // Filter by customer type
+        if (filters.customerType === "withAccount") {
+            filtered = filtered.filter(hasAccount);
+        } else if (filters.customerType === "guestOnly") {
+            filtered = filtered.filter(c => !hasAccount(c));
+        }
+
+        // Apply search filter
+        if (filters.search) {
+            const searchValue = filters.search.toLowerCase();
+            filtered = filtered.filter((customer: ProfileView) => {
+                if (customer.name && customer.name.toLowerCase().includes(searchValue)) return true;
+                if (customer.email && customer.email.toLowerCase().includes(searchValue)) return true;
+                if (customer.phone?.some(p => p?.toLowerCase().includes(searchValue))) return true;
+                return false;
+            });
+        }
+
+        // Sort by created_at (newest first)
+        filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+        setCustomers(filtered);
+    }, [filters.excludeMembers, filters.customerType, filters.search, allCustomers]);
 
     const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const searchValue = e.target.value;
-        setFilters({ ...filters, search: searchValue });
-
-        if (searchValue === "") {
-            setCustomers(filters.excludeMembers ? allCustomers?.filter(c => c.role === null) : allCustomers);
-            return;
-        }
-
-        const baseCustomers = filters.excludeMembers ? allCustomers?.filter(c => c.role === null) : allCustomers;
-
-        const filtered = baseCustomers?.filter((customer: ProfileView) => {
-            if (customer.name && customer.name.toLowerCase().includes(searchValue.toLowerCase())) return true;
-            if (customer.email && customer.email.toLowerCase().includes(searchValue.toLowerCase())) return true;
-            if (customer.phone.some(p => p.toLowerCase().includes(searchValue.toLowerCase()))) return true;
-            return false;
-        });
-        setCustomers(filtered);
-    }
+        setFilters({ ...filters, search: e.target.value });
+    };
 
     const columns: GridColDef[] = [
         {
@@ -58,14 +89,43 @@ export function CustomersScreen({ allCustomers }: { allCustomers: ProfileView[] 
                     </div>
                     <div>
                         <div className="text-sm font-medium text-gray-900">
-                            {params.row.name || "Unknown"}
+                            {params.row.name || t("guest") || "Guest"}
                         </div>
                         <div className="text-xs text-gray-500 font-mono">
-                            {String(params.row.id).substring(0, 8)}...
+                            #{params.row.id}
                         </div>
                     </div>
                 </div>
             )
+        },
+        {
+            field: "customerType",
+            headerName: t("type") || "Type",
+            flex: 1,
+            minWidth: 130,
+            renderCell: (params: GridRenderCellParams) => {
+                const isRegistered = hasAccount(params.row);
+                return (
+                    <div className="flex items-center h-full">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full ${isRegistered
+                            ? "bg-emerald-100 text-emerald-800"
+                            : "bg-orange-100 text-orange-800"
+                            }`}>
+                            {isRegistered ? (
+                                <>
+                                    <UserCheck className="h-3 w-3" />
+                                    {t("registered") || "Registered"}
+                                </>
+                            ) : (
+                                <>
+                                    <ShoppingBag className="h-3 w-3" />
+                                    {t("guestOrder") || "Guest Order"}
+                                </>
+                            )}
+                        </span>
+                    </div>
+                );
+            }
         },
         {
             field: "contact",
@@ -117,10 +177,23 @@ export function CustomersScreen({ allCustomers }: { allCustomers: ProfileView[] 
             )
         },
         {
+            field: "total_orders",
+            headerName: t("orders") || "Orders",
+            flex: 0.8,
+            minWidth: 100,
+            renderCell: (params: GridRenderCellParams) => (
+                <div className="flex items-center h-full text-sm text-gray-900">
+                    <span className={`inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full ${(params.row.total_orders ?? 0) > 0 ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-gray-600"}`}>
+                        {params.row.total_orders ?? 0}
+                    </span>
+                </div>
+            )
+        },
+        {
             field: "created_at",
             headerName: t("memberSince"),
             flex: 1,
-            minWidth: 150,
+            minWidth: 120,
             renderCell: (params: GridRenderCellParams) => (
                 <div className="flex items-center h-full text-sm text-gray-900">
                     <Calendar className="h-3.5 w-3.5 text-gray-400 mx-2" />
@@ -129,23 +202,10 @@ export function CustomersScreen({ allCustomers }: { allCustomers: ProfileView[] 
             )
         },
         {
-            field: "role",
-            headerName: t("status"),
-            flex: 1,
-            minWidth: 120,
-            renderCell: (params: GridRenderCellParams) => (
-                <div className="flex items-center h-full">
-                    <span className={`inline-flex px-2.5 py-1 text-xs font-semibold rounded-full ${params.row.role ? "bg-purple-100 text-purple-800" : "bg-green-100 text-green-800"}`}>
-                        {params.row.role ? params.row.role : t("active")}
-                    </span>
-                </div>
-            )
-        },
-        {
             field: "actions",
             headerName: t("actions"),
-            flex: 1,
-            minWidth: 100,
+            flex: 0.8,
+            minWidth: 80,
             sortable: false,
             renderCell: (params: GridRenderCellParams) => (
                 <div className="flex items-center h-full">
@@ -169,6 +229,17 @@ export function CustomersScreen({ allCustomers }: { allCustomers: ProfileView[] 
                     <p className="text-gray-600">{t("manageCustomerBase")}</p>
                 </div>
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full md:w-auto">
+                    {/* Customer Type Filter */}
+                    <select
+                        value={filters.customerType}
+                        onChange={(e) => setFilters({ ...filters, customerType: e.target.value as any })}
+                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                    >
+                        <option value="all">{t("allCustomers") || "All Customers"}</option>
+                        <option value="withAccount">{t("registeredOnly") || "Registered Only"}</option>
+                        <option value="guestOnly">{t("guestOrdersOnly") || "Guest Orders Only"}</option>
+                    </select>
+
                     <div className="flex items-center">
                         <label htmlFor="members" className="align-text-top font-medium text-gray-700 select-none cursor-pointer" onClick={() => setFilters({ ...filters, excludeMembers: !filters.excludeMembers })}>
                             {t("excludeMembers")}
