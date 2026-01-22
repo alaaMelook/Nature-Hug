@@ -1346,4 +1346,65 @@ export class IAdminServerRepository implements AdminRepository {
             period_end: new Date(endDate)
         };
     }
+
+    async getInventoryData(): Promise<{ product_id: number; variant_id: number | null; name: string; variant_name: string | null; stock: number; price: number; }[]> {
+        console.log("[IAdminRepository] getInventoryData called.");
+
+        const items: { product_id: number; variant_id: number | null; name: string; variant_name: string | null; stock: number; price: number; }[] = [];
+
+        // Get all products
+        const { data: products, error: productsError } = await supabaseAdmin.schema('store')
+            .from('products')
+            .select('id, name_en, stock, price');
+
+        if (productsError) {
+            console.error("[IAdminRepository] getInventoryData products error:", productsError);
+            throw productsError;
+        }
+
+        // Get all variants
+        const { data: variants, error: variantsError } = await supabaseAdmin.schema('store')
+            .from('product_variants')
+            .select('id, product_id, name_en, stock, price');
+
+        if (variantsError) {
+            console.error("[IAdminRepository] getInventoryData variants error:", variantsError);
+            throw variantsError;
+        }
+
+        // Create a set of product IDs that have variants
+        const productIdsWithVariants = new Set((variants || []).map((v: any) => v.product_id));
+
+        // Add products without variants
+        for (const product of (products || [])) {
+            if (!productIdsWithVariants.has(product.id)) {
+                items.push({
+                    product_id: product.id,
+                    variant_id: null,
+                    name: product.name_en,
+                    variant_name: null,
+                    stock: product.stock || 0,
+                    price: product.price || 0
+                });
+            }
+        }
+
+        // Create a map of product names
+        const productNameMap = new Map((products || []).map((p: any) => [p.id, p.name_en]));
+
+        // Add variants
+        for (const variant of (variants || [])) {
+            items.push({
+                product_id: variant.product_id,
+                variant_id: variant.id,
+                name: productNameMap.get(variant.product_id) || 'Unknown',
+                variant_name: variant.name_en,
+                stock: variant.stock || 0,
+                price: variant.price || 0
+            });
+        }
+
+        console.log("[IAdminRepository] getInventoryData result:", items.length, "items");
+        return items;
+    }
 }

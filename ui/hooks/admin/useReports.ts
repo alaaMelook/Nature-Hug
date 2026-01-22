@@ -52,44 +52,24 @@ export async function getReportSummaryAction(startDate: string, endDate: string)
 export async function getInventoryValuationAction(): Promise<{ items: InventoryItem[], totalValue: number }> {
     try {
         const repo = new IAdminServerRepository();
-        const products = await repo.viewAllWithDetails();
+        const inventoryItems = await repo.getInventoryData();
 
         const items: InventoryItem[] = [];
         let totalValue = 0;
 
-        for (const product of products) {
-            // Main product (if no variants or has its own stock)
-            if (!product.variant_id && product.stock > 0) {
-                const value = product.stock * product.price;
+        for (const item of inventoryItems) {
+            if (item.stock > 0) {
+                const value = item.stock * item.price;
                 items.push({
-                    product_id: product.product_id,
-                    variant_id: null,
-                    name: product.name_en,
-                    variant_name: null,
-                    stock: product.stock,
-                    price: product.price,
+                    product_id: item.product_id,
+                    variant_id: item.variant_id,
+                    name: item.name,
+                    variant_name: item.variant_name,
+                    stock: item.stock,
+                    price: item.price,
                     total_value: value
                 });
                 totalValue += value;
-            }
-
-            // Product variants
-            if (product.variants && product.variants.length > 0) {
-                for (const variant of product.variants) {
-                    if (variant.stock > 0) {
-                        const value = variant.stock * variant.price;
-                        items.push({
-                            product_id: product.product_id,
-                            variant_id: variant.id,
-                            name: product.name_en,
-                            variant_name: variant.name_en,
-                            stock: variant.stock,
-                            price: variant.price,
-                            total_value: value
-                        });
-                        totalValue += value;
-                    }
-                }
             }
         }
 
@@ -102,3 +82,4 @@ export async function getInventoryValuationAction(): Promise<{ items: InventoryI
         return { items: [], totalValue: 0 };
     }
 }
+

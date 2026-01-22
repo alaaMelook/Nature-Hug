@@ -17,7 +17,8 @@ import {
   BarChart3,
   Bell,
   BellRing,
-  Loader2
+  Loader2,
+  Wallet
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
@@ -90,6 +91,15 @@ export default function AdminSidebar({
       ]
     },
     { name: t("reports"), href: "/admin/reports", icon: BarChart3 },
+    {
+      name: "Finance",
+      href: "/admin/finance",
+      icon: Wallet,
+      submenu: [
+        { name: "💰 Cashflow", href: "/admin/finance/cashflow" },
+        { name: "📁 Categories", href: "/admin/finance/cashflow-categories" },
+      ]
+    },
     { name: t("gallery"), href: "/admin/gallery", icon: Image },
   ];
 

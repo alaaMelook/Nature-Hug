@@ -356,9 +356,11 @@ export default function AdminReportsScreen() {
                                                 {inventoryData.items.map((item, index) => (
                                                     <tr key={`${item.product_id}-${item.variant_id || 'main'}-${index}`} className="hover:bg-gray-50">
                                                         <td className="px-6 py-4 whitespace-nowrap">
-                                                            <div className="text-sm font-medium text-gray-900">{item.name}</div>
+                                                            <div className="text-sm font-medium text-gray-900">
+                                                                {item.variant_name || item.name}
+                                                            </div>
                                                             {item.variant_name && (
-                                                                <div className="text-xs text-gray-500">{item.variant_name}</div>
+                                                                <div className="text-xs text-gray-500">{item.name}</div>
                                                             )}
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
