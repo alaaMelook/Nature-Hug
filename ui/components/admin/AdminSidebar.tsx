@@ -96,6 +96,7 @@ export default function AdminSidebar({
       href: "/admin/finance",
       icon: Wallet,
       submenu: [
+        { name: "📊 Business Analysis", href: "/admin/finance/business-analysis" },
         { name: "💰 Cashflow", href: "/admin/finance/cashflow" },
         { name: "📁 Categories", href: "/admin/finance/cashflow-categories" },
       ]
