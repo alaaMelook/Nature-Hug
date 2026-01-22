@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -10,7 +10,7 @@ import { Governorate } from "@/domain/entities/database/governorate";
 import { PromoCode } from "@/domain/entities/database/promoCode";
 import {
     User, Phone, Mail, MapPin, Package, Tag, Plus, Minus, X,
-    Search, ShoppingCart, Loader2, ArrowLeft, DollarSign
+    Search, ShoppingCart, Loader2, ArrowLeft, DollarSign, UserSearch, Check
 } from "lucide-react";
 import { createAdminOrderAction } from "@/ui/hooks/admin/useAdminCreateOrder";
 
@@ -18,6 +18,16 @@ interface OrderItem {
     product: ProductView;
     quantity: number;
     unitPrice: number; // editable
+}
+
+interface CustomerSearchResult {
+    type: 'registered' | 'guest';
+    id: number | null;
+    name: string;
+    phone: string;
+    phone2: string;
+    email: string;
+    addresses: { address: string; governorate_slug: string }[];
 }
 
 interface AdminCreateOrderScreenProps {
@@ -29,6 +39,13 @@ interface AdminCreateOrderScreenProps {
 export function AdminCreateOrderScreen({ products, governorates, promoCodes }: AdminCreateOrderScreenProps) {
     const { t, i18n } = useTranslation();
     const router = useRouter();
+
+    // Customer Search State
+    const [customerSearchQuery, setCustomerSearchQuery] = useState("");
+    const [customerSearchResults, setCustomerSearchResults] = useState<CustomerSearchResult[]>([]);
+    const [showCustomerSearch, setShowCustomerSearch] = useState(false);
+    const [searchingCustomers, setSearchingCustomers] = useState(false);
+    const [selectedCustomer, setSelectedCustomer] = useState<CustomerSearchResult | null>(null);
 
     // Customer Info State
     const [customerName, setCustomerName] = useState("");
@@ -52,6 +69,68 @@ export function AdminCreateOrderScreen({ products, governorates, promoCodes }: A
 
     // UI State
     const [loading, setLoading] = useState(false);
+
+    // Customer Search with debounce
+    useEffect(() => {
+        const searchCustomers = async () => {
+            if (customerSearchQuery.length < 2) {
+                setCustomerSearchResults([]);
+                return;
+            }
+
+            setSearchingCustomers(true);
+            try {
+                const res = await fetch(`/api/admin/customers/search?q=${encodeURIComponent(customerSearchQuery)}`);
+                const data = await res.json();
+                if (Array.isArray(data)) {
+                    setCustomerSearchResults(data);
+                }
+            } catch (error) {
+                console.error("Customer search error:", error);
+            } finally {
+                setSearchingCustomers(false);
+            }
+        };
+
+        const timer = setTimeout(searchCustomers, 300);
+        return () => clearTimeout(timer);
+    }, [customerSearchQuery]);
+
+    // Handle customer selection
+    const handleSelectCustomer = (customer: CustomerSearchResult) => {
+        setSelectedCustomer(customer);
+        setCustomerName(customer.name);
+        setCustomerPhone(customer.phone);
+        setCustomerPhone2(customer.phone2 || "");
+        setCustomerEmail(customer.email || "");
+
+        // Set address from first address if available
+        if (customer.addresses && customer.addresses.length > 0) {
+            const addr = customer.addresses[0];
+            setCustomerAddress(addr.address || "");
+
+            // Find matching governorate
+            const gov = governorates.find(g => g.slug === addr.governorate_slug);
+            if (gov) {
+                setSelectedGovernorate(gov);
+            }
+        }
+
+        setShowCustomerSearch(false);
+        setCustomerSearchQuery("");
+        toast.success(`Customer "${customer.name}" selected`);
+    };
+
+    // Clear selected customer
+    const clearSelectedCustomer = () => {
+        setSelectedCustomer(null);
+        setCustomerName("");
+        setCustomerPhone("");
+        setCustomerPhone2("");
+        setCustomerEmail("");
+        setCustomerAddress("");
+        setSelectedGovernorate(null);
+    };
 
     // Filtered Products for Search
     const filteredProducts = useMemo(() => {
@@ -238,9 +317,88 @@ export function AdminCreateOrderScreen({ products, governorates, promoCodes }: A
                 <div className="lg:col-span-2 space-y-6">
                     {/* Customer Information */}
                     <div className="bg-white rounded-xl shadow-sm border p-6">
-                        <h3 className="text-sm font-semibold text-gray-500 uppercase mb-4 flex items-center gap-2">
-                            <User size={16} /> {t("adminOrders.customerInfo")}
-                        </h3>
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-sm font-semibold text-gray-500 uppercase flex items-center gap-2">
+                                <User size={16} /> {t("adminOrders.customerInfo")}
+                            </h3>
+                            <button
+                                type="button"
+                                onClick={() => setShowCustomerSearch(!showCustomerSearch)}
+                                className="flex items-center gap-2 px-3 py-1.5 bg-primary-50 text-primary-700 rounded-lg hover:bg-primary-100 transition-colors text-sm font-medium"
+                            >
+                                <UserSearch size={16} />
+                                Search Customer
+                            </button>
+                        </div>
+
+                        {/* Customer Search Dropdown */}
+                        {showCustomerSearch && (
+                            <div className="mb-4 p-4 bg-gray-50 rounded-lg border">
+                                <div className="relative">
+                                    <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                                    <input
+                                        type="text"
+                                        value={customerSearchQuery}
+                                        onChange={(e) => setCustomerSearchQuery(e.target.value)}
+                                        className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none"
+                                        placeholder="Search by name, phone, or email..."
+                                        autoFocus
+                                    />
+                                    {searchingCustomers && (
+                                        <Loader2 className="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 animate-spin" />
+                                    )}
+                                </div>
+
+                                {/* Search Results */}
+                                {customerSearchResults.length > 0 && (
+                                    <div className="mt-2 max-h-48 overflow-y-auto space-y-1">
+                                        {customerSearchResults.map((customer, idx) => (
+                                            <button
+                                                key={`${customer.type}-${customer.phone}-${idx}`}
+                                                onClick={() => handleSelectCustomer(customer)}
+                                                className="w-full flex items-center justify-between p-3 hover:bg-white rounded-lg transition-colors text-left border border-transparent hover:border-gray-200"
+                                            >
+                                                <div>
+                                                    <p className="font-medium text-gray-900">{customer.name || 'No name'}</p>
+                                                    <p className="text-xs text-gray-500">
+                                                        {customer.phone} {customer.email && `• ${customer.email}`}
+                                                    </p>
+                                                </div>
+                                                <span className={`text-xs px-2 py-0.5 rounded-full ${customer.type === 'registered'
+                                                        ? 'bg-green-100 text-green-700'
+                                                        : 'bg-gray-100 text-gray-600'
+                                                    }`}>
+                                                    {customer.type === 'registered' ? 'Account' : 'Guest'}
+                                                </span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {customerSearchQuery.length >= 2 && !searchingCustomers && customerSearchResults.length === 0 && (
+                                    <p className="mt-2 text-sm text-gray-500 text-center py-2">No customers found</p>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Selected Customer Indicator */}
+                        {selectedCustomer && (
+                            <div className="mb-4 flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                                <div className="flex items-center gap-2">
+                                    <Check className="w-4 h-4 text-green-600" />
+                                    <span className="text-sm text-green-700">
+                                        <strong>{selectedCustomer.name}</strong> selected ({selectedCustomer.type === 'registered' ? 'Account' : 'Guest'})
+                                    </span>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={clearSelectedCustomer}
+                                    className="text-red-500 hover:text-red-700"
+                                >
+                                    <X size={16} />
+                                </button>
+                            </div>
+                        )}
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
