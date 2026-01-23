@@ -12,7 +12,7 @@ export async function GET(request: Request) {
     }
 
     try {
-        // Get stats from RPC
+        // Get base stats from RPC
         const { data: baseStats, error: rpcError } = await supabaseAdmin
             .schema('admin')
             .rpc('get_dashboard_stats', { p_start_date: startDate, p_end_date: endDate })
@@ -23,91 +23,118 @@ export async function GET(request: Request) {
             throw rpcError;
         }
 
-        // Custom Customer Calculation using order_details view (which has customer_email)
-        // Fetch all registered customers
-        const { data: customersData, error: custError } = await supabaseAdmin
-            .schema('store')
-            .from('customers')
-            .select('email, created_at');
-
-        // Use order_details view instead of orders table
-        const { data: ordersData, error: ordersError } = await supabaseAdmin
+        // === CUSTOMER COUNT ===
+        // Use order_details view which has all the proper data
+        // Get ALL orders with customer info
+        const { data: allOrders, error: ordersError } = await supabaseAdmin
             .schema('admin')
             .from('order_details')
-            .select('customer_email, order_date')
-            .order('order_date', { ascending: true });
+            .select('customer_email, phone_numbers, order_date');
 
-        if (custError) throw custError;
-        if (ordersError) throw ordersError;
+        if (ordersError) {
+            console.error("Orders error:", ordersError);
+            throw ordersError;
+        }
 
-        const customers = customersData || [];
-        const orders = ordersData || [];
+        // Count unique customers by email OR first phone number
+        const uniqueCustomers = new Set<string>();
 
-        // Map of First Seen Date for every unique email
-        const emailFirstSeen = new Map<string, string>();
+        (allOrders || []).forEach(order => {
+            // Use email if available, otherwise use first phone
+            const identifier = order.customer_email?.trim().toLowerCase()
+                || (order.phone_numbers && order.phone_numbers[0]?.trim());
 
-        // Populate with registration dates
-        customers.forEach(c => {
-            if (c.email) {
-                const email = c.email.toLowerCase().trim();
-                emailFirstSeen.set(email, c.created_at);
+            if (identifier) {
+                uniqueCustomers.add(identifier);
             }
         });
 
-        // Populate/Update with order dates from order_details view
-        orders.forEach(o => {
-            if (o.customer_email) {
-                const email = o.customer_email.toLowerCase().trim();
-                const currentFirstSeen = emailFirstSeen.get(email);
+        const totalCustomers = uniqueCustomers.size;
 
-                if (!currentFirstSeen || new Date(o.order_date) < new Date(currentFirstSeen)) {
-                    emailFirstSeen.set(email, o.order_date);
-                }
-            }
-        });
-
-        const totalUniqueCustomers = emailFirstSeen.size;
-
-        // Count new customers in period
-        let newCustomersCount = 0;
+        // === CUSTOMERS IN PERIOD ===
         const start = new Date(startDate);
         const end = new Date(endDate);
         end.setHours(23, 59, 59, 999);
 
-        emailFirstSeen.forEach((dateStr) => {
-            const seenDate = new Date(dateStr);
-            if (seenDate >= start && seenDate <= end) {
-                newCustomersCount++;
+        // Track unique customers per period by their first order date
+        const customerFirstOrderDate = new Map<string, Date>();
+
+        (allOrders || []).forEach(order => {
+            const identifier = order.customer_email?.trim().toLowerCase()
+                || (order.phone_numbers && order.phone_numbers[0]?.trim());
+
+            if (identifier) {
+                const orderDate = new Date(order.order_date);
+                const existing = customerFirstOrderDate.get(identifier);
+
+                if (!existing || orderDate < existing) {
+                    customerFirstOrderDate.set(identifier, orderDate);
+                }
             }
         });
 
-        // Calculate Change for Customers
-        let prevCustomersCount = 0;
+        // Count new customers in current period (first order in this period)
+        let periodCustomers = 0;
+        customerFirstOrderDate.forEach((firstOrderDate) => {
+            if (firstOrderDate >= start && firstOrderDate <= end) {
+                periodCustomers++;
+            }
+        });
+
+        // Count customers in previous period
         const periodLength = end.getTime() - start.getTime();
         const prevStart = new Date(start.getTime() - periodLength);
-        const prevEnd = new Date(start.getTime());
+        const prevEnd = new Date(start.getTime() - 1);
 
-        emailFirstSeen.forEach((dateStr) => {
-            const seenDate = new Date(dateStr);
-            if (seenDate >= prevStart && seenDate < prevEnd) {
-                prevCustomersCount++;
+        let prevPeriodCustomers = 0;
+        customerFirstOrderDate.forEach((firstOrderDate) => {
+            if (firstOrderDate >= prevStart && firstOrderDate <= prevEnd) {
+                prevPeriodCustomers++;
             }
         });
 
+        // Calculate change
         let customersChange = "0";
-        if (prevCustomersCount > 0) {
-            const change = ((newCustomersCount - prevCustomersCount) / prevCustomersCount) * 100;
-            customersChange = change.toFixed(1);
-        } else {
-            customersChange = newCustomersCount > 0 ? "100" : "0";
+        if (prevPeriodCustomers > 0) {
+            const change = periodCustomers - prevPeriodCustomers;
+            customersChange = (change >= 0 ? "+" : "") + String(change);
+        } else if (periodCustomers > 0) {
+            customersChange = "+" + String(periodCustomers);
         }
 
-        // Merge results
+        // === CONVERSION RATE ===
+        // All customers in this view have placed orders, so conversion = 100%
+        // But if we have registered customers who haven't ordered, we need to factor that in
+        // For now, since we're counting people who ordered, conversion rate = 100%
+        // A more meaningful metric would be: returning customers / total customers
+
+        // Calculate repeat customer rate instead
+        const customersWithMultipleOrders = new Map<string, number>();
+        (allOrders || []).forEach(order => {
+            const identifier = order.customer_email?.trim().toLowerCase()
+                || (order.phone_numbers && order.phone_numbers[0]?.trim());
+
+            if (identifier) {
+                customersWithMultipleOrders.set(identifier, (customersWithMultipleOrders.get(identifier) || 0) + 1);
+            }
+        });
+
+        let repeatCustomers = 0;
+        customersWithMultipleOrders.forEach((orderCount) => {
+            if (orderCount > 1) repeatCustomers++;
+        });
+
+        const conversionRate = totalCustomers > 0
+            ? ((repeatCustomers / totalCustomers) * 100).toFixed(1)
+            : "0";
+
+        // Merge with RPC results
         const stats: DashboardStats = {
             ...baseStats as DashboardStats,
-            total_customers: totalUniqueCustomers,
-            current_period_customers: newCustomersCount,
-            customers_change: customersChange as string
+            total_customers: totalCustomers,
+            current_period_customers: periodCustomers,
+            customers_change: customersChange,
+            current_period_conversion_rate: conversionRate
         };
 
         return NextResponse.json(stats);
