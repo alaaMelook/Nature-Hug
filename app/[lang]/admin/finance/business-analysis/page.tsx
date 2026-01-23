@@ -45,7 +45,7 @@ interface AnalysisData {
 }
 
 type PeriodType = 'custom' | 'thisMonth' | 'lastMonth' | 'thisQuarter' | 'lastQuarter' | 'thisYear' | 'lastYear';
-type ModalType = 'revenue' | 'cogs' | 'expenses' | 'cashInflow' | 'cashOutflow' | null;
+type ModalType = 'revenue' | 'cogs' | 'expenses' | 'cashInflow' | 'cashOutflow' | 'grossProfit' | 'netProfit' | 'grossMargin' | 'netCashFlow' | null;
 
 export default function BusinessAnalysisPage() {
     const [data, setData] = useState<AnalysisData | null>(null);
@@ -173,7 +173,114 @@ export default function BusinessAnalysisPage() {
     };
 
     const DetailModal = () => {
-        if (!activeModal || !data?.details) return null;
+        if (!activeModal || !data) return null;
+
+        // For calculated metrics, show summary breakdown
+        if (activeModal === 'grossProfit' || activeModal === 'netProfit' || activeModal === 'grossMargin' || activeModal === 'netCashFlow') {
+            return (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[80vh] overflow-hidden">
+                        <div className="flex items-center justify-between p-4 border-b">
+                            <h2 className="text-lg font-bold text-gray-900">
+                                {activeModal === 'grossProfit' && '📊 Gross Profit Breakdown'}
+                                {activeModal === 'netProfit' && '💵 Net Profit Breakdown'}
+                                {activeModal === 'grossMargin' && '📈 Gross Margin Details'}
+                                {activeModal === 'netCashFlow' && '💰 Net Cash Flow Breakdown'}
+                            </h2>
+                            <button onClick={() => setActiveModal(null)} className="p-2 hover:bg-gray-100 rounded-lg">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            {activeModal === 'grossProfit' && (
+                                <>
+                                    <div className="flex justify-between items-center py-3 border-b">
+                                        <span className="text-gray-600">Revenue (Total Sales)</span>
+                                        <span className="font-semibold text-green-600">{formatCurrency(data.revenue)}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center py-3 border-b">
+                                        <span className="text-gray-600">COGS (Cost of Goods Sold)</span>
+                                        <span className="font-semibold text-orange-600">- {formatCurrency(data.cogs)}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center py-3 bg-emerald-50 px-4 rounded-lg">
+                                        <span className="font-bold text-gray-900">Gross Profit</span>
+                                        <span className="font-bold text-emerald-600 text-xl">{formatCurrency(data.grossProfit)}</span>
+                                    </div>
+                                    <p className="text-sm text-gray-500 mt-4">💡 Gross Profit = Revenue - Cost of Goods Sold</p>
+                                </>
+                            )}
+                            {activeModal === 'netProfit' && (
+                                <>
+                                    <div className="flex justify-between items-center py-3 border-b">
+                                        <span className="text-gray-600">Revenue</span>
+                                        <span className="font-semibold text-green-600">{formatCurrency(data.revenue)}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center py-3 border-b">
+                                        <span className="text-gray-600">COGS</span>
+                                        <span className="font-semibold text-orange-600">- {formatCurrency(data.cogs)}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center py-3 border-b bg-gray-50 px-4 rounded">
+                                        <span className="font-medium text-gray-700">= Gross Profit</span>
+                                        <span className="font-semibold text-emerald-600">{formatCurrency(data.grossProfit)}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center py-3 border-b">
+                                        <span className="text-gray-600">Operating Expenses</span>
+                                        <span className="font-semibold text-red-600">- {formatCurrency(data.operatingExpenses)}</span>
+                                    </div>
+                                    <div className={`flex justify-between items-center py-3 px-4 rounded-lg ${data.netProfit >= 0 ? 'bg-blue-50' : 'bg-red-50'}`}>
+                                        <span className="font-bold text-gray-900">Net Profit</span>
+                                        <span className={`font-bold text-xl ${data.netProfit >= 0 ? 'text-blue-600' : 'text-red-600'}`}>{formatCurrency(data.netProfit)}</span>
+                                    </div>
+                                    <p className="text-sm text-gray-500 mt-4">💡 Net Profit = Gross Profit - Operating Expenses</p>
+                                </>
+                            )}
+                            {activeModal === 'grossMargin' && (
+                                <>
+                                    <div className="flex justify-between items-center py-3 border-b">
+                                        <span className="text-gray-600">Gross Profit</span>
+                                        <span className="font-semibold text-emerald-600">{formatCurrency(data.grossProfit)}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center py-3 border-b">
+                                        <span className="text-gray-600">Revenue</span>
+                                        <span className="font-semibold text-green-600">{formatCurrency(data.revenue)}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center py-3 bg-gray-100 px-4 rounded-lg">
+                                        <span className="font-bold text-gray-900">Gross Margin</span>
+                                        <span className="font-bold text-gray-800 text-2xl">
+                                            {data.revenue > 0 ? Math.round((data.grossProfit / data.revenue) * 100) : 0}%
+                                        </span>
+                                    </div>
+                                    <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+                                        <p className="text-sm text-blue-800">💡 <strong>Formula:</strong> (Gross Profit ÷ Revenue) × 100</p>
+                                        <p className="text-sm text-blue-700 mt-2">A higher gross margin indicates better profitability from core operations.</p>
+                                    </div>
+                                </>
+                            )}
+                            {activeModal === 'netCashFlow' && (
+                                <>
+                                    <div className="flex justify-between items-center py-3 border-b">
+                                        <span className="text-gray-600">Cash Inflow (Income)</span>
+                                        <span className="font-semibold text-green-600">{formatCurrency(data.cashInflow)}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center py-3 border-b">
+                                        <span className="text-gray-600">Cash Outflow (Expenses)</span>
+                                        <span className="font-semibold text-red-600">- {formatCurrency(data.cashOutflow)}</span>
+                                    </div>
+                                    <div className={`flex justify-between items-center py-3 px-4 rounded-lg ${data.cashFlow >= 0 ? 'bg-indigo-50' : 'bg-rose-50'}`}>
+                                        <span className="font-bold text-gray-900">Net Cash Flow</span>
+                                        <span className={`font-bold text-xl ${data.cashFlow >= 0 ? 'text-indigo-600' : 'text-rose-600'}`}>{formatCurrency(data.cashFlow)}</span>
+                                    </div>
+                                    <p className="text-sm text-gray-500 mt-4">💡 Net Cash Flow = Cash Inflow - Cash Outflow</p>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // For data-driven modals (original logic)
+        if (!data.details) return null;
 
         let title = '';
         let items: any[] = [];
@@ -381,6 +488,7 @@ export default function BusinessAnalysisPage() {
                                     icon={TrendingUp}
                                     color="bg-emerald-500"
                                     subtitle="Revenue - COGS"
+                                    onClick={() => setActiveModal('grossProfit')}
                                 />
                                 <MetricCard
                                     title="Net Profit"
@@ -388,6 +496,7 @@ export default function BusinessAnalysisPage() {
                                     icon={DollarSign}
                                     color={data.netProfit >= 0 ? "bg-blue-500" : "bg-red-500"}
                                     subtitle="Gross Profit - Operating Expenses"
+                                    onClick={() => setActiveModal('netProfit')}
                                 />
                             </div>
                         </div>
@@ -404,12 +513,16 @@ export default function BusinessAnalysisPage() {
                                     subtitle="From cashflow transactions"
                                     onClick={() => setActiveModal('expenses')}
                                 />
-                                <div className="bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl p-6 flex items-center justify-center">
+                                <div
+                                    className="bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl p-6 flex items-center justify-center cursor-pointer hover:from-gray-200 hover:to-gray-300 transition-all"
+                                    onClick={() => setActiveModal('grossMargin')}
+                                >
                                     <div className="text-center">
                                         <p className="text-sm text-gray-600">Gross Margin</p>
                                         <p className="text-3xl font-bold text-gray-800">
                                             {data.revenue > 0 ? Math.round((data.grossProfit / data.revenue) * 100) : 0}%
                                         </p>
+                                        <p className="text-xs text-primary-500 mt-2">Click for details →</p>
                                     </div>
                                 </div>
                             </div>
@@ -441,6 +554,7 @@ export default function BusinessAnalysisPage() {
                                     icon={Wallet}
                                     color={data.cashFlow >= 0 ? "bg-indigo-500" : "bg-rose-500"}
                                     subtitle="Inflow - Outflow"
+                                    onClick={() => setActiveModal('netCashFlow')}
                                 />
                             </div>
                         </div>
