@@ -5,6 +5,7 @@ import { Plus, Pencil, Trash2, Tag } from "lucide-react";
 interface Category {
     id: number;
     name: string;
+    exclude_from_opex: boolean;
     created_at: string;
 }
 
@@ -77,6 +78,34 @@ export default function CashflowCategoriesPage() {
         }
     };
 
+    const handleToggleExclude = async (category: Category) => {
+        const newValue = !category.exclude_from_opex;
+
+        // Optimistic update
+        setCategories(categories.map(c =>
+            c.id === category.id ? { ...c, exclude_from_opex: newValue } : c
+        ));
+
+        try {
+            const res = await fetch(`/api/admin/finance/cashflow-categories/${category.id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: category.name, exclude_from_opex: newValue }),
+            });
+
+            if (!res.ok) {
+                throw new Error("Failed to update");
+            }
+        } catch (error) {
+            console.error(error);
+            // Revert on error
+            setCategories(categories.map(c =>
+                c.id === category.id ? { ...c, exclude_from_opex: !newValue } : c
+            ));
+            alert("Failed to update status");
+        }
+    };
+
     return (
         <div className="min-h-screen bg-gray-50 p-6">
             <div className="max-w-4xl mx-auto space-y-6">
@@ -101,22 +130,31 @@ export default function CashflowCategoriesPage() {
                         <thead className="bg-gray-50 border-b">
                             <tr>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Exclude from OPEX</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200">
                             {loading ? (
                                 <tr>
-                                    <td colSpan={2} className="px-6 py-8 text-center text-gray-500">Loading...</td>
+                                    <td colSpan={3} className="px-6 py-8 text-center text-gray-500">Loading...</td>
                                 </tr>
                             ) : categories.length === 0 ? (
                                 <tr>
-                                    <td colSpan={2} className="px-6 py-8 text-center text-gray-500">No categories found. Add a new one!</td>
+                                    <td colSpan={3} className="px-6 py-8 text-center text-gray-500">No categories found. Add a new one!</td>
                                 </tr>
                             ) : (
                                 categories.map((cat) => (
                                     <tr key={cat.id} className="hover:bg-gray-50">
                                         <td className="px-6 py-4 text-sm font-medium text-gray-900">{cat.name}</td>
+                                        <td className="px-6 py-4">
+                                            <input
+                                                type="checkbox"
+                                                checked={cat.exclude_from_opex || false}
+                                                onChange={() => handleToggleExclude(cat)}
+                                                className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500 border-gray-300 cursor-pointer"
+                                            />
+                                        </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-2">
                                                 <button

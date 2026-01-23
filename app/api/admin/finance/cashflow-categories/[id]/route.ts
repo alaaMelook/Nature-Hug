@@ -11,7 +11,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
             .schema('admin')
             .from('cashflow_categories')
             .update({
-                name: body.name
+                name: body.name,
+                exclude_from_opex: body.exclude_from_opex
             })
             .eq('id', id)
             .select()

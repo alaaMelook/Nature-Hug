@@ -15,6 +15,7 @@ interface TransactionDetail {
     description: string | null;
     amount: number;
     category: string;
+    exclude_from_opex?: boolean;
 }
 
 interface COGSDetail {
@@ -297,8 +298,18 @@ export default function BusinessAnalysisPage() {
                 ];
                 break;
             case 'expenses':
+                title = '📉 Operating Expenses Breakdown';
+                items = data.details.expenses.filter((e) => !e.exclude_from_opex);
+                columns = [
+                    { key: 'date', label: 'Date' },
+                    { key: 'reference', label: 'Reference' },
+                    { key: 'category', label: 'Category' },
+                    { key: 'description', label: 'Description' },
+                    { key: 'amount', label: 'Amount' }
+                ];
+                break;
             case 'cashOutflow':
-                title = '📉 Expenses Breakdown';
+                title = '📉 Cash Outflow Breakdown';
                 items = data.details.expenses;
                 columns = [
                     { key: 'date', label: 'Date' },
@@ -358,9 +369,14 @@ export default function BusinessAnalysisPage() {
                                 </thead>
                                 <tbody className="divide-y">
                                     {items.map((item, idx) => (
-                                        <tr key={idx} className="hover:bg-gray-50">
+                                        <tr key={idx} className={`hover:bg-gray-50 ${item.exclude_from_opex && activeModal === 'cashOutflow' ? 'bg-orange-50/50' : ''}`}>
                                             {columns.map(col => (
                                                 <td key={col.key} className="px-4 py-3 text-sm text-gray-900">
+                                                    {col.key === 'category' && item.exclude_from_opex && activeModal === 'cashOutflow' && (
+                                                        <span className="block mb-1 text-[10px] text-orange-600 font-medium">
+                                                            (Excluded from OPEX)
+                                                        </span>
+                                                    )}
                                                     {col.key === 'amount' || col.key === 'grand_total' || col.key === 'materials_cost'
                                                         ? formatCurrency(item[col.key])
                                                         : col.key === 'date' || col.key === 'created_at'

@@ -131,7 +131,7 @@ export async function GET(request: Request) {
         const { data: expensesData, error: expensesError } = await supabaseAdmin
             .schema('admin')
             .from('cashflow_transactions')
-            .select('id, date, reference, description, amount, cashflow_categories(name)')
+            .select('id, date, reference, description, amount, cashflow_categories(name, exclude_from_opex)')
             .eq('type', 'expense')
             .gte('date', startDate)
             .lte('date', endDate)
@@ -141,7 +141,11 @@ export async function GET(request: Request) {
             console.error("[Business Analysis] Expenses error:", expensesError);
         }
 
-        const operatingExpenses = (expensesData || []).reduce((sum, exp) => sum + (exp.amount || 0), 0);
+        const allExpenses = expensesData || [];
+        // Operating Expenses = Expenses NOT excluded
+        const operatingExpenses = allExpenses
+            .filter(e => !(e.cashflow_categories as any)?.exclude_from_opex)
+            .reduce((sum, exp) => sum + (exp.amount || 0), 0);
 
         // 4. Calculate Cash Inflow from Cashflow (income)
         const { data: incomeData, error: incomeError } = await supabaseAdmin
@@ -158,7 +162,9 @@ export async function GET(request: Request) {
         }
 
         const cashInflow = (incomeData || []).reduce((sum, inc) => sum + (inc.amount || 0), 0);
-        const cashOutflow = operatingExpenses;
+
+        // Cash Outflow includes ALL expenses (even excluded ones like Owner Withdrawal)
+        const cashOutflow = allExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
 
         // Calculate derived metrics
         const grossProfit = revenue - cogs;
@@ -182,7 +188,8 @@ export async function GET(request: Request) {
                 cogs: cogsBreakdown,
                 expenses: (expensesData || []).map(e => ({
                     ...e,
-                    category: (e.cashflow_categories as any)?.name || 'Uncategorized'
+                    category: (e.cashflow_categories as any)?.name || 'Uncategorized',
+                    exclude_from_opex: (e.cashflow_categories as any)?.exclude_from_opex || false
                 })),
                 income: (incomeData || []).map(i => ({
                     ...i,

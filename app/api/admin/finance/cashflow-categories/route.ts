@@ -35,7 +35,8 @@ export async function POST(request: Request) {
             .schema('admin')
             .from('cashflow_categories')
             .insert({
-                name: body.name
+                name: body.name,
+                exclude_from_opex: body.exclude_from_opex || false
             })
             .select()
             .single();
