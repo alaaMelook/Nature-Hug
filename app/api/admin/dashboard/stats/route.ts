@@ -12,7 +12,7 @@ export async function GET(request: Request) {
     }
 
     try {
-        // 1. Get base stats from RPC (reusing existing logic for revenue/products/orders)
+        // Get stats from RPC
         const { data: baseStats, error: rpcError } = await supabaseAdmin
             .schema('admin')
             .rpc('get_dashboard_stats', { p_start_date: startDate, p_end_date: endDate })
@@ -23,19 +23,19 @@ export async function GET(request: Request) {
             throw rpcError;
         }
 
-        // 2. Custom Customer Calculation (Registered + Keys)
+        // Custom Customer Calculation using order_details view (which has customer_email)
         // Fetch all registered customers
         const { data: customersData, error: custError } = await supabaseAdmin
             .schema('store')
             .from('customers')
             .select('email, created_at');
 
-        // Fetch all orders (for guest emails) - USING guest_email instead of customer_email
+        // Use order_details view instead of orders table
         const { data: ordersData, error: ordersError } = await supabaseAdmin
-            .schema('store')
-            .from('orders')
-            .select('guest_email, created_at')
-            .order('created_at', { ascending: true });
+            .schema('admin')
+            .from('order_details')
+            .select('customer_email, order_date')
+            .order('order_date', { ascending: true });
 
         if (custError) throw custError;
         if (ordersError) throw ordersError;
@@ -44,10 +44,9 @@ export async function GET(request: Request) {
         const orders = ordersData || [];
 
         // Map of First Seen Date for every unique email
-        // Key: Email (lowercase), Value: First Seen Date (ISO string)
         const emailFirstSeen = new Map<string, string>();
 
-        // 1. Populate with registration dates
+        // Populate with registration dates
         customers.forEach(c => {
             if (c.email) {
                 const email = c.email.toLowerCase().trim();
@@ -55,15 +54,14 @@ export async function GET(request: Request) {
             }
         });
 
-        // 2. Populate/Update with order dates (capture guests or earlier interactions)
+        // Populate/Update with order dates from order_details view
         orders.forEach(o => {
-            if (o.guest_email) {
-                const email = o.guest_email.toLowerCase().trim();
+            if (o.customer_email) {
+                const email = o.customer_email.toLowerCase().trim();
                 const currentFirstSeen = emailFirstSeen.get(email);
 
-                // If not seen yet, OR this order is earlier than current known date
-                if (!currentFirstSeen || new Date(o.created_at) < new Date(currentFirstSeen)) {
-                    emailFirstSeen.set(email, o.created_at);
+                if (!currentFirstSeen || new Date(o.order_date) < new Date(currentFirstSeen)) {
+                    emailFirstSeen.set(email, o.order_date);
                 }
             }
         });
@@ -83,7 +81,7 @@ export async function GET(request: Request) {
             }
         });
 
-        // 3. Calculate Change for Customers
+        // Calculate Change for Customers
         let prevCustomersCount = 0;
         const periodLength = end.getTime() - start.getTime();
         const prevStart = new Date(start.getTime() - periodLength);
