@@ -106,15 +106,16 @@ export class IAdminClientRepository implements AdminRepository {
     async getDashboardMetrics(startDate: string,
         endDate: string
     ): Promise<DashboardStats> {
-        console.log("[IAdminRepository] getDashboardMetrics called.");
-        const { data, status, statusText, error } = await supabase.schema('admin')
-            .rpc('get_dashboard_stats', { p_start_date: startDate, p_end_date: endDate })
-            .single();
-        console.log("[IAdminRepository] getDashboardMetrics result:", { data, status, statusText });
-        if (error) {
-            console.error("[IAdminRepository] getDashboardMetrics error:", error);
-            throw error;
+        console.log("[IAdminRepository] getDashboardMetrics called via API.");
+        const response = await fetch(`/api/admin/dashboard/stats?startDate=${startDate}&endDate=${endDate}`);
+
+        if (!response.ok) {
+            const error = await response.json();
+            console.error("[IAdminRepository] getDashboardMetrics API error:", error);
+            throw new Error(error.error || "Failed to fetch dashboard stats");
         }
+
+        const data = await response.json();
         return data as DashboardStats;
     }
 
