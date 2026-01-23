@@ -52,6 +52,9 @@ export default function EditPromoCodeForm({ promoCode, products, customers = [] 
     };
     const [validFrom, setValidFrom] = useState<string>(toLocalDatetimeString(promoCode.valid_from));
     const [validUntil, setValidUntil] = useState<string>(toLocalDatetimeString(promoCode.valid_until));
+    // Usage & stacking state
+    const [usageLimit, setUsageLimit] = useState<string>(promoCode.usage_limit?.toString() || "");
+    const [stackingMode, setStackingMode] = useState<'additive' | 'sequential'>(promoCode.stacking_mode || 'additive');
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -77,6 +80,8 @@ export default function EditPromoCodeForm({ promoCode, products, customers = [] 
                 eligible_customer_ids: allCustomers ? [] : selectedCustomerIds,
                 valid_from: toISOString(validFrom),
                 valid_until: toISOString(validUntil),
+                usage_limit: usageLimit ? parseInt(usageLimit) : undefined,
+                stacking_mode: stackingMode,
             } as PromoCode);
 
             if (result.success) {
@@ -283,6 +288,54 @@ export default function EditPromoCodeForm({ promoCode, products, customers = [] 
                                         onChange={(e) => setValidUntil(e.target.value)}
                                         className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none text-sm"
                                     />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Usage Limit & Stacking Mode Section */}
+                        <div className="pt-4 border-t border-gray-100">
+                            <h3 className="text-sm font-medium text-gray-900 mb-3">{t("usageSettings") || "Usage Settings"}</h3>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">{t("usageLimit") || "Usage Limit"}</label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        value={usageLimit}
+                                        onChange={(e) => setUsageLimit(e.target.value)}
+                                        placeholder="∞"
+                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none text-sm"
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        {promoCode.usage_count !== undefined && `Used ${promoCode.usage_count} times. `}
+                                        {t("usageLimitDesc") || "Leave empty for unlimited"}
+                                    </p>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">{t("stackingMode") || "Stacking Mode"}</label>
+                                    <div className="flex gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setStackingMode('additive')}
+                                            className={`flex-1 px-3 py-2 text-sm rounded-lg border transition-all ${stackingMode === 'additive'
+                                                    ? 'bg-primary-100 border-primary-500 text-primary-700 font-medium'
+                                                    : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
+                                                }`}
+                                        >
+                                            {t("additive") || "Additive"}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setStackingMode('sequential')}
+                                            className={`flex-1 px-3 py-2 text-sm rounded-lg border transition-all ${stackingMode === 'sequential'
+                                                    ? 'bg-primary-100 border-primary-500 text-primary-700 font-medium'
+                                                    : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
+                                                }`}
+                                        >
+                                            {t("sequential") || "Sequential"}
+                                        </button>
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-1">{stackingMode === 'additive' ? (t("additiveDesc") || "10%+20%=30%") : (t("sequentialDesc") || "Applied one after another")}</p>
                                 </div>
                             </div>
                         </div>

@@ -4,7 +4,7 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { FlaskConicalIcon, History, Home, InfoIcon, LogIn, LogOut, Menu, PhoneCall, Settings, ShoppingBag, ShoppingCart, Store, Truck, User, X } from "lucide-react";
+import { FlaskConicalIcon, Heart, History, Home, InfoIcon, LogIn, LogOut, Menu, PhoneCall, Settings, ShoppingBag, ShoppingCart, Store, Truck, User, X } from "lucide-react";
 
 import { useTranslation } from "react-i18next";
 
@@ -45,10 +45,37 @@ export default function Navbar() {
     // Fix hydration mismatch
     const [mounted, setMounted] = useState(false);
 
+    // Wishlist count
+    const [wishlistCount, setWishlistCount] = useState(0);
+
 
     useEffect(() => {
         setMounted(true);
     }, []);
+
+    // Fetch wishlist count
+    useEffect(() => {
+        const fetchWishlistCount = async () => {
+            console.log('[Navbar] Fetching wishlist count, user:', !!user);
+            // Fetch for all logged in users
+            if (user) {
+                try {
+                    const res = await fetch('/api/wishlist');
+                    console.log('[Navbar] Wishlist API response status:', res.status);
+                    if (res.ok) {
+                        const data = await res.json();
+                        console.log('[Navbar] Wishlist data:', data);
+                        setWishlistCount(data.items?.length || 0);
+                    }
+                } catch (error) {
+                    console.error('Failed to fetch wishlist count:', error);
+                }
+            } else {
+                setWishlistCount(0);
+            }
+        };
+        fetchWishlistCount();
+    }, [user]);
 
     useEffect(() => {
         const handleScroll = () => {
@@ -207,6 +234,19 @@ export default function Navbar() {
             {/* ---- Desktop Right Section ---- */}
             <div className="hidden md:flex items-center space-x-4">
 
+                {/* Wishlist */}
+                <Link
+                    href="/wishlist"
+                    className={`relative flex items-center justify-center ${isHomePage && !isScrolled ? "" : "bg-red-50 shadow-md hover:bg-red-100 transition"} p-2 rounded-lg`}
+                    title={t('wishlist') || 'Wishlist'}
+                >
+                    <Heart className="w-5 h-5 text-red-500" fill="currentColor" />
+                    {wishlistCount > 0 && (
+                        <span className="absolute -right-2 -top-2 text-xs min-w-5 h-5 px-1 rounded-full font-semibold text-white bg-red-500 flex items-center justify-center shadow-xs shadow-red-300">
+                            {wishlistCount}
+                        </span>
+                    )}
+                </Link>
 
                 {/* Cart */}
                 <Link
@@ -274,6 +314,14 @@ export default function Navbar() {
                                 >
                                     <History className="w-4 h-4 mx-2" />
                                     {t('orderHistory')}
+                                </Link>
+                                <Link
+                                    href="/wishlist"
+                                    onClick={() => setIsSettingsOpen(false)}
+                                    className="flex items-center px-4 py-2 text-sm text-primary-900 hover:bg-gray-100"
+                                >
+                                    <Heart className="w-4 h-4 mx-2 text-red-500" fill="currentColor" />
+                                    {t('wishlist') || 'Wishlist'}
                                 </Link>
                                 <button
                                     onClick={handleLogout}
@@ -376,6 +424,19 @@ export default function Navbar() {
                             >
                                 <History className="w-5 h-5 mx-2 text-primary-900" />
                                 {t('orderHistory')}
+                            </Link>
+                            <Link
+                                href="/wishlist"
+                                onClick={() => setIsOpen(false)}
+                                className="text-primary-950 hover:text-primary-300 text-lg mx-5 flex items-center relative"
+                            >
+                                <Heart className="w-5 h-5 mx-2 text-red-500" fill="currentColor" />
+                                {t('wishlist') || 'Wishlist'}
+                                {wishlistCount > 0 && (
+                                    <span className="ml-2 text-xs min-w-5 h-5 px-1 rounded-full font-semibold text-white bg-red-500 flex items-center justify-center">
+                                        {wishlistCount}
+                                    </span>
+                                )}
                             </Link>
                             <button
                                 onClick={handleLogout}

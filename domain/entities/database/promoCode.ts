@@ -13,4 +13,7 @@ export interface PromoCode {
     eligible_customer_ids?: number[]; // null or empty = all customers can use this code
     valid_from?: string; // When the promo code becomes active
     valid_until?: string; // When the promo code expires
+    usage_limit?: number; // Max times this code can be used (null = unlimited)
+    usage_count?: number; // Current number of times used
+    stacking_mode?: 'additive' | 'sequential'; // How discounts stack with other codes
 }

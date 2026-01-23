@@ -15,7 +15,7 @@ import { ProductDetailView } from "@/domain/entities/views/shop/productDetailVie
 import { ProductView } from "@/domain/entities/views/shop/productView";
 import SimilarProductsScroll from "@/ui/components/store/SimilarProductsScroll";
 import { motion } from "framer-motion";
-import material from "@mui/x-data-grid/material";
+import { WishlistButton } from "@/ui/components/store/WishlistButton";
 
 
 export function ProductDetailScreen({ initProduct: product, similarProducts = [] }: { initProduct: ProductDetailView | null, similarProducts?: ProductView[] }) {
@@ -97,9 +97,16 @@ export function ProductDetailScreen({ initProduct: product, similarProducts = []
 
                     {/* Price and Variant Selection */}
                     <div className="flex flex-col sm:flex-row items-center justify-between mb-8 gap-4">
-                        <p className="text-4xl font-extrabold text-primary-900">
-                            {t("{{price, currency}}", { price: product.price * quantity })}
-                        </p>
+                        <div className="flex items-center gap-3">
+                            <p className="text-4xl font-extrabold text-primary-900">
+                                {t("{{price, currency}}", { price: product.price * quantity })}
+                            </p>
+                            <WishlistButton
+                                productId={product.product_id}
+                                variantId={product.variant_id || null}
+                                size={28}
+                            />
+                        </div>
                         <div className="grid grid-cols-2 gap-2 w-full sm:w-1/2">
                             {product.variants?.map(variant => (
                                 <Link

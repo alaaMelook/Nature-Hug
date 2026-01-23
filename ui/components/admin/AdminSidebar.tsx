@@ -18,7 +18,8 @@ import {
   Bell,
   BellRing,
   Loader2,
-  Wallet
+  Wallet,
+  Heart
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
@@ -40,6 +41,7 @@ export default function AdminSidebar({
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
   const [mounted, setMounted] = useState(false);
+  const [wishlistCount, setWishlistCount] = useState(0);
 
   // Push notifications
   const { isSupported, permission, requestPermission, isLoading } = usePushNotifications();
@@ -101,12 +103,27 @@ export default function AdminSidebar({
         { name: "📁 Categories", href: "/admin/finance/cashflow-categories" },
       ]
     },
+    { name: t("wishlists") || "Wishlists", href: "/admin/wishlists", icon: Heart, badge: wishlistCount },
     { name: t("gallery"), href: "/admin/gallery", icon: Image },
   ];
 
   // Prevent hydration mismatch by only rendering after mount
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  // Fetch wishlist unique customers count
+  useEffect(() => {
+    const fetchWishlistCount = async () => {
+      try {
+        const res = await fetch('/api/admin/wishlists');
+        const data = await res.json();
+        setWishlistCount(data.stats?.unique_customers || 0);
+      } catch (error) {
+        console.error('Failed to fetch wishlist count:', error);
+      }
+    };
+    fetchWishlistCount();
   }, []);
 
   // Initialize expanded menus based on current path

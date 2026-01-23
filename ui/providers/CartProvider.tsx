@@ -23,7 +23,7 @@ export const useCart = () => {
 
 export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
     // Initializing totals to 0 and items as empty array
-    const emptyCart: Cart = { discount: 0, netTotal: 0, total: 0, items: [], promoCode: null, promoCodeId: null, free_shipping: false, isAdmin: false };
+    const emptyCart: Cart = { discount: 0, netTotal: 0, total: 0, items: [], promoCode: null, promoCodeId: null, promoCodes: [], free_shipping: false, isAdmin: false };
     const [cart, setCart] = useState<Cart>(emptyCart);
     const [loading, setLoading] = useState(true);
     const [isClient, setIsClient] = useState(false);
@@ -203,26 +203,57 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
     // --- Promo Code Actions (New Simple Logic) ---
 
     const applyPromoCode = async (code: string, customerId?: number) => {
+        // Check if already applied
+        if (cart.promoCodes.some(p => p.code.toLowerCase() === code.toLowerCase())) {
+            toast.error(t('promoAlreadyApplied') || 'This promo code is already applied');
+            return;
+        }
+
         const result = await validatePromoCodeAction(code, cart.items, customerId);
         if (result.isValid && 'isAdmin' in result && result.isAdmin) {
+            // Admin promo code - special handling
+            const newPromo: AppliedPromoCode = {
+                id: result.details?.id ?? 0,
+                code: code,
+                discount: 0,
+                free_shipping: false,
+                is_bogo: false,
+                percentage_off: 0
+            };
             setCart(prevCart => ({
                 ...prevCart,
                 promoCode: code,
                 free_shipping: false,
                 discount: 0,
                 promoCodeId: result.details?.id ?? null,
+                promoCodes: [...prevCart.promoCodes, newPromo],
                 isAdmin: result.isAdmin,
             }));
         }
         else if (result.isValid && 'discount' in result) {
+            const newPromo: AppliedPromoCode = {
+                id: result.details?.id ?? 0,
+                code: code,
+                discount: result.discount,
+                free_shipping: result.details?.free_shipping ?? false,
+                is_bogo: result.details?.is_bogo ?? false,
+                percentage_off: result.details?.percentage_off ?? 0
+            };
+
+            // Calculate total discount from all promo codes
+            const newPromoCodes = [...cart.promoCodes, newPromo];
+            const totalDiscount = newPromoCodes.reduce((sum, p) => sum + p.discount, 0);
+            const hasFreeShipping = newPromoCodes.some(p => p.free_shipping);
+
             setCart(prevCart => ({
                 ...prevCart,
-                promoCode: code,
-                free_shipping: result.details?.free_shipping ?? false,
+                promoCode: code,  // Keep last applied for backward compatibility
+                free_shipping: hasFreeShipping,
                 promoCodeId: result.details?.id ?? null,
-                discount: result.discount,
+                promoCodes: newPromoCodes,
+                discount: totalDiscount,
             }));
-            console.log('[ADMIN ORDER]', cart.discount, cart.netTotal, cart.free_shipping);
+            console.log('[CART] Applied promo codes:', newPromoCodes.length, 'Total discount:', totalDiscount);
             if (cart.isAdmin) {
                 toast.info(t('checkout.adminOrder'));
             }
@@ -234,15 +265,34 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
         }
     };
 
-    const removePromoCode = async () => {
-        setCart(prevCart => ({
-            ...prevCart,
-            promoCode: null,
-            promoCodeId: null,
-            free_shipping: false,
-            discount: 0,
-            isAdmin: false
-        }));
+    const removePromoCode = async (promoId?: number) => {
+        if (promoId) {
+            // Remove specific promo code
+            const newPromoCodes = cart.promoCodes.filter(p => p.id !== promoId);
+            const totalDiscount = newPromoCodes.reduce((sum, p) => sum + p.discount, 0);
+            const hasFreeShipping = newPromoCodes.some(p => p.free_shipping);
+
+            setCart(prevCart => ({
+                ...prevCart,
+                promoCodes: newPromoCodes,
+                promoCode: newPromoCodes.length > 0 ? newPromoCodes[0].code : null,
+                promoCodeId: newPromoCodes.length > 0 ? newPromoCodes[0].id : null,
+                discount: totalDiscount,
+                free_shipping: hasFreeShipping,
+                isAdmin: newPromoCodes.length === 0 ? false : prevCart.isAdmin
+            }));
+        } else {
+            // Remove all promo codes (backward compatible)
+            setCart(prevCart => ({
+                ...prevCart,
+                promoCode: null,
+                promoCodeId: null,
+                promoCodes: [],
+                free_shipping: false,
+                discount: 0,
+                isAdmin: false
+            }));
+        }
     };
 
     // --- Getter Functions ---

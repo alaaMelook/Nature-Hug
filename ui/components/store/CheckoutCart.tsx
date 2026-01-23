@@ -73,39 +73,59 @@ export function CheckoutCart({ selectedGovernorate, onPurchase, customerId }: {
                     )}
                 </div>
 
-                {/* Promo Code */}
-                <div className="mt-6 pt-6 border-t border-gray-100">
-                    {cart.promoCode ? (
-                        <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-xl p-3">
-                            <div className="flex items-center gap-2">
-                                <Tag className="w-4 h-4 text-green-600" />
-                                <span className="text-sm font-medium text-green-700">{cart.promoCode.toUpperCase()}</span>
-                            </div>
-                            <button
-                                onClick={() => removePromoCode()}
-                                className="text-xs text-red-500 hover:text-red-700 font-medium"
-                            >
-                                {t('checkout.remove')}
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="relative">
-                            <input
-                                onChange={(e) => setPromoCode(e.target.value)}
-                                type="text"
-                                placeholder={t("checkout.promoCodePlaceholder")}
-                                className="w-full px-20 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all"
-                            />
-                            <Tag className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                            <button
-                                className="absolute right-1.5 top-1.5 bottom-1.5 px-3 bg-white text-primary-600 text-xs font-semibold rounded-lg border border-gray-100 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
-                                onClick={() => applyPromoCode(promoCode, customerId)}
-                                disabled={promoCode.trim().length === 0}
-                            >
-                                {t("checkout.applyButton")}
-                            </button>
+                {/* Promo Codes */}
+                <div className="mt-6 pt-6 border-t border-gray-100 space-y-3">
+                    {/* Applied Promo Codes List */}
+                    {cart.promoCodes && cart.promoCodes.length > 0 && (
+                        <div className="space-y-2">
+                            {cart.promoCodes.map((promo) => (
+                                <div key={promo.id} className="flex items-center justify-between bg-green-50 border border-green-200 rounded-xl p-3">
+                                    <div className="flex items-center gap-2">
+                                        <Tag className="w-4 h-4 text-green-600" />
+                                        <span className="text-sm font-medium text-green-700">{promo.code.toUpperCase()}</span>
+                                        {promo.free_shipping && (
+                                            <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">
+                                                {t('checkout.freeShipping')}
+                                            </span>
+                                        )}
+                                        {promo.percentage_off && promo.percentage_off > 0 && (
+                                            <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">
+                                                {promo.percentage_off}% {t('off')}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <button
+                                        onClick={() => removePromoCode(promo.id)}
+                                        className="text-xs text-red-500 hover:text-red-700 font-medium"
+                                    >
+                                        {t('checkout.remove')}
+                                    </button>
+                                </div>
+                            ))}
                         </div>
                     )}
+
+                    {/* Add Promo Code Input */}
+                    <div className="relative">
+                        <input
+                            value={promoCode}
+                            onChange={(e) => setPromoCode(e.target.value)}
+                            type="text"
+                            placeholder={t("checkout.promoCodePlaceholder")}
+                            className="w-full px-10 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all"
+                        />
+                        <Tag className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                        <button
+                            className="absolute right-1.5 top-1.5 bottom-1.5 px-3 bg-white text-primary-600 text-xs font-semibold rounded-lg border border-gray-100 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+                            onClick={() => {
+                                applyPromoCode(promoCode, customerId);
+                                setPromoCode(''); // Clear input after applying
+                            }}
+                            disabled={promoCode.trim().length === 0}
+                        >
+                            {t("checkout.applyButton")}
+                        </button>
+                    </div>
                 </div>
 
                 {/* Totals */}

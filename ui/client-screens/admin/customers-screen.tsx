@@ -1,11 +1,17 @@
 'use client';
 
 import { ProfileView } from "@/domain/entities/views/shop/profileView";
-import { Search, Mail, Phone, Calendar, User, MapPin, UserCheck, ShoppingBag } from "lucide-react";
+import { Search, Mail, Phone, Calendar, User, MapPin, UserCheck, ShoppingBag, Merge, X, Loader2, AlertTriangle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
+import { toast } from "sonner";
+
+interface DuplicateGroup {
+    phone: string;
+    customers: { id: number; name: string; email: string; auth_user_id: string | null }[];
+}
 
 export function CustomersScreen({ allCustomers }: { allCustomers: ProfileView[] | undefined }) {
     const { t } = useTranslation();
@@ -15,6 +21,86 @@ export function CustomersScreen({ allCustomers }: { allCustomers: ProfileView[] 
         customerType: "all" as "all" | "withAccount" | "guestOnly",
     });
     const [customers, setCustomers] = useState(allCustomers);
+
+    // Merge state
+    const [showMergeModal, setShowMergeModal] = useState(false);
+    const [duplicates, setDuplicates] = useState<DuplicateGroup[]>([]);
+    const [loadingDuplicates, setLoadingDuplicates] = useState(false);
+    const [merging, setMerging] = useState(false);
+    const [selectedGroup, setSelectedGroup] = useState<DuplicateGroup | null>(null);
+    const [primaryId, setPrimaryId] = useState<number | null>(null);
+
+    // Fetch duplicates
+    const fetchDuplicates = async () => {
+        setLoadingDuplicates(true);
+        try {
+            const res = await fetch('/api/admin/customers/merge');
+            const data = await res.json();
+            if (Array.isArray(data)) {
+                setDuplicates(data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch duplicates:", error);
+            toast.error("Failed to fetch duplicates");
+        } finally {
+            setLoadingDuplicates(false);
+        }
+    };
+
+    // Handle merge
+    const handleMerge = async (duplicateId: number) => {
+        if (!primaryId || !duplicateId) return;
+
+        setMerging(true);
+        try {
+            const res = await fetch('/api/admin/customers/merge', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ primaryId, duplicateId })
+            });
+
+            const data = await res.json();
+
+            if (data.success) {
+                toast.success(`Customers merged successfully!`);
+                // Refresh duplicates list
+                await fetchDuplicates();
+                setSelectedGroup(null);
+                setPrimaryId(null);
+                // Reload page to get fresh customer list
+                window.location.reload();
+            } else {
+                toast.error(data.error || "Merge failed");
+            }
+        } catch (error) {
+            console.error("Merge error:", error);
+            toast.error("Failed to merge customers");
+        } finally {
+            setMerging(false);
+        }
+    };
+
+    // Open merge modal
+    const openMergeModal = () => {
+        setShowMergeModal(true);
+        fetchDuplicates();
+    };
+
+    // Auto-check for duplicates on mount
+    useEffect(() => {
+        const checkDuplicates = async () => {
+            try {
+                const res = await fetch('/api/admin/customers/merge');
+                const data = await res.json();
+                if (Array.isArray(data)) {
+                    setDuplicates(data);
+                }
+            } catch (error) {
+                console.error("Failed to check duplicates:", error);
+            }
+        };
+        checkDuplicates();
+    }, []);
 
     // Check if customer has an account vs guest (made order without account)
     // Uses has_account field from database if available, otherwise falls back to email check
@@ -223,10 +309,48 @@ export function CustomersScreen({ allCustomers }: { allCustomers: ProfileView[] 
             animate={{ opacity: 1 }}
             className="space-y-6"
         >
+            {/* Duplicate Customers Alert Banner */}
+            {duplicates.length > 0 && (
+                <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-center justify-between"
+                >
+                    <div className="flex items-center gap-3">
+                        <div className="bg-amber-100 rounded-full p-2">
+                            <AlertTriangle className="text-amber-600" size={20} />
+                        </div>
+                        <div>
+                            <p className="font-medium text-amber-900">
+                                {duplicates.length} duplicate customer group{duplicates.length > 1 ? 's' : ''} detected
+                            </p>
+                            <p className="text-sm text-amber-700">
+                                Customers with the same phone number may need to be merged.
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={openMergeModal}
+                        className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-sm font-medium"
+                    >
+                        <Merge size={16} />
+                        Review & Merge
+                    </button>
+                </motion.div>
+            )}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                    <h2 className="text-3xl font-bold text-gray-900">{t("customers")}</h2>
-                    <p className="text-gray-600">{t("manageCustomerBase")}</p>
+                <div className="flex items-center gap-4">
+                    <div>
+                        <h2 className="text-3xl font-bold text-gray-900">{t("customers")}</h2>
+                        <p className="text-gray-600">{t("manageCustomerBase")}</p>
+                    </div>
+                    <button
+                        onClick={openMergeModal}
+                        className="flex items-center gap-2 px-4 py-2 bg-amber-100 text-amber-800 rounded-lg hover:bg-amber-200 transition-colors text-sm font-medium"
+                    >
+                        <Merge size={16} />
+                        Merge Duplicates
+                    </button>
                 </div>
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full md:w-auto">
                     {/* Customer Type Filter */}
@@ -299,6 +423,145 @@ export function CustomersScreen({ allCustomers }: { allCustomers: ProfileView[] 
                     }}
                 />
             </div>
+
+            {/* Merge Duplicates Modal */}
+            <AnimatePresence>
+                {showMergeModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[80vh] overflow-hidden m-4"
+                        >
+                            <div className="p-4 border-b flex items-center justify-between bg-amber-50">
+                                <div className="flex items-center gap-2">
+                                    <Merge className="text-amber-600" size={20} />
+                                    <h3 className="text-lg font-semibold text-amber-900">Merge Duplicate Customers</h3>
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        setShowMergeModal(false);
+                                        setSelectedGroup(null);
+                                        setPrimaryId(null);
+                                    }}
+                                    className="p-2 hover:bg-amber-100 rounded-full transition-colors"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            <div className="p-4 overflow-y-auto max-h-[60vh]">
+                                {loadingDuplicates ? (
+                                    <div className="flex items-center justify-center py-8">
+                                        <Loader2 className="animate-spin text-gray-400" size={32} />
+                                    </div>
+                                ) : duplicates.length === 0 ? (
+                                    <div className="text-center py-8 text-gray-500">
+                                        <AlertTriangle className="mx-auto mb-2 text-green-500" size={40} />
+                                        <p className="font-medium text-green-700">No duplicate customers found!</p>
+                                        <p className="text-sm">All customers have unique phone numbers.</p>
+                                    </div>
+                                ) : selectedGroup ? (
+                                    // Step 2: Select primary customer
+                                    <div className="space-y-4">
+                                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                            <p className="text-sm text-blue-800">
+                                                <strong>Step 2:</strong> Select the PRIMARY customer (the one to keep), then click "Merge" on the duplicate to remove.
+                                            </p>
+                                        </div>
+                                        <p className="text-sm text-gray-600">
+                                            Phone: <strong>{selectedGroup.phone}</strong>
+                                        </p>
+                                        <div className="space-y-2">
+                                            {selectedGroup.customers.map(customer => (
+                                                <div
+                                                    key={customer.id}
+                                                    className={`flex items-center justify-between p-3 rounded-lg border ${primaryId === customer.id
+                                                        ? 'border-green-500 bg-green-50'
+                                                        : 'border-gray-200 hover:border-gray-300'
+                                                        }`}
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <input
+                                                            type="radio"
+                                                            name="primaryCustomer"
+                                                            checked={primaryId === customer.id}
+                                                            onChange={() => setPrimaryId(customer.id)}
+                                                            className="h-4 w-4 text-green-600"
+                                                        />
+                                                        <div>
+                                                            <p className="font-medium">{customer.name || 'No name'}</p>
+                                                            <p className="text-xs text-gray-500">
+                                                                #{customer.id} • {customer.email || 'No email'}
+                                                                {customer.auth_user_id && ' • Has Account'}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    {primaryId && primaryId !== customer.id && (
+                                                        <button
+                                                            onClick={() => handleMerge(customer.id)}
+                                                            disabled={merging}
+                                                            className="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 text-sm font-medium disabled:opacity-50 flex items-center gap-1"
+                                                        >
+                                                            {merging ? (
+                                                                <Loader2 className="animate-spin" size={14} />
+                                                            ) : (
+                                                                <Merge size={14} />
+                                                            )}
+                                                            Merge into #{primaryId}
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                setSelectedGroup(null);
+                                                setPrimaryId(null);
+                                            }}
+                                            className="text-sm text-gray-500 hover:text-gray-700"
+                                        >
+                                            ← Back to duplicates list
+                                        </button>
+                                    </div>
+                                ) : (
+                                    // Step 1: Show duplicate groups
+                                    <div className="space-y-4">
+                                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                                            <p className="text-sm text-amber-800">
+                                                <strong>{duplicates.length} duplicate group(s) found!</strong> Click on a group to merge.
+                                            </p>
+                                        </div>
+                                        <div className="space-y-2">
+                                            {duplicates.map(group => (
+                                                <button
+                                                    key={group.phone}
+                                                    onClick={() => setSelectedGroup(group)}
+                                                    className="w-full flex items-center justify-between p-4 rounded-lg border border-amber-200 hover:border-amber-400 hover:bg-amber-50 transition-colors text-left"
+                                                >
+                                                    <div>
+                                                        <p className="font-medium text-gray-900">
+                                                            📞 {group.phone}
+                                                        </p>
+                                                        <p className="text-sm text-gray-500">
+                                                            {group.customers.length} customers with this phone
+                                                        </p>
+                                                        <p className="text-xs text-gray-400 mt-1">
+                                                            {group.customers.map(c => c.name || `#${c.id}`).join('  •  ')}
+                                                        </p>
+                                                    </div>
+                                                    <span className="text-amber-600">→</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </motion.div>
     );
 }

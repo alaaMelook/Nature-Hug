@@ -62,7 +62,7 @@ export function AdminCreateOrderScreen({ products, governorates, promoCodes }: A
 
     // Promo Code State
     const [promoCodeInput, setPromoCodeInput] = useState("");
-    const [appliedPromo, setAppliedPromo] = useState<PromoCode | null>(null);
+    const [appliedPromos, setAppliedPromos] = useState<PromoCode[]>([]);
 
     // Price Overrides
     const [shippingOverride, setShippingOverride] = useState<number | null>(null);
@@ -149,18 +149,33 @@ export function AdminCreateOrderScreen({ products, governorates, promoCodes }: A
 
     const shipping = useMemo(() => {
         // Free shipping promo code overrides everything
-        if (appliedPromo?.free_shipping) return 0;
+        const hasFreeShipping = appliedPromos.some(p => p.free_shipping);
+        if (hasFreeShipping) return 0;
         if (shippingOverride !== null) return shippingOverride;
         return selectedGovernorate?.fees ?? 0;
-    }, [selectedGovernorate, shippingOverride, appliedPromo]);
+    }, [selectedGovernorate, shippingOverride, appliedPromos]);
 
     const discount = useMemo(() => {
-        if (!appliedPromo) return 0;
-        if (appliedPromo.percentage_off > 0) {
-            return subtotal * (appliedPromo.percentage_off / 100);
+        if (appliedPromos.length === 0) return 0;
+
+        // Check stacking mode - use first promo's mode
+        const stackingMode = appliedPromos[0]?.stacking_mode || 'additive';
+
+        if (stackingMode === 'additive') {
+            // Add all percentages together
+            const totalPercentage = appliedPromos.reduce((sum, p) => sum + (p.percentage_off || 0), 0);
+            return subtotal * (totalPercentage / 100);
+        } else {
+            // Sequential: apply one after another
+            let remaining = subtotal;
+            appliedPromos.forEach(p => {
+                if (p.percentage_off > 0) {
+                    remaining = remaining * (1 - p.percentage_off / 100);
+                }
+            });
+            return subtotal - remaining;
         }
-        return 0;
-    }, [appliedPromo, subtotal]);
+    }, [appliedPromos, subtotal]);
 
     const grandTotal = useMemo(() => {
         return subtotal + shipping - discount;
@@ -215,11 +230,27 @@ export function AdminCreateOrderScreen({ products, governorates, promoCodes }: A
             p.code.toLowerCase() === promoCodeInput.toLowerCase() && p.is_active
         );
         if (promo) {
-            setAppliedPromo(promo);
+            // Check if already applied
+            if (appliedPromos.some(p => p.id === promo.id)) {
+                toast.error(t("promoAlreadyApplied") || "This code is already applied");
+                return;
+            }
+            // Check usage limit
+            if (promo.usage_limit && (promo.usage_count || 0) >= promo.usage_limit) {
+                toast.error(t("promoLimitReached") || "This promo code has reached its usage limit");
+                return;
+            }
+            setAppliedPromos(prev => [...prev, promo]);
+            setPromoCodeInput("");
             toast.success(t("promoApplied", { code: promo.code }));
         } else {
             toast.error(t("invalidPromoCode"));
         }
+    };
+
+    // Remove Promo Code
+    const removePromoCode = (promoId: number) => {
+        setAppliedPromos(prev => prev.filter(p => p.id !== promoId));
     };
 
     // Submit Order
@@ -266,7 +297,7 @@ export function AdminCreateOrderScreen({ products, governorates, promoCodes }: A
                 payment_method: "Admin Order",
                 payment_status: "pending",
                 status: "processing",
-                promo_code_id: appliedPromo?.id ?? null,
+                promo_code_id: appliedPromos[0]?.id ?? null,
                 items: orderItems.map(item => ({
                     product_id: item.product.id,
                     variant_id: item.product.variant_id,
@@ -365,8 +396,8 @@ export function AdminCreateOrderScreen({ products, governorates, promoCodes }: A
                                                     </p>
                                                 </div>
                                                 <span className={`text-xs px-2 py-0.5 rounded-full ${customer.type === 'registered'
-                                                        ? 'bg-green-100 text-green-700'
-                                                        : 'bg-gray-100 text-gray-600'
+                                                    ? 'bg-green-100 text-green-700'
+                                                    : 'bg-gray-100 text-gray-600'
                                                     }`}>
                                                     {customer.type === 'registered' ? 'Account' : 'Guest'}
                                                 </span>
@@ -590,43 +621,51 @@ export function AdminCreateOrderScreen({ products, governorates, promoCodes }: A
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                     {t("adminOrders.promoCode")}
                                 </label>
-                                {appliedPromo ? (
-                                    <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg p-3">
-                                        <div className="flex items-center gap-2">
-                                            <Tag className="w-4 h-4 text-green-600" />
-                                            <span className="font-medium text-green-700">{appliedPromo.code}</span>
-                                            <span className="text-sm text-green-600">
-                                                {appliedPromo.free_shipping
-                                                    ? t("freeShipping") || "Free Shipping"
-                                                    : `(${appliedPromo.percentage_off}% off)`
-                                                }
-                                            </span>
-                                        </div>
-                                        <button
-                                            onClick={() => setAppliedPromo(null)}
-                                            className="text-red-500 hover:text-red-700"
-                                        >
-                                            <X size={16} />
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <div className="flex gap-2">
-                                        <input
-                                            type="text"
-                                            value={promoCodeInput}
-                                            onChange={(e) => setPromoCodeInput(e.target.value)}
-                                            className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none text-sm"
-                                            placeholder={t("adminOrders.enterPromoCode")}
-                                        />
-                                        <button
-                                            onClick={applyPromoCode}
-                                            disabled={!promoCodeInput.trim()}
-                                            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 text-sm font-medium"
-                                        >
-                                            {t("apply")}
-                                        </button>
+                                {appliedPromos.length > 0 && (
+                                    <div className="space-y-2 mb-3">
+                                        {appliedPromos.map((promo, idx) => (
+                                            <div key={promo.id} className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg p-2">
+                                                <div className="flex items-center gap-2">
+                                                    <Tag className="w-4 h-4 text-green-600" />
+                                                    <span className="font-medium text-green-700">{promo.code}</span>
+                                                    <span className="text-xs text-green-600">
+                                                        {promo.free_shipping
+                                                            ? t("freeShipping") || "Free Shipping"
+                                                            : `${promo.percentage_off}%`
+                                                        }
+                                                    </span>
+                                                    {idx === 0 && appliedPromos.length > 1 && (
+                                                        <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
+                                                            {promo.stacking_mode === 'sequential' ? 'Sequential' : 'Additive'}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <button
+                                                    onClick={() => removePromoCode(promo.id)}
+                                                    className="text-red-500 hover:text-red-700"
+                                                >
+                                                    <X size={14} />
+                                                </button>
+                                            </div>
+                                        ))}
                                     </div>
                                 )}
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        value={promoCodeInput}
+                                        onChange={(e) => setPromoCodeInput(e.target.value)}
+                                        className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none text-sm"
+                                        placeholder={t("adminOrders.enterPromoCode")}
+                                    />
+                                    <button
+                                        onClick={applyPromoCode}
+                                        disabled={!promoCodeInput.trim()}
+                                        className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 text-sm font-medium"
+                                    >
+                                        {t("apply")}
+                                    </button>
+                                </div>
                             </div>
 
                             {/* Totals */}

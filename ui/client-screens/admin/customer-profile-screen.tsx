@@ -4,10 +4,11 @@ import { ProfileView } from "@/domain/entities/views/shop/profileView";
 import { OrderSummaryView } from "@/domain/entities/views/shop/orderSummaryView";
 
 import { useTranslation } from "react-i18next";
-import { useState } from "react";
-import { Mail, Phone, MapPin, Calendar, Shield, User, Package } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Mail, Phone, MapPin, Calendar, Shield, User, Package, Heart, Loader2 } from "lucide-react";
 import { Member } from "@/domain/entities/auth/member";
 import { motion } from "framer-motion";
+import Image from "next/image";
 
 interface CustomerProfileScreenProps {
     customer: ProfileView;
@@ -17,10 +18,36 @@ interface CustomerProfileScreenProps {
     onRevoke: () => Promise<void>;
 }
 
+
 export function CustomerProfileScreen({ customer, orders, member, onPromote, onRevoke }: CustomerProfileScreenProps) {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const [isPromoting, setIsPromoting] = useState(false);
     const [isRevoking, setIsRevoking] = useState(false);
+
+    // Wishlist state
+    interface WishlistItem {
+        id: number;
+        product_id: number;
+        product: { slug: string; name_en: string; name_ar: string; price: number; image_url: string | null };
+    }
+    const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
+    const [loadingWishlist, setLoadingWishlist] = useState(true);
+
+    // Fetch wishlist on mount
+    useEffect(() => {
+        const fetchWishlist = async () => {
+            try {
+                const res = await fetch(`/api/admin/customers/${customer.id}/wishlist`);
+                const data = await res.json();
+                setWishlistItems(data.items || []);
+            } catch (error) {
+                console.error('Failed to fetch wishlist:', error);
+            } finally {
+                setLoadingWishlist(false);
+            }
+        };
+        fetchWishlist();
+    }, [customer.id]);
 
     const handlePromote = async (role: MemberRole) => {
         setIsPromoting(true);
@@ -227,6 +254,56 @@ export function CustomerProfileScreen({ customer, orders, member, onPromote, onR
                     </div>
                 </motion.div>
             </div>
+
+            {/* Wishlist Section */}
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="bg-white shadow rounded-lg p-6"
+            >
+                <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                    <Heart className="w-5 h-5 mr-2 text-red-500" fill="currentColor" />
+                    {t("wishlist") || "Wishlist"}
+                    <span className="ml-2 text-sm text-gray-500">({wishlistItems.length})</span>
+                </h3>
+
+                {loadingWishlist ? (
+                    <div className="flex items-center justify-center py-8">
+                        <Loader2 className="animate-spin text-gray-400" size={24} />
+                    </div>
+                ) : wishlistItems.length > 0 ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                        {wishlistItems.map((item) => (
+                            <a
+                                key={item.id}
+                                href={`/products/${item.product.slug}`}
+                                className="group block"
+                            >
+                                <div className="aspect-square rounded-lg overflow-hidden bg-gray-100 mb-2">
+                                    <Image
+                                        src={item.product.image_url || 'https://placehold.co/100x100'}
+                                        alt={i18n.language === 'ar' ? item.product.name_ar : item.product.name_en}
+                                        width={150}
+                                        height={150}
+                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                    />
+                                </div>
+                                <p className="text-sm font-medium text-gray-900 truncate group-hover:text-primary-600">
+                                    {i18n.language === 'ar' ? item.product.name_ar : item.product.name_en}
+                                </p>
+                                <p className="text-sm text-primary-600">
+                                    {t('{{price, currency}}', { price: item.product.price })}
+                                </p>
+                            </a>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-gray-500 text-sm text-center py-4">
+                        {t("emptyWishlist") || "This customer has no items in their wishlist"}
+                    </p>
+                )}
+            </motion.div>
         </motion.div>
     );
 }

@@ -11,10 +11,19 @@ declare global {
         error?: string;
         success: boolean;
     }
-    interface Cart {
-        promoCode: string | null;
-        promoCodeId: number | null;
+    interface AppliedPromoCode {
+        id: number;
+        code: string;
         discount: number;
+        free_shipping: boolean;
+        is_bogo?: boolean;
+        percentage_off?: number;
+    }
+    interface Cart {
+        promoCode: string | null;  // Keep for backward compatibility
+        promoCodeId: number | null;  // Keep for backward compatibility
+        promoCodes: AppliedPromoCode[];  // New: array of applied promo codes
+        discount: number;  // Total discount from all promo codes
         free_shipping: boolean;
         total: number;
         netTotal: number;
@@ -32,7 +41,7 @@ declare global {
         getCartCount: () => number;
         loading: boolean;
         applyPromoCode: (code: string, customerId?: number) => Promise<void>;
-        removePromoCode: () => Promise<void>;
+        removePromoCode: (promoId?: number) => Promise<void>;  // Updated to accept optional promoId
         syncCart: () => Promise<void>;
         setCart: (cart: Cart) => void;
         itemsKey: string;

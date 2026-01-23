@@ -10,6 +10,7 @@ import { StarRating } from "./StarRating";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
+import { WishlistButton } from "./WishlistButton";
 
 export function ProductCard({
     product,
@@ -62,6 +63,11 @@ export function ProductCard({
                     sizes={compact ? "(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" : "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"}
                 />
 
+                {/* Wishlist Button */}
+                <div className="absolute top-3 right-3">
+                    <WishlistButton productId={product.product_id || product.id} variantId={product.variant_id} size={compact ? 16 : 20} />
+                </div>
+
                 {product.discount != null && product.discount > 0 && (
                     <div
                         className="absolute top-3 left-3 bg-red-600 text-white px-3 py-1 rounded-full text-sm font-semibold shadow-md">
@@ -71,7 +77,7 @@ export function ProductCard({
 
                 {(product.stock == null || product.stock === 0) && (
                     <div
-                        className="absolute top-3 right-3 bg-neutral-600 text-white px-3 py-1 rounded-full text-sm font-medium shadow-md">
+                        className="absolute bottom-3 right-3 bg-neutral-600 text-white px-3 py-1 rounded-full text-sm font-medium shadow-md">
                         {t("outOfStock")}
                     </div>
                 )}
