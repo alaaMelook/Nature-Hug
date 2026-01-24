@@ -16,12 +16,11 @@ export async function GET(request: Request) {
 
         const credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
 
-        const auth = new google.auth.JWT(
-            credentials.client_email,
-            undefined,
-            credentials.private_key,
-            ['https://www.googleapis.com/auth/webmasters.readonly']
-        );
+        const auth = new google.auth.JWT({
+            email: credentials.client_email,
+            key: credentials.private_key,
+            scopes: ['https://www.googleapis.com/auth/webmasters.readonly']
+        });
 
         const searchconsole = google.searchconsole({ version: 'v1', auth });
 
