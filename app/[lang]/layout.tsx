@@ -40,6 +40,23 @@ export default async function RootLayoutRootLayout({
             })(window,document,'script','dataLayer','GTM-MRZ8RP3M');`,
                     }}
                 />
+                {/* Google Analytics 4 */}
+                <Script
+                    src="https://www.googletagmanager.com/gtag/js?id=G-CCPV07R8F1"
+                    strategy="afterInteractive"
+                />
+                <Script
+                    id="ga4-script"
+                    strategy="afterInteractive"
+                    dangerouslySetInnerHTML={{
+                        __html: `
+                            window.dataLayer = window.dataLayer || [];
+                            function gtag(){dataLayer.push(arguments);}
+                            gtag('js', new Date());
+                            gtag('config', 'G-CCPV07R8F1');
+                        `,
+                    }}
+                />
                 <meta name="keywords" content="Nature Hug, Natural Skincare, Skincare Products, Skincare Store" />
                 <meta name="robots" content="index, follow" />
                 <meta name="viewport" content="width=device-width, initial-scale=1.0" />

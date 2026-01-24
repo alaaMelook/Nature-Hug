@@ -11,7 +11,11 @@ export interface DashboardStats {
     current_period_orders: number;
     current_period_revenue: string; // Use string for high-precision currency
     current_period_avg_order_value: string; // AOV (NUMERIC)
-    current_period_conversion_rate: string; // CR (NUMERIC, percentage)
+    current_period_conversion_rate: string; // CR (NUMERIC, percentage) - Repeat Customer Rate
+
+    // Visitor-based metrics (from Google Analytics)
+    visitors?: number;
+    visitor_conversion_rate?: string; // Orders / Visitors * 100
 
     // Change/Delta Metrics (NUMERIC, percentage)
     customers_change: string;

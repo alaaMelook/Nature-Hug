@@ -128,13 +128,39 @@ export async function GET(request: Request) {
             ? ((repeatCustomers / totalCustomers) * 100).toFixed(1)
             : "0";
 
+        // === VISITOR-BASED CONVERSION RATE (from Google Analytics) ===
+        let visitors = 0;
+        let visitorConversionRate = "0";
+
+        try {
+            // Fetch visitors from GA4 API
+            const gaResponse = await fetch(
+                `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/admin/analytics/visitors?startDate=${startDate}&endDate=${endDate}`
+            );
+
+            if (gaResponse.ok) {
+                const gaData = await gaResponse.json();
+                visitors = gaData.visitors || 0;
+
+                // Calculate Visitor-based Conversion Rate = (Orders in period / Visitors) * 100
+                const periodOrders = (baseStats as any)?.current_period_orders || 0;
+                if (visitors > 0) {
+                    visitorConversionRate = ((periodOrders / visitors) * 100).toFixed(1);
+                }
+            }
+        } catch (gaError) {
+            console.log("[Dashboard Stats] GA4 fetch skipped:", gaError);
+        }
+
         // Merge with RPC results
         const stats: DashboardStats = {
             ...baseStats as DashboardStats,
             total_customers: totalCustomers,
             current_period_customers: periodCustomers,
             customers_change: customersChange,
-            current_period_conversion_rate: conversionRate
+            current_period_conversion_rate: conversionRate,
+            visitors: visitors,
+            visitor_conversion_rate: visitorConversionRate
         };
 
         return NextResponse.json(stats);

@@ -16,6 +16,8 @@ interface StatCard {
     color: string;
     isCurrency?: boolean;
     isCount?: boolean;
+    description?: string;
+    formula?: string;
 }
 
 interface ActionCard {
@@ -42,7 +44,9 @@ export function AdminDashboardScreen({ actionStats }: {
             icon: Users,
             change: parseFloat(dashboard?.customers_change ?? "0"),
             color: "text-blue-600 bg-blue-50",
-            isCount: true
+            isCount: true,
+            description: "Unique customers who placed orders (by email or phone)",
+            formula: "Registered Customers + Unique Guest Orders"
         },
         {
             title: t("totalProducts"),
@@ -52,7 +56,9 @@ export function AdminDashboardScreen({ actionStats }: {
             icon: Package,
             change: parseFloat(dashboard?.products_change ?? "0"),
             color: "text-purple-600 bg-purple-50",
-            isCount: true
+            isCount: true,
+            description: "Total active products in the store",
+            formula: "Count of all published products"
         },
         {
             title: t("totalOrders"),
@@ -62,7 +68,9 @@ export function AdminDashboardScreen({ actionStats }: {
             icon: ShoppingCart,
             change: parseFloat(dashboard?.orders_change ?? "0"),
             color: "text-amber-600 bg-amber-50",
-            isCount: true
+            isCount: true,
+            description: "Total orders placed (all statuses except cancelled)",
+            formula: "Count of orders"
         },
         {
             title: t("totalRevenue"),
@@ -73,30 +81,42 @@ export function AdminDashboardScreen({ actionStats }: {
             change: parseFloat(dashboard?.revenue_change ?? "0"),
             color: "text-emerald-600 bg-emerald-50",
             isCurrency: true,
-            isCount: true
+            isCount: true,
+            description: "Total revenue from delivered/completed orders",
+            formula: "Sum of final_order_total for delivered orders"
         },
         {
             title: t("avgOrderValue"),
             name: "avg_order_value",
             value: parseFloat(dashboard?.current_period_avg_order_value ?? "0"),
-            parValue: 0, // No par value for AOV provided in this view specifically matching others? Or is it current_period? actually standard is comparison. 
-            // In DashboardStats: current_period_avg_order_value exists, avg_order_value_change exists. 
-            // We can display current value and the change.
+            parValue: 0,
             icon: BadgeDollarSignIcon,
-
             color: "text-cyan-600 bg-cyan-50",
-            isCurrency: true
+            isCurrency: true,
+            description: "Average order value in the selected period",
+            formula: "Total Revenue ÷ Number of Orders"
         },
-        // We can add Conversion Rate if needed, user said "all other parameters"
+        // Repeat Customer Rate
         {
             title: t("conversionRate"),
             name: "conversion_rate",
             value: parseFloat(dashboard?.current_period_conversion_rate ?? "0"),
             parValue: 0,
             icon: ShoppingBasket,
-
             color: "text-indigo-600 bg-indigo-50",
-            // It's a percentage value itself
+            description: "Percentage of customers who ordered more than once",
+            formula: "(Repeat Customers ÷ Total Customers) × 100"
+        },
+        // Visitor-based Conversion Rate (from Google Analytics)
+        {
+            title: "Visitor Conversion",
+            name: "visitor_conversion_rate",
+            value: parseFloat(dashboard?.visitor_conversion_rate ?? "0"),
+            parValue: dashboard?.visitors ?? 0,
+            icon: ShoppingBasket,
+            color: "text-purple-600 bg-purple-50",
+            description: "Percentage of website visitors who placed an order",
+            formula: `(Orders ÷ Visitors) × 100 | Visitors: ${dashboard?.visitors ?? 0}`
         }
     ];
 
@@ -272,7 +292,8 @@ export function AdminDashboardScreen({ actionStats }: {
                         <motion.div
                             key={stat.title}
                             variants={itemVariants}
-                            className="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200 group"
+                            className="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200 group relative cursor-help"
+                            title={stat.description}
                         >
                             <div className="flex items-start justify-between mb-4">
                                 <div className={`p-2.5 rounded-xl ${stat.color} group-hover:scale-110 transition-transform duration-200`}>
@@ -289,8 +310,17 @@ export function AdminDashboardScreen({ actionStats }: {
                                 <p className="text-xs md:text-sm font-medium text-gray-500">{stat.title}</p>
                                 <h3 className="text-lg md:text-xl font-bold text-gray-900 mt-1 tracking-tight">
                                     {stat.isCurrency ? t("{{price, currency}}", { price: stat.value }) : stat.value}
+                                    {stat.name === "conversion_rate" || stat.name === "visitor_conversion_rate" ? "%" : ""}
                                 </h3>
                             </div>
+                            {/* Tooltip on hover */}
+                            {stat.description && (
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 whitespace-nowrap max-w-xs">
+                                    <div className="font-semibold mb-1">{stat.description}</div>
+                                    {stat.formula && <div className="text-gray-300 text-[10px]">📊 {stat.formula}</div>}
+                                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                                </div>
+                            )}
                         </motion.div>
                     ))
                 )}
