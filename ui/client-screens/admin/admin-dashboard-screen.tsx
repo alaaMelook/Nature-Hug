@@ -96,16 +96,28 @@ export function AdminDashboardScreen({ actionStats }: {
             description: "Average order value in the selected period",
             formula: "Total Revenue ÷ Number of Orders"
         },
-        // Repeat Customer Rate
+        // Customer Retention (Repeat Customer Rate)
         {
-            title: t("conversionRate"),
+            title: "Customer Retention",
             name: "conversion_rate",
             value: parseFloat(dashboard?.current_period_conversion_rate ?? "0"),
             parValue: 0,
-            icon: ShoppingBasket,
+            icon: Users,
             color: "text-indigo-600 bg-indigo-50",
             description: "Percentage of customers who ordered more than once",
             formula: "(Repeat Customers ÷ Total Customers) × 100"
+        },
+        // Website Visitors (from Google Analytics)
+        {
+            title: "Visitors",
+            name: "visitors",
+            value: dashboard?.visitors ?? 0,
+            parValue: 0,
+            icon: Users,
+            color: "text-teal-600 bg-teal-50",
+            isCount: true,
+            description: "Unique website visitors from Google Analytics",
+            formula: "GA4 Active Users in selected period"
         },
         // Visitor-based Conversion Rate (from Google Analytics)
         {
@@ -116,7 +128,7 @@ export function AdminDashboardScreen({ actionStats }: {
             icon: ShoppingBasket,
             color: "text-purple-600 bg-purple-50",
             description: "Percentage of website visitors who placed an order",
-            formula: `(Orders ÷ Visitors) × 100 | Visitors: ${dashboard?.visitors ?? 0}`
+            formula: `(Orders ÷ Visitors) × 100`
         }
     ];
 
