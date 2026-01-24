@@ -12,6 +12,7 @@ import { createOrder } from "@/ui/hooks/store/useCreateOrderActions";
 import { useRouter } from "next/navigation";
 import { Loader2, CreditCard, Banknote, MapPin, Phone, User, Mail, CheckCircle2 } from "lucide-react";
 import { useTranslation, Trans } from "react-i18next";
+import { trackBeginCheckout, trackPurchase } from "@/lib/analytics/gtag";
 
 // import { initiatePaymobPayment } from "@/ui/hooks/store/usePaymobActions";
 
@@ -40,6 +41,21 @@ export function CheckoutGuestScreen({ governorates }: { governorates: Governorat
         // keep governorate slug in the form in sync with selectedGovernorate
         setValue('guest_address.governorate_slug', selectedGovernorate?.slug);
     }, [selectedGovernorate, setValue]);
+
+    // GA4 Track Begin Checkout
+    useEffect(() => {
+        if (cart.items.length > 0) {
+            trackBeginCheckout(
+                cart.items.map(item => ({
+                    item_id: item.id || item.slug,
+                    item_name: item.name,
+                    price: item.price,
+                    quantity: item.quantity
+                })),
+                cart.netTotal
+            );
+        }
+    }, []);
 
 
     const onSubmit = async (data: FormValues) => {
@@ -119,6 +135,22 @@ export function CheckoutGuestScreen({ governorates }: { governorates: Governorat
             }
 
             toast.success(t('checkout.success.orderCreated'));
+
+            // GA4 Track Purchase
+            trackPurchase(
+                result.order_id,
+                cart.items.map(item => ({
+                    item_id: item.id || item.slug,
+                    item_name: item.name,
+                    price: item.price,
+                    quantity: item.quantity
+                })),
+                orderPayload.grand_total || 0,
+                orderPayload.shipping_total || 0,
+                orderPayload.tax_total || 0,
+                cart.promoCode || undefined
+            );
+
             // navigate first then clear cart to avoid any cart-empty watchers redirecting away
             router.push(`/orders/${result.order_id}`);
             await clearCart();

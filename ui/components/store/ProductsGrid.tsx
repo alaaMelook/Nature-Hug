@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { WishlistButton } from "./WishlistButton";
+import { trackSelectItem } from "@/lib/analytics/gtag";
 
 export function ProductCard({
     product,
@@ -44,7 +45,15 @@ export function ProductCard({
             animate="show"
             className={`bg-white rounded-xl shadow-lg overflow-hidden flex flex-col transform transition-transform duration-300 hover:scale-105 cursor-pointer z-2${compact ? "p-3" : ""
                 }`}
-            onClick={() => router.push(`/products/${product.slug}`)}
+            onClick={() => {
+                trackSelectItem("Product Grid", {
+                    item_id: product.id || product.slug,
+                    item_name: product.name,
+                    price: product.price,
+                    item_category: product.category_name || undefined
+                }, 0);
+                router.push(`/products/${product.slug}`);
+            }}
         >
             <div className={`relative ${compact ? "aspect-[4/3]" : "aspect-w-4 aspect-h-3"} block`}>
                 <Image

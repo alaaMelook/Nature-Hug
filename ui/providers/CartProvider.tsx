@@ -6,6 +6,7 @@ import { ProductView, CartItem } from "@/domain/entities/views/shop/productView"
 import { useTranslation } from "react-i18next";
 import { validatePromoCodeAction } from "@/ui/hooks/store/usePromoCodeActions";
 import { validateCart } from "../hooks/store/validateCart";
+import { trackAddToCart, trackRemoveFromCart, trackViewCart, ProductItem } from "@/lib/analytics/gtag";
 
 // Note: Ensure 'js-cookie' is installed
 const Cookies = require("js-cookie");
@@ -157,6 +158,16 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
             }
 
             toast.success(t('addedtoCart', { product: product.name }), { duration: 2000 });
+
+            // GA4 Track Add to Cart
+            trackAddToCart({
+                item_id: product.id || product.slug,
+                item_name: product.name,
+                price: product.price,
+                quantity: quantity,
+                item_category: product.category_name || undefined
+            }, quantity);
+
             // ONLY update items; totals (discount, total, netTotal) are left untouched
             return { ...prevCart, items: newItems, netTotal: prevCart.netTotal + (product.price || 0) * quantity };
         });
@@ -164,6 +175,14 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
 
     const removeFromCart = async (product: ProductView) => {
         setCart(prevCart => {
+            // GA4 Track Remove from Cart
+            trackRemoveFromCart({
+                item_id: product.id || product.slug,
+                item_name: product.name,
+                price: product.price,
+                quantity: prevCart.items.find(item => item.slug === product.slug)?.quantity || 1
+            });
+
             // Filter out the product based on slug
             const newItems = prevCart.items.filter(
                 (item) => item.slug !== product.slug

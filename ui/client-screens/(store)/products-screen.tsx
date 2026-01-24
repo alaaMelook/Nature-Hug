@@ -6,6 +6,7 @@ import ProductGrid from "@/ui/components/store/ProductsGrid";
 import { useTranslation } from "react-i18next";
 import { Category } from "@/domain/entities/database/category";
 import { motion } from "framer-motion";
+import { trackViewItemList } from "@/lib/analytics/gtag";
 
 import { useSearchParams } from "next/navigation";
 
@@ -111,6 +112,22 @@ export function ProductsScreen({ initProducts, initCategories }: {
         });
 
     }, [products, filters]);
+
+    // GA4 Track View Item List
+    useEffect(() => {
+        if (filteredProducts.length > 0) {
+            const listName = filters.category || "All Products";
+            trackViewItemList(
+                listName,
+                filteredProducts.slice(0, 10).map(p => ({
+                    item_id: p.id || p.slug,
+                    item_name: p.name,
+                    price: p.price,
+                    item_category: p.category_name || undefined
+                }))
+            );
+        }
+    }, [filteredProducts, filters.category]);
 
     return (
         <motion.div

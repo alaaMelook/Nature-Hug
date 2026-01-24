@@ -14,6 +14,7 @@ import { Loader2, MapPin, Plus, CreditCard, Banknote, CheckCircle2, Phone, User,
 
 import { useTranslation, Trans } from "react-i18next";
 import Link from "next/link";
+import { trackBeginCheckout, trackPurchase } from "@/lib/analytics/gtag";
 
 
 type FormValues = Partial<Order> & {
@@ -50,6 +51,21 @@ export function CheckoutUserScreen({ governorates, user }: { governorates: Gover
             setSelectedGovernorate(addrGov ?? null);
         }
     }, [selectedGovernorate, setValue, selectedAddressIndex, user]);
+
+    // GA4 Track Begin Checkout
+    useEffect(() => {
+        if (cart.items.length > 0) {
+            trackBeginCheckout(
+                cart.items.map(item => ({
+                    item_id: item.id || item.slug,
+                    item_name: item.name,
+                    price: item.price,
+                    quantity: item.quantity
+                })),
+                cart.netTotal
+            );
+        }
+    }, []);
 
 
 
@@ -105,44 +121,26 @@ export function CheckoutUserScreen({ governorates, user }: { governorates: Gover
         }
         else if (result.order_id) {
             if (selectedPayment === 'online') {
-                // try {
-                //     const responseData = await initiatePaymobPayment(
-                //         result.order_id,
-                //         payload.grand_total!,
-                //         {
-                //             first_name: user.name.split(' ')[0],
-                //             last_name: user.name.split(' ').slice(1).join(' ') || 'NA',
-                //             email: user.email,
-                //             phone: user.phone[0] || data.guest_phone!,
-                //         },
-                //         {
-                //             street: payload.guest_address?.address || user.address?.[selectedAddressIndex as number]?.address || 'NA',
-                //             city: selectedGovernorate?.name_en || 'NA',
-                //             country: 'EG',
-                //             state: selectedGovernorate?.name_en || 'NA',
-                //         }
-                //     );
-
-                //     if (responseData.error) {
-                //         toast.error(responseData.error);
-                //         setLoading(false);
-                //         return;
-                //     }
-
-                //     if (responseData.iframeUrl) {
-                //         await clearCart();
-                //         window.location.href = responseData.iframeUrl;
-                //         return;
-                //     }
-                // } catch (err) {
-                //     console.error(err);
-                //     toast.error("checkout.errors.paymentFailed");
-                //     setLoading(false);
-                //     return;
-                // }
+                // Payment logic commented out
             }
 
             toast.success(t('checkout.success.orderCreated'));
+
+            // GA4 Track Purchase
+            trackPurchase(
+                result.order_id,
+                cart.items.map(item => ({
+                    item_id: item.id || item.slug,
+                    item_name: item.name,
+                    price: item.price,
+                    quantity: item.quantity
+                })),
+                payload.grand_total || 0,
+                payload.shipping_total || 0,
+                payload.tax_total || 0,
+                cart.promoCode || undefined
+            );
+
             // navigate first, then clear the cart to avoid in-place redirect from cart-empty watchers
             router.push(`/orders/${result.order_id}`);
             await clearCart();

@@ -16,6 +16,7 @@ import { ProductView } from "@/domain/entities/views/shop/productView";
 import SimilarProductsScroll from "@/ui/components/store/SimilarProductsScroll";
 import { motion } from "framer-motion";
 import { WishlistButton } from "@/ui/components/store/WishlistButton";
+import { trackViewItem } from "@/lib/analytics/gtag";
 
 
 export function ProductDetailScreen({ initProduct: product, similarProducts = [] }: { initProduct: ProductDetailView | null, similarProducts?: ProductView[] }) {
@@ -27,6 +28,18 @@ export function ProductDetailScreen({ initProduct: product, similarProducts = []
     const toggleSection = useCallback((id: String) => {
         setActiveSection(activeSection === id ? null : id);
     }, [activeSection]);
+
+    // GA4 Track View Item
+    useEffect(() => {
+        if (product) {
+            trackViewItem({
+                item_id: product.variant_id || product.product_id,
+                item_name: product.name,
+                price: product.price,
+                item_category: product.category_name || undefined
+            });
+        }
+    }, [product]);
 
     const materials = product?.materials?.filter((material) => material.material_type === 'Chemicals');
     if (!product) {

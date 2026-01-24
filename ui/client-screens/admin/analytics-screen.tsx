@@ -22,6 +22,12 @@ interface AnalyticsData {
     error?: string;
 }
 
+interface FunnelStep {
+    label: string;
+    name: string;
+    count: number;
+}
+
 interface StatCardInfo {
     title: string;
     value: string | number;
@@ -38,16 +44,40 @@ function formatDuration(seconds: number): string {
     return `${mins}m ${secs}s`;
 }
 
+interface KeywordData {
+    query: string;
+    clicks: number;
+    impressions: number;
+    ctr: number;
+    position: number;
+}
+
 export function AnalyticsScreen() {
     const [data, setData] = useState<AnalyticsData | null>(null);
+    const [funnel, setFunnel] = useState<FunnelStep[]>([]);
+    const [keywords, setKeywords] = useState<KeywordData[]>([]);
+    const [realtimeUsers, setRealtimeUsers] = useState<number>(0);
     const [loading, setLoading] = useState(true);
+    const [loadingFunnel, setLoadingFunnel] = useState(true);
+    const [loadingKeywords, setLoadingKeywords] = useState(true);
     const [dateMode, setDateMode] = useState<"preset" | "custom">("preset");
     const [presetRange, setPresetRange] = useState("30daysAgo");
     const [customStartDate, setCustomStartDate] = useState("");
     const [customEndDate, setCustomEndDate] = useState("");
     const [selectedCard, setSelectedCard] = useState<StatCardInfo | null>(null);
 
-    // Set default custom dates
+    // Fetch Realtime Data
+    const fetchRealtime = async () => {
+        try {
+            const res = await fetch('/api/admin/analytics/realtime');
+            const json = await res.json();
+            setRealtimeUsers(json.activeUsers || 0);
+        } catch (error) {
+            console.error("Failed to fetch realtime data:", error);
+        }
+    };
+
+    // Set default custom dates and start realtime interval
     useEffect(() => {
         const today = new Date();
         const thirtyDaysAgo = new Date(today);
@@ -55,10 +85,16 @@ export function AnalyticsScreen() {
 
         setCustomEndDate(today.toISOString().split('T')[0]);
         setCustomStartDate(thirtyDaysAgo.toISOString().split('T')[0]);
+
+        fetchRealtime();
+        const interval = setInterval(fetchRealtime, 30000); // Update every 30s
+        return () => clearInterval(interval);
     }, []);
 
     const fetchData = async () => {
         setLoading(true);
+        setLoadingFunnel(true);
+        setLoadingKeywords(true);
         try {
             let startDate = presetRange;
             let endDate = "today";
@@ -68,13 +104,27 @@ export function AnalyticsScreen() {
                 endDate = customEndDate;
             }
 
-            const res = await fetch(`/api/admin/analytics/full?startDate=${startDate}&endDate=${endDate}`);
-            const json = await res.json();
+            const [res, funnelRes, searchRes] = await Promise.all([
+                fetch(`/api/admin/analytics/full?startDate=${startDate}&endDate=${endDate}`),
+                fetch(`/api/admin/analytics/funnel?startDate=${startDate}&endDate=${endDate}`),
+                fetch(`/api/admin/analytics/search-console?startDate=${startDate}&endDate=${endDate}`)
+            ]);
+
+            const [json, funnelJson, searchJson] = await Promise.all([
+                res.json(),
+                funnelRes.json(),
+                searchRes.json()
+            ]);
+
             setData(json);
+            setFunnel(funnelJson.funnel || []);
+            setKeywords(searchJson.keywords || []);
         } catch (error) {
             console.error("Failed to fetch analytics:", error);
         }
         setLoading(false);
+        setLoadingFunnel(false);
+        setLoadingKeywords(false);
     };
 
     useEffect(() => {
@@ -87,7 +137,7 @@ export function AnalyticsScreen() {
             value: data?.visitors ?? 0,
             icon: Users,
             color: "bg-blue-500",
-            desc: "Unique users",
+            desc: realtimeUsers > 0 ? `${realtimeUsers} Active Now` : "Unique users",
             explanation: "The number of unique users who visited your website during the selected period. Each person is counted only once, even if they visit multiple times.",
             formula: "COUNT(DISTINCT user_id)"
         },
@@ -221,6 +271,126 @@ export function AnalyticsScreen() {
                 </div>
             )}
 
+            {/* Funnel Analysis Section */}
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100"
+            >
+                <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                    <TrendingDown className="h-6 w-6 text-blue-500 rotate-180" />
+                    Purchase Funnel
+                </h3>
+
+                <div className="flex flex-col md:flex-row items-end justify-between gap-2 md:gap-4 h-64 md:h-48 pt-4">
+                    {loadingFunnel ? (
+                        Array(5).fill(0).map((_, i) => (
+                            <div key={i} className="flex-1 w-full bg-gray-100 animate-pulse rounded-t-xl" style={{ height: `${100 - (i * 15)}%` }}></div>
+                        ))
+                    ) : funnel.length > 0 ? (
+                        funnel.map((step, i) => {
+                            const prevCount = i > 0 ? funnel[i - 1].count : step.count;
+                            const dropOff = i > 0 && prevCount > 0 ? (step.count / prevCount * 100).toFixed(1) : 100;
+                            const height = (step.count / (funnel[0].count || 1) * 100);
+
+                            return (
+                                <div key={step.name} className="flex-1 w-full flex flex-col items-center justify-end group relative h-full">
+                                    {/* Drop-off Badge */}
+                                    {i > 0 && (
+                                        <div className="absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 bg-gray-900 text-white text-[10px] px-1.5 py-0.5 rounded-full z-10 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                                            {dropOff}% conversion
+                                        </div>
+                                    )}
+
+                                    {/* Bar */}
+                                    <div
+                                        className={`w-full max-w-[80px] rounded-t-xl transition-all duration-500 hover:brightness-110 shadow-sm ${i === 0 ? "bg-blue-500" :
+                                            i === 1 ? "bg-indigo-500" :
+                                                i === 2 ? "bg-purple-500" :
+                                                    i === 3 ? "bg-pink-500" : "bg-rose-500"
+                                            }`}
+                                        style={{ height: `${Math.max(height, 5)}%` }}
+                                    >
+                                        <div className="text-white text-[10px] md:text-xs font-bold text-center pt-2">
+                                            {step.count.toLocaleString()}
+                                        </div>
+                                    </div>
+
+                                    {/* Label */}
+                                    <div className="text-[10px] md:text-xs text-gray-500 mt-2 text-center font-medium leading-tight">
+                                        {step.label}
+                                    </div>
+                                </div>
+                            );
+                        })
+                    ) : (
+                        <div className="w-full flex items-center justify-center text-gray-400 h-20">No funnel data available yet</div>
+                    )}
+                </div>
+            </motion.div>
+
+            {/* Search Keywords Section */}
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100"
+            >
+                <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                    <Globe className="h-6 w-6 text-green-500" />
+                    Top Search Keywords
+                    <span className="text-xs font-normal text-gray-400 ml-auto">Google Search performance</span>
+                </h3>
+
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                        <thead>
+                            <tr className="border-b border-gray-100 uppercase text-[10px] font-bold text-gray-400 tracking-wider">
+                                <th className="pb-3 pl-2">Keyword</th>
+                                <th className="pb-3 text-center">Clicks</th>
+                                <th className="pb-3 text-center">Impressions</th>
+                                <th className="pb-3 text-center">CTR</th>
+                                <th className="pb-3 text-center pr-2">Avg. Position</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50">
+                            {loadingKeywords ? (
+                                Array(5).fill(0).map((_, i) => (
+                                    <tr key={i} className="animate-pulse">
+                                        <td className="py-4 pl-2"><div className="h-4 bg-gray-100 rounded w-32"></div></td>
+                                        <td className="py-4 text-center"><div className="h-4 bg-gray-100 rounded w-12 mx-auto"></div></td>
+                                        <td className="py-4 text-center"><div className="h-4 bg-gray-100 rounded w-12 mx-auto"></div></td>
+                                        <td className="py-4 text-center"><div className="h-4 bg-gray-100 rounded w-12 mx-auto"></div></td>
+                                        <td className="py-4 text-center pr-2"><div className="h-4 bg-gray-100 rounded w-8 mx-auto"></div></td>
+                                    </tr>
+                                ))
+                            ) : keywords.length > 0 ? (
+                                keywords.map((kw: KeywordData, i: number) => (
+                                    <tr key={i} className="hover:bg-gray-50 transition-colors group">
+                                        <td className="py-3 pl-2 text-sm font-medium text-gray-900">{kw.query}</td>
+                                        <td className="py-3 text-center text-sm text-gray-600">{kw.clicks.toLocaleString()}</td>
+                                        <td className="py-3 text-center text-sm text-gray-600">{kw.impressions.toLocaleString()}</td>
+                                        <td className="py-3 text-center text-sm text-gray-600">{kw.ctr.toFixed(1)}%</td>
+                                        <td className="py-3 text-center pr-2">
+                                            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${kw.position <= 3 ? "bg-green-100 text-green-700" :
+                                                kw.position <= 10 ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-700"
+                                                }`}>
+                                                #{kw.position.toFixed(1)}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan={5} className="py-10 text-center text-gray-400 text-sm">
+                                        No keywords data available. Make sure Search Console is connected.
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </motion.div>
+
             {/* Stat Cards */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 {statCards.map((stat, i) => (
@@ -240,6 +410,12 @@ export function AnalyticsScreen() {
                         </div>
                         <p className="text-2xl font-bold text-gray-900">
                             {loading ? "..." : stat.value}
+                            {stat.title === "Visitors" && realtimeUsers > 0 && (
+                                <span className="absolute top-4 right-8 flex h-3 w-3">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                                </span>
+                            )}
                         </p>
                         <p className="text-sm text-gray-500">{stat.title}</p>
                         <p className="text-xs text-gray-400">{stat.desc}</p>
@@ -317,7 +493,7 @@ export function AnalyticsScreen() {
                                 {[1, 2, 3, 4, 5].map(i => <div key={i} className="h-8 bg-gray-100 rounded"></div>)}
                             </div>
                         ) : data?.topPages?.length ? (
-                            data.topPages.map((page, i) => (
+                            data.topPages.map((page: { path: string; views: number }, i: number) => (
                                 <div key={i} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                                     <span className="text-sm text-gray-700 truncate max-w-[70%]">{page.path}</span>
                                     <span className="text-sm font-semibold text-gray-900">{page.views.toLocaleString()}</span>
@@ -342,7 +518,7 @@ export function AnalyticsScreen() {
                                 {[1, 2, 3, 4, 5].map(i => <div key={i} className="h-8 bg-gray-100 rounded"></div>)}
                             </div>
                         ) : data?.trafficSources?.length ? (
-                            data.trafficSources.map((source, i) => (
+                            data.trafficSources.map((source: { source: string; sessions: number }, i: number) => (
                                 <div key={i} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                                     <span className="text-sm text-gray-700">{source.source}</span>
                                     <span className="text-sm font-semibold text-gray-900">{source.sessions.toLocaleString()}</span>
@@ -367,9 +543,9 @@ export function AnalyticsScreen() {
                                 {[1, 2, 3].map(i => <div key={i} className="h-12 bg-gray-100 rounded"></div>)}
                             </div>
                         ) : data?.devices?.length ? (
-                            data.devices.map((device, i) => {
+                            data.devices.map((device: { device: string; sessions: number }, i: number) => {
                                 const Icon = getDeviceIcon(device.device);
-                                const total = data.devices.reduce((acc, d) => acc + d.sessions, 0);
+                                const total = data.devices.reduce((acc: number, d: { sessions: number }) => acc + d.sessions, 0);
                                 const percentage = total > 0 ? ((device.sessions / total) * 100).toFixed(1) : 0;
                                 return (
                                     <div key={i} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
@@ -408,7 +584,7 @@ export function AnalyticsScreen() {
                                 {[1, 2, 3, 4, 5].map(i => <div key={i} className="h-8 bg-gray-100 rounded"></div>)}
                             </div>
                         ) : data?.countries?.length ? (
-                            data.countries.map((country, i) => (
+                            data.countries.map((country: { country: string; sessions: number }, i: number) => (
                                 <div key={i} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                                     <span className="text-sm text-gray-700">{country.country}</span>
                                     <span className="text-sm font-semibold text-gray-900">{country.sessions.toLocaleString()}</span>
