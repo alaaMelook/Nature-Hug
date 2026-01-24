@@ -2,7 +2,7 @@ import { BetaAnalyticsDataClient } from '@google-analytics/data';
 import { NextResponse } from 'next/server';
 
 // Google Analytics 4 Property ID (just the number, not the full "properties/xxx" format)
-const GA4_PROPERTY_ID = process.env.GA4_PROPERTY_ID || '361944646'; // From your GA4 property
+const GA4_PROPERTY_ID = process.env.GA4_PROPERTY_ID || '497336931'; // From your GA4 property
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
