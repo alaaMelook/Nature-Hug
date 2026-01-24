@@ -92,7 +92,15 @@ export default function AdminSidebar({
         { name: t("governorates"), href: "/admin/shipping/governorates" },
       ]
     },
-    { name: t("reports"), href: "/admin/reports", icon: BarChart3 },
+    {
+      name: t("reports"),
+      href: "/admin/reports",
+      icon: BarChart3,
+      submenu: [
+        { name: "📊 Reports", href: "/admin/reports" },
+        { name: "📈 Analytics", href: "/admin/analytics" },
+      ]
+    },
     {
       name: "Finance",
       href: "/admin/finance",
