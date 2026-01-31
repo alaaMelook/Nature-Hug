@@ -202,15 +202,11 @@ export function TrackingScreen({ initialOrder, initialError, lang }: TrackingScr
                                 {order.items?.map((item, idx) => (
                                     <div key={idx} className="flex justify-between items-center py-3 border-b border-gray-50 last:border-0">
                                         <div className="flex items-center gap-3">
-                                            {item.product_image && (
-                                                <img
-                                                    src={item.product_image}
-                                                    alt={item.product_name}
-                                                    className="w-12 h-12 rounded-lg object-cover"
-                                                />
-                                            )}
+                                            <div className="w-12 h-12 rounded-lg bg-primary-50 flex items-center justify-center">
+                                                <Package size={20} className="text-primary-600" />
+                                            </div>
                                             <div>
-                                                <p className="font-medium text-gray-900">{item.product_name}</p>
+                                                <p className="font-medium text-gray-900">{item.item_name || item.product_base_name}</p>
                                                 {item.variant_name && (
                                                     <p className="text-sm text-gray-500">{item.variant_name}</p>
                                                 )}
