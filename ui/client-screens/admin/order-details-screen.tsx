@@ -40,6 +40,8 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
         shipping_total: order.shipping_total,
         discount_total: order.discount_total,
         final_order_total: order.final_order_total,
+        is_prepaid: order.payment_status === 'paid',
+        note: order.note || '',
         items: order.items.map(item => ({
             id: item.id,
             item_name: item.item_name,
@@ -78,6 +80,30 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
         }
     }, [order, router]);
 
+    // Toggle Prepaid status directly without edit mode
+    const handleTogglePrepaid = async () => {
+        setUpdating(true);
+        try {
+            const newPaymentStatus = order.payment_status === 'paid' ? 'pending' : 'paid';
+            const result = await updateOrderAction({
+                order_id: order.order_id,
+                payment_status: newPaymentStatus
+            });
+            if (result.success) {
+                toast.success(newPaymentStatus === 'paid'
+                    ? (t("markedAsPrepaid") || "Order marked as Prepaid")
+                    : (t("removedPrepaid") || "Prepaid status removed"));
+                router.refresh();
+            } else {
+                toast.error(result.error || t("failedToUpdateOrder"));
+            }
+        } catch (error) {
+            console.error("Failed to toggle prepaid:", error);
+            toast.error(t("failedToUpdateOrder"));
+        } finally {
+            setUpdating(false);
+        }
+    };
 
 
 
@@ -110,14 +136,18 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
                 // Debug logging for COD issue
                 console.log("[Shipment Debug] Order Data:", {
                     payment_method: order.payment_method,
+                    payment_status: order.payment_status,
                     final_order_total: order.final_order_total,
                     subtotal: order.subtotal,
                     shipping_total: order.shipping_total,
                     discount_total: order.discount_total,
                     applied_promo_code: order.applied_promo_code,
-                    promo_percentage: order.promo_percentage
+                    promo_percentage: order.promo_percentage,
+                    note: order.note
                 });
 
+                // Check if order is Prepaid (payment_status is 'paid')
+                const isPrepaid = order.payment_status === 'paid';
                 const isCOD = order.payment_method.toLowerCase() !== 'online card';
 
                 // Calculate effective total with discount (same logic as display)
@@ -130,9 +160,11 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
                     ? order.subtotal - calculatedDiscount + order.shipping_total
                     : order.final_order_total;
 
-                const codValue = isCOD ? effectiveTotal : 0;
+                // If Prepaid, COD = 0. Otherwise, check if it's a COD order.
+                const codValue = isPrepaid ? 0 : (isCOD ? effectiveTotal : 0);
 
                 console.log("[Shipment Debug] COD Calculation:", {
+                    isPrepaid,
                     isCOD,
                     codValue,
                     calculatedDiscount,
@@ -140,16 +172,25 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
                     payment_method_lowercase: order.payment_method.toLowerCase()
                 });
 
+                // Build special instructions - include order notes if available
+                let specialInstructions = "في حالة وجود مشكلة 01090998664";
+                if (order.note && order.note.trim()) {
+                    specialInstructions = `${order.note.trim()} | ${specialInstructions}`;
+                }
+                if (isPrepaid) {
+                    specialInstructions = `[مدفوع مسبقاً] ${specialInstructions}`;
+                }
+
                 // Create shipment with correct API field names
                 const shipmentData: Shipment = {
                     toAddress: order.shipping_street_address,
                     toPhone: order.phone_numbers[0] || "",
                     toMobile: order.phone_numbers[0] || "",
-                    cod: codValue,  // Changed from codAmount to cod
+                    cod: codValue,  // 0 for Prepaid orders
                     fromAddress: "",
                     toConsigneeName: order.customer_name,
-                    toCityID: governorate.cityID,  // Changed from toCityId to toCityID
-                    specialInstuctions: "في حالة وجود مشكلة 01090998664",  // Changed from shipperNotes
+                    toCityID: governorate.cityID,
+                    specialInstuctions: specialInstructions,  // Includes order notes
                     pieces: order.items.reduce((acc, item) => acc + item.quantity, 0),
                     fromCityID: 1078
                 };
@@ -159,7 +200,16 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
                 result = await markAsOutForDeliveryAction(order, shipmentData);
             } else {
                 // Only send order_id and order_status to avoid sending fields that don't exist in DB
-                result = await updateOrderAction({ order_id: order.order_id, order_status: newStatus });
+                // Automatically set payment status to 'paid' if status is delivered or completed
+                const extraFields: any = {};
+                if (newStatus === 'delivered' || newStatus === 'completed') {
+                    extraFields.payment_status = 'paid';
+                }
+                result = await updateOrderAction({
+                    order_id: order.order_id,
+                    order_status: newStatus,
+                    ...extraFields
+                });
             }
 
             if (result.success) {
@@ -213,6 +263,8 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
                 shipping_total: editForm.shipping_total,
                 discount_total: editForm.discount_total,
                 final_order_total: editForm.final_order_total,
+                // Note: payment_status (Prepaid) is now handled by standalone toggle button
+                note: editForm.note || null,
                 items: editForm.items.map((item) => ({
                     id: item.id, // undefined for new items
                     quantity: item.quantity,
@@ -324,6 +376,8 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
             shipping_total: order.shipping_total,
             discount_total: order.discount_total,
             final_order_total: order.final_order_total,
+            is_prepaid: order.payment_status === 'paid',
+            note: order.note || '',
             items: order.items.map(item => ({
                 id: item.id,
                 item_name: item.item_name,
@@ -385,27 +439,37 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
                         <div>
                             <h1 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-3 flex-wrap">
                                 {t("orderId")} #{order.order_id}
-                                <span className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium uppercase tracking-wide ${statusColor(order.order_status)}`}>
+                                <span className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-bold uppercase tracking-wide shadow-sm ${statusColor(order.order_status)}`}>
                                     {t(order.order_status) || order.order_status}
                                 </span>
+                                {/* Show Paid for completed/delivered orders, or Prepaid for orders marked as paid but not yet delivered */}
+                                {(['delivered', 'completed'].includes(order.order_status.toLowerCase())) ? (
+                                    <span className="px-3 py-1.5 rounded-full text-xs sm:text-sm font-bold uppercase tracking-wide shadow-sm bg-green-100 text-green-700">
+                                        {t("paid") || "Paid"}
+                                    </span>
+                                ) : order.payment_status === 'paid' ? (
+                                    <span className="px-3 py-1.5 rounded-full text-xs sm:text-sm font-bold uppercase tracking-wide shadow-sm bg-blue-100 text-blue-700">
+                                        {t("prepaid") || "Prepaid"}
+                                    </span>
+                                ) : null}
                             </h1>
                         </div>
                     </div>
                 </div>
 
                 {/* Actions - Changed to flex-wrap on mobile and justified end */}
-                <div className="flex flex-wrap justify-start gap-3 mt-4 sm:mt-0 sm:justify-end">
+                <div className="flex flex-wrap justify-start gap-3 mt-4 sm:mt-0 sm:justify-end items-center">
                     <button
                         onClick={() => import("@/lib/utils/invoiceGenerator").then(mod => mod.generateInvoicePDF(order))}
-                        className="flex-1 sm:flex-none px-4 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors border border-gray-200"
+                        className="flex-1 sm:flex-none px-4 py-2 bg-white text-gray-700 hover:bg-gray-50 rounded-lg text-sm font-medium transition-colors border border-gray-200 shadow-sm"
                     >
-                        {t("exportInvoice")}
+                        📄 {t("exportInvoice")}
                     </button>
                     {actions.neg && (
                         <button
                             onClick={() => handleStatusChange(actions.status_neg)}
                             disabled={updating}
-                            className="flex-1 sm:flex-none px-4 py-2 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                            className="flex-1 sm:flex-none px-4 py-2 bg-red-50 text-red-700 hover:bg-red-100 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 border border-red-100"
                         >
                             {t(actions.neg)}
                         </button>
@@ -416,9 +480,9 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
                             <button
                                 onClick={() => handleStatusChange('out for delivery', true)}
                                 disabled={updating}
-                                className="flex-1 sm:flex-none px-4 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 border border-gray-200"
+                                className="flex-1 sm:flex-none px-4 py-2 bg-white text-gray-500 hover:bg-gray-50 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 border border-gray-200 italic"
                             >
-                                {t("markAsOutForDelivery")} ({t("manual") || "Manual"})
+                                ✍️ {t("markAsOutForDelivery")} ({t("manual") || "Manual"})
                             </button>
                         </>
                     )}
@@ -426,9 +490,13 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
                         <button
                             onClick={() => handleStatusChange(actions.status_pos, false)}
                             disabled={updating}
-                            className="flex-1 sm:flex-none px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 shadow-sm"
+                            className="flex-1 sm:flex-none px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 shadow-md flex items-center gap-2"
                         >
-                            {order.order_status === 'processing' ? t("sendToShipment") : t(actions.pos)}
+                            {order.order_status === 'processing' ? (
+                                <><Package size={16} /> {t("sendToShipment") || "Send to Shipment"}</>
+                            ) : (
+                                t(actions.pos)
+                            )}
                         </button>
                     )}
                     {/* Delete Order Button */}
@@ -608,10 +676,57 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
                             <div>
                                 <p className="text-xs text-gray-500 mb-1">{t("paymentStatus")}</p>
                                 <span className={`px-2 py-1 rounded-full text-xs font-semibold ${order.payment_status === 'paid' ? 'bg-green-100 text-green-800' : order.payment_status === 'refunded' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}`}>
-                                    {t(order.payment_status) || order.payment_status}
+                                    {order.payment_status === 'paid' ? (t("prepaid") || "Prepaid") : (t(order.payment_status) || order.payment_status)}
                                 </span>
                             </div>
+                            {/* Prepaid Toggle Button - Always visible (standalone action) */}
+                            <div className="pt-2 border-t">
+                                <button
+                                    onClick={handleTogglePrepaid}
+                                    disabled={updating}
+                                    className={`w-full px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${order.payment_status === 'paid'
+                                        ? 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
+                                        : 'bg-green-600 text-white hover:bg-green-700'
+                                        } disabled:opacity-50`}
+                                >
+                                    {updating ? (
+                                        <Loader2 className="animate-spin" size={16} />
+                                    ) : order.payment_status === 'paid' ? (
+                                        <>✓ {t("prepaid") || "Prepaid"} - {t("clickToRemove") || "Click to remove"}</>
+                                    ) : (
+                                        <>{t("markAsPrepaid") || "Mark as Prepaid (مدفوع مسبقاً)"}</>
+                                    )}
+                                </button>
+                                <p className="text-xs text-gray-500 mt-2 text-center">
+                                    {t("prepaidDescription") || "When Prepaid, COD will be 0 when sending to shipping company"}
+                                </p>
+                            </div>
                         </div>
+                    </motion.section>
+
+                    {/* Order Notes Section */}
+                    <motion.section variants={itemVariants} className="bg-white rounded-xl shadow-sm border p-4 sm:p-6">
+                        <h3 className="text-xs font-semibold text-gray-500 uppercase mb-4 flex items-center gap-2">
+                            📝 {t("orderNotes") || "Order Notes"}
+                        </h3>
+                        {isEditing ? (
+                            <textarea
+                                value={editForm.note}
+                                onChange={(e) => setEditForm({ ...editForm, note: e.target.value })}
+                                placeholder={t("addOrderNotes") || "Add notes for this order..."}
+                                rows={3}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            />
+                        ) : (
+                            <p className={`text-sm ${order.note ? 'text-gray-700' : 'text-gray-400 italic'}`}>
+                                {order.note || (t("noNotes") || "No notes for this order")}
+                            </p>
+                        )}
+                        {order.note && !isEditing && (
+                            <p className="text-xs text-gray-500 mt-2">
+                                💡 {t("notesWillBeSentToShipping") || "Notes will be sent to the shipping company"}
+                            </p>
+                        )}
                     </motion.section>
                 </div>
 

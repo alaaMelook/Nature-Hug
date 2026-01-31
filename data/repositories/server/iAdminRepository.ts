@@ -792,7 +792,10 @@ export class IAdminServerRepository implements AdminRepository {
         if (existingOrder.customer_id && (order.customer_name !== undefined || order.customer_email !== undefined)) {
             const customerUpdate: any = {};
             if (order.customer_name !== undefined) customerUpdate.name = order.customer_name;
-            if (order.customer_email !== undefined) customerUpdate.email = order.customer_email;
+            // Only update email if it's not empty to avoid duplicate key error
+            if (order.customer_email !== undefined && order.customer_email.trim() !== '') {
+                customerUpdate.email = order.customer_email;
+            }
 
             if (Object.keys(customerUpdate).length > 0) {
                 const { error: customerError } = await supabaseAdmin.schema('store')
@@ -841,6 +844,9 @@ export class IAdminServerRepository implements AdminRepository {
         // Payment info
         if (order.payment_method !== undefined) updateData.payment_method = order.payment_method;
         if (order.payment_status !== undefined) updateData.payment_status = order.payment_status;
+
+        // Order notes
+        if ((order as any).note !== undefined) updateData.note = (order as any).note;
 
         if (Object.keys(updateData).length > 0) {
             console.log("[IAdminRepository] updateOrder - Final updateData before call:", JSON.stringify(updateData, null, 2));

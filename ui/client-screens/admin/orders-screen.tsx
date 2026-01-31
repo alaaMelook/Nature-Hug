@@ -390,14 +390,34 @@ export function OrdersScreen({ initialOrders, promoCodes = [] }: { initialOrders
                                                 ) : <span className="text-gray-600 w-full tracking-wider">&mdash;</span>}
                                             </td>
                                             <td className="px-4 py-3">
-                                                <span className={`text-xs px-2 py-0.5 rounded-full w-fit ${statusColor(order.order_status)}`}>
-                                                    {order.order_status}
-                                                </span>
+                                                <div className="flex flex-col gap-1">
+                                                    <span className={`text-xs px-2.5 py-1 rounded-full w-fit font-bold uppercase ${statusColor(order.order_status)}`}>
+                                                        {t(order.order_status) || order.order_status}
+                                                    </span>
+                                                    {order.awb ? (
+                                                        <span className="text-xs text-blue-600 font-medium">
+                                                            📄 {order.awb}
+                                                        </span>
+                                                    ) : order.order_status === 'out for delivery' || order.order_status === 'shipped' || order.order_status === 'delivered' ? (
+                                                        <span className="text-xs text-amber-600 font-medium italic">
+                                                            {t("manual") || "(Manual)"}
+                                                        </span>
+                                                    ) : null}
+                                                </div>
                                             </td>
                                             <td className="px-4 py-3">
-                                                <div className="flex flex-col">
+                                                <div className="flex flex-col gap-1">
                                                     <span className="text-sm font-medium text-gray-900">{order.payment_method}</span>
-
+                                                    {/* Show Paid for completed/delivered orders, or Prepaid for orders marked as paid but not yet delivered */}
+                                                    {(['delivered', 'completed'].includes(order.order_status.toLowerCase())) ? (
+                                                        <span className="text-xs px-2.5 py-1 rounded-full font-bold w-fit bg-green-100 text-green-700">
+                                                            {t("paid") || "Paid"}
+                                                        </span>
+                                                    ) : order.payment_status === 'paid' ? (
+                                                        <span className="text-xs px-2.5 py-1 rounded-full font-bold w-fit bg-blue-100 text-blue-700">
+                                                            {t("prepaid") || "Prepaid"}
+                                                        </span>
+                                                    ) : null}
                                                 </div>
                                             </td>
                                             <td className="px-4 py-3 font-medium text-gray-900">{t('{{price, currency}}', { price: order.final_order_total })}</td>
@@ -405,8 +425,8 @@ export function OrdersScreen({ initialOrders, promoCodes = [] }: { initialOrders
                                                 {order.created_by_user_name ? (
                                                     <div className="flex items-center gap-1">
                                                         <span className={`text-xs px-2 py-1 rounded-full ${order.created_by_user_role === 'admin'
-                                                                ? 'bg-purple-50 text-purple-700'
-                                                                : 'bg-blue-50 text-blue-700'
+                                                            ? 'bg-purple-50 text-purple-700'
+                                                            : 'bg-blue-50 text-blue-700'
                                                             }`}>
                                                             {order.created_by_user_role === 'admin' && '👤'}
                                                             {order.created_by_user_role === 'moderator' && '👔'}
@@ -470,9 +490,16 @@ export function OrdersScreen({ initialOrders, promoCodes = [] }: { initialOrders
                                     >
                                         <div className="flex items-center justify-between mb-3 mx-5">
                                             <h3 className="font-semibold text-lg text-gray-900">#{order.order_id}</h3>
-                                            <span className={`text-xs px-2 py-0.5 rounded-full ${statusColor(order.order_status)}`}>
-                                                {order.order_status}
-                                            </span>
+                                            <div className="flex flex-col items-end gap-1">
+                                                <span className={`text-xs px-2.5 py-1 rounded-full font-bold uppercase ${statusColor(order.order_status)}`}>
+                                                    {t(order.order_status) || order.order_status}
+                                                </span>
+                                                {order.awb ? (
+                                                    <span className="text-xs text-blue-600 font-medium">📄 {order.awb}</span>
+                                                ) : order.order_status === 'out for delivery' || order.order_status === 'shipped' || order.order_status === 'delivered' ? (
+                                                    <span className="text-xs text-amber-600 font-medium italic">{t("manual") || "(Manual)"}</span>
+                                                ) : null}
+                                            </div>
                                         </div>
 
                                         <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm text-gray-700 mb-3">
@@ -483,7 +510,19 @@ export function OrdersScreen({ initialOrders, promoCodes = [] }: { initialOrders
                                                 <span className="font-medium">{t("governorate")}:</span> {order.shipping_governorate}
                                             </div>
                                             <div>
-                                                <span className="font-medium">{t("payment")}:</span> {order.payment_method}
+                                                <div className="flex flex-col gap-1 text-sm">
+                                                    <div><span className="font-medium">{t("payment")}:</span> {order.payment_method}</div>
+                                                    {/* Show Paid for completed/delivered orders, or Prepaid for orders marked as paid but not yet delivered */}
+                                                    {(['delivered', 'completed'].includes(order.order_status.toLowerCase())) ? (
+                                                        <span className="text-xs px-2.5 py-1 rounded-full font-bold w-fit bg-green-100 text-green-700">
+                                                            {t("paid") || "Paid"}
+                                                        </span>
+                                                    ) : order.payment_status === 'paid' ? (
+                                                        <span className="text-xs px-2.5 py-1 rounded-full font-bold w-fit bg-blue-100 text-blue-700">
+                                                            {t("prepaid") || "Prepaid"}
+                                                        </span>
+                                                    ) : null}
+                                                </div>
                                             </div>
                                             {order.applied_promo_code && (
                                                 <div>
@@ -500,8 +539,8 @@ export function OrdersScreen({ initialOrders, promoCodes = [] }: { initialOrders
                                                 <div>
                                                     <span className="font-medium">{t("createdBy")}:</span>{" "}
                                                     <span className={`text-xs px-2 py-1 rounded-full ${order.created_by_user_role === 'admin'
-                                                            ? 'bg-purple-50 text-purple-700'
-                                                            : 'bg-blue-50 text-blue-700'
+                                                        ? 'bg-purple-50 text-purple-700'
+                                                        : 'bg-blue-50 text-blue-700'
                                                         }`}>
                                                         {order.created_by_user_name}
                                                     </span>
