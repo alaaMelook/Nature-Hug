@@ -143,8 +143,8 @@ export function TrackingScreen({ initialOrder, initialError, lang }: TrackingScr
                                             return (
                                                 <div key={step.key} className="flex flex-col items-center flex-1">
                                                     <div className={`relative z-10 w-12 h-12 rounded-full flex items-center justify-center transition-all ${isCompleted
-                                                            ? 'bg-primary-600 text-white'
-                                                            : 'bg-gray-100 text-gray-400'
+                                                        ? 'bg-primary-600 text-white'
+                                                        : 'bg-gray-100 text-gray-400'
                                                         } ${isCurrent ? 'ring-4 ring-primary-200' : ''}`}>
                                                         <Icon size={20} />
                                                     </div>
@@ -177,7 +177,7 @@ export function TrackingScreen({ initialOrder, initialError, lang }: TrackingScr
                                 </h3>
                                 <p className="text-gray-600">{order.customer_name}</p>
                                 <p className="text-gray-600">{order.shipping_street_address}</p>
-                                <p className="text-gray-600">{order.shipping_governorate_name}</p>
+                                <p className="text-gray-600">{order.shipping_governorate}</p>
                             </div>
 
                             {/* Contact Info */}
