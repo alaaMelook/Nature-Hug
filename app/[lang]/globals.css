@@ -19,8 +19,15 @@
 
     --font-sans: var(--font-gerlach-sans), ui-sans-serif, system-ui;
     --font-arabic: var(--font-muslimah), ui-sans-serif, system-ui;
+    --font-cairo: var(--font-cairo), ui-sans-serif, system-ui;
 
     --color-text: var(--color-primary-50);
+}
+
+/* Cairo font for product descriptions */
+.font-cairo {
+    font-family: 'Cairo', var(--font-cairo), ui-sans-serif, system-ui !important;
+    font-weight: 400;
 }
 [dir="rtl"] {
     word-spacing: 0.2em; /* increase or decrease as you like */

@@ -82,10 +82,10 @@ export function ProductDetailScreen({ initProduct: product, similarProducts = []
                     className="lg:w-1/2 flex flex-col justify-start lg:pt-0 pt-8"
                 > {/* Adjusted padding */}
                     <p className="text-sm font-semibold text-gray-500 uppercase mb-1">{product.category_name?.toUpperCase()}</p> {/* Added category/type for style */}
-                    <h1 className="text-4xl lg:text-5xl font-serif font-semibold text-primary-900 mb-2 leading-tight"> {/* Changed font and color to primary-900 */}
+                    <h1 className="text-4xl lg:text-5xl font-semibold text-primary-900 mb-2 leading-tight font-cairo"> {/* Changed font and color to primary-900 */}
                         {product.name}
                     </h1>
-                    <p className="text-gray-700">
+                    <p className="text-gray-700 font-cairo text-lg leading-relaxed">
                         {product.highlight}
                     </p>
                     <div className="mt-2 mb-4">

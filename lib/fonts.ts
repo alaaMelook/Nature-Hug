@@ -1,4 +1,13 @@
 import localFont from "next/font/local";
+import { Cairo } from "next/font/google";
+
+// Cairo font for product descriptions
+export const cairo = Cairo({
+  subsets: ["arabic", "latin"],
+  weight: ["300", "400", "500", "600", "700"],
+  variable: "--font-cairo",
+  display: "swap",
+});
 
 export const muslimah = localFont({
   src: [

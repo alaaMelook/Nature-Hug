@@ -51,11 +51,11 @@ export const CollapsibleSection = ({
             </button>
 
             <div
-                className={`overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'max-h-96 opacity-100 p-4 pt-0' : 'max-h-0 opacity-0'
+                className={`overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'max-h-none opacity-100 p-4 pt-0' : 'max-h-0 opacity-0'
                     }`}
                 aria-hidden={!isOpen}
             >
-                <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                <div className="text-gray-700 leading-relaxed whitespace-pre-wrap font-cairo">
                     {typeof content === 'string' ? <p className="mb-5">{t(content)}</p> : isOpen && content}
                 </div>
             </div>
