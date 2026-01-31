@@ -155,7 +155,165 @@ class ShipmentService {
         return response.blob();
     }
 
+    /**
+     * Get shipment statistics from Aliens Express API
+     */
+    public async getShipmentStats(fromDate?: Date, toDate?: Date): Promise<ShipmentStats> {
+        // Default to all time if no dates provided
+        const from = fromDate || new Date('2020-01-01');
+        const to = toDate || new Date();
 
+        const shipments = await this.getShipmentHistory(from, to);
+
+        // Calculate statistics
+        const totalShipments = shipments.length;
+
+        // Log unique statuses for debugging
+        const uniqueStatuses = [...new Set(shipments.map(s => s.StatusNameE))];
+        console.log("[ShipmentService] Unique statuses found:", uniqueStatuses);
+
+        // Status counts based on StatusNameE from the API
+        const statusCounts = {
+            delivered: 0,
+            heading: 0,    // Heading to Customer / Out for Delivery
+            inProgress: 0, // In Progress / Picked up / In transit
+            newOrders: 0,  // New / Pending Pickup
+            returned: 0,   // Returned / RTS
+            cancelled: 0,
+            pendingReturn: 0,
+            requireAttention: 0,
+        };
+
+        let totalCOD = 0;
+        let collectedCOD = 0;
+        const unmatchedStatuses: string[] = [];
+
+        for (const shipment of shipments) {
+            const status = (shipment.StatusNameE || '').toLowerCase().trim();
+            const cod = shipment.COD || 0;
+            // Collected is "Yes"/"No" string, not a number!
+            const isCollected = (shipment.Collected || '').toLowerCase() === 'yes';
+
+            totalCOD += cod;
+            if (isCollected) {
+                collectedCOD += cod;
+            }
+
+            // Map Aliens Express status names to our categories
+            if (status === 'delivered' || status === 'completed' || status.includes('delivered')) {
+                statusCounts.delivered++;
+            } else if (status === 'with courier' || status === 'delivering' || status === 'out for delivery' ||
+                status.includes('heading') || status.includes('courier') || status.includes('delivering')) {
+                statusCounts.heading++;
+            } else if (status === 'picked up' || status === 'in transit' || status === 'in progress' ||
+                status.includes('transit') || status.includes('progress') || status === 'picked up') {
+                statusCounts.inProgress++;
+            } else if (status === 'online pickup' || status === 'new' || status === 'pending pickup' ||
+                status === 'pending' || status.includes('online pickup') || status.includes('new order')) {
+                statusCounts.newOrders++;
+            } else if (status === 'returned' || status === 'rts' || status === 'returned to shipper' ||
+                status.includes('returned') || status.includes('rts')) {
+                statusCounts.returned++;
+            } else if (status === 'cancelled' || status === 'canceled' || status.includes('cancel')) {
+                statusCounts.cancelled++;
+            } else if (status.includes('pending return') || status.includes('return pending')) {
+                statusCounts.pendingReturn++;
+            } else if (status.includes('attention') || status.includes('failed') || status.includes('exception')) {
+                statusCounts.requireAttention++;
+            } else {
+                // Track unmatched statuses
+                if (!unmatchedStatuses.includes(status)) {
+                    unmatchedStatuses.push(status);
+                }
+            }
+        }
+
+        if (unmatchedStatuses.length > 0) {
+            console.log("[ShipmentService] Unmatched statuses:", unmatchedStatuses);
+        }
+
+        // Calculate rates
+        const successRate = totalShipments > 0
+            ? ((statusCounts.delivered / totalShipments) * 100).toFixed(1)
+            : '0';
+        const returnRate = totalShipments > 0
+            ? ((statusCounts.returned / totalShipments) * 100).toFixed(1)
+            : '0';
+
+        // Calculate average delivery time (days) from delivered shipments
+        let avgDeliveryTime = 0;
+        const deliveredShipments = shipments.filter(s =>
+            (s.StatusNameE || '').toLowerCase().includes('delivered') && s.DeliveryDate && s.PickupDate
+        );
+
+        if (deliveredShipments.length > 0) {
+            let totalDays = 0;
+            for (const ship of deliveredShipments) {
+                const pickup = new Date(ship.PickupDate);
+                const delivery = new Date(ship.DeliveryDate);
+                const diffDays = (delivery.getTime() - pickup.getTime()) / (1000 * 60 * 60 * 24);
+                if (diffDays > 0) totalDays += diffDays;
+            }
+            avgDeliveryTime = Math.round(totalDays / deliveredShipments.length);
+        }
+
+        const pendingCOD = totalCOD - collectedCOD;
+        const inTransit = statusCounts.heading + statusCounts.inProgress;
+        const pending = statusCounts.newOrders + statusCounts.requireAttention;
+
+        console.log("[ShipmentService] Stats calculated:", {
+            totalShipments,
+            delivered: statusCounts.delivered,
+            heading: statusCounts.heading,
+            inProgress: statusCounts.inProgress,
+            newOrders: statusCounts.newOrders,
+            returned: statusCounts.returned,
+            cancelled: statusCounts.cancelled,
+            totalCOD,
+            collectedCOD
+        });
+
+        return {
+            totalOrders: totalShipments,
+            totalShipments,
+            delivered: statusCounts.delivered,
+            cancelled: statusCounts.cancelled,
+            returned: statusCounts.returned,
+            pending,
+            inTransit,
+            successRate: parseFloat(successRate),
+            failureRate: parseFloat(returnRate),
+            avgDeliveryTime,
+            totalCOD: Math.round(totalCOD),
+            collectedCOD: Math.round(collectedCOD),
+            pendingCOD: Math.round(pendingCOD),
+            statusBreakdown: [
+                { name: 'Delivered', value: statusCounts.delivered, color: '#22c55e' },
+                { name: 'In Transit', value: inTransit, color: '#3b82f6' },
+                { name: 'Pending', value: pending, color: '#f59e0b' },
+                { name: 'Cancelled', value: statusCounts.cancelled, color: '#ef4444' },
+                { name: 'Returned', value: statusCounts.returned, color: '#8b5cf6' },
+            ]
+        };
+    }
+
+}
+
+export interface ShipmentStats {
+    totalOrders: number;
+    totalShipments: number;
+    delivered: number;
+    cancelled: number;
+    returned: number;
+    pending: number;
+    inTransit: number;
+    successRate: number;
+    failureRate: number;
+    avgDeliveryTime: number;
+    totalCOD: number;
+    collectedCOD: number;
+    pendingCOD: number;
+    statusBreakdown: { name: string; value: number; color: string }[];
 }
 
 export const shipmentService = ShipmentService.getInstance();

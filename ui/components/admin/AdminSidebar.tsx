@@ -83,7 +83,7 @@ export default function AdminSidebar({
       icon: Tag,
     },
     {
-      name: t("shipping"),
+      name: t("shippingNav") || "Shipping",
       href: "/admin/shipping",
       icon: Truck,
       submenu: [

@@ -213,7 +213,7 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
             }
 
             if (result.success) {
-                toast.success(t("orderStatusUpdated", { status: newStatus }));
+                toast.success(t("orderStatusUpdated", { status: t(newStatus) || newStatus }));
             } else {
                 toast.error(result.error || t("failedToUpdateOrder"));
             }
@@ -826,7 +826,7 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
                                         <span className="font-medium">{t('{{price, currency}}', { price: editForm.subtotal })}</span>
                                     </div>
                                     <div className="flex justify-between items-center w-full text-gray-600 px-2">
-                                        <span>{t("shipping")}</span>
+                                        <span>{t("shippingLabel")}</span>
                                         <input
                                             type="number"
                                             min="0"
@@ -869,7 +869,7 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
                                                 <span>{t('{{price, currency}}', { price: order.subtotal })}</span>
                                             </div>
                                             <div className="flex justify-between w-full text-gray-600 px-2">
-                                                <span>{t("shipping")}</span>
+                                                <span>{t("shippingLabel")}</span>
                                                 <span>{t('{{price, currency}}', { price: order.shipping_total })}</span>
                                             </div>
                                             {calculatedDiscount > 0 && <div className="flex justify-between w-full text-red-600 px-2">

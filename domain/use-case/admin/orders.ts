@@ -85,14 +85,34 @@ export class Orders {
     }
 
     async cancelShipped(order: OrderDetailsView) {
-        const result = await shipmentService.cancelShipment(order.awb ?? '');
-        if (!result) {
-            throw new Error("Failed to cancel shipment: No response");
+        let shipmentCancelled = false;
+        let shipmentError = null;
+
+        // Try to cancel the shipment with the shipping company
+        if (order.awb) {
+            try {
+                const result = await shipmentService.cancelShipment(order.awb);
+                if (result && result.IsCanceled) {
+                    shipmentCancelled = true;
+                    console.log("[cancelShipped] Shipment cancelled successfully with carrier");
+                } else {
+                    shipmentError = result?.ErrorMessage || "Unknown error from carrier";
+                    console.warn("[cancelShipped] Carrier refused to cancel shipment:", shipmentError);
+                }
+            } catch (error) {
+                shipmentError = error instanceof Error ? error.message : "Failed to contact carrier";
+                console.warn("[cancelShipped] Error cancelling shipment with carrier:", shipmentError);
+            }
         }
-        if (result.IsCanceled) {
-            return this.update({ order_id: order.order_id, order_status: 'cancelled' });
-        }
-        throw new Error("Failed to cancel shipment: " + result.ErrorMessage);
+
+        // Always cancel the order in our system, regardless of carrier response
+        await this.update({ order_id: order.order_id, order_status: 'cancelled' });
+
+        return {
+            orderCancelled: true,
+            shipmentCancelled,
+            shipmentError
+        };
     }
 
     async delete(orderId: number) {

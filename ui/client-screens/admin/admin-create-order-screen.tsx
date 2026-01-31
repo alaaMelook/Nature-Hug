@@ -362,7 +362,7 @@ export function AdminCreateOrderScreen({ products, governorates, promoCodes }: A
                                 className="flex items-center gap-2 px-3 py-1.5 bg-primary-50 text-primary-700 rounded-lg hover:bg-primary-100 transition-colors text-sm font-medium"
                             >
                                 <UserSearch size={16} />
-                                Search Customer
+                                {t("searchCustomers")}
                             </button>
                         </div>
 
@@ -376,7 +376,7 @@ export function AdminCreateOrderScreen({ products, governorates, promoCodes }: A
                                         value={customerSearchQuery}
                                         onChange={(e) => setCustomerSearchQuery(e.target.value)}
                                         className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none"
-                                        placeholder="Search by name, phone, or email..."
+                                        placeholder={t("adminOrders.searchByNamePhoneEmail") || "Search by name, phone, or email..."}
                                         autoFocus
                                     />
                                     {searchingCustomers && (
@@ -394,7 +394,7 @@ export function AdminCreateOrderScreen({ products, governorates, promoCodes }: A
                                                 className="w-full flex items-center justify-between p-3 hover:bg-white rounded-lg transition-colors text-left border border-transparent hover:border-gray-200"
                                             >
                                                 <div>
-                                                    <p className="font-medium text-gray-900">{customer.name || 'No name'}</p>
+                                                    <p className="font-medium text-gray-900">{customer.name || t("adminOrders.noName") || "No name"}</p>
                                                     <p className="text-xs text-gray-500">
                                                         {customer.phone} {customer.email && `• ${customer.email}`}
                                                     </p>
@@ -403,7 +403,7 @@ export function AdminCreateOrderScreen({ products, governorates, promoCodes }: A
                                                     ? 'bg-green-100 text-green-700'
                                                     : 'bg-gray-100 text-gray-600'
                                                     }`}>
-                                                    {customer.type === 'registered' ? 'Account' : 'Guest'}
+                                                    {customer.type === 'registered' ? t("adminOrders.account") || "Account" : t("adminOrders.guest") || "Guest"}
                                                 </span>
                                             </button>
                                         ))}
@@ -411,7 +411,7 @@ export function AdminCreateOrderScreen({ products, governorates, promoCodes }: A
                                 )}
 
                                 {customerSearchQuery.length >= 2 && !searchingCustomers && customerSearchResults.length === 0 && (
-                                    <p className="mt-2 text-sm text-gray-500 text-center py-2">No customers found</p>
+                                    <p className="mt-2 text-sm text-gray-500 text-center py-2">{t("noCustomers")}</p>
                                 )}
                             </div>
                         )}
@@ -422,7 +422,7 @@ export function AdminCreateOrderScreen({ products, governorates, promoCodes }: A
                                 <div className="flex items-center gap-2">
                                     <Check className="w-4 h-4 text-green-600" />
                                     <span className="text-sm text-green-700">
-                                        <strong>{selectedCustomer.name}</strong> selected ({selectedCustomer.type === 'registered' ? 'Account' : 'Guest'})
+                                        <strong>{selectedCustomer.name}</strong> {t("adminOrders.selected") || "selected"} ({selectedCustomer.type === 'registered' ? t("adminOrders.account") || "Account" : t("adminOrders.guest") || "Guest"})
                                     </span>
                                 </div>
                                 <button
@@ -698,7 +698,7 @@ export function AdminCreateOrderScreen({ products, governorates, promoCodes }: A
 
                                 {/* Shipping - Editable */}
                                 <div className="flex justify-between items-center">
-                                    <span className="text-gray-600">{t("shipping")}</span>
+                                    <span className="text-gray-600">{t("shippingLabel")}</span>
                                     <input
                                         type="number"
                                         value={shippingOverride !== null ? shippingOverride : (selectedGovernorate?.fees ?? 0)}

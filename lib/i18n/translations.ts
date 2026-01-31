@@ -261,7 +261,8 @@ export const resources = {
       allProducts: "All Products",
       categories: "Categories",
       allOrders: "All Orders",
-      shipping: "Shipping",
+      shippingNav: "Shipping",
+      shippingLabel: "Shipping",
       history: "History",
       totalRevenue: "Total Revenue",
       currentMonth: "Current Month",
@@ -617,7 +618,11 @@ export const resources = {
           email: "john@example.com",
           phone: "+20 123 456 7890",
           address: "123 Main St, Apt 4B",
-        }
+        },
+        // Order Notes
+        orderNotes: "Special Instructions",
+        orderNotesPlaceholder: "💭 Have something on your mind? Tell us here! For example: 'Please gift wrap this' or 'Leave at the door' or 'Call before delivery'...",
+        orderNotesHint: "💡 Share any special requests or delivery instructions",
       },
       trackOrders: "Track Orders",
       exportInvoices: "Export Invoices",
@@ -776,7 +781,12 @@ export const resources = {
         placeholders: {
           name: "Enter customer name",
           address: "Enter full delivery address"
-        }
+        },
+        searchByNamePhoneEmail: "Search by name, phone, or email...",
+        noName: "No name",
+        account: "Account",
+        guest: "Guest",
+        selected: "selected"
       },
 
       // Created By & Reports
@@ -789,6 +799,56 @@ export const resources = {
       units: "units",
       salesPercentage: "Sales %",
       noDataForPeriod: "No data available for this period",
+
+      // Tracking Timeline
+      tracking: {
+        orderStatus: "Order Status",
+        pending: "Order Placed",
+        processing: "Preparing",
+        shipped: "Shipped",
+        outForDelivery: "Out for Delivery",
+        delivered: "Delivered",
+        orderCancelled: "This order has been cancelled or returned",
+      },
+
+      // Shipping Dashboard Statistics
+      shipping: {
+        statistics: "Shipment Statistics",
+        showingData: "Showing data for",
+        totalShipments: "Total Shipments",
+        successRate: "Success Rate",
+        avgDeliveryTime: "Avg Delivery Time",
+        inTransit: "In Transit",
+        delivered: "Delivered",
+        deliveredLabel: "delivered",
+        cancelled: "Cancelled",
+        returned: "Returned",
+        pending: "Pending",
+        totalCOD: "Total COD Value",
+        collectedCOD: "Collected COD",
+        pendingCOD: "Pending COD",
+        statusBreakdown: "Status Breakdown",
+        providerDashboard: "Shipping Provider Dashboard",
+        noData: "No shipment data available",
+        highFailureRate: "High Failure Rate Alert",
+        failureRateWarning: "Your failure rate ({{rate}}%) is above the target. Consider reviewing cancelled and returned orders.",
+        presets: {
+          today: "Today",
+          week: "This Week",
+          month: "This Month",
+          "3months": "Last 3 Months",
+          year: "This Year",
+          all: "All Time",
+        },
+        status: {
+          delivered: "Delivered",
+          "in transit": "In Transit",
+          pending: "Pending",
+          cancelled: "Cancelled",
+          returned: "Returned",
+        },
+      },
+      days: "days",
 
     }
   },
@@ -1047,7 +1107,8 @@ export const resources = {
       allProducts: "كل المنتجات",
       categories: "الفئات",
       allOrders: "كل الطلبات",
-      shipping: "الشحن",
+      shippingNav: "الشحن",
+      shippingLabel: "الشحن",
       history: "السجل",
       totalRevenue: "إجمالي الإيرادات",
       currentMonth: "الشهر الحالي",
@@ -1562,7 +1623,12 @@ export const resources = {
         placeholders: {
           name: "أدخل اسم العميل",
           address: "أدخل عنوان التوصيل الكامل"
-        }
+        },
+        searchByNamePhoneEmail: "ابحث بالاسم أو الهاتف أو البريد الإلكتروني...",
+        noName: "بدون اسم",
+        account: "حساب مسجل",
+        guest: "ضيف",
+        selected: "تم اختياره"
       },
 
       // Created By & Reports
@@ -1573,6 +1639,56 @@ export const resources = {
       accountName: "اسم الحساب",
       salesPercentage: "نسبة المبيعات",
       noDataForPeriod: "لا توجد بيانات لهذه الفترة",
+
+      // Tracking Timeline
+      tracking: {
+        orderStatus: "حالة الطلب",
+        pending: "تم الطلب",
+        processing: "جاري التجهيز",
+        shipped: "تم الشحن",
+        outForDelivery: "في الطريق إليك",
+        delivered: "تم التسليم",
+        orderCancelled: "تم إلغاء أو إرجاع هذا الطلب",
+      },
+
+      // Shipping Dashboard Statistics
+      shipping: {
+        statistics: "إحصائيات الشحن",
+        showingData: "عرض بيانات",
+        totalShipments: "إجمالي الشحنات",
+        successRate: "نسبة النجاح",
+        avgDeliveryTime: "متوسط وقت التسليم",
+        inTransit: "في الطريق",
+        delivered: "تم التسليم",
+        deliveredLabel: "تم تسليمها",
+        cancelled: "ملغي",
+        returned: "مرتجع",
+        pending: "معلق",
+        totalCOD: "إجمالي المبالغ",
+        collectedCOD: "المبالغ المحصلة",
+        pendingCOD: "المبالغ المعلقة",
+        statusBreakdown: "تفاصيل الحالات",
+        providerDashboard: "لوحة تحكم شركة الشحن",
+        noData: "لا توجد بيانات شحن",
+        highFailureRate: "تنبيه: نسبة فشل عالية",
+        failureRateWarning: "نسبة الفشل ({{rate}}%) أعلى من المستهدف. راجع الطلبات الملغية والمرتجعة.",
+        presets: {
+          today: "اليوم",
+          week: "هذا الأسبوع",
+          month: "هذا الشهر",
+          "3months": "آخر 3 شهور",
+          year: "هذه السنة",
+          all: "الكل",
+        },
+        status: {
+          delivered: "تم التسليم",
+          "in transit": "في الطريق",
+          pending: "معلق",
+          cancelled: "ملغي",
+          returned: "مرتجع",
+        },
+      },
+      days: "يوم",
 
     }
   }

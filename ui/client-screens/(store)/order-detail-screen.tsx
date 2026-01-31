@@ -10,7 +10,7 @@ import { useTranslation, Trans } from "react-i18next";
 
 import { cancelUserOrderAction } from "@/ui/hooks/store/userOrderActions";
 import { toast } from "sonner";
-import { Package } from 'lucide-react';
+import { Package, Clock, Truck, CheckCircle2, XCircle, RotateCcw } from 'lucide-react';
 
 export default function OrderDetailScreen({ order, fromCheckout }: {
     order: OrderSummaryView | null,
@@ -51,6 +51,84 @@ export default function OrderDetailScreen({ order, fromCheckout }: {
         } else {
             toast.error(t("ordersScreen.cancelFailed"));
         }
+    };
+
+    // Order Tracking Timeline Component
+    const OrderTrackingTimeline = ({ status, t }: { status: string; t: any }) => {
+        const isArabic = i18n.language === 'ar';
+
+        const statusSteps = [
+            { key: 'pending', icon: Clock, label: isArabic ? 'تم الطلب' : 'Order Placed' },
+            { key: 'processing', icon: Package, label: isArabic ? 'جاري التجهيز' : 'Preparing' },
+            { key: 'shipped', icon: Truck, label: isArabic ? 'تم الشحن' : 'Shipped' },
+            { key: 'out for delivery', icon: Truck, label: isArabic ? 'في الطريق إليك' : 'Out for Delivery' },
+            { key: 'delivered', icon: CheckCircle2, label: isArabic ? 'تم التسليم' : 'Delivered' },
+        ];
+
+        const statusOrder = ['pending', 'processing', 'shipped', 'out for delivery', 'delivered', 'completed'];
+        const failedStatuses = ['cancelled', 'returned', 'refunded', 'failed', 'declined'];
+        const normalizedStatus = status.toLowerCase();
+        const isFailed = failedStatuses.includes(normalizedStatus);
+        const currentIndex = isFailed ? -1 : statusOrder.indexOf(normalizedStatus === 'completed' ? 'delivered' : normalizedStatus);
+
+        if (isFailed) {
+            return (
+                <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-xl">
+                    <div className="flex items-center gap-3 text-red-700">
+                        {normalizedStatus === 'returned' || normalizedStatus === 'refunded' ? (
+                            <RotateCcw size={24} />
+                        ) : (
+                            <XCircle size={24} />
+                        )}
+                        <div>
+                            <p className="font-semibold">{t(normalizedStatus) || status}</p>
+                            <p className="text-sm text-red-600">{t("tracking.orderCancelled")}</p>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        return (
+            <div className="mt-6 p-4 md:p-6 bg-gradient-to-r from-primary-50/50 to-amber-50/50 rounded-xl border border-primary-100">
+                <h3 className="font-semibold text-gray-900 mb-6 text-center">{isArabic ? 'حالة الطلب' : 'Order Status'}</h3>
+                <div className="relative">
+                    {/* Progress Line Background */}
+                    <div className="hidden md:block absolute top-6 left-0 right-0 h-1 bg-gray-200 rounded-full" style={{ left: '10%', right: '10%' }} />
+                    {/* Progress Line Filled */}
+                    <div
+                        className="hidden md:block absolute top-6 h-1 bg-primary-500 rounded-full transition-all duration-500"
+                        style={{
+                            left: '10%',
+                            width: `${Math.max(0, (currentIndex / (statusSteps.length - 1)) * 80)}%`
+                        }}
+                    />
+
+                    <div className="flex flex-col md:flex-row justify-between gap-4 md:gap-0">
+                        {statusSteps.map((step, index) => {
+                            const Icon = step.icon;
+                            const isCompleted = index <= currentIndex;
+                            const isCurrent = index === currentIndex;
+
+                            return (
+                                <div key={step.key} className="flex md:flex-col items-center gap-3 md:gap-0 flex-1">
+                                    <div className={`relative z-10 w-12 h-12 rounded-full flex items-center justify-center transition-all shadow-sm ${isCompleted
+                                        ? 'bg-primary-600 text-white'
+                                        : 'bg-white text-gray-400 border-2 border-gray-200'
+                                        } ${isCurrent ? 'ring-4 ring-primary-200 scale-110' : ''}`}>
+                                        <Icon size={20} />
+                                    </div>
+                                    <p className={`md:mt-3 text-xs md:text-sm text-center font-medium ${isCompleted ? 'text-primary-700' : 'text-gray-400'
+                                        }`}>
+                                        {step.label}
+                                    </p>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            </div>
+        );
     };
 
     // If order is null, show a friendly fallback UI. If `fromCheckout` is true, still show thank-you banner.
@@ -99,6 +177,9 @@ export default function OrderDetailScreen({ order, fromCheckout }: {
                             <p className="text-lg font-semibold">{order.item_count}</p>
                         </div>
                     </div>
+
+                    {/* Order Tracking Timeline */}
+                    <OrderTrackingTimeline status={order.order_status} t={t} />
 
                     <div className="mt-6 flex flex-col sm:grid sm:grid-cols-3 gap-6">
                         <div className="col-span-1 sm:col-span-2 border rounded-md">

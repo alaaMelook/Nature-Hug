@@ -422,16 +422,18 @@ export function CheckoutUserScreen({ governorates, user }: { governorates: Gover
                                         <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-600">
                                             <MessageSquare size={16} />
                                         </div>
-                                        {t('checkout.orderNotes') || 'Order Notes'}
+                                        {i18n.language === 'ar' ? 'ملاحظات خاصة' : 'Special Instructions'}
                                     </h3>
                                     <textarea
                                         {...register('note')}
-                                        placeholder={t('checkout.orderNotesPlaceholder') || 'Add any special instructions or notes for your order (optional)...'}
+                                        placeholder={i18n.language === 'ar'
+                                            ? '💭 عندك طلب خاص؟ قولنا هنا! مثلاً: "اتصلوا قبل التوصيل" أو "سيبوها عند الباب" أو "تغليف هدية"...'
+                                            : '💭 Have something special in mind? Tell us here! e.g., "Call before delivery" or "Leave at door" or "Gift wrap please"...'}
                                         rows={3}
                                         className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all resize-none text-sm"
                                     />
                                     <p className="text-xs text-gray-500">
-                                        💡 {t('checkout.orderNotesHint') || 'Notes will be sent to the shipping company'}
+                                        💡 {i18n.language === 'ar' ? 'ملاحظاتك هتوصل لشركة الشحن' : 'Your notes will be shared with the delivery team'}
                                     </p>
                                 </div>
 

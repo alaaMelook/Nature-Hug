@@ -44,6 +44,22 @@ export class IAdminServerRepository implements AdminRepository {
         return data;
     }
 
+    async getOrderByAwb(awb: string): Promise<OrderDetailsView | null> {
+        console.log(`[IAdminRepository] getOrderByAwb called for awb: ${awb}`);
+        const { data, error } = await supabaseAdmin.schema('admin')
+            .from('order_details')
+            .select('*')
+            .eq('awb', awb)
+            .maybeSingle();
+
+        if (error) {
+            console.error("[IAdminRepository] getOrderByAwb error:", error);
+            throw error;
+        }
+
+        return data;
+    }
+
     async getDashboardMetrics(startDate: string,
         endDate: string
     ): Promise<DashboardStats> {
