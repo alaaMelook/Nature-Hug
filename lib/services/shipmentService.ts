@@ -157,8 +157,11 @@ class ShipmentService {
 
     /**
      * Get shipment statistics from Aliens Express API
+     * @param fromDate - Start date for filtering
+     * @param toDate - End date for filtering
+     * @param feesMap - Optional map of city names to shipping fees (for net payout calculation)
      */
-    public async getShipmentStats(fromDate?: Date, toDate?: Date): Promise<ShipmentStats> {
+    public async getShipmentStats(fromDate?: Date, toDate?: Date, feesMap?: Record<string, number>): Promise<ShipmentStats> {
         // Default to all time if no dates provided
         const from = fromDate || new Date('2020-01-01');
         const to = toDate || new Date();
@@ -186,6 +189,8 @@ class ShipmentService {
 
         let totalCOD = 0;
         let collectedCOD = 0;
+        let totalShippingFees = 0;
+        let collectedShippingFees = 0;
         const unmatchedStatuses: string[] = [];
 
         for (const shipment of shipments) {
@@ -194,9 +199,16 @@ class ShipmentService {
             // Collected is "Yes"/"No" string, not a number!
             const isCollected = (shipment.Collected || '').toLowerCase() === 'yes';
 
+            // Get shipping fee for this city
+            const cityName = (shipment.ToCityName || '').toLowerCase();
+            const shippingFee = feesMap ? (feesMap[cityName] || 0) : 0;
+
             totalCOD += cod;
+            totalShippingFees += shippingFee;
+
             if (isCollected) {
                 collectedCOD += cod;
+                collectedShippingFees += shippingFee;
             }
 
             // Map Aliens Express status names to our categories
@@ -257,7 +269,10 @@ class ShipmentService {
             avgDeliveryTime = Math.round(totalDays / deliveredShipments.length);
         }
 
-        const pendingCOD = totalCOD - collectedCOD;
+        // Calculate NET amounts after deducting shipping fees
+        const netCollected = collectedCOD - collectedShippingFees;
+        const netPending = (totalCOD - collectedCOD) - (totalShippingFees - collectedShippingFees);
+
         const inTransit = statusCounts.heading + statusCounts.inProgress;
         const pending = statusCounts.newOrders + statusCounts.requireAttention;
 
@@ -270,7 +285,11 @@ class ShipmentService {
             returned: statusCounts.returned,
             cancelled: statusCounts.cancelled,
             totalCOD,
-            collectedCOD
+            collectedCOD,
+            totalShippingFees,
+            collectedShippingFees,
+            netCollected,
+            netPending
         });
 
         return {
@@ -285,8 +304,8 @@ class ShipmentService {
             failureRate: parseFloat(returnRate),
             avgDeliveryTime,
             totalCOD: Math.round(totalCOD),
-            collectedCOD: Math.round(collectedCOD),
-            pendingCOD: Math.round(pendingCOD),
+            collectedCOD: Math.round(netCollected), // NET collected after shipping fees
+            pendingCOD: Math.round(netPending > 0 ? netPending : 0), // NET pending after shipping fees
             statusBreakdown: [
                 { name: 'Delivered', value: statusCounts.delivered, color: '#22c55e' },
                 { name: 'In Transit', value: inTransit, color: '#3b82f6' },

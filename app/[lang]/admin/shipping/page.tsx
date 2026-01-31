@@ -105,14 +105,15 @@ export default function ShipmentDashboard() {
         handlePresetChange('month');
     }, []);
 
-    const StatCard = ({ title, value, subtitle, icon: Icon, color }: {
+    const StatCard = ({ title, value, subtitle, icon: Icon, color, tooltip }: {
         title: string;
         value: string | number;
         subtitle?: string;
         icon: any;
         color: string;
+        tooltip?: string;
     }) => (
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 relative group cursor-help">
             <div className="flex items-start justify-between">
                 <div>
                     <p className="text-sm text-gray-500 mb-1">{title}</p>
@@ -123,6 +124,12 @@ export default function ShipmentDashboard() {
                     <Icon size={24} className="text-white" />
                 </div>
             </div>
+            {tooltip && (
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-normal max-w-xs text-center z-50 shadow-lg">
+                    {tooltip}
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                </div>
+            )}
         </div>
     );
 
@@ -203,6 +210,9 @@ export default function ShipmentDashboard() {
                             value={stats.totalOrders}
                             icon={Package}
                             color="bg-blue-500"
+                            tooltip={i18n.language === 'ar'
+                                ? 'عدد الشحنات الكلي المسجل في شركة الشحن'
+                                : 'Total shipments registered with the shipping company'}
                         />
                         <StatCard
                             title={t('shipping.successRate') || 'Success Rate'}
@@ -210,6 +220,9 @@ export default function ShipmentDashboard() {
                             subtitle={`${stats.delivered} ${t('shipping.deliveredLabel') || 'delivered'}`}
                             icon={CheckCircle2}
                             color="bg-green-500"
+                            tooltip={i18n.language === 'ar'
+                                ? 'نسبة النجاح = (الشحنات المُسلّمة ÷ إجمالي الشحنات) × 100'
+                                : 'Success Rate = (Delivered ÷ Total Orders) × 100'}
                         />
                         <StatCard
                             title={t('shipping.avgDeliveryTime') || 'Avg Delivery Time'}
@@ -217,12 +230,18 @@ export default function ShipmentDashboard() {
                             subtitle={t('days') || 'days'}
                             icon={Clock}
                             color="bg-amber-500"
+                            tooltip={i18n.language === 'ar'
+                                ? 'متوسط الأيام من تاريخ الاستلام حتى التسليم للعميل'
+                                : 'Average days from pickup date to delivery date'}
                         />
                         <StatCard
                             title={t('shipping.inTransit') || 'In Transit'}
                             value={stats.inTransit}
                             icon={Truck}
                             color="bg-purple-500"
+                            tooltip={i18n.language === 'ar'
+                                ? 'الشحنات في الطريق (With Courier + Delivering)'
+                                : 'Shipments currently on the way (With Courier + Delivering)'}
                         />
                     </div>
 
@@ -233,19 +252,28 @@ export default function ShipmentDashboard() {
                             value={`${stats.totalCOD?.toLocaleString() || 0} EGP`}
                             icon={DollarSign}
                             color="bg-emerald-500"
+                            tooltip={i18n.language === 'ar'
+                                ? 'إجمالي قيمة الدفع عند الاستلام (COD) لكل الشحنات (قبل خصم رسوم الشحن)'
+                                : 'Total Cash on Delivery value for all shipments (before shipping fees)'}
                         />
                         <StatCard
-                            title={t('shipping.collectedCOD') || 'Collected COD'}
+                            title={i18n.language === 'ar' ? '💰 صافي المحصّل' : '💰 Net Collected'}
                             value={`${stats.collectedCOD?.toLocaleString() || 0} EGP`}
                             subtitle={stats.totalCOD ? `${((stats.collectedCOD / stats.totalCOD) * 100).toFixed(1)}%` : '0%'}
                             icon={CheckCircle2}
                             color="bg-teal-500"
+                            tooltip={i18n.language === 'ar'
+                                ? '✅ المبلغ الصافي اللي هتستلميه = COD المحصّل - رسوم الشحن لكل محافظة'
+                                : '✅ Your NET payout = Collected COD - Shipping fees per governorate'}
                         />
                         <StatCard
-                            title={t('shipping.pendingCOD') || 'Pending COD'}
+                            title={i18n.language === 'ar' ? '⏳ صافي المتوقع' : '⏳ Net Expected'}
                             value={`${stats.pendingCOD?.toLocaleString() || 0} EGP`}
                             icon={AlertTriangle}
                             color="bg-orange-500"
+                            tooltip={i18n.language === 'ar'
+                                ? '⏳ المبلغ الصافي المتوقع من الشحنات اللي لسه متحصلتش = COD الباقي - رسوم الشحن المتبقية'
+                                : '⏳ Expected NET from pending shipments = Pending COD - Remaining shipping fees'}
                         />
                     </div>
 
