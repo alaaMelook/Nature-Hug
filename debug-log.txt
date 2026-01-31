@@ -1,0 +1,30 @@
+[2026-01-31T01:36:11.101Z] === CATEGORY UPDATE START for product_id: 85 ===
+[2026-01-31T01:36:11.102Z] category_ids received: [10]
+[2026-01-31T01:36:11.102Z] category_ids !== undefined: true
+[2026-01-31T01:36:11.102Z] Deleting existing categories for product_id: 85
+[2026-01-31T01:36:11.317Z] Delete result - error: null, count: null
+[2026-01-31T01:36:11.317Z] Inserting category records: [{"product_id":85,"category_id":10}]
+[2026-01-31T01:36:11.467Z] Insert result - error: null, data: [{"id":27,"product_id":85,"category_id":10,"created_at":"2026-01-31T01:36:10.779865+00:00"}]
+[2026-01-31T01:36:11.467Z] SUCCESS: Categories inserted for product_id: 85
+[2026-01-31T01:36:11.468Z] === CATEGORY UPDATE END ===
+
+[2026-01-31T01:37:04.738Z] === CATEGORY UPDATE START for product_id: 85 ===
+[2026-01-31T01:37:04.740Z] category_ids received: [10]
+[2026-01-31T01:37:04.740Z] category_ids !== undefined: true
+[2026-01-31T01:37:04.740Z] Deleting existing categories for product_id: 85
+[2026-01-31T01:37:05.129Z] Delete result - error: null, count: null
+[2026-01-31T01:37:05.129Z] Inserting category records: [{"product_id":85,"category_id":10}]
+[2026-01-31T01:37:05.373Z] Insert result - error: null, data: [{"id":28,"product_id":85,"category_id":10,"created_at":"2026-01-31T01:37:04.708443+00:00"}]
+[2026-01-31T01:37:05.374Z] SUCCESS: Categories inserted for product_id: 85
+[2026-01-31T01:37:05.374Z] === CATEGORY UPDATE END ===
+
+[2026-01-31T01:37:12.397Z] === CATEGORY UPDATE START for product_id: 85 ===
+[2026-01-31T01:37:12.397Z] category_ids received: [10]
+[2026-01-31T01:37:12.397Z] category_ids !== undefined: true
+[2026-01-31T01:37:12.398Z] Deleting existing categories for product_id: 85
+[2026-01-31T01:37:12.643Z] Delete result - error: null, count: null
+[2026-01-31T01:37:12.643Z] Inserting category records: [{"product_id":85,"category_id":10}]
+[2026-01-31T01:37:12.829Z] Insert result - error: null, data: [{"id":29,"product_id":85,"category_id":10,"created_at":"2026-01-31T01:37:12.121357+00:00"}]
+[2026-01-31T01:37:12.829Z] SUCCESS: Categories inserted for product_id: 85
+[2026-01-31T01:37:12.830Z] === CATEGORY UPDATE END ===
+

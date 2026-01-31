@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { useForm } from "react-hook-form";
 import { createOrder } from "@/ui/hooks/store/useCreateOrderActions";
 import { useRouter } from "next/navigation";
-import { Loader2, MapPin, Plus, CreditCard, Banknote, CheckCircle2, Phone, User, Mail, Edit2 } from "lucide-react";
+import { Loader2, MapPin, Plus, CreditCard, Banknote, CheckCircle2, Phone, User, Mail, Edit2, MessageSquare } from "lucide-react";
 
 import { useTranslation, Trans } from "react-i18next";
 import Link from "next/link";
@@ -82,6 +82,14 @@ export function CheckoutUserScreen({ governorates, user }: { governorates: Gover
             toast.error(t('checkout.errors.acceptTerms'));
             return;
         }
+
+        // Phone number validation - check saved phone or new phone
+        const hasPhone = (user.phone[0] && user.phone[0] !== '') || (data.guest_phone && data.guest_phone.trim() !== '');
+        if (!hasPhone) {
+            setError('guest_phone', { type: 'manual', message: t('checkout.errors.required', { field: t('checkout.phone') }) });
+            toast.error(t('checkout.errors.phoneRequired') || 'Phone number is required');
+            return;
+        }
         setLoading(true);
         let payload: Partial<Order>;
         // If using a saved address, build payload from user.address entry (do not use form values)
@@ -111,7 +119,8 @@ export function CheckoutUserScreen({ governorates, user }: { governorates: Gover
             tax_total: 0.00,
             payment_method: cart.isAdmin ? 'Online Card' : selectedPayment === 'cod' ? 'Cash on Delivery' : 'Online Card',
             grand_total: getCartTotal(cart.free_shipping ? 0 : selectedGovernorate?.fees ?? 0),
-            promo_code_id: cart.promoCodeId
+            promo_code_id: cart.promoCodeId,
+            note: data.note || null
         };
         const result = await createOrder(payload, cart.isAdmin, products);
         if (result.error) {
@@ -403,6 +412,27 @@ export function CheckoutUserScreen({ governorates, user }: { governorates: Gover
                                             {selectedPayment === 'online' && <CheckCircle2 className="text-primary-600" size={20} />}
                                         </div>
                                     </div>
+                                </div>
+
+                                <hr className="border-gray-100" />
+
+                                {/* Order Notes Section */}
+                                <div className="space-y-4">
+                                    <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                                        <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-600">
+                                            <MessageSquare size={16} />
+                                        </div>
+                                        {t('checkout.orderNotes') || 'Order Notes'}
+                                    </h3>
+                                    <textarea
+                                        {...register('note')}
+                                        placeholder={t('checkout.orderNotesPlaceholder') || 'Add any special instructions or notes for your order (optional)...'}
+                                        rows={3}
+                                        className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all resize-none text-sm"
+                                    />
+                                    <p className="text-xs text-gray-500">
+                                        💡 {t('checkout.orderNotesHint') || 'Notes will be sent to the shipping company'}
+                                    </p>
                                 </div>
 
                                 <div className="flex items-center gap-3 bg-gray-50 p-4 rounded-xl border border-gray-100">

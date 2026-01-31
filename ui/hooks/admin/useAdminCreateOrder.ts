@@ -23,6 +23,7 @@ interface AdminOrderData {
     payment_method: string;
     payment_status: string;
     status: string;
+    note: string | null;
     promo_code_id: number | null;
     items: {
         product_id: number;
@@ -54,6 +55,7 @@ export async function createAdminOrderAction(data: AdminOrderData) {
             payment_method: data.payment_method,
             payment_status: data.payment_status,
             status: data.status as any,
+            note: data.note,
             promo_code_id: data.promo_code_id,
             // Add the creator's customer_id to track who created this order
             created_by_customer_id: currentUser?.id || null,

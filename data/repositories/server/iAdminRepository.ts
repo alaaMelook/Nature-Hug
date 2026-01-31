@@ -931,8 +931,7 @@ export class IAdminServerRepository implements AdminRepository {
                             variant_id: item.variant_id || null,
                             quantity: item.quantity,
                             unit_price: item.unit_price,
-                            discount: 0,
-                            total: item.quantity * item.unit_price
+                            discount: 0
                         });
 
                     if (insertError) {
@@ -948,8 +947,7 @@ export class IAdminServerRepository implements AdminRepository {
                         .from('order_items')
                         .update({
                             quantity: item.quantity,
-                            unit_price: item.unit_price,
-                            total: item.quantity * item.unit_price
+                            unit_price: item.unit_price
                         })
                         .eq('id', item.id);
 

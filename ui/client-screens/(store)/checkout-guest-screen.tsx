@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { useForm } from "react-hook-form";
 import { createOrder } from "@/ui/hooks/store/useCreateOrderActions";
 import { useRouter } from "next/navigation";
-import { Loader2, CreditCard, Banknote, MapPin, Phone, User, Mail, CheckCircle2 } from "lucide-react";
+import { Loader2, CreditCard, Banknote, MapPin, Phone, User, Mail, CheckCircle2, MessageSquare } from "lucide-react";
 import { useTranslation, Trans } from "react-i18next";
 import { trackBeginCheckout, trackPurchase } from "@/lib/analytics/gtag";
 
@@ -69,6 +69,13 @@ export function CheckoutGuestScreen({ governorates }: { governorates: Governorat
         if (!data.termsAccepted) {
             setError('termsAccepted', { type: 'manual', message: t('checkout.errors.acceptTerms') });
             toast.error(t('checkout.errors.acceptTerms'));
+            return;
+        }
+
+        // Phone number validation
+        if (!data.guest_phone || data.guest_phone.trim() === '') {
+            setError('guest_phone', { type: 'manual', message: t('checkout.errors.required', { field: t('checkout.phone') }) });
+            toast.error(t('checkout.errors.phoneRequired') || 'Phone number is required');
             return;
         }
         setLoading(true);
@@ -351,6 +358,27 @@ export function CheckoutGuestScreen({ governorates }: { governorates: Governorat
                                             {selectedPayment === 'online' && <CheckCircle2 className="text-primary-600" size={20} />}
                                         </div>
                                     </div>
+                                </div>
+
+                                <hr className="border-gray-100" />
+
+                                {/* Order Notes Section */}
+                                <div className="space-y-4">
+                                    <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                                        <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-600">
+                                            <MessageSquare size={16} />
+                                        </div>
+                                        {t('checkout.orderNotes') || 'Order Notes'}
+                                    </h3>
+                                    <textarea
+                                        {...register('note')}
+                                        placeholder={t('checkout.orderNotesPlaceholder') || 'Add any special instructions or notes for your order (optional)...'}
+                                        rows={3}
+                                        className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all resize-none text-sm"
+                                    />
+                                    <p className="text-xs text-gray-500">
+                                        💡 {t('checkout.orderNotesHint') || 'Notes will be sent to the shipping company'}
+                                    </p>
                                 </div>
 
                                 <div className="flex items-center gap-3 bg-gray-50 p-4 rounded-xl border border-gray-100">

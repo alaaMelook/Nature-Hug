@@ -10,7 +10,7 @@ import { Governorate } from "@/domain/entities/database/governorate";
 import { PromoCode } from "@/domain/entities/database/promoCode";
 import {
     User, Phone, Mail, MapPin, Package, Tag, Plus, Minus, X,
-    Search, ShoppingCart, Loader2, ArrowLeft, DollarSign, UserSearch, Check
+    Search, ShoppingCart, Loader2, ArrowLeft, DollarSign, UserSearch, Check, MessageSquare
 } from "lucide-react";
 import { createAdminOrderAction } from "@/ui/hooks/admin/useAdminCreateOrder";
 
@@ -66,6 +66,9 @@ export function AdminCreateOrderScreen({ products, governorates, promoCodes }: A
 
     // Price Overrides
     const [shippingOverride, setShippingOverride] = useState<number | null>(null);
+
+    // Order Notes
+    const [orderNote, setOrderNote] = useState("");
 
     // UI State
     const [loading, setLoading] = useState(false);
@@ -297,6 +300,7 @@ export function AdminCreateOrderScreen({ products, governorates, promoCodes }: A
                 payment_method: "Admin Order",
                 payment_status: "pending",
                 status: "processing",
+                note: orderNote.trim() || null,
                 promo_code_id: appliedPromos[0]?.id ?? null,
                 items: orderItems.map(item => ({
                     product_id: item.product.id,
@@ -605,6 +609,23 @@ export function AdminCreateOrderScreen({ products, governorates, promoCodes }: A
                                 ))}
                             </div>
                         )}
+                    </div>
+
+                    {/* Order Notes Section */}
+                    <div className="bg-white rounded-xl shadow-sm border p-6">
+                        <h3 className="text-sm font-semibold text-gray-500 uppercase flex items-center gap-2 mb-4">
+                            <MessageSquare size={16} /> {t("orderNotes") || "Order Notes"}
+                        </h3>
+                        <textarea
+                            value={orderNote}
+                            onChange={(e) => setOrderNote(e.target.value)}
+                            placeholder={t("addOrderNotes") || "Add notes for this order... (will be sent to shipping company)"}
+                            rows={3}
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none resize-none text-sm"
+                        />
+                        <p className="text-xs text-gray-500 mt-2">
+                            💡 {t("notesWillBeSentToShipping") || "Notes will be sent to the shipping company when creating shipment"}
+                        </p>
                     </div>
                 </div>
 
