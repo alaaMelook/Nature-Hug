@@ -19,7 +19,8 @@ import {
   BellRing,
   Loader2,
   Wallet,
-  Heart
+  Heart,
+  Palette
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
@@ -113,6 +114,7 @@ export default function AdminSidebar({
     },
     { name: t("wishlists") || "Wishlists", href: "/admin/wishlists", icon: Heart, badge: wishlistCount },
     { name: t("gallery"), href: "/admin/gallery", icon: Image },
+    { name: t("siteThemes") || "Themes", href: "/admin/themes", icon: Palette },
   ];
 
   // Prevent hydration mismatch by only rendering after mount
