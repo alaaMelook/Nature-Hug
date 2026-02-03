@@ -16,4 +16,8 @@ export interface PromoCode {
     usage_limit?: number; // Max times this code can be used (null = unlimited)
     usage_count?: number; // Current number of times used
     stacking_mode?: 'additive' | 'sequential'; // How discounts stack with other codes
+    // New discount features
+    amount_off?: number; // Fixed amount discount in EGP (alternative to percentage_off)
+    min_order_amount?: number; // Minimum cart total required to use this promo code
+    auto_apply?: boolean; // If true, discount applies automatically at checkout without entering code
 }

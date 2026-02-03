@@ -18,6 +18,8 @@ declare global {
         free_shipping: boolean;
         is_bogo?: boolean;
         percentage_off?: number;
+        amount_off?: number;  // Fixed amount discount in EGP
+        auto_apply?: boolean; // Whether this was auto-applied
     }
     interface Cart {
         promoCode: string | null;  // Keep for backward compatibility
@@ -41,6 +43,7 @@ declare global {
         getCartCount: () => number;
         loading: boolean;
         applyPromoCode: (code: string, customerId?: number) => Promise<void>;
+        applyAutoPromoCodes: (customerId?: number) => Promise<void>;  // New: auto-apply eligible promos
         removePromoCode: (promoId?: number) => Promise<void>;  // Updated to accept optional promoId
         syncCart: () => Promise<void>;
         setCart: (cart: Cart) => void;

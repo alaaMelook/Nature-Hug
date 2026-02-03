@@ -256,7 +256,9 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
                 discount: result.discount,
                 free_shipping: result.details?.free_shipping ?? false,
                 is_bogo: result.details?.is_bogo ?? false,
-                percentage_off: result.details?.percentage_off ?? 0
+                percentage_off: result.details?.percentage_off ?? 0,
+                amount_off: result.details?.amount_off ?? 0,
+                auto_apply: result.details?.auto_apply ?? false
             };
 
             // Calculate total discount from all promo codes
@@ -314,6 +316,84 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
         }
     };
 
+    // --- Auto-Apply Promo Codes ---
+    const applyAutoPromoCodes = async (customerId?: number) => {
+        try {
+            const response = await fetch('/api/store/auto-apply-promos' + (customerId ? `?customerId=${customerId}` : ''));
+            if (!response.ok) return;
+
+            const { promoCodes: autoApplyPromos } = await response.json();
+
+            // First, remove any auto-applied promos that are no longer active
+            const activePromoIds = (autoApplyPromos || []).map((p: any) => p.id);
+            const existingAutoApplied = cart.promoCodes.filter(p => p.auto_apply);
+            const inactiveAutoApplied = existingAutoApplied.filter(p => !activePromoIds.includes(p.id));
+
+            if (inactiveAutoApplied.length > 0) {
+                console.log('[CART] Removing inactive auto-applied promos:', inactiveAutoApplied.map(p => p.code));
+                setCart(prevCart => {
+                    const newPromoCodes = prevCart.promoCodes.filter(p =>
+                        !p.auto_apply || activePromoIds.includes(p.id)
+                    );
+                    const totalDiscount = newPromoCodes.reduce((sum, p) => sum + p.discount, 0);
+                    const hasFreeShipping = newPromoCodes.some(p => p.free_shipping);
+
+                    return {
+                        ...prevCart,
+                        promoCodes: newPromoCodes,
+                        discount: totalDiscount,
+                        free_shipping: hasFreeShipping,
+                    };
+                });
+            }
+
+            if (!autoApplyPromos || autoApplyPromos.length === 0) return;
+
+            // Apply each auto-apply promo code
+            for (const promo of autoApplyPromos) {
+                // Skip if already applied
+                if (cart.promoCodes.some(p => p.id === promo.id)) continue;
+
+                // Validate and apply
+                const result = await validatePromoCodeAction(promo.code, cart.items, customerId);
+                if (result.isValid && 'discount' in result) {
+                    const newPromo: AppliedPromoCode = {
+                        id: promo.id,
+                        code: promo.code,
+                        discount: result.discount,
+                        free_shipping: promo.free_shipping ?? false,
+                        is_bogo: promo.is_bogo ?? false,
+                        percentage_off: promo.percentage_off ?? 0,
+                        amount_off: promo.amount_off ?? 0,
+                        auto_apply: true
+                    };
+
+                    setCart(prevCart => {
+                        const newPromoCodes = [...prevCart.promoCodes, newPromo];
+                        const totalDiscount = newPromoCodes.reduce((sum, p) => sum + p.discount, 0);
+                        const hasFreeShipping = newPromoCodes.some(p => p.free_shipping);
+
+                        return {
+                            ...prevCart,
+                            promoCode: promo.code,
+                            free_shipping: hasFreeShipping,
+                            promoCodeId: promo.id,
+                            promoCodes: newPromoCodes,
+                            discount: totalDiscount,
+                        };
+                    });
+
+                    // Show toast for auto-applied discount
+                    if (result.discount > 0) {
+                        toast.success(t('autoPromoApplied', { amount: result.discount }) || `Discount of ${result.discount} EGP applied automatically!`, { duration: 3000 });
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('[CART] Failed to apply auto promos:', error);
+        }
+    };
+
     // --- Getter Functions ---
 
     const getCartCount = () => {
@@ -322,8 +402,9 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
     };
 
     const getCartTotal = (shipping: number) => {
-        // Use the existing `total` field from state, which is assumed to be updated externally.
-        return (cart.netTotal || 0) + (shipping || 0) - (cart.isAdmin ? 0 : cart.discount || 0);
+        // Calculate discount from promoCodes array for reliability
+        const totalDiscount = cart.promoCodes?.reduce((sum, p) => sum + (p.discount || 0), 0) || 0;
+        return (cart.netTotal || 0) + (shipping || 0) - (cart.isAdmin ? 0 : totalDiscount);
     };
 
 
@@ -338,6 +419,7 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
             updateQuantity,
             clearCart,
             applyPromoCode,
+            applyAutoPromoCodes,
             removePromoCode,
             getCartTotal,
             getCartCount,

@@ -2,10 +2,18 @@
 import { useCart } from "@/ui/providers/CartProvider";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Tag } from "lucide-react";
+import { ArrowLeft, Tag, Sparkles, Gift } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Governorate } from "@/domain/entities/database/governorate";
 import Image from "next/image";
+
+interface PotentialPromo {
+    id: number;
+    min_order_amount: number;
+    amount_off?: number;
+    percentage_off?: number;
+    free_shipping?: boolean;
+}
 
 export function CheckoutCart({ selectedGovernorate, onPurchase, customerId }: {
     selectedGovernorate: Governorate | null,
@@ -13,9 +21,44 @@ export function CheckoutCart({ selectedGovernorate, onPurchase, customerId }: {
     customerId?: number,
 }) {
     const { t } = useTranslation();
-    const { cart, getCartTotal, applyPromoCode, removePromoCode } = useCart()
+    const { cart, getCartTotal, applyPromoCode, removePromoCode, applyAutoPromoCodes } = useCart()
     const [promoCode, setPromoCode] = useState<string>('');
     const products = cart.items;
+    const [autoApplied, setAutoApplied] = useState(false);
+    const [potentialPromos, setPotentialPromos] = useState<PotentialPromo[]>([]);
+
+    // Fetch potential promos that customer could unlock
+    useEffect(() => {
+        const fetchPotentialPromos = async () => {
+            try {
+                const response = await fetch('/api/store/auto-apply-promos' + (customerId ? `?customerId=${customerId}` : ''));
+                if (!response.ok) return;
+                const { promoCodes } = await response.json();
+
+                // Filter to only show promos with min_order_amount that are not yet applied
+                const potentials = promoCodes.filter((p: any) =>
+                    p.min_order_amount &&
+                    p.min_order_amount > cart.netTotal &&
+                    !cart.promoCodes.some(applied => applied.id === p.id)
+                );
+                setPotentialPromos(potentials);
+            } catch (error) {
+                console.error('Failed to fetch potential promos:', error);
+            }
+        };
+
+        if (cart.items.length > 0) {
+            fetchPotentialPromos();
+        }
+    }, [cart.netTotal, cart.items.length, customerId, cart.promoCodes]);
+
+    // Auto-apply eligible promo codes when component mounts
+    useEffect(() => {
+        if (cart.items.length > 0 && !autoApplied) {
+            applyAutoPromoCodes(customerId);
+            setAutoApplied(true);
+        }
+    }, [cart.items.length, customerId, autoApplied]);
 
     return (
         <section className="w-full md:w-1/3 flex flex-col space-y-6">
@@ -77,31 +120,91 @@ export function CheckoutCart({ selectedGovernorate, onPurchase, customerId }: {
                 <div className="mt-6 pt-6 border-t border-gray-100 space-y-3">
                     {/* Applied Promo Codes List */}
                     {cart.promoCodes && cart.promoCodes.length > 0 && (
-                        <div className="space-y-2">
+                        <div className="space-y-3">
                             {cart.promoCodes.map((promo) => (
-                                <div key={promo.id} className="flex items-center justify-between bg-green-50 border border-green-200 rounded-xl p-3">
-                                    <div className="flex items-center gap-2">
-                                        <Tag className="w-4 h-4 text-green-600" />
-                                        <span className="text-sm font-medium text-green-700">{promo.code.toUpperCase()}</span>
-                                        {promo.free_shipping && (
-                                            <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">
-                                                {t('checkout.freeShipping')}
+                                <div key={promo.id} className={`rounded-xl p-4 ${promo.auto_apply ? 'bg-purple-50 border border-purple-200' : 'bg-green-50 border border-green-200'}`}>
+                                    {/* Header Row */}
+                                    <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-2">
+                                            {promo.auto_apply ? (
+                                                <Sparkles className="w-4 h-4 text-purple-600" />
+                                            ) : (
+                                                <Tag className="w-4 h-4 text-green-600" />
+                                            )}
+                                            <span className={`text-sm font-semibold ${promo.auto_apply ? 'text-purple-700' : 'text-green-700'}`}>
+                                                {promo.auto_apply ? (t('autoDiscount') || 'خصم تلقائي') : promo.code.toUpperCase()}
                                             </span>
-                                        )}
-                                        {promo.percentage_off && promo.percentage_off > 0 && (
-                                            <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">
-                                                {promo.percentage_off}% {t('off')}
-                                            </span>
+                                        </div>
+                                        {!promo.auto_apply && (
+                                            <button
+                                                onClick={() => removePromoCode(promo.id)}
+                                                className="text-xs text-red-500 hover:text-red-700 font-medium"
+                                            >
+                                                {t('checkout.remove')}
+                                            </button>
                                         )}
                                     </div>
-                                    <button
-                                        onClick={() => removePromoCode(promo.id)}
-                                        className="text-xs text-red-500 hover:text-red-700 font-medium"
-                                    >
-                                        {t('checkout.remove')}
-                                    </button>
+
+                                    {/* Discount Details */}
+                                    <div className={`text-lg font-bold ${promo.auto_apply ? 'text-purple-600' : 'text-green-600'}`}>
+                                        {promo.amount_off && promo.amount_off > 0 ? (
+                                            <span>-{t("{{price, currency}}", { price: promo.amount_off })}</span>
+                                        ) : promo.percentage_off && promo.percentage_off > 0 ? (
+                                            <span>{promo.percentage_off}% {t('off') || 'خصم'}</span>
+                                        ) : promo.free_shipping ? (
+                                            <span>{t('checkout.freeShipping') || 'شحن مجاني'}</span>
+                                        ) : null}
+                                    </div>
+
+                                    {/* Saved Amount */}
+                                    {promo.discount > 0 && (
+                                        <p className={`text-xs mt-1 ${promo.auto_apply ? 'text-purple-600' : 'text-green-600'}`}>
+                                            {t('youSaved') || 'وفرت'}: {t("{{price, currency}}", { price: promo.discount })}
+                                        </p>
+                                    )}
                                 </div>
                             ))}
+                        </div>
+                    )}
+
+                    {/* Potential Discounts Banner */}
+                    {potentialPromos.length > 0 && (
+                        <div className="space-y-2">
+                            {potentialPromos.slice(0, 2).map((promo) => {
+                                const remaining = promo.min_order_amount - cart.netTotal;
+                                const discountText = promo.amount_off
+                                    ? t("{{price, currency}}", { price: promo.amount_off })
+                                    : promo.percentage_off
+                                        ? `${promo.percentage_off}%`
+                                        : promo.free_shipping
+                                            ? (t('checkout.freeShipping') || 'شحن مجاني')
+                                            : '';
+
+                                return (
+                                    <div key={promo.id} className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+                                        <div className="flex items-start gap-2">
+                                            <Gift className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                                            <div>
+                                                <p className="text-sm font-medium text-amber-800">
+                                                    {t('addMoreToUnlock', {
+                                                        amount: t("{{price, currency}}", { price: remaining }),
+                                                        discount: discountText
+                                                    }) || `أضف ${t("{{price, currency}}", { price: remaining })} للحصول على خصم ${discountText}`}
+                                                </p>
+                                                <div className="mt-2 bg-amber-100 rounded-full h-2 overflow-hidden">
+                                                    <div
+                                                        className="bg-amber-500 h-full rounded-full transition-all duration-300"
+                                                        style={{ width: `${Math.min(100, (cart.netTotal / promo.min_order_amount) * 100)}%` }}
+                                                    />
+                                                </div>
+                                                <p className="text-[10px] text-amber-600 mt-1">
+                                                    {t("{{price, currency}}", { price: cart.netTotal })} / {t("{{price, currency}}", { price: promo.min_order_amount })}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     )}
 
@@ -146,11 +249,12 @@ export function CheckoutCart({ selectedGovernorate, onPurchase, customerId }: {
                         </span>
                     </div>
 
-                    {cart.discount > 0 && (
+                    {/* Discount Row - calculated from promoCodes */}
+                    {cart.promoCodes && cart.promoCodes.reduce((sum, p) => sum + (p.discount || 0), 0) > 0 && (
                         <div className="flex justify-between text-sm">
                             <span className="text-gray-500">{t('checkout.discount')}</span>
                             <span className="font-medium text-green-600">
-                                -{t("{{price, currency}}", { price: cart.isAdmin ? cart.netTotal : Math.abs(cart.discount) })}
+                                -{t("{{price, currency}}", { price: cart.promoCodes.reduce((sum, p) => sum + (p.discount || 0), 0) })}
                             </span>
                         </div>
                     )}

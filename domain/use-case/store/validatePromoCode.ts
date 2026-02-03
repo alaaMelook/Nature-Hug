@@ -26,13 +26,31 @@ export class ValidatePromoCode {
             }
         }
 
+        // 2.5 Calculate cart total for minimum order validation
+        const cartTotal = products.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+
+        // 2.6 Check minimum order amount
+        if (promo.min_order_amount && promo.min_order_amount > 0) {
+            if (cartTotal < promo.min_order_amount) {
+                return {
+                    isValid: false,
+                    error: `Minimum order amount is ${promo.min_order_amount} EGP`
+                };
+            }
+        }
+
         // 3. Calculate Discount
         let totalDiscount = 0;
         if (promo.free_shipping && promo.all_cart && promo.percentage_off === 100) {
             return { isValid: true, discount: 0, promoCode: promo.code, details: promo, isAdmin: true };
         }
         if (promo.all_cart) {
-            if (promo.percentage_off > 0) {
+            // Handle fixed amount discount
+            if (promo.amount_off && promo.amount_off > 0) {
+                // Fixed amount discount - ensure we don't discount more than cart total
+                totalDiscount = Math.min(promo.amount_off, cartTotal);
+            }
+            else if (promo.percentage_off > 0) {
                 totalDiscount = products.reduce((acc, item) => acc + (item.price * item.quantity) * (promo.percentage_off / 100), 0);
             }
             else if (promo.is_bogo) {
@@ -71,7 +89,14 @@ export class ValidatePromoCode {
             if (eligibleProducts.length === 0) {
                 return { isValid: false, error: "No eligible products found" };
             }
-            if (promo.percentage_off > 0) {
+            const eligibleTotal = eligibleProducts.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+
+            // Handle fixed amount discount for specific products
+            if (promo.amount_off && promo.amount_off > 0) {
+                // Fixed amount discount - ensure we don't discount more than eligible products total
+                totalDiscount = Math.min(promo.amount_off, eligibleTotal);
+            }
+            else if (promo.percentage_off > 0) {
                 totalDiscount = eligibleProducts.reduce((acc, item) => acc + (item.price * item.quantity) * (promo.percentage_off / 100), 0);
             }
             else if (promo.is_bogo) {

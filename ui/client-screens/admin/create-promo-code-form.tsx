@@ -40,6 +40,11 @@ export default function CreatePromoCodeForm({ products, customers = [] }: Create
     // Usage & stacking state
     const [usageLimit, setUsageLimit] = useState<string>("");
     const [stackingMode, setStackingMode] = useState<'additive' | 'sequential'>('additive');
+    // New discount features
+    const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('percentage');
+    const [amountOff, setAmountOff] = useState<number>(0);
+    const [minOrderAmount, setMinOrderAmount] = useState<string>("");
+    const [autoApply, setAutoApply] = useState<boolean>(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -52,10 +57,14 @@ export default function CreatePromoCodeForm({ products, customers = [] }: Create
                 return new Date(dateStr).toISOString();
             };
 
+            // Auto-generate code for auto_apply promos if no code provided
+            const finalCode = code.trim() || (autoApply ? `AUTO_${Date.now().toString(36).toUpperCase()}` : code);
+
             const result = await createPromoCodeAction({
-                code,
+                code: finalCode,
                 is_bogo: isBogo,
-                percentage_off: isBogo ? 0 : percentageOff,
+                percentage_off: isBogo ? 0 : (discountType === 'percentage' ? percentageOff : 0),
+                amount_off: isBogo ? 0 : (discountType === 'fixed' ? amountOff : 0),
                 bogo_buy_count: isBogo ? bogoBuy : 0,
                 bogo_get_count: isBogo ? bogoGet : 0,
                 all_cart: allCart,
@@ -67,6 +76,8 @@ export default function CreatePromoCodeForm({ products, customers = [] }: Create
                 usage_limit: usageLimit ? parseInt(usageLimit) : undefined,
                 usage_count: 0,
                 stacking_mode: stackingMode,
+                min_order_amount: minOrderAmount ? parseFloat(minOrderAmount) : undefined,
+                auto_apply: autoApply,
             } as PromoCode);
 
             if (result.success) {
@@ -165,16 +176,23 @@ export default function CreatePromoCodeForm({ products, customers = [] }: Create
                         <h2 className="text-lg font-semibold text-gray-900 mb-4">{t("basicInformation")}</h2>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">{t("promoCodes")}</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                {t("promoCodes")} {autoApply && <span className="text-gray-400 text-xs">({t("optional") || "Optional"})</span>}
+                            </label>
                             <input
                                 type="text"
-                                required
+                                required={!autoApply}
                                 value={code}
                                 onChange={(e) => setCode(e.target.value.toUpperCase())}
-                                placeholder={t("promoCodePlaceholder")}
+                                placeholder={autoApply ? (t("autoCodePlaceholder") || "Leave empty to auto-generate") : t("promoCodePlaceholder")}
                                 className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all uppercase font-mono tracking-wider"
                             />
-                            <p className="text-xs text-gray-500 mt-1">{t("promoCodeHelp")}</p>
+                            <p className="text-xs text-gray-500 mt-1">
+                                {autoApply
+                                    ? (t("autoApplyCodeNote") || "Code is optional for auto-apply discounts. If left empty, a code will be auto-generated.")
+                                    : t("promoCodeHelp")
+                                }
+                            </p>
                         </div>
 
                         <div className="pt-4 border-t border-gray-100">
@@ -221,23 +239,87 @@ export default function CreatePromoCodeForm({ products, customers = [] }: Create
                                 </div>
                             </div>
                         ) : (
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">{t("discountPercentage")}</label>
-                                <div className="relative">
-                                    <input
-                                        type="text" inputMode="numeric"
+                            <div className="space-y-4">
+                                {/* Discount Type Selector */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">{t("discountType") || "Discount Type"}</label>
+                                    <div className="flex gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setDiscountType('percentage')}
+                                            className={`flex-1 px-3 py-2 text-sm rounded-lg border transition-all ${discountType === 'percentage'
+                                                ? 'bg-primary-100 border-primary-500 text-primary-700 font-medium'
+                                                : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
+                                                }`}
+                                        >
+                                            {t("percentageDiscount") || "Percentage %"}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setDiscountType('fixed')}
+                                            className={`flex-1 px-3 py-2 text-sm rounded-lg border transition-all ${discountType === 'fixed'
+                                                ? 'bg-primary-100 border-primary-500 text-primary-700 font-medium'
+                                                : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
+                                                }`}
+                                        >
+                                            {t("fixedAmount") || "Fixed Amount (EGP)"}
+                                        </button>
+                                    </div>
+                                </div>
 
-                                        required
-                                        value={percentageOff ?? "0"}
-                                        onChange={(e) => setPercentageOff(parseFloat(e.target.value === '' ? "0" : e.target.value) ?? 0)}
-                                        className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none pr-8"
-                                    />
-                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">%</span>
+                                {/* Percentage Input */}
+                                {discountType === 'percentage' && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">{t("discountPercentage")}</label>
+                                        <div className="relative">
+                                            <input
+                                                type="text" inputMode="numeric"
+                                                value={percentageOff ?? "0"}
+                                                onChange={(e) => setPercentageOff(parseFloat(e.target.value === '' ? "0" : e.target.value) ?? 0)}
+                                                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none pr-8"
+                                            />
+                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">%</span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Fixed Amount Input */}
+                                {discountType === 'fixed' && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">{t("discountAmount") || "Discount Amount"}</label>
+                                        <div className="relative">
+                                            <input
+                                                type="text" inputMode="numeric"
+                                                value={amountOff ?? "0"}
+                                                onChange={(e) => setAmountOff(parseFloat(e.target.value === '' ? "0" : e.target.value) ?? 0)}
+                                                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none pr-12"
+                                            />
+                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">{t("egp") || "EGP"}</span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Minimum Order Amount */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">{t("minOrderAmount") || "Minimum Order Amount"}</label>
+                                    <div className="relative">
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            value={minOrderAmount}
+                                            onChange={(e) => setMinOrderAmount(e.target.value)}
+                                            placeholder={t("noMinimum") || "No minimum"}
+                                            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none pr-12"
+                                        />
+                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">{t("egp") || "EGP"}</span>
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-1">{t("minOrderAmountDesc") || "Leave empty for no minimum purchase requirement"}</p>
                                 </div>
                             </div>
                         )}
-                        <div className="flex items-center gap-2">
 
+                        {/* Free Shipping Toggle */}
+                        <div className="flex items-center gap-2">
                             {t("freeShipping")}
                             <button
                                 type="button"
@@ -245,13 +327,31 @@ export default function CreatePromoCodeForm({ products, customers = [] }: Create
                                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${freeShipping ? 'bg-primary-600' : 'bg-gray-200'
                                     }`}
                             >
-
                                 <span
                                     className={`${i18n.dir() === "rtl" ? freeShipping ? '-translate-x-1' : '-translate-x-6'
                                         : freeShipping ? 'translate-x-6' : 'translate-x-1'
                                         } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
                                 />
                             </button>
+                        </div>
+
+                        {/* Auto-Apply Toggle */}
+                        <div className="pt-4 border-t border-gray-100">
+                            <label className="flex items-center justify-between cursor-pointer group">
+                                <div>
+                                    <span className="block text-sm font-medium text-gray-900">{t("autoApply") || "Auto Apply"}</span>
+                                    <span className="block text-xs text-gray-500">{t("autoApplyDesc") || "Automatically apply this discount at checkout without requiring a code"}</span>
+                                </div>
+                                <div className="relative">
+                                    <input
+                                        type="checkbox"
+                                        checked={autoApply}
+                                        onChange={(e) => setAutoApply(e.target.checked)}
+                                        className="sr-only peer"
+                                    />
+                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                                </div>
+                            </label>
                         </div>
 
                         {/* Time Validity Section */}
@@ -304,8 +404,8 @@ export default function CreatePromoCodeForm({ products, customers = [] }: Create
                                             type="button"
                                             onClick={() => setStackingMode('additive')}
                                             className={`flex-1 px-3 py-2 text-sm rounded-lg border transition-all ${stackingMode === 'additive'
-                                                    ? 'bg-primary-100 border-primary-500 text-primary-700 font-medium'
-                                                    : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
+                                                ? 'bg-primary-100 border-primary-500 text-primary-700 font-medium'
+                                                : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
                                                 }`}
                                         >
                                             {t("additive") || "Additive"}
@@ -314,8 +414,8 @@ export default function CreatePromoCodeForm({ products, customers = [] }: Create
                                             type="button"
                                             onClick={() => setStackingMode('sequential')}
                                             className={`flex-1 px-3 py-2 text-sm rounded-lg border transition-all ${stackingMode === 'sequential'
-                                                    ? 'bg-primary-100 border-primary-500 text-primary-700 font-medium'
-                                                    : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
+                                                ? 'bg-primary-100 border-primary-500 text-primary-700 font-medium'
+                                                : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
                                                 }`}
                                         >
                                             {t("sequential") || "Sequential"}

@@ -426,5 +426,43 @@ export class IProductServerRepository implements ProductRepository {
         return data;
     }
 
+    async getAutoApplyPromoCodes(): Promise<PromoCode[]> {
+        console.log("[IProductRepository] getAutoApplyPromoCodes called");
+        const supabase = await createSupabaseServerClient();
+        const now = new Date().toISOString();
+
+        const { data, error } = await supabase
+            .schema('store')
+            .from('promo_codes')
+            .select('*')
+            .eq('is_active', true)
+            .eq('auto_apply', true);
+
+        if (error) {
+            console.error("[IProductRepository] getAutoApplyPromoCodes error:", error);
+            throw error;
+        }
+
+        // Filter by time validity on the server side
+        const validCodes = (data || []).filter((promo: PromoCode) => {
+            // Check valid_from
+            if (promo.valid_from && new Date(promo.valid_from) > new Date(now)) {
+                return false;
+            }
+            // Check valid_until
+            if (promo.valid_until && new Date(promo.valid_until) < new Date(now)) {
+                return false;
+            }
+            // Check usage limit
+            if (promo.usage_limit && promo.usage_count && promo.usage_count >= promo.usage_limit) {
+                return false;
+            }
+            return true;
+        });
+
+        console.log("[IProductRepository] getAutoApplyPromoCodes found:", validCodes.length);
+        return validCodes;
+    }
+
 
 }
