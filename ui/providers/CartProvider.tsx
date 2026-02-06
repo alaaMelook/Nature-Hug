@@ -69,16 +69,19 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
             if (cart.promoCode && cart.items.length > 0) {
                 const result = await validatePromoCodeAction(cart.promoCode, cart.items);
                 if (result.isValid && 'discount' in result) {
+                    // Update both discount and free_shipping from the promo details
+                    const hasFreeShipping = result.details?.free_shipping ?? false;
                     setCart(prev => ({
                         ...prev,
                         discount: result.discount,
-                        promoCodeId: result.details?.id ?? null
+                        promoCodeId: result.details?.id ?? null,
+                        free_shipping: hasFreeShipping
                     }));
                 } else {
-                    setCart(prev => ({ ...prev, discount: 0, promoCodeId: null }));
+                    setCart(prev => ({ ...prev, discount: 0, promoCodeId: null, free_shipping: false }));
                 }
             } else if (cart.items.length === 0 && cart.discount > 0) {
-                setCart(prev => ({ ...prev, discount: 0, promoCodeId: null }));
+                setCart(prev => ({ ...prev, discount: 0, promoCodeId: null, free_shipping: false }));
             }
         };
 
@@ -274,7 +277,8 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
                 promoCodes: newPromoCodes,
                 discount: totalDiscount,
             }));
-            console.log('[CART] Applied promo codes:', newPromoCodes.length, 'Total discount:', totalDiscount);
+            console.log('[CART] Applied promo codes:', newPromoCodes.length, 'Total discount:', totalDiscount, 'Free shipping:', hasFreeShipping);
+            console.log('[CART] Promo details - free_shipping:', result.details?.free_shipping, 'code:', code);
             if (cart.isAdmin) {
                 toast.info(t('checkout.adminOrder'));
             }
