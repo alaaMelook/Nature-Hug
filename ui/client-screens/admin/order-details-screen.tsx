@@ -846,8 +846,14 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
                                         />
                                     </div>
                                     <div className="flex justify-between items-center w-full text-lg font-bold text-gray-900 mt-2 pt-2 border-t px-2">
-                                        <span>{t("totalAmount")}</span>
-                                        <span>{t('{{price, currency}}', { price: editForm.final_order_total })}</span>
+                                        <span>{t("totalAmount")} <span className="text-xs text-gray-400 font-normal">({t("editable") || "Editable"})</span></span>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            value={editForm.final_order_total}
+                                            onChange={(e) => setEditForm({ ...editForm, final_order_total: Number(e.target.value) })}
+                                            className="w-36 px-3 py-2 border-2 border-green-500 rounded-lg text-lg text-right font-bold focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-green-50"
+                                        />
                                     </div>
                                 </div>
                             ) : (

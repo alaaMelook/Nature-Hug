@@ -61,10 +61,16 @@ export async function createOrder(data: Partial<Order>, isAdmin: boolean, items:
     let verifiedPromoCodeId = null;
     let appliedPromoCodeName = null;
 
-    console.log(`[createOrder] Checking promo: promo_code_id=${data.promo_code_id}, client_discount=${data.discount_total}`);
+    console.log(`[createOrder] Checking promo: promo_code_id=${data.promo_code_id}, client_discount=${data.discount_total}, applied_promo_codes=${JSON.stringify(data.applied_promo_codes)}`);
 
-    if (data.promo_code_id || (items.length > 0 && data.discount_total && data.discount_total > 0)) {
-        // Try to fetch promo code details if ID is provided
+    // If we have applied_promo_codes array, use that for discount calculation
+    if (data.applied_promo_codes && Array.isArray(data.applied_promo_codes) && data.applied_promo_codes.length > 0) {
+        // Sum discounts from all applied promo codes
+        calculatedDiscount = data.applied_promo_codes.reduce((sum: number, p: any) => sum + (p.discount || 0), 0);
+        freeShipping = data.applied_promo_codes.some((p: any) => p.free_shipping === true);
+        console.log(`[createOrder] Using applied_promo_codes: totalDiscount=${calculatedDiscount}, freeShipping=${freeShipping}`);
+    } else if (data.promo_code_id || (items.length > 0 && data.discount_total && data.discount_total > 0)) {
+        // Legacy: Single promo code flow
         if (data.promo_code_id) {
             const supabase = await createSupabaseServerClient();
             const { data: promoData, error: promoError } = await supabase.schema('store').from('promo_codes').select('*').eq('id', data.promo_code_id).single();
@@ -106,24 +112,29 @@ export async function createOrder(data: Partial<Order>, isAdmin: boolean, items:
     }
 
     // 3. Calculate Shipping
+    // First, check if any of the applied_promo_codes has free_shipping
     let calculatedShipping = 0;
-    if (!freeShipping && !isAdmin) {
-        if (data.guest_address?.governorate_slug || data.shipping_address_id) {
-            const supabase = await createSupabaseServerClient();
-            let govSlug = data.guest_address?.governorate_slug;
+    const hasFreeShippingFromAppliedPromos = data.applied_promo_codes?.some((p: any) => p.free_shipping === true) ?? false;
 
-            // If using saved address (shipping_address_id), fetch its governorate
-            if (data.shipping_address_id && !govSlug) {
-                const { data: addr } = await supabase.schema('auth').from('addresses').select('governorate_id').eq('id', data.shipping_address_id).single();
-                if (addr && addr.governorate_id) {
-                    // Need governorate fees.
-                    const { data: gov } = await supabase.schema('store').from('governorates').select('fees').eq('id', addr.governorate_id).single();
-                    if (gov) calculatedShipping = gov.fees;
-                }
-            } else if (govSlug) {
-                const { data: gov } = await supabase.schema('store').from('governorates').select('fees').eq('slug', govSlug).single();
+    console.log(`[createOrder] Free shipping check - freeShipping from promo_code_id: ${freeShipping}, from applied_promo_codes: ${hasFreeShippingFromAppliedPromos}`);
+
+    const shouldChargeShipping = !freeShipping && !hasFreeShippingFromAppliedPromos && !isAdmin;
+
+    if (shouldChargeShipping) {
+        const supabase = await createSupabaseServerClient();
+        let govSlug = data.guest_address?.governorate_slug;
+
+        // If using saved address (shipping_address_id), fetch its governorate
+        if (data.shipping_address_id && !govSlug) {
+            const { data: addr } = await supabase.schema('auth').from('addresses').select('governorate_id').eq('id', data.shipping_address_id).single();
+            if (addr && addr.governorate_id) {
+                // Need governorate fees.
+                const { data: gov } = await supabase.schema('store').from('governorates').select('fees').eq('id', addr.governorate_id).single();
                 if (gov) calculatedShipping = gov.fees;
             }
+        } else if (govSlug) {
+            const { data: gov } = await supabase.schema('store').from('governorates').select('fees').eq('slug', govSlug).single();
+            if (gov) calculatedShipping = gov.fees;
         }
     }
 

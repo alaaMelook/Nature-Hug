@@ -205,6 +205,19 @@ export const generateInvoicePDF = (orders: OrderDetailsView | OrderDetailsView[]
         addTotalRow("Shipping:", order.shipping_total > 0 ? formatCurrency(order.shipping_total) : "Free", currentTotalY);
         currentTotalY += 6;
 
+        // Add discount line if applicable
+        let discountAmount = order.discount_total;
+
+        // Fallback: Calculate discount from promo_percentage if not saved in discount_total (for legacy/migrated orders)
+        if (discountAmount === 0 && order.promo_percentage > 0) {
+            discountAmount = order.subtotal * (order.promo_percentage / 100);
+        }
+
+        if (discountAmount > 0) {
+            addTotalRow("Discount:", `-${formatCurrency(discountAmount)}`, currentTotalY, false, 10, [220, 50, 50]);
+            currentTotalY += 6;
+        }
+
         // Grand Total Line (Stronger separator)
         doc.setDrawColor(200, 200, 200);
         doc.line(totalXLabel, currentTotalY, totalXValue, currentTotalY);
