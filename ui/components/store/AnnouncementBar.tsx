@@ -58,12 +58,14 @@ export function AnnouncementBar({ theme }: AnnouncementBarProps) {
     const textColor = theme.announcement_text_color || '#FFFFFF';
 
     // Speed mapping (seconds for full animation)
-    const speedMap = {
+    const speedMap: Record<string, number> = {
         slow: 40,
         medium: 25,
         fast: 12,
+        very_fast: 6,
+        ultra_fast: 3,
     };
-    const animationDuration = speedMap[theme.announcement_scroll_speed || 'medium'];
+    const animationDuration = speedMap[theme.announcement_scroll_speed || 'medium'] || 25;
 
     // Format countdown with labels
     const formatNumber = (n: number) => n.toString().padStart(2, '0');
@@ -76,51 +78,18 @@ export function AnnouncementBar({ theme }: AnnouncementBarProps) {
                 color: textColor
             }}
         >
-            {/* Countdown Timer - Compact on Mobile */}
+            {/* Countdown Timer - Very Compact */}
             {timeLeft && (
-                <div className="flex-shrink-0 flex items-center gap-0.5 md:gap-1 px-2 md:px-3 mx-1 md:mx-2 bg-black/30 rounded-lg backdrop-blur-sm">
-                    {/* Countdown Label */}
-                    <div className="hidden sm:flex flex-col items-center px-1 md:px-2 py-1">
-                        <span className="text-[8px] md:text-[10px] uppercase tracking-wider opacity-80">
-                            {isRTL ? 'ينتهي في' : 'Ends In'}
-                        </span>
-                    </div>
-
-                    {/* Mobile: Just show icon */}
-                    <span className="sm:hidden text-sm">⏱️</span>
-
-                    {/* Days - Hide on very small screens if 0 */}
-                    {timeLeft.days > 0 && (
-                        <>
-                            <div className="flex flex-col items-center px-1 md:px-2 py-0.5 md:py-1 bg-white/10 rounded">
-                                <span className="text-sm md:text-xl font-bold tabular-nums">{formatNumber(timeLeft.days)}</span>
-                                <span className="text-[8px] md:text-[10px] uppercase opacity-80">{isRTL ? 'ي' : 'D'}</span>
-                            </div>
-                            <span className="text-sm md:text-xl font-bold opacity-50">:</span>
-                        </>
-                    )}
-
-                    {/* Hours */}
-                    <div className="flex flex-col items-center px-1 md:px-2 py-0.5 md:py-1 bg-white/10 rounded">
-                        <span className="text-sm md:text-xl font-bold tabular-nums">{formatNumber(timeLeft.hours)}</span>
-                        <span className="text-[8px] md:text-[10px] uppercase opacity-80">{isRTL ? 'س' : 'H'}</span>
-                    </div>
-
-                    <span className="text-sm md:text-xl font-bold opacity-50">:</span>
-
-                    {/* Minutes */}
-                    <div className="flex flex-col items-center px-1 md:px-2 py-0.5 md:py-1 bg-white/10 rounded">
-                        <span className="text-sm md:text-xl font-bold tabular-nums">{formatNumber(timeLeft.minutes)}</span>
-                        <span className="text-[8px] md:text-[10px] uppercase opacity-80">{isRTL ? 'د' : 'M'}</span>
-                    </div>
-
-                    <span className="text-sm md:text-xl font-bold opacity-50">:</span>
-
-                    {/* Seconds */}
-                    <div className="flex flex-col items-center px-1 md:px-2 py-0.5 md:py-1 bg-white/10 rounded">
-                        <span className="text-sm md:text-xl font-bold tabular-nums animate-pulse">{formatNumber(timeLeft.seconds)}</span>
-                        <span className="text-[8px] md:text-[10px] uppercase opacity-80">{isRTL ? 'ث' : 'S'}</span>
-                    </div>
+                <div className="flex-shrink-0 flex items-center gap-0.5 px-2 mx-1 bg-black/30 rounded-md text-xs md:text-sm font-bold tabular-nums">
+                    <span className="opacity-70 hidden sm:inline">{isRTL ? 'ينتهي:' : 'Ends:'}</span>
+                    {timeLeft.days > 0 && <span>{timeLeft.days}d</span>}
+                    {timeLeft.days > 0 && <span className="opacity-50">:</span>}
+                    <span>{formatNumber(timeLeft.hours)}h</span>
+                    <span className="opacity-50">:</span>
+                    <span>{formatNumber(timeLeft.minutes)}m</span>
+                    {/* Seconds only on desktop */}
+                    <span className="hidden md:inline opacity-50">:</span>
+                    <span className="hidden md:inline animate-pulse">{formatNumber(timeLeft.seconds)}s</span>
                 </div>
             )}
 
