@@ -10,6 +10,7 @@ export interface OrderDetailsView {
     shipping_street_address: string;
     shipping_governorate: string;
     applied_promo_code: string;
+    applied_promo_codes?: { id: number; code: string; discount: number; auto_apply?: boolean }[] | null;
     promo_percentage: number;
     phone_numbers: string[];
     items: OrderItemView[];

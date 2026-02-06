@@ -159,7 +159,8 @@ export async function createOrder(data: Partial<Order>, isAdmin: boolean, items:
                 .update({
                     discount_total: calculatedDiscount,
                     grand_total: calculatedGrandTotal,
-                    shipping_total: calculatedShipping
+                    shipping_total: calculatedShipping,
+                    applied_promo_codes: data.applied_promo_codes || null
                 })
                 .eq('id', createdOrder.order_id);
 

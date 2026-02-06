@@ -94,7 +94,13 @@ export function CheckoutGuestScreen({ governorates }: { governorates: Governorat
             payment_method: cart.isAdmin ? 'Online Card' : selectedPayment === 'cod' ? 'Cash on Delivery' : 'Online Card',
             grand_total: getCartTotal(cart.isAdmin ? selectedGovernorate.fees ?? 0 : cart.free_shipping ? 0 : selectedGovernorate?.fees ?? 0),
             guest_address: { ...(data.guest_address || {}), governorate_slug: selectedGovernorate?.slug },
-            promo_code_id: cart.promoCodeId
+            promo_code_id: cart.promoCodeId,
+            applied_promo_codes: cart.promoCodes?.length > 0 ? cart.promoCodes.map(p => ({
+                id: p.id,
+                code: p.code,
+                discount: p.discount,
+                auto_apply: p.auto_apply
+            })) : null
         };
         const result = await createOrder(orderPayload, cart.isAdmin, products);
         if (result.error) {

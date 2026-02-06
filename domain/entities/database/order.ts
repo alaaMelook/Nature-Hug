@@ -25,6 +25,7 @@ export interface Order {
     created_by_customer_id?: number | null; // ID of admin/moderator who created this order
     shipping_address_id?: number | null;
     promo_code_id?: number | null;
+    applied_promo_codes?: { id: number; code: string; discount: number; auto_apply?: boolean }[] | null;
     items?: Partial<OrderItem>[];
     awb: string | null;
     payment_status: string;

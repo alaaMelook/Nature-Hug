@@ -120,6 +120,12 @@ export function CheckoutUserScreen({ governorates, user }: { governorates: Gover
             payment_method: cart.isAdmin ? 'Online Card' : selectedPayment === 'cod' ? 'Cash on Delivery' : 'Online Card',
             grand_total: getCartTotal(cart.free_shipping ? 0 : selectedGovernorate?.fees ?? 0),
             promo_code_id: cart.promoCodeId,
+            applied_promo_codes: cart.promoCodes?.length > 0 ? cart.promoCodes.map(p => ({
+                id: p.id,
+                code: p.code,
+                discount: p.discount,
+                auto_apply: p.auto_apply
+            })) : null,
             note: data.note || null
         };
         const result = await createOrder(payload, cart.isAdmin, products);

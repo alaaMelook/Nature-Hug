@@ -384,7 +384,15 @@ export function OrdersScreen({ initialOrders, promoCodes = [] }: { initialOrders
                                             <td className="px-4 py-3 text-gray-700">{order.customer_name}</td>
                                             <td className="px-4 py-3 text-gray-600">{order.shipping_governorate}</td>
                                             <td className="px-4 py-3 text-gray-600 text-center">
-                                                {order.applied_promo_code ? (
+                                                {order.applied_promo_codes && order.applied_promo_codes.length > 0 ? (
+                                                    <div className="flex flex-wrap gap-1 justify-center">
+                                                        {order.applied_promo_codes.map((promo, idx) => (
+                                                            <span key={idx} className={`px-2 py-1 rounded-full text-xs font-medium border ${promo.auto_apply ? 'bg-green-50 text-green-700 border-green-100' : 'bg-blue-50 text-blue-700 border-blue-100'}`}>
+                                                                {promo.code}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                ) : order.applied_promo_code ? (
                                                     <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-full text-xs font-medium border border-blue-100">
                                                         {order.applied_promo_code}
                                                     </span>
@@ -532,7 +540,18 @@ export function OrdersScreen({ initialOrders, promoCodes = [] }: { initialOrders
                                                     ) : null}
                                                 </div>
                                             </div>
-                                            {order.applied_promo_code && (
+                                            {(order.applied_promo_codes && order.applied_promo_codes.length > 0) ? (
+                                                <div>
+                                                    <span className="font-medium">{t("promoCode")}:</span>{' '}
+                                                    <div className="flex flex-wrap gap-1 mt-1">
+                                                        {order.applied_promo_codes.map((promo, idx) => (
+                                                            <span key={idx} className={`px-2 py-1 rounded-full text-xs font-medium border ${promo.auto_apply ? 'bg-green-50 text-green-700 border-green-100' : 'bg-blue-50 text-blue-700 border-blue-100'}`}>
+                                                                {promo.code}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            ) : order.applied_promo_code && (
                                                 <div>
                                                     <span className="font-medium">{t("promoCode")}:</span>{' '}
                                                     <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-full text-xs font-medium border border-blue-100">
