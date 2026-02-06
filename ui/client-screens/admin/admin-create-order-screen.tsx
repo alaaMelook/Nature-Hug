@@ -145,37 +145,62 @@ export function AdminCreateOrderScreen({ products, governorates, promoCodes }: A
         );
     }, [products, productSearch]);
 
-    // Filter and Apply Auto-Apply Promo Codes
+    // Calculate current subtotal for promo validation
+    const currentSubtotal = useMemo(() => {
+        return orderItems.reduce((acc, item) => acc + (item.unitPrice * item.quantity), 0);
+    }, [orderItems]);
+
+    // Filter and Apply Auto-Apply Promo Codes - now checks min_order_amount
     useEffect(() => {
         const autoApplyPromos = promoCodes.filter(p => p.auto_apply && p.is_active);
 
         if (autoApplyPromos.length > 0) {
             setAppliedPromos(prev => {
                 const newPromosToApply: PromoCode[] = [];
+                const promosToRemove: number[] = [];
 
                 autoApplyPromos.forEach(promo => {
-                    // Check if already applied
-                    if (prev.some(p => p.id === promo.id)) return;
+                    const alreadyApplied = prev.some(p => p.id === promo.id);
 
                     // Check Customer Eligibility
                     if (promo.eligible_customer_ids && promo.eligible_customer_ids.length > 0) {
                         if (!selectedCustomer || !selectedCustomer.id || !promo.eligible_customer_ids.includes(selectedCustomer.id)) {
+                            if (alreadyApplied) promosToRemove.push(promo.id);
                             return;
                         }
                     }
 
-                    newPromosToApply.push(promo);
+                    // Check Minimum Order Amount
+                    if (promo.min_order_amount && promo.min_order_amount > 0) {
+                        if (currentSubtotal < promo.min_order_amount) {
+                            // Remove if was applied but no longer qualifies
+                            if (alreadyApplied) promosToRemove.push(promo.id);
+                            return;
+                        }
+                    }
+
+                    // If not already applied, add it
+                    if (!alreadyApplied) {
+                        newPromosToApply.push(promo);
+                    }
                 });
+
+                // Remove promos that no longer qualify
+                let updatedPromos = prev.filter(p => !promosToRemove.includes(p.id));
 
                 if (newPromosToApply.length > 0) {
                     toast.success(t("checkout.autoPromoApplied", { amount: newPromosToApply.length }) || "Auto promo code applied!");
-                    return [...prev, ...newPromosToApply];
+                    return [...updatedPromos, ...newPromosToApply];
+                }
+
+                if (promosToRemove.length > 0) {
+                    return updatedPromos;
                 }
 
                 return prev;
             });
         }
-    }, [promoCodes, selectedCustomer, t]);
+    }, [promoCodes, selectedCustomer, t, currentSubtotal]);
 
     // Calculations
     const subtotal = useMemo(() => {
@@ -193,23 +218,22 @@ export function AdminCreateOrderScreen({ products, governorates, promoCodes }: A
     const discount = useMemo(() => {
         if (appliedPromos.length === 0) return 0;
 
-        // Check stacking mode - use first promo's mode
-        const stackingMode = appliedPromos[0]?.stacking_mode || 'additive';
+        let totalDiscount = 0;
 
-        if (stackingMode === 'additive') {
-            // Add all percentages together
-            const totalPercentage = appliedPromos.reduce((sum, p) => sum + (p.percentage_off || 0), 0);
-            return subtotal * (totalPercentage / 100);
-        } else {
-            // Sequential: apply one after another
-            let remaining = subtotal;
-            appliedPromos.forEach(p => {
-                if (p.percentage_off > 0) {
-                    remaining = remaining * (1 - p.percentage_off / 100);
-                }
-            });
-            return subtotal - remaining;
-        }
+        // Calculate discount from each promo
+        appliedPromos.forEach(promo => {
+            // Fixed amount discount
+            if (promo.amount_off && promo.amount_off > 0) {
+                totalDiscount += promo.amount_off;
+            }
+            // Percentage discount
+            else if (promo.percentage_off && promo.percentage_off > 0) {
+                totalDiscount += subtotal * (promo.percentage_off / 100);
+            }
+        });
+
+        // Make sure discount doesn't exceed subtotal
+        return Math.min(totalDiscount, subtotal);
     }, [appliedPromos, subtotal]);
 
     const grandTotal = useMemo(() => {
