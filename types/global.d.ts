@@ -70,7 +70,7 @@ declare global {
 
     type LangKey = 'en' | 'ar';
     type LangChangeListener = (lang: LangKey) => void;
-    type MemberRole = 'admin' | 'moderator' | 'user';
+    type MemberRole = 'admin' | 'moderator' | 'user' | 'distributor';
     interface SidebarStats {
         productsWarningCount: { products: number, reviews: number };
         materialsWarningCount: number;

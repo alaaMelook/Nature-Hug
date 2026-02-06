@@ -25,15 +25,14 @@ export class ICustomerServerRepository implements CustomerRepository {
     async getCurrentUser(): Promise<User | null> {
         console.log("[ICustomerRepository] getCurrentUser called.");
         const supabase = await createSupabaseServerClient();
-        const { data, error } = await supabase.auth.getSession();
-        if (error || !data.session) {
+        const { data: { user }, error } = await supabase.auth.getUser();
+
+        if (error || !user) {
+            console.log("[ICustomerRepository] getCurrentUser no user found:", error);
             return null;
         }
-        const user = await data.session.user;
-        console.log("[ICustomerRepository] getCurrentUser result:", { data: user });
-        if (user === null) {
-            return null;
-        }
+
+        console.log("[ICustomerRepository] getCurrentUser result id:", user.id);
         return user;
     }
 

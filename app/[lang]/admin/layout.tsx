@@ -19,6 +19,10 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
     if (!member) redirect("/");
 
+    if (member.role === 'distributor') {
+        redirect("/");
+    }
+
     // ⭐️ Moderator Redirect Logic
     if (member.role === 'moderator') {
         const headersList = await headers();

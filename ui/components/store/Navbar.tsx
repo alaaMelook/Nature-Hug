@@ -287,7 +287,17 @@ export default function Navbar() {
                                     <User className="w-4 h-4 mx-2" />
                                     {t('profile')}
                                 </Link>
-                                {member && (
+                                {member && member.role === 'distributor' && (
+                                    <Link
+                                        href="/distributor"
+                                        onClick={() => setIsSettingsOpen(false)}
+                                        className="flex items-center px-4 py-2 text-sm text-amber-700 hover:bg-amber-100"
+                                    >
+                                        <Truck className="w-5 h-5 mx-2 text-amber-700" />
+                                        {language === 'ar' ? 'بوابة الموزعين' : 'Distributor Portal'}
+                                    </Link>
+                                )}
+                                {member && member.role !== 'distributor' && (
                                     <Link
                                         href={member.role === 'moderator' ? "/admin/shipping/history" : "/admin"}
                                         onClick={() => setIsSettingsOpen(false)}
@@ -298,7 +308,6 @@ export default function Navbar() {
                                                 <Truck className="w-5 h-5 mx-2 text-red-700" />
                                                 {t('trackOrders')}
                                             </>
-
                                             :
                                             <>
                                                 <FlaskConicalIcon className="w-5 h-5 mx-2 text-red-700" />
@@ -398,22 +407,32 @@ export default function Navbar() {
                                 <User className="w-5 h-5 mx-2 text-primary-900" />
                                 {t('profile')}
                             </Link>
-                            {member && (
+                            {member && member.role === 'distributor' && (
+                                <Link
+                                    href="/distributor"
+                                    onClick={() => setIsOpen(false)}
+                                    className="text-amber-700 hover:text-amber-400 text-lg mx-5 flex"
+                                >
+                                    <Truck className="w-5 h-5 mx-2 text-amber-700" />
+                                    {language === 'ar' ? 'بوابة الموزعين' : 'Distributor Portal'}
+                                </Link>
+                            )}
+                            {member && member.role !== 'distributor' && (
                                 <Link
                                     href={member.role === 'moderator' ? "/admin/shipping/history" : "/admin"}
                                     onClick={() => setIsOpen(false)}
                                     className="text-red-700 hover:text-red-400 text-lg mx-5 flex"
-                                >{member.role === 'moderator' ?
-                                    <>
-                                        <Truck className="w-5 h-5 mx-2 text-red-700" />
-                                        {t('trackOrders')}
-                                    </>
-
-                                    :
-                                    <>
-                                        <FlaskConicalIcon className="w-5 h-5 mx-2 text-red-700" />
-                                        {t('adminPanel')}
-                                    </>
+                                >
+                                    {member.role === 'moderator' ?
+                                        <>
+                                            <Truck className="w-5 h-5 mx-2 text-red-700" />
+                                            {t('trackOrders')}
+                                        </>
+                                        :
+                                        <>
+                                            <FlaskConicalIcon className="w-5 h-5 mx-2 text-red-700" />
+                                            {t('adminPanel')}
+                                        </>
                                     }
                                 </Link>
                             )}

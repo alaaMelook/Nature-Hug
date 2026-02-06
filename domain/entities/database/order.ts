@@ -29,4 +29,6 @@ export interface Order {
     awb: string | null;
     payment_status: string;
     sessionId: string | null;
+    cancel_requested?: boolean;  // Distributor requested cancellation
+    created_by_distributor_id?: number | null;  // ID of distributor who created this order
 }

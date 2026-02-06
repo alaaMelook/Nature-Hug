@@ -94,7 +94,7 @@ export function CustomerProfileScreen({ customer, orders, member, onPromote, onR
                         )}
                     </div>
                 </div>
-                <div className="flex space-x-2">
+                <div className="flex flex-wrap gap-2">
                     {member ? (
                         <>
                             <button
@@ -113,9 +113,25 @@ export function CustomerProfileScreen({ customer, orders, member, onPromote, onR
                                     {t("makeAdmin")}
                                 </button>
                             )}
+                            {member.role === 'distributor' && (
+                                <button
+                                    onClick={() => handlePromote('moderator')}
+                                    disabled={isPromoting}
+                                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+                                >
+                                    {t("makeModerator")}
+                                </button>
+                            )}
                         </>
                     ) : (
                         <>
+                            <button
+                                onClick={() => handlePromote('distributor')}
+                                disabled={isPromoting}
+                                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-amber-600 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-colors"
+                            >
+                                🚚 {i18n.language === 'ar' ? 'جعله موزع' : 'Make Distributor'}
+                            </button>
                             <button
                                 onClick={() => handlePromote('moderator')}
                                 disabled={isPromoting}
