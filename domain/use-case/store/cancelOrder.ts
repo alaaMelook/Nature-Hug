@@ -5,12 +5,25 @@ export class CancelOrder {
     constructor(private repo = new ICustomerServerRepository()) { }
 
     async execute(orderId: number): Promise<void> {
+        // First try to get authenticated user
         const user = await new GetCurrentUser().execute();
-        if (!user) {
-            throw new Error("User not authenticated");
+
+        if (user) {
+            // Authenticated user - cancel by customer ID
+            await this.repo.cancelOrder(orderId, user.id);
+            return;
         }
 
+        // If no authenticated user, try anonymous session
+        const sessionId = await new GetCurrentUser().getAnonymousSessionId();
 
-        await this.repo.cancelOrder(orderId, user.id);
+        if (sessionId) {
+            // Guest user - cancel by session ID
+            await this.repo.cancelOrderBySession(orderId, sessionId);
+            return;
+        }
+
+        // Neither authenticated nor guest session found
+        throw new Error("Unable to verify order ownership. Please contact support.");
     }
 }

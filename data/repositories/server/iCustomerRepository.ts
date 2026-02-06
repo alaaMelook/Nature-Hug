@@ -338,4 +338,21 @@ export class ICustomerServerRepository implements CustomerRepository {
             throw error;
         }
     }
+
+    async cancelOrderBySession(orderId: number, sessionId: string): Promise<void> {
+        console.log(`[ICustomerRepository] cancelOrderBySession called for order ${orderId} by session ${sessionId}`);
+        const supabase = await createSupabaseServerClient();
+
+        const { error } = await supabase.schema('store')
+            .from('orders')
+            .update({ status: 'cancelled' })
+            .eq('id', orderId)
+            .eq('session_id', sessionId)
+            .in('status', ['pending', 'processing']);
+
+        if (error) {
+            console.error("[ICustomerRepository] cancelOrderBySession error:", error);
+            throw error;
+        }
+    }
 }
