@@ -52,13 +52,14 @@ export function CheckoutCart({ selectedGovernorate, onPurchase, customerId }: {
         }
     }, [cart.netTotal, cart.items.length, customerId, cart.promoCodes]);
 
-    // Auto-apply eligible promo codes when component mounts
+    // Auto-apply eligible promo codes when component mounts or cart total changes
     useEffect(() => {
-        if (cart.items.length > 0 && !autoApplied) {
+        if (cart.items.length > 0) {
+            // Re-apply auto promos when cart changes (to catch min_order_amount thresholds)
             applyAutoPromoCodes(customerId);
             setAutoApplied(true);
         }
-    }, [cart.items.length, customerId, autoApplied]);
+    }, [cart.items.length, customerId, cart.netTotal]);
 
     return (
         <section className="w-full md:w-1/3 flex flex-col space-y-6">

@@ -319,10 +319,15 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
     // --- Auto-Apply Promo Codes ---
     const applyAutoPromoCodes = async (customerId?: number) => {
         try {
+            console.log('[CART] applyAutoPromoCodes called, customerId:', customerId, 'cart.items:', cart.items.length, 'netTotal:', cart.netTotal);
             const response = await fetch('/api/store/auto-apply-promos' + (customerId ? `?customerId=${customerId}` : ''));
-            if (!response.ok) return;
+            if (!response.ok) {
+                console.log('[CART] Auto-apply API failed:', response.status);
+                return;
+            }
 
             const { promoCodes: autoApplyPromos } = await response.json();
+            console.log('[CART] Auto-apply promos from API:', autoApplyPromos?.length, autoApplyPromos?.map((p: any) => ({ id: p.id, code: p.code, min_order_amount: p.min_order_amount })));
 
             // First, remove any auto-applied promos that are no longer active
             const activePromoIds = (autoApplyPromos || []).map((p: any) => p.id);
@@ -347,15 +352,24 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
                 });
             }
 
-            if (!autoApplyPromos || autoApplyPromos.length === 0) return;
+            if (!autoApplyPromos || autoApplyPromos.length === 0) {
+                console.log('[CART] No auto-apply promos available');
+                return;
+            }
 
             // Apply each auto-apply promo code
             for (const promo of autoApplyPromos) {
                 // Skip if already applied
-                if (cart.promoCodes.some(p => p.id === promo.id)) continue;
+                if (cart.promoCodes.some(p => p.id === promo.id)) {
+                    console.log('[CART] Promo already applied, skipping:', promo.code);
+                    continue;
+                }
 
+                console.log('[CART] Validating auto promo:', promo.code, 'for cart items:', cart.items.length);
                 // Validate and apply
                 const result = await validatePromoCodeAction(promo.code, cart.items, customerId);
+                console.log('[CART] Validation result for', promo.code, ':', result);
+
                 if (result.isValid && 'discount' in result) {
                     const newPromo: AppliedPromoCode = {
                         id: promo.id,

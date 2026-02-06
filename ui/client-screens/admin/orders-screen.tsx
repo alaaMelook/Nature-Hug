@@ -346,6 +346,7 @@ export function OrdersScreen({ initialOrders, promoCodes = [] }: { initialOrders
                             <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase ">{t("customerName")}</th>
                             <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase ">{t("governorate")}</th>
                             <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase ">{t("promoCode")}</th>
+                            <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase ">{t("discount") || "DISCOUNT"}</th>
                             <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase ">{t("status")}</th>
                             <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase ">{t("payment")}</th>
                             <th className="px-4 py-3 text-left font-medium text-gray-500 uppercase ">{t("total")}</th>
@@ -388,6 +389,13 @@ export function OrdersScreen({ initialOrders, promoCodes = [] }: { initialOrders
                                                         {order.applied_promo_code}
                                                     </span>
                                                 ) : <span className="text-gray-600 w-full tracking-wider">&mdash;</span>}
+                                            </td>
+                                            <td className="px-4 py-3 text-gray-600">
+                                                {order.discount_total > 0 ? (
+                                                    <span className="text-green-600 font-medium">
+                                                        -{t('{{price, currency}}', { price: order.discount_total })}
+                                                    </span>
+                                                ) : <span className="text-gray-400">&mdash;</span>}
                                             </td>
                                             <td className="px-4 py-3">
                                                 <div className="flex flex-col gap-1">
@@ -529,6 +537,14 @@ export function OrdersScreen({ initialOrders, promoCodes = [] }: { initialOrders
                                                     <span className="font-medium">{t("promoCode")}:</span>{' '}
                                                     <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-full text-xs font-medium border border-blue-100">
                                                         {order.applied_promo_code}
+                                                    </span>
+                                                </div>
+                                            )}
+                                            {order.discount_total > 0 && (
+                                                <div>
+                                                    <span className="font-medium">{t("discount") || "Discount"}:</span>{' '}
+                                                    <span className="text-green-600 font-medium">
+                                                        -{t('{{price, currency}}', { price: order.discount_total })}
                                                     </span>
                                                 </div>
                                             )}
