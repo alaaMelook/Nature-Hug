@@ -106,6 +106,47 @@ export function CheckoutUserScreen({ governorates, user }: { governorates: Gover
             }
         }
 
+        // Calculate subtotal from items directly
+        const subtotal = cart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+        // Calculate discounts sequentially
+        let remainingAmount = subtotal;
+        const appliedPromoCodesWithCorrectDiscounts: { id: number; code: string; discount: number; auto_apply: boolean }[] = [];
+
+        // First: Apply all fixed amount discounts (amount_off)
+        cart.promoCodes?.forEach(p => {
+            if (p.amount_off && p.amount_off > 0) {
+                const promoDiscount = Math.min(p.amount_off, remainingAmount);
+                appliedPromoCodesWithCorrectDiscounts.push({
+                    id: p.id,
+                    code: p.code,
+                    discount: promoDiscount,
+                    auto_apply: p.auto_apply ?? false
+                });
+                remainingAmount -= promoDiscount;
+            }
+        });
+
+        // Then: Apply percentage discounts on the remaining amount
+        cart.promoCodes?.forEach(p => {
+            if (p.percentage_off && p.percentage_off > 0) {
+                const promoDiscount = remainingAmount * (p.percentage_off / 100);
+                appliedPromoCodesWithCorrectDiscounts.push({
+                    id: p.id,
+                    code: p.code,
+                    discount: promoDiscount,
+                    auto_apply: p.auto_apply ?? false
+                });
+                remainingAmount -= promoDiscount;
+            }
+        });
+
+        const totalDiscount = appliedPromoCodesWithCorrectDiscounts.reduce((sum, p) => sum + p.discount, 0);
+
+        // Check if any promo has free shipping
+        const hasFreeShipping = cart.promoCodes?.some(p => p.free_shipping) ?? false;
+        const shippingTotal = hasFreeShipping ? 0 : selectedGovernorate?.fees ?? 0;
+
         payload = {
             ...payload,
             status: 'pending',
@@ -113,19 +154,14 @@ export function CheckoutUserScreen({ governorates, user }: { governorates: Gover
             guest_name: data.guest_name,
             guest_phone: data.guest_phone,
             guest_phone2: data.guest_phone2 ?? null,
-            subtotal: cart.netTotal,
-            discount_total: cart.discount,
-            shipping_total: cart.free_shipping ? 0 : selectedGovernorate?.fees ?? 0,
+            subtotal: subtotal,
+            discount_total: totalDiscount,
+            shipping_total: shippingTotal,
             tax_total: 0.00,
             payment_method: cart.isAdmin ? 'Online Card' : selectedPayment === 'cod' ? 'Cash on Delivery' : 'Online Card',
-            grand_total: getCartTotal(cart.free_shipping ? 0 : selectedGovernorate?.fees ?? 0),
+            grand_total: subtotal - totalDiscount + shippingTotal,
             promo_code_id: cart.promoCodeId,
-            applied_promo_codes: cart.promoCodes?.length > 0 ? cart.promoCodes.map(p => ({
-                id: p.id,
-                code: p.code,
-                discount: p.discount,
-                auto_apply: p.auto_apply
-            })) : null,
+            applied_promo_codes: appliedPromoCodesWithCorrectDiscounts.length > 0 ? appliedPromoCodesWithCorrectDiscounts : null,
             note: data.note || null
         };
         const result = await createOrder(payload, cart.isAdmin, products);
