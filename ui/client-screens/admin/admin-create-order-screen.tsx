@@ -145,6 +145,38 @@ export function AdminCreateOrderScreen({ products, governorates, promoCodes }: A
         );
     }, [products, productSearch]);
 
+    // Filter and Apply Auto-Apply Promo Codes
+    useEffect(() => {
+        const autoApplyPromos = promoCodes.filter(p => p.auto_apply && p.is_active);
+
+        if (autoApplyPromos.length > 0) {
+            setAppliedPromos(prev => {
+                const newPromosToApply: PromoCode[] = [];
+
+                autoApplyPromos.forEach(promo => {
+                    // Check if already applied
+                    if (prev.some(p => p.id === promo.id)) return;
+
+                    // Check Customer Eligibility
+                    if (promo.eligible_customer_ids && promo.eligible_customer_ids.length > 0) {
+                        if (!selectedCustomer || !selectedCustomer.id || !promo.eligible_customer_ids.includes(selectedCustomer.id)) {
+                            return;
+                        }
+                    }
+
+                    newPromosToApply.push(promo);
+                });
+
+                if (newPromosToApply.length > 0) {
+                    toast.success(t("checkout.autoPromoApplied", { amount: newPromosToApply.length }) || "Auto promo code applied!");
+                    return [...prev, ...newPromosToApply];
+                }
+
+                return prev;
+            });
+        }
+    }, [promoCodes, selectedCustomer, t]);
+
     // Calculations
     const subtotal = useMemo(() => {
         return orderItems.reduce((acc, item) => acc + (item.unitPrice * item.quantity), 0);

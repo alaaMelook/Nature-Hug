@@ -37,7 +37,7 @@ export async function POST(
             return NextResponse.json({ error: 'Distributor profile not found' }, { status: 404 });
         }
 
-        const orderId = parseInt(params.id);
+        const orderId = parseInt(id);
 
         // Verify this order belongs to the distributor
         const { data: order, error: orderError } = await supabase
