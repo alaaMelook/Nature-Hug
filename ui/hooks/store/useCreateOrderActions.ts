@@ -118,9 +118,13 @@ export async function createOrder(data: Partial<Order>, isAdmin: boolean, items:
 
     console.log(`[createOrder] Free shipping check - freeShipping from promo_code_id: ${freeShipping}, from applied_promo_codes: ${hasFreeShippingFromAppliedPromos}`);
 
-    const shouldChargeShipping = !freeShipping && !hasFreeShippingFromAppliedPromos && !isAdmin;
-
-    if (shouldChargeShipping) {
+    // For admin orders, use the shipping_total passed from the client
+    // For regular orders, calculate shipping unless free shipping applies
+    if (isAdmin) {
+        // Admin orders: use the shipping value from the client
+        calculatedShipping = data.shipping_total ?? 0;
+        console.log(`[createOrder] Admin order - using client shipping_total: ${calculatedShipping}`);
+    } else if (!freeShipping && !hasFreeShippingFromAppliedPromos) {
         const supabase = await createSupabaseServerClient();
         let govSlug = data.guest_address?.governorate_slug;
 
