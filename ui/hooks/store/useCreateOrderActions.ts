@@ -116,15 +116,16 @@ export async function createOrder(data: Partial<Order>, isAdmin: boolean, items:
     let calculatedShipping = 0;
     const hasFreeShippingFromAppliedPromos = data.applied_promo_codes?.some((p: any) => p.free_shipping === true) ?? false;
 
-    console.log(`[createOrder] Free shipping check - freeShipping from promo_code_id: ${freeShipping}, from applied_promo_codes: ${hasFreeShippingFromAppliedPromos}`);
+    console.log(`[createOrder] Free shipping check - freeShipping from promo_code_id: ${freeShipping}, from applied_promo_codes: ${hasFreeShippingFromAppliedPromos}, client shipping_total: ${data.shipping_total}`);
 
-    // For admin orders, use the shipping_total passed from the client
-    // For regular orders, calculate shipping unless free shipping applies
-    if (isAdmin) {
-        // Admin orders: use the shipping value from the client
-        calculatedShipping = data.shipping_total ?? 0;
-        console.log(`[createOrder] Admin order - using client shipping_total: ${calculatedShipping}`);
-    } else if (!freeShipping && !hasFreeShippingFromAppliedPromos) {
+    // Check if free shipping applies
+    const hasFreeShipping = freeShipping || hasFreeShippingFromAppliedPromos;
+
+    if (hasFreeShipping) {
+        calculatedShipping = 0;
+        console.log(`[createOrder] Free shipping applied`);
+    } else {
+        // Try to calculate shipping from governorate, but use client value as fallback
         const supabase = await createSupabaseServerClient();
         let govSlug = data.guest_address?.governorate_slug;
 
@@ -132,7 +133,6 @@ export async function createOrder(data: Partial<Order>, isAdmin: boolean, items:
         if (data.shipping_address_id && !govSlug) {
             const { data: addr } = await supabase.schema('auth').from('addresses').select('governorate_id').eq('id', data.shipping_address_id).single();
             if (addr && addr.governorate_id) {
-                // Need governorate fees.
                 const { data: gov } = await supabase.schema('store').from('governorates').select('fees').eq('id', addr.governorate_id).single();
                 if (gov) calculatedShipping = gov.fees;
             }
@@ -140,7 +140,16 @@ export async function createOrder(data: Partial<Order>, isAdmin: boolean, items:
             const { data: gov } = await supabase.schema('store').from('governorates').select('fees').eq('slug', govSlug).single();
             if (gov) calculatedShipping = gov.fees;
         }
+
+        // IMPORTANT: If server calculation returned 0 but client sent a shipping value, use client value
+        // This handles cases where governorate lookup fails or saved address has incomplete data
+        if (calculatedShipping === 0 && data.shipping_total && data.shipping_total > 0) {
+            console.log(`[createOrder] Server shipping calculation returned 0, using client shipping_total: ${data.shipping_total}`);
+            calculatedShipping = data.shipping_total;
+        }
     }
+
+    console.log(`[createOrder] Final calculated shipping: ${calculatedShipping}`);
 
     // 4. Calculate Final Total
     const calculatedGrandTotal = Math.max(0, calculatedSubtotal + calculatedShipping - calculatedDiscount);
