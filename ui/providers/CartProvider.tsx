@@ -430,8 +430,11 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
     };
 
     const getCartTotal = (shipping: number) => {
+        // Calculate subtotal directly from items
+        const subtotal = cart.items?.reduce((sum, item) => sum + (item.price * item.quantity), 0) || 0;
+
         // Sequential discount calculation: first apply fixed amounts, then percentages on remaining
-        let remainingAmount = cart.netTotal || 0;
+        let remainingAmount = subtotal;
 
         // First: Apply all fixed amount discounts (amount_off)
         cart.promoCodes?.forEach(p => {

@@ -76,7 +76,7 @@ export default function CartPage() {
                             <div className="flex justify-between items-center text-slate-700 mb-4">
                                 <span className="text-lg">{t("subtotal")}</span>
                                 <span className="text-lg font-semibold text-slate-900">
-                                    {t("{{price, currency}}", { price: cart.netTotal })}
+                                    {t("{{price, currency}}", { price: cart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0) })}
                                 </span>
                             </div>
                             <p className="text-sm text-slate-500 mb-6 flex">{t("checkoutInfo")}</p>

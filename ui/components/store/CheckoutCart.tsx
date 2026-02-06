@@ -237,7 +237,7 @@ export function CheckoutCart({ selectedGovernorate, onPurchase, customerId }: {
                     <div className="flex justify-between text-sm">
                         <span className="text-gray-500">{t('checkout.subtotal')}</span>
                         <span className="font-medium text-gray-900">
-                            {t("{{price, currency}}", { price: cart.isAdmin ? 0 : cart.netTotal })}
+                            {t("{{price, currency}}", { price: cart.isAdmin ? 0 : cart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0) })}
                         </span>
                     </div>
 
@@ -252,8 +252,10 @@ export function CheckoutCart({ selectedGovernorate, onPurchase, customerId }: {
 
                     {/* Discount Row - calculated sequentially from promoCodes */}
                     {cart.promoCodes && cart.promoCodes.length > 0 && (() => {
+                        // Calculate subtotal from items directly
+                        const subtotal = cart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
                         // Sequential discount calculation for display
-                        let remainingAmount = cart.netTotal || 0;
+                        let remainingAmount = subtotal;
                         let totalDiscount = 0;
 
                         // First: fixed amount discounts
