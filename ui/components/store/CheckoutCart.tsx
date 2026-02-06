@@ -244,7 +244,6 @@ export function CheckoutCart({ selectedGovernorate, onPurchase, customerId }: {
                     <div className="flex justify-between text-sm">
                         <span className="text-gray-500">{t('checkout.shipping')}</span>
                         <span className="font-medium text-gray-900">
-                            {console.log('[CHECKOUT] Shipping calculation - cart.free_shipping:', cart.free_shipping, 'cart.isAdmin:', cart.isAdmin, 'selectedGovernorate.fees:', selectedGovernorate?.fees)}
                             {selectedGovernorate ?
                                 t("{{price, currency}}", { price: cart.free_shipping || cart.isAdmin ? 0 : selectedGovernorate.fees }) :
                                 <span className="text-orange-500 text-xs bg-orange-50 px-2 py-1 rounded-full">{t('checkout.selectLocation')}</span>}
