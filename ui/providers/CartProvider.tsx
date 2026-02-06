@@ -263,10 +263,11 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
             }));
         }
         else if (result.isValid && 'discount' in result) {
+            // Add new promo with its details (discount will be recalculated)
             const newPromo: AppliedPromoCode = {
                 id: result.details?.id ?? 0,
                 code: code,
-                discount: result.discount,
+                discount: 0, // Will be recalculated below
                 free_shipping: result.details?.free_shipping ?? false,
                 is_bogo: result.details?.is_bogo ?? false,
                 percentage_off: result.details?.percentage_off ?? 0,
@@ -274,20 +275,43 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
                 auto_apply: result.details?.auto_apply ?? false
             };
 
-            // Calculate total discount from all promo codes
-            const newPromoCodes = [...cart.promoCodes, newPromo];
-            const totalDiscount = newPromoCodes.reduce((sum, p) => sum + p.discount, 0);
-            const hasFreeShipping = newPromoCodes.some(p => p.free_shipping);
+            // Recalculate all discounts sequentially
+            const allPromoCodes = [...cart.promoCodes, newPromo];
+            const subtotal = cart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            let remainingAmount = subtotal;
+
+            // First pass: Apply all fixed amount discounts
+            const recalculatedPromos = allPromoCodes.map(p => {
+                if (p.amount_off && p.amount_off > 0) {
+                    const discountValue = Math.min(p.amount_off, remainingAmount);
+                    remainingAmount -= discountValue;
+                    return { ...p, discount: discountValue };
+                }
+                return { ...p, discount: 0 };
+            });
+
+            // Second pass: Apply all percentage discounts on remaining amount
+            const finalPromos = recalculatedPromos.map(p => {
+                if (p.percentage_off && p.percentage_off > 0 && !p.amount_off) {
+                    const discountValue = remainingAmount * (p.percentage_off / 100);
+                    remainingAmount -= discountValue;
+                    return { ...p, discount: discountValue };
+                }
+                return p;
+            });
+
+            const totalDiscount = finalPromos.reduce((sum, p) => sum + p.discount, 0);
+            const hasFreeShipping = finalPromos.some(p => p.free_shipping);
 
             setCart(prevCart => ({
                 ...prevCart,
                 promoCode: code,  // Keep last applied for backward compatibility
                 free_shipping: hasFreeShipping,
                 promoCodeId: result.details?.id ?? null,
-                promoCodes: newPromoCodes,
+                promoCodes: finalPromos,
                 discount: totalDiscount,
             }));
-            console.log('[CART] Applied promo codes:', newPromoCodes.length, 'Total discount:', totalDiscount, 'Free shipping:', hasFreeShipping);
+            console.log('[CART] Applied promo codes (sequential):', finalPromos.length, 'Total discount:', totalDiscount, 'Free shipping:', hasFreeShipping);
             console.log('[CART] Promo details - free_shipping:', result.details?.free_shipping, 'code:', code);
             if (cart.isAdmin) {
                 toast.info(t('checkout.adminOrder'));
@@ -388,7 +412,7 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
                     const newPromo: AppliedPromoCode = {
                         id: promo.id,
                         code: promo.code,
-                        discount: result.discount,
+                        discount: 0, // Will be recalculated
                         free_shipping: promo.free_shipping ?? false,
                         is_bogo: promo.is_bogo ?? false,
                         percentage_off: promo.percentage_off ?? 0,
@@ -397,16 +421,40 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
                     };
 
                     setCart(prevCart => {
-                        const newPromoCodes = [...prevCart.promoCodes, newPromo];
-                        const totalDiscount = newPromoCodes.reduce((sum, p) => sum + p.discount, 0);
-                        const hasFreeShipping = newPromoCodes.some(p => p.free_shipping);
+                        // Recalculate all discounts sequentially
+                        const allPromoCodes = [...prevCart.promoCodes, newPromo];
+                        const subtotal = prevCart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                        let remainingAmount = subtotal;
+
+                        // First pass: Apply all fixed amount discounts
+                        const recalculatedPromos = allPromoCodes.map(p => {
+                            if (p.amount_off && p.amount_off > 0) {
+                                const discountValue = Math.min(p.amount_off, remainingAmount);
+                                remainingAmount -= discountValue;
+                                return { ...p, discount: discountValue };
+                            }
+                            return { ...p, discount: 0 };
+                        });
+
+                        // Second pass: Apply all percentage discounts on remaining amount
+                        const finalPromos = recalculatedPromos.map(p => {
+                            if (p.percentage_off && p.percentage_off > 0 && !p.amount_off) {
+                                const discountValue = remainingAmount * (p.percentage_off / 100);
+                                remainingAmount -= discountValue;
+                                return { ...p, discount: discountValue };
+                            }
+                            return p;
+                        });
+
+                        const totalDiscount = finalPromos.reduce((sum, p) => sum + p.discount, 0);
+                        const hasFreeShipping = finalPromos.some(p => p.free_shipping);
 
                         return {
                             ...prevCart,
                             promoCode: promo.code,
                             free_shipping: hasFreeShipping,
                             promoCodeId: promo.id,
-                            promoCodes: newPromoCodes,
+                            promoCodes: finalPromos,
                             discount: totalDiscount,
                         };
                     });
