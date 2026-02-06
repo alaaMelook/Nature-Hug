@@ -53,6 +53,7 @@ export interface Theme {
     announcement_bg_color?: string;
     announcement_text_color?: string;
     announcement_countdown_end?: string;  // ISO datetime - bar hides when countdown ends
+    announcement_scroll_speed?: 'slow' | 'medium' | 'fast';  // Scroll speed
 
     // Scheduling (Optional)
     valid_from?: string;

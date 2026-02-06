@@ -57,57 +57,69 @@ export function AnnouncementBar({ theme }: AnnouncementBarProps) {
     const bgColor = theme.announcement_bg_color || '#E91E63';
     const textColor = theme.announcement_text_color || '#FFFFFF';
 
+    // Speed mapping (seconds for full animation)
+    const speedMap = {
+        slow: 40,
+        medium: 25,
+        fast: 12,
+    };
+    const animationDuration = speedMap[theme.announcement_scroll_speed || 'medium'];
+
     // Format countdown with labels
     const formatNumber = (n: number) => n.toString().padStart(2, '0');
 
     return (
         <div
-            className="fixed bottom-0 left-0 right-0 w-full py-3 overflow-hidden z-[90] flex items-center"
+            className="fixed bottom-0 left-0 right-0 w-full py-2 md:py-3 overflow-hidden z-[90] flex items-center"
             style={{
                 backgroundColor: bgColor,
                 color: textColor
             }}
         >
-            {/* Countdown Timer Box - More Prominent */}
+            {/* Countdown Timer - Compact on Mobile */}
             {timeLeft && (
-                <div className="flex-shrink-0 flex items-center gap-1 px-3 mx-2 bg-black/30 rounded-lg backdrop-blur-sm">
+                <div className="flex-shrink-0 flex items-center gap-0.5 md:gap-1 px-2 md:px-3 mx-1 md:mx-2 bg-black/30 rounded-lg backdrop-blur-sm">
                     {/* Countdown Label */}
-                    <div className="flex flex-col items-center px-2 py-1">
-                        <span className="text-[10px] uppercase tracking-wider opacity-80">
-                            {isRTL ? 'العرض ينتهي في' : 'Ends In'}
+                    <div className="hidden sm:flex flex-col items-center px-1 md:px-2 py-1">
+                        <span className="text-[8px] md:text-[10px] uppercase tracking-wider opacity-80">
+                            {isRTL ? 'ينتهي في' : 'Ends In'}
                         </span>
                     </div>
 
-                    {/* Days */}
+                    {/* Mobile: Just show icon */}
+                    <span className="sm:hidden text-sm">⏱️</span>
+
+                    {/* Days - Hide on very small screens if 0 */}
                     {timeLeft.days > 0 && (
-                        <div className="flex flex-col items-center px-2 py-1 bg-white/10 rounded">
-                            <span className="text-xl md:text-2xl font-bold tabular-nums">{formatNumber(timeLeft.days)}</span>
-                            <span className="text-[10px] uppercase opacity-80">{isRTL ? 'يوم' : 'Days'}</span>
-                        </div>
+                        <>
+                            <div className="flex flex-col items-center px-1 md:px-2 py-0.5 md:py-1 bg-white/10 rounded">
+                                <span className="text-sm md:text-xl font-bold tabular-nums">{formatNumber(timeLeft.days)}</span>
+                                <span className="text-[8px] md:text-[10px] uppercase opacity-80">{isRTL ? 'ي' : 'D'}</span>
+                            </div>
+                            <span className="text-sm md:text-xl font-bold opacity-50">:</span>
+                        </>
                     )}
 
-                    {timeLeft.days > 0 && <span className="text-xl font-bold opacity-50">:</span>}
-
                     {/* Hours */}
-                    <div className="flex flex-col items-center px-2 py-1 bg-white/10 rounded">
-                        <span className="text-xl md:text-2xl font-bold tabular-nums">{formatNumber(timeLeft.hours)}</span>
-                        <span className="text-[10px] uppercase opacity-80">{isRTL ? 'ساعة' : 'Hrs'}</span>
+                    <div className="flex flex-col items-center px-1 md:px-2 py-0.5 md:py-1 bg-white/10 rounded">
+                        <span className="text-sm md:text-xl font-bold tabular-nums">{formatNumber(timeLeft.hours)}</span>
+                        <span className="text-[8px] md:text-[10px] uppercase opacity-80">{isRTL ? 'س' : 'H'}</span>
                     </div>
 
-                    <span className="text-xl font-bold opacity-50">:</span>
+                    <span className="text-sm md:text-xl font-bold opacity-50">:</span>
 
                     {/* Minutes */}
-                    <div className="flex flex-col items-center px-2 py-1 bg-white/10 rounded">
-                        <span className="text-xl md:text-2xl font-bold tabular-nums">{formatNumber(timeLeft.minutes)}</span>
-                        <span className="text-[10px] uppercase opacity-80">{isRTL ? 'دقيقة' : 'Min'}</span>
+                    <div className="flex flex-col items-center px-1 md:px-2 py-0.5 md:py-1 bg-white/10 rounded">
+                        <span className="text-sm md:text-xl font-bold tabular-nums">{formatNumber(timeLeft.minutes)}</span>
+                        <span className="text-[8px] md:text-[10px] uppercase opacity-80">{isRTL ? 'د' : 'M'}</span>
                     </div>
 
-                    <span className="text-xl font-bold opacity-50">:</span>
+                    <span className="text-sm md:text-xl font-bold opacity-50">:</span>
 
                     {/* Seconds */}
-                    <div className="flex flex-col items-center px-2 py-1 bg-white/10 rounded animate-pulse">
-                        <span className="text-xl md:text-2xl font-bold tabular-nums">{formatNumber(timeLeft.seconds)}</span>
-                        <span className="text-[10px] uppercase opacity-80">{isRTL ? 'ثانية' : 'Sec'}</span>
+                    <div className="flex flex-col items-center px-1 md:px-2 py-0.5 md:py-1 bg-white/10 rounded">
+                        <span className="text-sm md:text-xl font-bold tabular-nums animate-pulse">{formatNumber(timeLeft.seconds)}</span>
+                        <span className="text-[8px] md:text-[10px] uppercase opacity-80">{isRTL ? 'ث' : 'S'}</span>
                     </div>
                 </div>
             )}
@@ -115,11 +127,11 @@ export function AnnouncementBar({ theme }: AnnouncementBarProps) {
             {/* Scrolling Text */}
             <div className="flex-1 overflow-hidden">
                 <div
-                    className="flex whitespace-nowrap text-base md:text-lg font-semibold"
+                    className="flex whitespace-nowrap text-sm md:text-base font-semibold"
                     style={{
                         animation: isRTL
-                            ? 'scroll-rtl 25s linear infinite'
-                            : 'scroll-ltr 25s linear infinite',
+                            ? `scroll-rtl ${animationDuration}s linear infinite`
+                            : `scroll-ltr ${animationDuration}s linear infinite`,
                     }}
                 >
                     <span className="px-4">{text}</span>
