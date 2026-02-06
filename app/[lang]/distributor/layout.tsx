@@ -6,13 +6,14 @@ export default async function DistributorLayout({
     params,
 }: {
     children: React.ReactNode;
-    params: { lang: string };
+    params: Promise<{ lang: string }>;
 }) {
+    const { lang } = await params;
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
-        redirect(`/${params.lang}/login`);
+        redirect(`/${lang}/login`);
     }
 
     // Check if user is a distributor
@@ -24,10 +25,10 @@ export default async function DistributorLayout({
 
     if (!member || member.role !== 'distributor') {
         // Not a distributor, redirect to home
-        redirect(`/${params.lang}`);
+        redirect(`/${lang}`);
     }
 
-    const isRTL = params.lang === 'ar';
+    const isRTL = lang === 'ar';
 
     return (
         <div className="min-h-screen bg-gray-50" dir={isRTL ? 'rtl' : 'ltr'}>
@@ -40,19 +41,19 @@ export default async function DistributorLayout({
                         </div>
                         <div className="flex items-center gap-4">
                             <a
-                                href={`/${params.lang}/distributor`}
+                                href={`/${lang}/distributor`}
                                 className="px-3 py-2 rounded-md text-sm font-medium hover:bg-amber-700 transition-colors"
                             >
                                 {isRTL ? 'طلباتي' : 'My Orders'}
                             </a>
                             <a
-                                href={`/${params.lang}/distributor/create-order`}
+                                href={`/${lang}/distributor/create-order`}
                                 className="px-4 py-2 bg-white text-amber-600 rounded-md text-sm font-bold hover:bg-amber-50 transition-colors"
                             >
                                 + {isRTL ? 'طلب جديد' : 'New Order'}
                             </a>
                             <a
-                                href={`/${params.lang}`}
+                                href={`/${lang}`}
                                 className="px-3 py-2 rounded-md text-sm font-medium hover:bg-amber-700 transition-colors"
                             >
                                 {isRTL ? 'الرئيسية' : 'Home'}

@@ -1,7 +1,8 @@
 import { createSupabaseServerClient as createClient } from "@/data/datasources/supabase/server";
 import { DistributorOrdersScreen } from "@/ui/client-screens/distributor/distributor-orders-screen";
 
-export default async function DistributorPage({ params }: { params: { lang: string } }) {
+export default async function DistributorPage({ params }: { params: Promise<{ lang: string }> }) {
+    const { lang } = await params;
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -23,5 +24,5 @@ export default async function DistributorPage({ params }: { params: { lang: stri
         .eq('created_by_distributor_id', customer.id)
         .order('created_at', { ascending: false });
 
-    return <DistributorOrdersScreen orders={orders || []} lang={params.lang} />;
+    return <DistributorOrdersScreen orders={orders || []} lang={lang} />;
 }

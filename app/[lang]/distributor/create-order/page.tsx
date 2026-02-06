@@ -1,7 +1,8 @@
 import { createSupabaseServerClient as createClient } from "@/data/datasources/supabase/server";
 import { DistributorCreateOrderScreen } from "@/ui/client-screens/distributor/distributor-create-order-screen";
 
-export default async function DistributorCreateOrderPage({ params }: { params: { lang: string } }) {
+export default async function DistributorCreateOrderPage({ params }: { params: Promise<{ lang: string }> }) {
+    const { lang } = await params;
     const supabase = await createClient();
 
     // Fetch products
@@ -21,7 +22,7 @@ export default async function DistributorCreateOrderPage({ params }: { params: {
         <DistributorCreateOrderScreen
             products={products || []}
             governorates={governorates || []}
-            lang={params.lang}
+            lang={lang}
         />
     );
 }
