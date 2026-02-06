@@ -44,8 +44,18 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
                 try {
                     const decompressedCart = lz.decompressFromUTF16(savedCart);
                     const parsedCart = JSON.parse(decompressedCart || JSON.stringify(emptyCart));
-                    // Ensure the cart structure is complete upon loading
-                    setCart({ ...emptyCart, ...parsedCart });
+
+                    // IMPORTANT: Recalculate free_shipping from promoCodes to avoid stale values
+                    const promoCodes = parsedCart.promoCodes || [];
+                    const hasFreeShipping = promoCodes.some((p: any) => p.free_shipping === true);
+
+                    // Ensure the cart structure is complete upon loading with correct free_shipping
+                    setCart({
+                        ...emptyCart,
+                        ...parsedCart,
+                        free_shipping: hasFreeShipping  // Override with calculated value
+                    });
+                    console.log('[CART] Loaded from localStorage - promoCodes:', promoCodes.length, 'free_shipping (calculated):', hasFreeShipping);
                 } catch (err) {
                     console.error("Error loading cart:", err);
                     setCart(emptyCart);
