@@ -250,15 +250,39 @@ export function CheckoutCart({ selectedGovernorate, onPurchase, customerId }: {
                         </span>
                     </div>
 
-                    {/* Discount Row - calculated from promoCodes */}
-                    {cart.promoCodes && cart.promoCodes.reduce((sum, p) => sum + (p.discount || 0), 0) > 0 && (
-                        <div className="flex justify-between text-sm">
-                            <span className="text-gray-500">{t('checkout.discount')}</span>
-                            <span className="font-medium text-green-600">
-                                -{t("{{price, currency}}", { price: cart.promoCodes.reduce((sum, p) => sum + (p.discount || 0), 0) })}
-                            </span>
-                        </div>
-                    )}
+                    {/* Discount Row - calculated sequentially from promoCodes */}
+                    {cart.promoCodes && cart.promoCodes.length > 0 && (() => {
+                        // Sequential discount calculation for display
+                        let remainingAmount = cart.netTotal || 0;
+                        let totalDiscount = 0;
+
+                        // First: fixed amount discounts
+                        cart.promoCodes.forEach(p => {
+                            if (p.amount_off && p.amount_off > 0) {
+                                const amountToDiscount = Math.min(p.amount_off, remainingAmount);
+                                totalDiscount += amountToDiscount;
+                                remainingAmount -= amountToDiscount;
+                            }
+                        });
+
+                        // Then: percentage discounts on remaining
+                        cart.promoCodes.forEach(p => {
+                            if (p.percentage_off && p.percentage_off > 0) {
+                                const percentageDiscount = remainingAmount * (p.percentage_off / 100);
+                                totalDiscount += percentageDiscount;
+                                remainingAmount -= percentageDiscount;
+                            }
+                        });
+
+                        return totalDiscount > 0 ? (
+                            <div className="flex justify-between text-sm">
+                                <span className="text-gray-500">{t('checkout.discount')}</span>
+                                <span className="font-medium text-green-600">
+                                    -{t("{{price, currency}}", { price: totalDiscount })}
+                                </span>
+                            </div>
+                        ) : null;
+                    })()}
 
                     <div className="flex justify-between items-end pt-4 border-t border-gray-100">
                         <span className="text-base font-bold text-gray-900">{t('checkout.total')}</span>

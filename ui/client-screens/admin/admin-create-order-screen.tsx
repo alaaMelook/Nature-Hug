@@ -218,17 +218,25 @@ export function AdminCreateOrderScreen({ products, governorates, promoCodes }: A
     const discount = useMemo(() => {
         if (appliedPromos.length === 0) return 0;
 
+        // Sequential calculation: First apply fixed amounts, then percentages on remaining
+        let remainingSubtotal = subtotal;
         let totalDiscount = 0;
 
-        // Calculate discount from each promo
+        // First: Apply all fixed amount discounts
         appliedPromos.forEach(promo => {
-            // Fixed amount discount
             if (promo.amount_off && promo.amount_off > 0) {
-                totalDiscount += promo.amount_off;
+                const amountToDiscount = Math.min(promo.amount_off, remainingSubtotal);
+                totalDiscount += amountToDiscount;
+                remainingSubtotal -= amountToDiscount;
             }
-            // Percentage discount
-            else if (promo.percentage_off && promo.percentage_off > 0) {
-                totalDiscount += subtotal * (promo.percentage_off / 100);
+        });
+
+        // Then: Apply percentage discounts on the remaining amount
+        appliedPromos.forEach(promo => {
+            if (promo.percentage_off && promo.percentage_off > 0) {
+                const percentageDiscount = remainingSubtotal * (promo.percentage_off / 100);
+                totalDiscount += percentageDiscount;
+                remainingSubtotal -= percentageDiscount;
             }
         });
 

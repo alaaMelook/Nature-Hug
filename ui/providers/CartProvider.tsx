@@ -430,9 +430,27 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
     };
 
     const getCartTotal = (shipping: number) => {
-        // Calculate discount from promoCodes array for reliability
-        const totalDiscount = cart.promoCodes?.reduce((sum, p) => sum + (p.discount || 0), 0) || 0;
-        return (cart.netTotal || 0) + (shipping || 0) - (cart.isAdmin ? 0 : totalDiscount);
+        // Sequential discount calculation: first apply fixed amounts, then percentages on remaining
+        let remainingAmount = cart.netTotal || 0;
+
+        // First: Apply all fixed amount discounts (amount_off)
+        cart.promoCodes?.forEach(p => {
+            if (p.amount_off && p.amount_off > 0) {
+                const amountToDiscount = Math.min(p.amount_off, remainingAmount);
+                remainingAmount -= amountToDiscount;
+            }
+        });
+
+        // Then: Apply percentage discounts on the remaining amount
+        cart.promoCodes?.forEach(p => {
+            if (p.percentage_off && p.percentage_off > 0) {
+                const percentageDiscount = remainingAmount * (p.percentage_off / 100);
+                remainingAmount -= percentageDiscount;
+            }
+        });
+
+        // Add shipping
+        return Math.max(0, remainingAmount) + (shipping || 0);
     };
 
 
