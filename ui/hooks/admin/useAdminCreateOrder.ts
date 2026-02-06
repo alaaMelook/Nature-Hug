@@ -5,6 +5,7 @@ import { Order } from "@/domain/entities/database/order";
 import { OrderItem } from "@/domain/entities/database/orderItem";
 import { CreateOrder } from "@/domain/use-case/store/createOrder";
 import { GetCurrentUser } from "@/domain/use-case/store/getCurrentUser";
+import { createSupabaseServerClient } from "@/data/datasources/supabase/server";
 
 interface AdminOrderData {
     guest_name: string;
@@ -69,7 +70,28 @@ export async function createAdminOrderAction(data: AdminOrderData) {
         };
 
         console.log("[createAdminOrderAction] Order payload - created_by_customer_id:", orderPayload.created_by_customer_id);
+        console.log(`[createAdminOrderAction] Order payload - discount_total: ${orderPayload.discount_total}, subtotal: ${orderPayload.subtotal}, grand_total: ${orderPayload.grand_total}`);
         const result = await new CreateOrder().execute(orderPayload);
+
+        // WORKAROUND: Direct update to ensure discount_total and grand_total are saved correctly
+        // This is needed because the RPC might not be extracting these values from order_data JSON
+        if (data.discount_total > 0 || data.shipping_total !== undefined) {
+            const supabase = await createSupabaseServerClient();
+            const { error: updateError } = await supabase.schema('store')
+                .from('orders')
+                .update({
+                    discount_total: data.discount_total,
+                    grand_total: data.grand_total,
+                    shipping_total: data.shipping_total
+                })
+                .eq('id', result.order_id);
+
+            if (updateError) {
+                console.error('[createAdminOrderAction] Failed to update order totals:', updateError);
+            } else {
+                console.log(`[createAdminOrderAction] Successfully updated order ${result.order_id} with discount=${data.discount_total}, total=${data.grand_total}`);
+            }
+        }
 
         revalidatePath('/admin/orders', 'layout');
 

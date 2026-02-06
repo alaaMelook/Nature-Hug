@@ -206,10 +206,19 @@ export const generateInvoicePDF = (orders: OrderDetailsView | OrderDetailsView[]
         currentTotalY += 6;
 
         // Add discount line if applicable
-        let discountAmount = order.discount_total;
+        // Calculate discount with multiple fallbacks:
+        // 1. First check applied_promo_codes array (sum of all discounts)
+        // 2. Then check discount_total
+        // 3. Finally fallback to promo_percentage calculation
+        let discountAmount = 0;
 
-        // Fallback: Calculate discount from promo_percentage if not saved in discount_total (for legacy/migrated orders)
-        if (discountAmount === 0 && order.promo_percentage > 0) {
+        if (order.applied_promo_codes && Array.isArray(order.applied_promo_codes) && order.applied_promo_codes.length > 0) {
+            // Sum all discounts from applied promo codes
+            discountAmount = order.applied_promo_codes.reduce((sum: number, promo: any) => sum + (promo.discount || 0), 0);
+        } else if (order.discount_total > 0) {
+            discountAmount = order.discount_total;
+        } else if (order.promo_percentage > 0) {
+            // Fallback: Calculate discount from promo_percentage for legacy/migrated orders
             discountAmount = order.subtotal * (order.promo_percentage / 100);
         }
 
@@ -223,8 +232,15 @@ export const generateInvoicePDF = (orders: OrderDetailsView | OrderDetailsView[]
         doc.line(totalXLabel, currentTotalY, totalXValue, currentTotalY);
         currentTotalY += 6;
 
+        // Calculate the correct total (in case stored value doesn't include discount)
+        const correctTotal = order.subtotal + order.shipping_total - discountAmount;
+        // Use the calculated total if it differs from stored value (indicates discount wasn't applied in DB)
+        const displayTotal = discountAmount > 0 && order.final_order_total > correctTotal
+            ? correctTotal
+            : order.final_order_total;
+
         // Grand Total
-        addTotalRow("TOTAL:", formatCurrency(order.final_order_total), currentTotalY, true, 12, [100, 80, 60]); // Brownish tone for Grand Total
+        addTotalRow("TOTAL:", formatCurrency(displayTotal), currentTotalY, true, 12, [100, 80, 60]); // Brownish tone for Grand Total
 
 
         // --- Footer (Thank You Message) ---

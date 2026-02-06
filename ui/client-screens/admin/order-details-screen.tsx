@@ -858,14 +858,26 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
                                 </div>
                             ) : (
                                 (() => {
-                                    // Calculate discount from promo_percentage if discount_total is 0 but promo code exists
-                                    const calculatedDiscount = order.discount_total > 0
-                                        ? order.discount_total
-                                        : (order.applied_promo_code && order.promo_percentage)
-                                            ? order.subtotal * (order.promo_percentage / 100)
-                                            : 0;
-                                    const effectiveTotal = calculatedDiscount > 0 && order.discount_total === 0
-                                        ? order.subtotal - calculatedDiscount + order.shipping_total
+                                    // Calculate discount with multiple fallbacks:
+                                    // 1. First check applied_promo_codes array (sum of all discounts)
+                                    // 2. Then check discount_total
+                                    // 3. Finally fallback to promo_percentage calculation
+                                    let calculatedDiscount = 0;
+
+                                    if (order.applied_promo_codes && Array.isArray(order.applied_promo_codes) && order.applied_promo_codes.length > 0) {
+                                        // Sum all discounts from applied promo codes
+                                        calculatedDiscount = order.applied_promo_codes.reduce((sum: number, promo: any) => sum + (promo.discount || 0), 0);
+                                    } else if (order.discount_total > 0) {
+                                        calculatedDiscount = order.discount_total;
+                                    } else if (order.applied_promo_code && order.promo_percentage > 0) {
+                                        calculatedDiscount = order.subtotal * (order.promo_percentage / 100);
+                                    }
+
+                                    // Always calculate the correct total
+                                    const correctTotal = order.subtotal + order.shipping_total - calculatedDiscount;
+                                    // Use calculated total if it's different from stored (indicates discount wasn't applied properly)
+                                    const effectiveTotal = calculatedDiscount > 0 && order.final_order_total > correctTotal
+                                        ? correctTotal
                                         : order.final_order_total;
 
                                     return (
@@ -878,10 +890,25 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
                                                 <span>{t("shippingLabel")}</span>
                                                 <span>{t('{{price, currency}}', { price: order.shipping_total })}</span>
                                             </div>
-                                            {calculatedDiscount > 0 && <div className="flex justify-between w-full text-red-600 px-2">
-                                                <span>{t("discount")} {order.applied_promo_code && <span className="text-xs">({order.applied_promo_code} - {order.promo_percentage}%)</span>}</span>
-                                                <span><strong>-</strong> {t('{{price, currency}}', { price: calculatedDiscount })}</span>
-                                            </div>}
+                                            {/* Show each promo code on a separate line */}
+                                            {order.applied_promo_codes && Array.isArray(order.applied_promo_codes) && order.applied_promo_codes.length > 0 ? (
+                                                order.applied_promo_codes.map((promo: any, index: number) => (
+                                                    <div key={index} className="flex justify-between w-full text-red-600 px-2">
+                                                        <span>
+                                                            {t("discount")}
+                                                            <span className="text-xs ml-1">
+                                                                ({promo.code}{promo.auto_apply && ' 🔄'})
+                                                            </span>
+                                                        </span>
+                                                        <span><strong>-</strong> {t('{{price, currency}}', { price: promo.discount || 0 })}</span>
+                                                    </div>
+                                                ))
+                                            ) : calculatedDiscount > 0 && (
+                                                <div className="flex justify-between w-full text-red-600 px-2">
+                                                    <span>{t("discount")} {order.applied_promo_code && <span className="text-xs">({order.applied_promo_code} - {order.promo_percentage}%)</span>}</span>
+                                                    <span><strong>-</strong> {t('{{price, currency}}', { price: calculatedDiscount })}</span>
+                                                </div>
+                                            )}
                                             <div className="flex justify-between w-full text-lg font-bold text-gray-900 mt-2 pt-2 border-t px-2">
                                                 <span>{t("totalAmount")}</span>
                                                 <span>{t('{{price, currency}}', { price: effectiveTotal })}</span>
