@@ -999,6 +999,10 @@ export class IAdminServerRepository implements AdminRepository {
     async deleteOrder(orderId: number): Promise<void> {
         console.log("[IAdminRepository] deleteOrder called with orderId:", orderId);
 
+        // Restore stock before deleting order
+        const { restoreOrderStock } = await import("@/lib/services/stockService");
+        await restoreOrderStock(orderId);
+
         // First delete order items
         const { error: itemsError } = await supabaseAdmin.schema('store')
             .from('order_items')

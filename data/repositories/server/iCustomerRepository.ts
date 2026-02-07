@@ -326,6 +326,10 @@ export class ICustomerServerRepository implements CustomerRepository {
         console.log(`[ICustomerRepository] cancelOrder called for order ${orderId} by customer ${customerId}`);
         const supabase = await createSupabaseServerClient();
 
+        // Restore stock before cancelling
+        const { restoreOrderStock } = await import("@/lib/services/stockService");
+        await restoreOrderStock(orderId);
+
         const { error } = await supabase.schema('store')
             .from('orders')
             .update({ status: 'cancelled' })
@@ -342,6 +346,10 @@ export class ICustomerServerRepository implements CustomerRepository {
     async cancelOrderBySession(orderId: number, sessionId: string): Promise<void> {
         console.log(`[ICustomerRepository] cancelOrderBySession called for order ${orderId} by session ${sessionId}`);
         const supabase = await createSupabaseServerClient();
+
+        // Restore stock before cancelling
+        const { restoreOrderStock } = await import("@/lib/services/stockService");
+        await restoreOrderStock(orderId);
 
         const { error } = await supabase.schema('store')
             .from('orders')
