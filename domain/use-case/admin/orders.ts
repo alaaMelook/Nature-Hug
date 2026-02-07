@@ -56,6 +56,9 @@ export class Orders {
     }
 
     async reject(id: string) {
+        // Restore stock before rejecting
+        const { restoreOrderStock } = await import("@/lib/services/stockService");
+        await restoreOrderStock(Number(id));
         return this.update({ order_id: Number(id), order_status: 'declined' });
     }
 
