@@ -395,13 +395,20 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
                 return;
             }
 
+            // Track which promos we've applied in this batch to avoid duplicates
+            // (cart.promoCodes won't update mid-loop since setCart is async)
+            const appliedInThisBatch = new Set<number>();
+
             // Apply each auto-apply promo code
             for (const promo of autoApplyPromos) {
-                // Skip if already applied
-                if (cart.promoCodes.some(p => p.id === promo.id)) {
+                // Skip if already applied (either in cart or in this batch)
+                if (cart.promoCodes.some(p => p.id === promo.id) || appliedInThisBatch.has(promo.id)) {
                     console.log('[CART] Promo already applied, skipping:', promo.code);
                     continue;
                 }
+
+                // Mark as applied in this batch
+                appliedInThisBatch.add(promo.id);
 
                 console.log('[CART] Validating auto promo:', promo.code, 'for cart items:', cart.items.length);
                 // Validate and apply
