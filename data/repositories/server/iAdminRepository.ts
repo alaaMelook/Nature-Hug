@@ -259,32 +259,15 @@ export class IAdminServerRepository implements AdminRepository {
 
 
         // 1.5. Update product_categories junction table
-        // Always handle categories - even if empty array (to clear categories)
-        // File logging for debugging
-        const fs = require('fs');
-        const logPath = 'd:/Desktop/Nature Hug/System/Nature-Hug/debug-log.txt';
-        const log = (msg: string) => {
-            const timestamp = new Date().toISOString();
-            fs.appendFileSync(logPath, `[${timestamp}] ${msg}\n`);
-        };
-
-        log(`=== CATEGORY UPDATE START for product_id: ${product.product_id} ===`);
-        log(`category_ids received: ${JSON.stringify(product.category_ids)}`);
-        log(`category_ids !== undefined: ${product.category_ids !== undefined}`);
-
         if (product.category_ids !== undefined) {
-            log(`Deleting existing categories for product_id: ${product.product_id}`);
-
             // Delete existing category relationships first
-            const { error: deleteError, data: deleteData, count: deleteCount } = await supabaseAdmin.schema('store')
+            const { error: deleteError } = await supabaseAdmin.schema('store')
                 .from('product_categories')
                 .delete()
                 .eq('product_id', product.product_id);
 
-            log(`Delete result - error: ${JSON.stringify(deleteError)}, count: ${deleteCount}`);
-
             if (deleteError) {
-                log(`ERROR deleting categories: ${JSON.stringify(deleteError)}`);
+                console.error("[IAdminRepository] Error deleting categories:", deleteError);
             }
 
             // Insert new category relationships only if there are categories to add
@@ -294,27 +277,16 @@ export class IAdminServerRepository implements AdminRepository {
                     category_id: categoryId
                 }));
 
-                log(`Inserting category records: ${JSON.stringify(categoryRecords)}`);
-
-                const { error: categoryError, data: insertData } = await supabaseAdmin.schema('store')
+                const { error: categoryError } = await supabaseAdmin.schema('store')
                     .from('product_categories')
                     .insert(categoryRecords)
                     .select();
 
-                log(`Insert result - error: ${JSON.stringify(categoryError)}, data: ${JSON.stringify(insertData)}`);
-
                 if (categoryError) {
-                    log(`ERROR inserting categories: ${JSON.stringify(categoryError)}`);
-                } else {
-                    log(`SUCCESS: Categories inserted for product_id: ${product.product_id}`);
+                    console.error("[IAdminRepository] Error inserting categories:", categoryError);
                 }
-            } else {
-                log(`No categories to insert (empty array)`);
             }
-        } else {
-            log(`category_ids is undefined, skipping category update`);
         }
-        log(`=== CATEGORY UPDATE END ===\n`);
 
         // 2. Update main product materials
         if (product.materials && product.materials.length > 0) {

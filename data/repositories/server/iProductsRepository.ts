@@ -201,20 +201,8 @@ export class IProductServerRepository implements ProductRepository {
         console.log("[IProductRepository] viewByCategory called with categoryName:", categoryName);
         const supabase = await createSupabaseServerClient();
 
-        // File logging for debugging
-        const fs = await import('fs');
-        const logPath = 'd:/Desktop/Nature Hug/System/Nature-Hug/debug-log.txt';
-        const log = (msg: string) => {
-            const timestamp = new Date().toISOString();
-            fs.appendFileSync(logPath, `[${timestamp}] ${msg}\n`);
-        };
-
-        log(`viewByCategory called with categoryName: ${categoryName}`);
-        log(`Language: ${this.lang}`);
-
         // First, get the category ID by name
         const categoryColumn = this.lang === 'ar' ? 'name_ar' : 'name_en';
-        log(`Looking for category in column: ${categoryColumn}`);
 
         const { data: categoryData, error: catError } = await supabase.schema('store')
             .from('categories')
@@ -222,16 +210,14 @@ export class IProductServerRepository implements ProductRepository {
             .eq(categoryColumn, categoryName)
             .single();
 
-        log(`Category lookup result: ${JSON.stringify(categoryData)}`);
-        if (catError) log(`Category lookup error: ${JSON.stringify(catError)}`);
+        if (catError) {
+            console.error("[IProductRepository] Category lookup error:", catError);
+        }
 
         if (!categoryData) {
-            log(`Category not found: ${categoryName}`);
             console.log("[IProductRepository] Category not found:", categoryName);
             return [];
         }
-
-        log(`Found category ID: ${categoryData.id}`);
 
         // Get product IDs that have this category
         const { data: productCategoryLinks, error: pcError } = await supabase.schema('store')
@@ -239,14 +225,13 @@ export class IProductServerRepository implements ProductRepository {
             .select('product_id')
             .eq('category_id', categoryData.id);
 
-        log(`product_categories query result: ${JSON.stringify(productCategoryLinks)}`);
-        if (pcError) log(`product_categories query error: ${JSON.stringify(pcError)}`);
+        if (pcError) {
+            console.error("[IProductRepository] product_categories query error:", pcError);
+        }
 
         const productIds = (productCategoryLinks || []).map(pc => pc.product_id);
-        log(`Product IDs found: ${JSON.stringify(productIds)}`);
 
         if (productIds.length === 0) {
-            log(`No products found for category: ${categoryName}`);
             console.log("[IProductRepository] No products found for category:", categoryName);
             return [];
         }
@@ -262,10 +247,7 @@ export class IProductServerRepository implements ProductRepository {
             .select('*')
             .in('product_id', productIds);
 
-        log(`Final products query: ${data?.length || 0} products, status: ${status}`);
-        if (error) log(`Final products query error: ${JSON.stringify(error)}`);
-
-        console.log("[IProductRepository] viewByCategory result:", { data, status, statusText });
+        console.log("[IProductRepository] viewByCategory result:", { count: data?.length || 0, status, statusText });
         if (error) {
             console.error("[IProductRepository] viewByCategory error:", error);
             throw error;
