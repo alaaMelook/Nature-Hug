@@ -34,7 +34,8 @@ export class IProductClientRepository implements ProductRepository {
         }
 
         // Fetch category names for all products from junction table
-        const productIds = [...new Set(data.map((p: any) => p.product_id))];
+        // Use product_id if available, otherwise fall back to id
+        const productIds = [...new Set(data.map((p: any) => p.product_id || p.id))];
 
         // Step 1: Get product-category links (simple query, no join)
         const { data: productCategoryLinks, error: pcError } = await supabase.schema('store')
@@ -81,7 +82,8 @@ export class IProductClientRepository implements ProductRepository {
         // Attach category_names to each product
         return data.map((product: any) => ({
             ...product,
-            category_names: categoryNamesMap[product.product_id] || []
+            product_id: product.product_id || product.id,
+            category_names: categoryNamesMap[product.product_id || product.id] || []
         }));
     }
 

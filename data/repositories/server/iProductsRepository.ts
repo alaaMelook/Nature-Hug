@@ -37,7 +37,8 @@ export class IProductServerRepository implements ProductRepository {
         }
 
         // Fetch category names for all products from junction table
-        const productIds = [...new Set(data.map((p: any) => p.product_id).filter((id: any) => id !== undefined && id !== null))];
+        // Use product_id if available, otherwise fall back to id (for views that don't have product_id)
+        const productIds = [...new Set(data.map((p: any) => p.product_id || p.id).filter((id: any) => id !== undefined && id !== null))];
 
         console.log("[IProductRepository] viewAll - productIds:", productIds);
 
@@ -107,7 +108,8 @@ export class IProductServerRepository implements ProductRepository {
         // Attach category_names to each product
         return data.map((product: any) => ({
             ...product,
-            category_names: categoryNamesMap[product.product_id] || []
+            product_id: product.product_id || product.id,
+            category_names: categoryNamesMap[product.product_id || product.id] || []
         }));
     }
 
