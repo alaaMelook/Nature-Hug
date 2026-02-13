@@ -74,6 +74,6 @@ declare global {
     interface SidebarStats {
         productsWarningCount: { products: number, reviews: number };
         materialsWarningCount: number;
-        ordersWarningCount: { pending: number, processing: number };
+        ordersWarningCount: { pending: number, processing: number, packing: number };
     }
 }

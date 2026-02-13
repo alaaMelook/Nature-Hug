@@ -13,6 +13,8 @@ import { PackagingRule } from "@/domain/entities/database/packagingRule";
 interface ProductOption {
     id: number;
     name: string;
+    isVariant?: boolean;
+    parentName?: string;
 }
 
 interface PackagingRulesScreenProps {
@@ -248,10 +250,33 @@ function RuleCard({ rule, materials, products, isNew, saving, onSave, onDelete, 
 
     const toggleProduct = (productId: number) => {
         const current = rule.product_ids || [];
+        const clickedProduct = products.find(p => p.id === productId);
+        const isBaseProduct = clickedProduct && !clickedProduct.isVariant;
+
         if (current.includes(productId)) {
-            onChange('product_ids', current.filter(id => id !== productId));
+            // Unchecking
+            if (isBaseProduct) {
+                // Uncheck base product AND all its variants
+                const variantIds = products
+                    .filter(p => p.isVariant && p.parentName === clickedProduct.name)
+                    .map(p => p.id);
+                const idsToRemove = new Set([productId, ...variantIds]);
+                onChange('product_ids', current.filter(id => !idsToRemove.has(id)));
+            } else {
+                onChange('product_ids', current.filter(id => id !== productId));
+            }
         } else {
-            onChange('product_ids', [...current, productId]);
+            // Checking
+            if (isBaseProduct) {
+                // Check base product AND all its variants
+                const variantIds = products
+                    .filter(p => p.isVariant && p.parentName === clickedProduct.name)
+                    .map(p => p.id);
+                const newIds = new Set([...current, productId, ...variantIds]);
+                onChange('product_ids', Array.from(newIds));
+            } else {
+                onChange('product_ids', [...current, productId]);
+            }
         }
     };
 
@@ -516,7 +541,7 @@ function RuleCard({ rule, materials, products, isNew, saving, onSave, onDelete, 
                                             <div
                                                 key={product.id}
                                                 onClick={() => toggleProduct(product.id)}
-                                                className={`px-3 py-2.5 cursor-pointer flex items-center gap-3 text-sm hover:bg-gray-50 transition-colors ${isSelected ? 'bg-blue-50/60' : ''}`}
+                                                className={`px-3 py-2.5 cursor-pointer flex items-center gap-3 text-sm hover:bg-gray-50 transition-colors ${isSelected ? 'bg-blue-50/60' : ''} ${product.isVariant ? 'pl-8' : ''}`}
                                             >
                                                 <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${isSelected
                                                     ? 'bg-primary-600 border-primary-600'
@@ -525,7 +550,7 @@ function RuleCard({ rule, materials, products, isNew, saving, onSave, onDelete, 
                                                     {isSelected && <Check size={12} className="text-white" strokeWidth={3} />}
                                                 </div>
                                                 <span className={`${isSelected ? 'text-gray-900 font-medium' : 'text-gray-700'} truncate`}>
-                                                    {product.name}
+                                                    {product.isVariant ? `↳ ${product.name}` : product.name}
                                                 </span>
                                             </div>
                                         );

@@ -26,6 +26,8 @@ export interface OrderDetailsView {
     created_by_user_role: 'admin' | 'moderator' | null;
     // Order notes
     note: string | null;
+    // Packing status
+    packed?: boolean;
 }
 export interface OrderItemView {
     id?: number; // Order item ID for database updates

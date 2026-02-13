@@ -850,15 +850,7 @@ export class IAdminServerRepository implements AdminRepository {
                 throw error;
             }
 
-            // Deduct packaging materials when order is set to processing
-            if (order.order_status === 'processing' && order.order_id) {
-                try {
-                    const { deductPackagingForOrder } = await import("@/lib/services/stockService");
-                    await deductPackagingForOrder(order.order_id);
-                } catch (packagingError) {
-                    console.error("[IAdminRepository] Packaging deduction error (non-fatal):", packagingError);
-                }
-            }
+            // Note: Packaging deduction is now handled via the Order Packing page (/admin/orders/packing)
         }
 
         // Update phone numbers if provided

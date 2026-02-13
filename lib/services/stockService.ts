@@ -231,6 +231,11 @@ export async function deductPackagingForOrder(orderId: number): Promise<void> {
     const orderProductIds = orderItems
         .map((item: any) => item.product_id)
         .filter((id: any) => id !== null);
+    const orderVariantIds = orderItems
+        .map((item: any) => item.variant_id)
+        .filter((id: any) => id !== null);
+    // Combined IDs for matching against rules (rules can target products OR variants)
+    const allOrderItemIds = [...orderProductIds, ...orderVariantIds];
 
     // 4. Get product associations for all rules
     const ruleIds = rules.map((r: any) => r.id);
@@ -252,7 +257,7 @@ export async function deductPackagingForOrder(orderId: number): Promise<void> {
         // Check if this rule applies to this order
         if (rule.applies_to === 'specific') {
             const ruleProds = ruleProductsMap[rule.id] || [];
-            const hasMatch = orderProductIds.some((pid: number) => ruleProds.includes(pid));
+            const hasMatch = allOrderItemIds.some((pid: number) => ruleProds.includes(pid));
             if (!hasMatch) {
                 console.log(`[StockService] Rule ${rule.id} skipped - no matching products in order`);
                 continue;
