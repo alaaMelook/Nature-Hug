@@ -64,6 +64,7 @@ export default function AdminSidebar({
       badge: (stats?.productsWarningCount?.products ?? 0) + (stats?.productsWarningCount?.reviews ?? 0),
       submenu: [
         { name: t("allProducts"), href: "/admin/products", badge: stats?.productsWarningCount?.products },
+        { name: t("packagingRules") || "Packaging Rules", href: "/admin/products/packaging-rules" },
         { name: t("categories"), href: "/admin/products/categories" },
         { name: t("reviews"), href: "/admin/products/reviews", badge: stats?.productsWarningCount?.reviews },
       ]

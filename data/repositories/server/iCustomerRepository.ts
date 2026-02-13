@@ -327,8 +327,9 @@ export class ICustomerServerRepository implements CustomerRepository {
         const supabase = await createSupabaseServerClient();
 
         // Restore stock before cancelling
-        const { restoreOrderStock } = await import("@/lib/services/stockService");
+        const { restoreOrderStock, restorePackagingForOrder } = await import("@/lib/services/stockService");
         await restoreOrderStock(orderId);
+        await restorePackagingForOrder(orderId);
 
         const { error } = await supabase.schema('store')
             .from('orders')
@@ -348,8 +349,9 @@ export class ICustomerServerRepository implements CustomerRepository {
         const supabase = await createSupabaseServerClient();
 
         // Restore stock before cancelling
-        const { restoreOrderStock } = await import("@/lib/services/stockService");
+        const { restoreOrderStock, restorePackagingForOrder } = await import("@/lib/services/stockService");
         await restoreOrderStock(orderId);
+        await restorePackagingForOrder(orderId);
 
         const { error } = await supabase.schema('store')
             .from('orders')

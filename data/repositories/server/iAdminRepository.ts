@@ -849,6 +849,16 @@ export class IAdminServerRepository implements AdminRepository {
                 console.error("[IAdminRepository] updateOrder error:", error);
                 throw error;
             }
+
+            // Deduct packaging materials when order is set to processing
+            if (order.order_status === 'processing' && order.order_id) {
+                try {
+                    const { deductPackagingForOrder } = await import("@/lib/services/stockService");
+                    await deductPackagingForOrder(order.order_id);
+                } catch (packagingError) {
+                    console.error("[IAdminRepository] Packaging deduction error (non-fatal):", packagingError);
+                }
+            }
         }
 
         // Update phone numbers if provided
@@ -972,8 +982,9 @@ export class IAdminServerRepository implements AdminRepository {
         console.log("[IAdminRepository] deleteOrder called with orderId:", orderId);
 
         // Restore stock before deleting order
-        const { restoreOrderStock } = await import("@/lib/services/stockService");
+        const { restoreOrderStock, restorePackagingForOrder } = await import("@/lib/services/stockService");
         await restoreOrderStock(orderId);
+        await restorePackagingForOrder(orderId);
 
         // First delete order items
         const { error: itemsError } = await supabaseAdmin.schema('store')
