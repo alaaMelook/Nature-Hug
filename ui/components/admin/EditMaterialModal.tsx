@@ -116,12 +116,13 @@ export function EditMaterialModal({ isOpen, onClose, material, onSuccess }: Edit
                                     {t("pricePerUnit") || "Price per Unit"}
                                 </label>
                                 <input
-                                    type="text"
-                                    inputMode="decimal"
+                                    type="number"
+                                    step="0.0001"
+                                    min="0"
                                     required
                                     className="w-full border border-gray-200 p-2.5 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
                                     value={formData.price_per_gram ?? ""}
-                                    onChange={(e) => setFormData({ ...formData, price_per_gram: Number(e.target.value) })}
+                                    onChange={(e) => setFormData({ ...formData, price_per_gram: parseFloat(e.target.value) || 0 })}
                                 />
                             </div>
 
@@ -131,11 +132,12 @@ export function EditMaterialModal({ isOpen, onClose, material, onSuccess }: Edit
                                     {t("stockUnits") || "Stock"}
                                 </label>
                                 <input
-                                    type="text"
-                                    inputMode="decimal"
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
                                     className="w-full border border-gray-200 p-2.5 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
                                     value={formData.stock_grams ?? ""}
-                                    onChange={(e) => setFormData({ ...formData, stock_grams: Number(e.target.value) })}
+                                    onChange={(e) => setFormData({ ...formData, stock_grams: parseFloat(e.target.value) || 0 })}
                                 />
                             </div>
 
@@ -161,11 +163,12 @@ export function EditMaterialModal({ isOpen, onClose, material, onSuccess }: Edit
                                     {t("lowStockThreshold") || "Low Stock Threshold"}
                                 </label>
                                 <input
-                                    type="text"
-                                    inputMode="decimal"
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
                                     className="w-full border border-gray-200 p-2.5 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
                                     value={formData.low_stock_threshold ?? 0}
-                                    onChange={(e) => setFormData({ ...formData, low_stock_threshold: Number(e.target.value) })}
+                                    onChange={(e) => setFormData({ ...formData, low_stock_threshold: parseFloat(e.target.value) || 0 })}
                                 />
                             </div>
 

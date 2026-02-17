@@ -68,14 +68,14 @@ export default function NewMaterialPage() {
                         {t("pricePerGram") || "Price per gram"}
                     </label>
                     <input
-                        type="text" inputMode="numeric" pattern="[0-9]*"
-
+                        type="number"
                         step="0.0001"
+                        min="0"
                         required
                         className="w-full border p-2 rounded"
                         value={formData.price_per_gram}
                         onChange={(e) =>
-                            setFormData({ ...formData, price_per_gram: Number(e.target.value) })
+                            setFormData({ ...formData, price_per_gram: parseFloat(e.target.value) || 0 })
                         }
                     />
                 </div>
@@ -86,14 +86,14 @@ export default function NewMaterialPage() {
                         {t("stockGrams") || "Stock (grams)"}
                     </label>
                     <input
-                        type="text" inputMode="numeric" pattern="[0-9]*"
-
+                        type="number"
                         step="0.01"
+                        min="0"
                         required
                         className="w-full border p-2 rounded"
                         value={formData.stock_grams}
                         onChange={(e) =>
-                            setFormData({ ...formData, stock_grams: Number(e.target.value) })
+                            setFormData({ ...formData, stock_grams: parseFloat(e.target.value) || 0 })
                         }
                     />
                 </div>
@@ -124,15 +124,15 @@ export default function NewMaterialPage() {
                         {t("lowStockThreshold") || "Low Stock Threshold"}
                     </label>
                     <input
-                        type="text" inputMode="numeric" pattern="[0-9]*"
-
+                        type="number"
                         step="0.01"
+                        min="0"
                         className="w-full border p-2 rounded"
                         value={formData.low_stock_threshold ?? 0}
                         onChange={(e) =>
                             setFormData({
                                 ...formData,
-                                low_stock_threshold: Number(e.target.value),
+                                low_stock_threshold: parseFloat(e.target.value) || 0,
                             })
                         }
                     />
