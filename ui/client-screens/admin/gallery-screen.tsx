@@ -148,6 +148,7 @@ export function GalleryScreen({ images }: { images: { image: any, url: string }[
                                     src={img.url}
                                     alt={img.image.name}
                                     fill={true}
+                                    unoptimized
                                     className={`w-full h-full object-cover ${img.status === 'uploading' ? 'opacity-50 blur-[1px]' : ''}`}
                                 />
                                 {img.status === 'uploading' && (
