@@ -539,9 +539,10 @@ export class IAdminServerRepository implements AdminRepository {
             }
         }
 
-        // Attach categories to each product
+        // Attach categories to each product and map image_url to image
         return data.map((product: any) => ({
             ...product,
+            image: product.image_url || product.image || '',
             categories: categoriesMap[product.product_id] || [],
             category_ids: (categoriesMap[product.product_id] || []).map((c: any) => c.id)
         }));
