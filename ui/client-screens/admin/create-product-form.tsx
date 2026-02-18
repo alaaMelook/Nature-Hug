@@ -11,7 +11,7 @@ import { MaterialSelector } from "@/ui/components/admin/materialSelector";
 import { Material } from "@/domain/entities/database/material";
 import { Category } from "@/domain/entities/database/category";
 import { CategoryMultiSelect } from "@/ui/components/admin/CategoryMultiSelect";
-import { ChevronDown, ChevronUp, Trash2, Plus, Image as ImageIcon, Box, Check, ChevronRight, ChevronLeft, Pencil } from "lucide-react";
+import { ChevronDown, ChevronUp, Trash2, Plus, Image as ImageIcon, Box, Check, ChevronRight, ChevronLeft, Pencil, Star } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 
@@ -445,6 +445,9 @@ export function CreateProductForm({ initialImages, initialCategories, editMode =
                                                 className="relative aspect-square rounded-lg overflow-hidden border-2 group border-amber-500"
                                             >
                                                 <Image src={watch("image_url")} alt={t("altProduct")} className="w-full h-full object-cover" fill={true} />
+                                                <div className="absolute top-1 left-1 bg-amber-500 text-white rounded-full p-1 shadow-md">
+                                                    <Star size={12} fill="white" />
+                                                </div>
                                                 <button
                                                     type="button"
                                                     onClick={() => {
@@ -462,19 +465,34 @@ export function CreateProductForm({ initialImages, initialCategories, editMode =
                                                 initial={{ opacity: 0, scale: 0.8 }}
                                                 animate={{ opacity: 1, scale: 1 }}
                                                 exit={{ opacity: 0, scale: 0.8 }}
-                                                className="relative aspect-square rounded-lg overflow-hidden border group"
+                                                className="relative aspect-square rounded-lg overflow-hidden border group cursor-pointer hover:border-amber-400 hover:border-2 transition-all"
+                                                onClick={() => {
+                                                    // Swap: clicked gallery image becomes primary, old primary goes to gallery
+                                                    const oldPrimary = watch("image_url");
+                                                    const currentGallery = [...(watch("gallery") || [])];
+                                                    setValue("image_url", url || "");
+                                                    currentGallery[index] = oldPrimary;
+                                                    setValue("gallery", currentGallery.filter(Boolean));
+                                                }}
                                             >
                                                 {url ? (
                                                     <Image src={url} alt={t("altProduct")} className="w-full h-full object-cover" fill={true} />
                                                 ) : null}
+                                                {/* Hover overlay: set as primary */}
+                                                <div className="absolute inset-0 bg-amber-500/0 group-hover:bg-amber-500/20 transition-colors flex items-center justify-center">
+                                                    <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 backdrop-blur-sm rounded-full p-1.5 shadow-md">
+                                                        <Star size={14} className="text-amber-500" />
+                                                    </div>
+                                                </div>
                                                 <button
                                                     type="button"
-                                                    onClick={() => {
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
                                                         const newGallery = watch("gallery").filter((_, i) => i !== index);
                                                         setValue("gallery", newGallery);
                                                         if (watch("image_url") === url) setValue("image_url", newGallery[0] || "");
                                                     }}
-                                                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10"
                                                 >
                                                     <Trash2 size={12} />
                                                 </button>
@@ -765,7 +783,7 @@ export function CreateProductForm({ initialImages, initialCategories, editMode =
                                                 <div className="mb-4">
                                                     <label className="text-xs font-medium text-gray-500 uppercase mb-2 block">{t("images")}</label>
                                                     <div className="flex gap-2 flex-wrap">
-                                                        {watch(`variants.${index}.image`) && ( // 👈 FIX: Check for 'image' field for main image
+                                                        {watch(`variants.${index}.image`) && (
                                                             <motion.div
                                                                 key={`main-img-${field.id}`}
                                                                 initial={{ opacity: 0, scale: 0.8 }}
@@ -774,23 +792,41 @@ export function CreateProductForm({ initialImages, initialCategories, editMode =
                                                                 className="relative h-12 w-12 rounded-lg overflow-hidden border-2 group border-amber-500"
                                                             >
                                                                 <Image src={watch(`variants.${index}.image`)} alt={`Product_v_${index}`} className="object-cover" width={48} height={48} />
-                                                                <input type="hidden" {...register(`variants.${index}.image` as const)} /> {/* Register field */}
+                                                                <input type="hidden" {...register(`variants.${index}.image` as const)} />
+                                                                <div className="absolute top-0.5 left-0.5 bg-amber-500 text-white rounded-full p-0.5">
+                                                                    <Star size={8} fill="white" />
+                                                                </div>
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => {
-                                                                        setValue(`variants.${index}.image`, ""); // 👈 FIX: Set the correct field
+                                                                        setValue(`variants.${index}.image`, "");
                                                                     }}
-                                                                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                    className="absolute top-0.5 right-0.5 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
                                                                 >
-                                                                    <Trash2 size={12} />
+                                                                    <Trash2 size={8} />
                                                                 </button>
-                                                                <span className="absolute bottom-0 left-0 bg-amber-500 text-white text-xs px-2 py-0.5 rounded-tr-lg">{t("mainImage")}</span>
                                                             </motion.div>
                                                         )}
                                                         {watch(`variants.${index}.gallery`)?.map((url, imgIndex) => (
                                                             url ? (
-                                                                <div key={imgIndex} className="relative h-12 w-12 rounded border overflow-hidden">
+                                                                <div
+                                                                    key={imgIndex}
+                                                                    className="relative h-12 w-12 rounded border overflow-hidden group cursor-pointer hover:border-amber-400 hover:border-2 transition-all"
+                                                                    onClick={() => {
+                                                                        // Swap: clicked variant gallery image becomes variant primary
+                                                                        const oldPrimary = watch(`variants.${index}.image`);
+                                                                        const currentGallery = [...(watch(`variants.${index}.gallery`) || [])];
+                                                                        setValue(`variants.${index}.image`, url);
+                                                                        currentGallery[imgIndex] = oldPrimary;
+                                                                        setValue(`variants.${index}.gallery`, currentGallery.filter(Boolean));
+                                                                    }}
+                                                                >
                                                                     <Image src={url} alt={t("altVariant")} className="object-cover" fill={true} />
+                                                                    <div className="absolute inset-0 bg-amber-500/0 group-hover:bg-amber-500/20 transition-colors flex items-center justify-center">
+                                                                        <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 rounded-full p-0.5">
+                                                                            <Star size={8} className="text-amber-500" />
+                                                                        </div>
+                                                                    </div>
                                                                 </div>
                                                             ) : null
                                                         ))}
