@@ -134,6 +134,7 @@ export function CreateProductForm({ initialImages, initialCategories, editMode =
             name_ar: data.name_ar.trim().length > 0 ? data.name_ar.trim() : data.name_en.trim(),
             price: cleanNumber(data.price),
             image_url: watch("image_url"),
+            image: watch("image_url"),
             stock: cleanNumber(data.stock),
             visible: true,
             discount: cleanNumber(data.discount),
