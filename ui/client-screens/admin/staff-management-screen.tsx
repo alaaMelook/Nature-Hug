@@ -150,6 +150,7 @@ export default function StaffManagementScreen() {
     const handleEdit = (member: StaffMember) => {
         setEditingStaff(member);
         setSelectedPermissions(member.permissions || []);
+        setNewName(member.customers?.name || '');
         setModalMode('edit');
     };
 
@@ -179,7 +180,11 @@ export default function StaffManagementScreen() {
                 const res = await fetch(`/api/admin/staff/${editingStaff.id}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ permissions: selectedPermissions }),
+                    body: JSON.stringify({
+                        permissions: selectedPermissions,
+                        name: newName,
+                        customerId: editingStaff.customers?.id || editingStaff.user_id,
+                    }),
                 });
                 const data = await res.json();
                 if (!data.success) throw new Error(data.error);
@@ -490,15 +495,29 @@ export default function StaffManagementScreen() {
 
                             {/* Edit Mode: show member info */}
                             {modalMode === 'edit' && editingStaff && (
-                                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                                    <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
-                                        <span className="text-white font-bold text-sm">
-                                            {(editingStaff.customers?.name || '?')[0].toUpperCase()}
-                                        </span>
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
+                                            <span className="text-white font-bold text-sm">
+                                                {(newName || editingStaff.customers?.name || '?')[0].toUpperCase()}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm text-gray-500">{editingStaff.customers?.email}</p>
+                                        </div>
                                     </div>
                                     <div>
-                                        <p className="text-sm font-medium text-gray-900">{editingStaff.customers?.name}</p>
-                                        <p className="text-xs text-gray-500">{editingStaff.customers?.email}</p>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                                        <div className="relative">
+                                            <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                            <input
+                                                type="text"
+                                                value={newName}
+                                                onChange={e => setNewName(e.target.value)}
+                                                placeholder="Staff member name"
+                                                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                             )}
@@ -533,8 +552,8 @@ export default function StaffManagementScreen() {
 
                                         return (
                                             <div key={perm.key} className={`rounded-lg border transition-all ${isParentChecked || someChildrenChecked
-                                                    ? 'border-primary-300 bg-primary-50/50'
-                                                    : 'border-gray-200 hover:border-gray-300'
+                                                ? 'border-primary-300 bg-primary-50/50'
+                                                : 'border-gray-200 hover:border-gray-300'
                                                 }`}>
                                                 {/* Parent Permission */}
                                                 <label className="flex items-center gap-3 p-3 cursor-pointer">
