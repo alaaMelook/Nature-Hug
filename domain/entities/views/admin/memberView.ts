@@ -4,4 +4,5 @@ export interface MemberView {
     email: string,
     role: MemberRole,
     created_at: string,
+    permissions?: string[],
 }

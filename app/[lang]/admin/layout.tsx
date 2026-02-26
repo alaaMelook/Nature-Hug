@@ -7,6 +7,8 @@ import { ReactNode } from "react";
 import { ViewMember } from "@/domain/use-case/admin/members";
 import { GetCurrentUser } from "@/domain/use-case/store/getCurrentUser";
 import { GetSidebarStats } from "@/domain/use-case/admin/getSidebarStats";
+import { ICustomerServerRepository } from "@/data/repositories/server/iCustomerRepository";
+import { hasPermissionForRoute, getFirstAllowedRoute } from "@/lib/permissions";
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
 
@@ -15,7 +17,22 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
     if (!user) redirect("/");
 
-    const member = await new ViewMember().fromCustomerId({ customerId: user.id });
+    let member;
+    try {
+        member = await new ViewMember().fromCustomerId({ customerId: user.id });
+    } catch (e) {
+        // If member_view doesn't have this member, try building from raw data
+        const repo = new ICustomerServerRepository();
+        const rawMember = await repo.fetchMember(user.id);
+        if (!rawMember) redirect("/");
+        member = {
+            id: rawMember!.id,
+            name: 'Staff',
+            email: '',
+            role: rawMember!.role as MemberRole,
+            created_at: rawMember!.created_at,
+        };
+    }
 
     if (!member) redirect("/");
 
@@ -23,27 +40,52 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         redirect("/");
     }
 
+    // Get the current pathname
+    const headersList = await headers();
+    const fullUrl = headersList.get('x-url') || "";
+    let pathname = '/';
+    try {
+        pathname = new URL(fullUrl).pathname;
+    } catch (error) {
+        pathname = fullUrl;
+    }
+
     // ⭐️ Moderator Redirect Logic
     if (member.role === 'moderator') {
-        const headersList = await headers();
-        const fullUrl = headersList.get('x-url') || "";
-
-        let pathname = '/';
-        try {
-            pathname = new URL(fullUrl).pathname;
-        } catch (error) {
-            pathname = fullUrl; // Fallback if regular path structure
-        }
-
-        // Check if the current path includes the allowed path
-        // Using includes check handles language prefixes (e.g., /en/admin/shipping/history)
         if (!pathname.includes('/admin/shipping/history')) {
-            // Extract language from the first segment of the pathname default to 'en'
             const segments = pathname.split('/').filter(Boolean);
             const lang = segments[0] || 'en';
-
-            // Redirect to the allowed page with the correct language
             redirect(`/${lang}/admin/shipping/history`);
+        }
+    }
+
+    // 🔒 Staff Permission Logic
+    let staffPermissions: string[] = [];
+    if (member.role === 'staff') {
+        const repo = new ICustomerServerRepository();
+        // Need to get the member from members table (not member_view) to get the member.id
+        const memberRecord = await repo.fetchMember(user.id);
+        if (memberRecord) {
+            staffPermissions = await repo.getMemberPermissions(memberRecord.id);
+        }
+
+        if (staffPermissions.length === 0) {
+            redirect("/");
+        }
+
+        // Check if current route is allowed
+        // Allow the base /admin route only if they have dashboard permission
+        const isBaseAdmin = pathname.match(/\/admin\/?$/);
+        const hasDashboard = staffPermissions.includes('dashboard');
+
+        if (isBaseAdmin && !hasDashboard) {
+            const segments = pathname.split('/').filter(Boolean);
+            const lang = segments[0] || 'en';
+            redirect(`/${lang}${getFirstAllowedRoute(staffPermissions)}`);
+        } else if (!isBaseAdmin && !hasPermissionForRoute(staffPermissions, pathname)) {
+            const segments = pathname.split('/').filter(Boolean);
+            const lang = segments[0] || 'en';
+            redirect(`/${lang}${getFirstAllowedRoute(staffPermissions)}`);
         }
     }
 
@@ -51,7 +93,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
     return (
         <div className="min-h-screen bg-gray-50 flex">
-            <AdminSidebar stats={stats} member={member} />
+            <AdminSidebar stats={stats} member={member} staffPermissions={staffPermissions} />
             <div className="flex-1 flex flex-col min-w-0 transition-all duration-300 ease-in-out">
                 <AdminHeader adminUser={member} />
                 <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-y-auto">

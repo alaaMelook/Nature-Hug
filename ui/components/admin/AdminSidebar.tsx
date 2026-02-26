@@ -15,25 +15,26 @@ import {
   Truck,
   Tag,
   BarChart3,
-  Bell,
-  BellRing,
-  Loader2,
   Wallet,
   Heart,
-  Palette
+  Palette,
+  UsersRound
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Member } from "@/domain/entities/auth/member";
 import { MemberView } from "@/domain/entities/views/admin/memberView";
-import { usePushNotifications } from "@/ui/hooks/usePushNotifications";
+
+import { STAFF_PERMISSIONS } from "@/lib/permissions";
 
 export default function AdminSidebar({
   stats,
-  member
+  member,
+  staffPermissions = []
 }: {
   stats?: SidebarStats;
   member?: MemberView;
+  staffPermissions?: string[];
 }) {
   const pathname = usePathname();
   const params = useParams();
@@ -44,8 +45,7 @@ export default function AdminSidebar({
   const [mounted, setMounted] = useState(false);
   const [wishlistCount, setWishlistCount] = useState(0);
 
-  // Push notifications
-  const { isSupported, permission, requestPermission, isLoading } = usePushNotifications();
+
 
   // Navigation defined before hooks that depend on it
   const navigation = [
@@ -117,7 +117,66 @@ export default function AdminSidebar({
     { name: t("wishlists") || "Wishlists", href: "/admin/wishlists", icon: Heart, badge: wishlistCount },
     { name: t("gallery"), href: "/admin/gallery", icon: Image },
     { name: t("siteThemes") || "Themes", href: "/admin/themes", icon: Palette },
+    {
+      name: "People",
+      href: "/admin/people",
+      icon: UsersRound,
+      submenu: [
+        { name: "👥 Team Members", href: "/admin/people/team-members" },
+      ]
+    },
   ];
+
+  // Filter navigation for staff role based on permissions
+  const filteredNavigation = member?.role === 'staff'
+    ? navigation
+      .filter(item => {
+        // Find matching permission key for this nav item
+        for (const perm of STAFF_PERMISSIONS) {
+          for (const route of perm.routes) {
+            if (item.href === route || item.href.startsWith(route + '/')) {
+              // Check if parent or any child is granted
+              if (staffPermissions.includes(perm.key)) return true;
+              if (perm.children?.some(c => staffPermissions.includes(c.key))) return true;
+              return false;
+            }
+          }
+        }
+        return false;
+      })
+      .map(item => {
+        // Filter submenu items for staff
+        if (item.submenu) {
+          // Find the parent permission key
+          let parentPerm: typeof STAFF_PERMISSIONS[0] | undefined;
+          for (const perm of STAFF_PERMISSIONS) {
+            for (const route of perm.routes) {
+              if (item.href === route || item.href.startsWith(route + '/')) {
+                parentPerm = perm;
+                break;
+              }
+            }
+            if (parentPerm) break;
+          }
+
+          // If parent-level permission, show all submenus
+          if (parentPerm && staffPermissions.includes(parentPerm.key)) {
+            return item;
+          }
+
+          // Otherwise filter submenus by child permissions
+          if (parentPerm?.children) {
+            const filteredSubmenu = item.submenu.filter(sub => {
+              return parentPerm!.children!.some(
+                c => staffPermissions.includes(c.key) && (sub.href === c.route || sub.href.startsWith(c.route + '/'))
+              );
+            });
+            return { ...item, submenu: filteredSubmenu };
+          }
+        }
+        return item;
+      })
+    : navigation;
 
   // Prevent hydration mismatch by only rendering after mount
   useEffect(() => {
@@ -151,6 +210,9 @@ export default function AdminSidebar({
   // All hooks above - conditional returns below
   if (member?.role === 'moderator') return null;
   if (!mounted) return null;
+
+  // Use filtered navigation for staff, full navigation for admin
+  const navItems = filteredNavigation;
 
   const toggleMenu = (name: string) => {
     setExpandedMenus(prev =>
@@ -277,56 +339,12 @@ export default function AdminSidebar({
           <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4 px-3 mt-2">
             {t("adminPanel")}
           </div>
-          {navigation.map((item) => (
+          {navItems.map((item) => (
             <NavItem key={item.name} item={item} />
-
           ))}
         </nav>
 
-        <div className="p-4 border-t border-gray-100 mt-auto space-y-3">
-          {/* Notification Enable Button */}
-          {isSupported && permission !== 'granted' && (
-            <button
-              onClick={requestPermission}
-              disabled={isLoading}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 bg-primary-50 text-primary-700 hover:bg-primary-100 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>جاري التفعيل...</span>
-                </>
-              ) : (
-                <>
-                  <Bell className="h-4 w-4" />
-                  <span>تفعيل الإشعارات 🔔</span>
-                </>
-              )}
-            </button>
-          )}
-
-          {/* Notification Status - Already Enabled (clickable to refresh) */}
-          {isSupported && permission === 'granted' && (
-            <button
-              onClick={requestPermission}
-              disabled={isLoading}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm text-green-600 bg-green-50 rounded-lg hover:bg-green-100 transition-all duration-200 disabled:opacity-50"
-              title="اضغط لتجديد الاشتراك"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>جاري التحديث...</span>
-                </>
-              ) : (
-                <>
-                  <BellRing className="h-4 w-4" />
-                  <span>الإشعارات مفعلة ✓</span>
-                </>
-              )}
-            </button>
-          )}
-
+        <div className="p-4 border-t border-gray-100 mt-auto">
           <div className="px-3 py-2">
             <p className="text-xs text-gray-400 text-center">© 2025 Nature Hug</p>
           </div>

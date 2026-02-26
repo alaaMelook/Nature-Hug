@@ -54,12 +54,12 @@ export default function AdminHeader({ adminUser }: { adminUser: MemberView }) {
                 className="flex items-center gap-3 pl-2 pr-1 py-1 rounded-full hover:bg-gray-50 transition-all border border-transparent hover:border-gray-200"
               >
                 <div className="hidden md:block text-right">
-                  <p className="text-sm font-semibold text-gray-900 leading-none">{adminUser.name}</p>
+                  <p className="text-sm font-semibold text-gray-900 leading-none">{adminUser.name || 'Staff'}</p>
                   <p className="text-xs text-gray-500 mt-0.5">{adminUser.role}</p>
                 </div>
                 <div className="w-9 h-9 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center shadow-sm ring-2 ring-white">
                   <span className="text-white font-medium text-sm">
-                    {adminUser.name.charAt(0).toUpperCase()}
+                    {(adminUser.name || 'S').charAt(0).toUpperCase()}
                   </span>
                 </div>
               </button>
@@ -72,7 +72,7 @@ export default function AdminHeader({ adminUser }: { adminUser: MemberView }) {
                   />
                   <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl py-2 z-50 border border-gray-100 transform transition-all animate-in fade-in zoom-in-95 duration-200">
                     <div className="px-4 py-3 border-b border-gray-50 bg-gray-50/50">
-                      <p className="font-semibold text-gray-900">{adminUser.name}</p>
+                      <p className="font-semibold text-gray-900">{adminUser.name || 'Staff'}</p>
                       <p className="text-xs text-gray-500 truncate">{adminUser.email}</p>
                     </div>
 

@@ -288,6 +288,49 @@ export class ICustomerServerRepository implements CustomerRepository {
         }
     }
 
+    async getMemberPermissions(memberId: number): Promise<string[]> {
+        console.log("[ICustomerServerRepository] getMemberPermissions called with memberId:", memberId);
+        const { supabaseAdmin } = await import("@/data/datasources/supabase/admin");
+        const { data, error } = await supabaseAdmin.schema('store')
+            .from('member_permissions')
+            .select('permission')
+            .eq('member_id', memberId);
+        if (error) {
+            console.error("[ICustomerServerRepository] getMemberPermissions error:", error);
+            throw error;
+        }
+        return (data || []).map((row: any) => row.permission);
+    }
+
+    async setMemberPermissions(memberId: number, permissions: string[]): Promise<void> {
+        console.log("[ICustomerServerRepository] setMemberPermissions called:", { memberId, permissions });
+        const { supabaseAdmin } = await import("@/data/datasources/supabase/admin");
+
+        // Delete existing permissions
+        const { error: deleteError } = await supabaseAdmin.schema('store')
+            .from('member_permissions')
+            .delete()
+            .eq('member_id', memberId);
+        if (deleteError) {
+            console.error("[ICustomerServerRepository] delete permissions error:", deleteError);
+            throw deleteError;
+        }
+
+        // Insert new permissions
+        if (permissions.length > 0) {
+            const rows = permissions.map(p => ({ member_id: memberId, permission: p }));
+            const { error: insertError } = await supabaseAdmin.schema('store')
+                .from('member_permissions')
+                .insert(rows);
+            if (insertError) {
+                console.error("[ICustomerServerRepository] insert permissions error:", insertError);
+                throw insertError;
+            }
+        }
+    }
+
+
+
     async viewAllOrders(customerId: number): Promise<OrderSummaryView[]> {
         console.log("[ICustomerRepository] viewAllOrders called with customerId:", customerId);
         const supabase = await createSupabaseServerClient();

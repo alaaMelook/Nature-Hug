@@ -3,4 +3,5 @@ export interface Member {
     user_id: number;
     role: MemberRole;
     created_at: string;
+    permissions?: string[];
 }
