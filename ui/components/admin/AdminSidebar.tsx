@@ -91,8 +91,9 @@ export default function AdminSidebar({
       href: "/admin/bazaars",
       icon: Store,
       submenu: [
-        { name: i18n.language === 'ar' ? 'كل البازارات' : 'All Bazaars', href: "/admin/bazaars" },
-        { name: i18n.language === 'ar' ? 'بازار جديد' : 'New Bazaar', href: "/admin/bazaars/create" },
+        { name: i18n.language === 'ar' ? 'كل البازارات' : 'All Bazaars', href: "/admin/bazaars", permKey: 'bazaars.all' },
+        { name: i18n.language === 'ar' ? 'بازار جديد' : 'New Bazaar', href: "/admin/bazaars/create", permKey: 'bazaars.create' },
+        { name: i18n.language === 'ar' ? 'نقطة البيع' : 'Point of Sale', href: "/admin/bazaars", permKey: 'bazaars.pos', staffOnly: true },
       ]
     },
     {
@@ -141,10 +142,10 @@ export default function AdminSidebar({
   const filteredNavigation = member?.role === 'staff'
     ? navigation
       .filter(item => {
-        // Find matching permission key for this nav item
+        // Find matching permission key for this nav item (exact match only)
         for (const perm of STAFF_PERMISSIONS) {
           for (const route of perm.routes) {
-            if (item.href === route || item.href.startsWith(route + '/')) {
+            if (item.href === route) {
               // Check if parent or any child is granted
               if (staffPermissions.includes(perm.key)) return true;
               if (perm.children?.some(c => staffPermissions.includes(c.key))) return true;
@@ -161,7 +162,7 @@ export default function AdminSidebar({
           let parentPerm: typeof STAFF_PERMISSIONS[0] | undefined;
           for (const perm of STAFF_PERMISSIONS) {
             for (const route of perm.routes) {
-              if (item.href === route || item.href.startsWith(route + '/')) {
+              if (item.href === route) {
                 parentPerm = perm;
                 break;
               }
@@ -176,7 +177,11 @@ export default function AdminSidebar({
 
           // Otherwise filter submenus by child permissions
           if (parentPerm?.children) {
-            const filteredSubmenu = item.submenu.filter(sub => {
+            const filteredSubmenu = item.submenu.filter((sub: any) => {
+              // If submenu has explicit permKey, match by key directly
+              if (sub.permKey) {
+                return staffPermissions.includes(sub.permKey);
+              }
               return parentPerm!.children!.some(
                 c => staffPermissions.includes(c.key) && (sub.href === c.route || sub.href.startsWith(c.route + '/'))
               );
@@ -186,7 +191,14 @@ export default function AdminSidebar({
         }
         return item;
       })
-    : navigation;
+    : navigation.map(item => {
+      // For non-staff, filter out staffOnly submenu items
+      if (item.submenu) {
+        return { ...item, submenu: item.submenu.filter((sub: any) => !sub.staffOnly) };
+      }
+      return item;
+    });
+
 
   // Prevent hydration mismatch by only rendering after mount
   useEffect(() => {
@@ -263,7 +275,7 @@ export default function AdminSidebar({
             <div className="mt-1 ml-4 pl-3 border-l-2 border-gray-100 space-y-1">
               {item.submenu.map((subItem: any) => (
                 <Link
-                  key={subItem.href}
+                  key={subItem.permKey || subItem.href}
                   href={subItem.href}
                   className={`flex items-center px-3 py-2 text-sm rounded-md transition-colors
                     ${pathname === subItem.href

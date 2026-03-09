@@ -4,6 +4,7 @@ import BazaarDetailScreen from "@/ui/client-screens/admin/bazaar-detail-screen";
 import { IProductServerRepository } from "@/data/repositories/server/iProductsRepository";
 import { GetAllPromoCodes } from "@/domain/use-case/admin/promo-codes/getAllPromoCodes";
 import { redirect } from "next/navigation";
+import { getAdminStaffPermissions } from "@/lib/admin-helpers";
 
 export default async function BazaarDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
@@ -18,7 +19,13 @@ export default async function BazaarDetailPage({ params }: { params: Promise<{ i
     let products: any[] = [];
     let promoCodes: any[] = [];
 
-    // Load products and promo codes (these always work)
+    // Check if current user is POS-only staff (uses cached function)
+    const { customerId, permissions } = await getAdminStaffPermissions();
+    const isPosOnly = permissions.length > 0
+        && permissions.includes('bazaars.pos')
+        && !permissions.includes('bazaars');
+
+    // Load products and promo codes
     try {
         [products, promoCodes] = await Promise.all([
             new IProductServerRepository().viewAll(),
@@ -28,17 +35,17 @@ export default async function BazaarDetailPage({ params }: { params: Promise<{ i
         console.error("[BazaarDetailPage] Error loading products/promos:", error);
     }
 
-    // Load bazaar-specific data (requires migration)
-    try {
-        report = await bazaarsUc.getReport(bazaarId);
-        console.log("[BazaarDetailPage] Report loaded:", JSON.stringify(report));
-    } catch (error) {
-        console.error("[BazaarDetailPage] Error loading report:", error);
+    // Load bazaar-specific data
+    if (!isPosOnly) {
+        try {
+            report = await bazaarsUc.getReport(bazaarId);
+        } catch (error) {
+            console.error("[BazaarDetailPage] Error loading report:", error);
+        }
     }
 
     try {
         orders = await bazaarsUc.getOrders(bazaarId);
-        console.log("[BazaarDetailPage] Orders loaded:", orders.length, "orders");
     } catch (error) {
         console.error("[BazaarDetailPage] Error loading orders:", error);
     }
@@ -50,6 +57,8 @@ export default async function BazaarDetailPage({ params }: { params: Promise<{ i
             orders={orders}
             products={products}
             promoCodes={promoCodes.filter((p: any) => p.bazaar_id === bazaarId || !p.bazaar_only)}
+            isPosOnly={isPosOnly}
+            currentUserId={customerId}
         />
     );
 }

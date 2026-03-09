@@ -38,6 +38,8 @@ interface BazaarDetailScreenProps {
     orders: OrderDetailsView[];
     products: ProductView[];
     promoCodes: PromoCode[];
+    isPosOnly?: boolean;
+    currentUserId?: number | null;
 }
 
 type ActiveTab = 'report' | 'pos' | 'orders';
@@ -48,14 +50,13 @@ const PAYMENT_METHODS = [
     { key: 'wallet', label: 'Wallet', labelAr: 'محفظة', icon: Wallet, color: 'bg-purple-50 border-purple-300 text-purple-700' },
 ];
 
-export default function BazaarDetailScreen({ bazaar, report, orders, products, promoCodes }: BazaarDetailScreenProps) {
+export default function BazaarDetailScreen({ bazaar, report, orders, products, promoCodes, isPosOnly = false, currentUserId }: BazaarDetailScreenProps) {
     const { t, i18n } = useTranslation();
     const router = useRouter();
     const params = useParams();
     const lang = params?.lang as string;
     const isAr = i18n.language === 'ar';
-
-    const [activeTab, setActiveTab] = useState<ActiveTab>('report');
+    const [activeTab, setActiveTab] = useState<ActiveTab>(isPosOnly ? 'pos' : 'report');
 
     // ====== POS STATE ======
     const [customerName, setCustomerName] = useState("");
@@ -245,11 +246,16 @@ export default function BazaarDetailScreen({ bazaar, report, orders, products, p
         }
     };
 
-    const tabs = [
-        { key: 'report' as ActiveTab, label: isAr ? '📊 التقرير' : '📊 Report', icon: BarChart3 },
-        { key: 'pos' as ActiveTab, label: isAr ? '🛒 نقطة البيع' : '🛒 POS', icon: ShoppingCart },
-        { key: 'orders' as ActiveTab, label: isAr ? '📋 الطلبات' : '📋 Orders', icon: Package },
-    ];
+    const tabs = isPosOnly
+        ? [
+            { key: 'pos' as ActiveTab, label: isAr ? '🛒 نقطة البيع' : '🛒 POS', icon: ShoppingCart },
+            { key: 'orders' as ActiveTab, label: isAr ? '📋 طلباتي' : '📋 My Orders', icon: Package },
+        ]
+        : [
+            { key: 'report' as ActiveTab, label: isAr ? '📊 التقرير' : '📊 Report', icon: BarChart3 },
+            { key: 'pos' as ActiveTab, label: isAr ? '🛒 نقطة البيع' : '🛒 POS', icon: ShoppingCart },
+            { key: 'orders' as ActiveTab, label: isAr ? '📋 الطلبات' : '📋 Orders', icon: Package },
+        ];
 
     return (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-4 sm:p-6 max-w-7xl mx-auto">
@@ -265,13 +271,15 @@ export default function BazaarDetailScreen({ bazaar, report, orders, products, p
                     </h1>
                     <p className="text-sm text-gray-500">{bazaar.location} • {bazaar.start_date} → {bazaar.end_date}</p>
                 </div>
-                <button
-                    onClick={() => router.push(`/${lang}/admin/bazaars/${bazaar.id}/edit`)}
-                    className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
-                >
-                    <Pencil size={16} />
-                    {isAr ? 'تعديل' : 'Edit'}
-                </button>
+                {!isPosOnly && (
+                    <button
+                        onClick={() => router.push(`/${lang}/admin/bazaars/${bazaar.id}/edit`)}
+                        className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
+                    >
+                        <Pencil size={16} />
+                        {isAr ? 'تعديل' : 'Edit'}
+                    </button>
+                )}
             </div>
 
             {/* Tabs */}
@@ -291,7 +299,7 @@ export default function BazaarDetailScreen({ bazaar, report, orders, products, p
             </div>
 
             {/* Tab Content */}
-            {activeTab === 'report' && <ReportTab report={report} isAr={isAr} />}
+            {activeTab === 'report' && <ReportTab report={report} orders={orders} bazaar={bazaar} isAr={isAr} />}
             {activeTab === 'pos' && (
                 <POSTab
                     isAr={isAr}
@@ -321,15 +329,120 @@ export default function BazaarDetailScreen({ bazaar, report, orders, products, p
 }
 
 // ======================== REPORT TAB ========================
-function ReportTab({ report, isAr }: { report: BazaarReport; isAr: boolean }) {
+function ReportTab({ report, orders, bazaar, isAr }: { report: BazaarReport; orders: any[]; bazaar: Bazaar; isAr: boolean }) {
+    const [selectedDay, setSelectedDay] = useState<string>('all');
+    const [startHour, setStartHour] = useState<number>(0);
+    const [endHour, setEndHour] = useState<number>(23);
+
+    // Generate bazaar days
+    const bazaarDays = useMemo(() => {
+        const days: { label: string; date: string }[] = [];
+        const start = new Date(bazaar.start_date);
+        const end = new Date(bazaar.end_date);
+        let current = new Date(start);
+        let dayNum = 1;
+        while (current <= end) {
+            days.push({
+                label: `${isAr ? 'يوم' : 'Day'} ${dayNum} (${current.toLocaleDateString(isAr ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })})`,
+                date: current.toISOString().split('T')[0],
+            });
+            current.setDate(current.getDate() + 1);
+            dayNum++;
+        }
+        return days;
+    }, [bazaar.start_date, bazaar.end_date, isAr]);
+
+    // Filter orders by selected day and hour range
+    const filteredOrders = useMemo(() => {
+        if (selectedDay === 'all' && startHour === 0 && endHour === 23) return orders;
+        return orders.filter((order: any) => {
+            if (!order.created_at) return true;
+            const orderDate = new Date(order.created_at);
+            if (selectedDay !== 'all') {
+                const dayStart = new Date(selectedDay + 'T00:00:00');
+                dayStart.setHours(startHour, 0, 0, 0);
+                const dayEnd = new Date(selectedDay + 'T00:00:00');
+                if (endHour < startHour) dayEnd.setDate(dayEnd.getDate() + 1);
+                dayEnd.setHours(endHour, 59, 59, 999);
+                return orderDate >= dayStart && orderDate <= dayEnd;
+            }
+            const hour = orderDate.getHours();
+            if (startHour <= endHour) return hour >= startHour && hour <= endHour;
+            return hour >= startHour || hour <= endHour;
+        });
+    }, [orders, selectedDay, startHour, endHour]);
+
+    // Compute report from filtered orders
+    const computedReport = useMemo(() => {
+        if (selectedDay === 'all' && startHour === 0 && endHour === 23) return report;
+        const totalSales = filteredOrders.reduce((acc: number, o: any) => acc + (o.grand_total || 0), 0);
+        const orderCount = filteredOrders.length;
+        const uniqueCustomers = new Set(filteredOrders.map((o: any) => o.customer_name).filter(Boolean));
+        const paymentMap: Record<string, { count: number; total: number }> = {};
+        filteredOrders.forEach((o: any) => {
+            const method = o.payment_method || 'unknown';
+            if (!paymentMap[method]) paymentMap[method] = { count: 0, total: 0 };
+            paymentMap[method].count++;
+            paymentMap[method].total += o.grand_total || 0;
+        });
+        const staffMap: Record<string, { orderCount: number; totalSales: number }> = {};
+        filteredOrders.forEach((o: any) => {
+            const name = o.created_by_user_name || 'Unknown';
+            if (!staffMap[name]) staffMap[name] = { orderCount: 0, totalSales: 0 };
+            staffMap[name].orderCount++;
+            staffMap[name].totalSales += o.grand_total || 0;
+        });
+        return {
+            totalSales, orderCount, customerCount: uniqueCustomers.size,
+            topProducts: report.topProducts,
+            topStaff: Object.entries(staffMap).map(([name, data]) => ({ name, ...data })).sort((a, b) => b.totalSales - a.totalSales),
+            paymentBreakdown: Object.entries(paymentMap).map(([method, data]) => ({ method, ...data })),
+        };
+    }, [filteredOrders, report, selectedDay, startHour, endHour]);
+
+    const hourOptions = Array.from({ length: 24 }, (_, i) => i);
+
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 print-report">
+            {/* Filter Bar + Print */}
+            <div className="bg-white rounded-xl border p-4 flex flex-wrap items-end gap-4 no-print">
+                <div className="flex-1 min-w-[180px]">
+                    <label className="block text-xs font-medium text-gray-500 mb-1.5">{isAr ? 'اليوم' : 'Day'}</label>
+                    <select value={selectedDay} onChange={(e) => setSelectedDay(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500/20 outline-none bg-white">
+                        <option value="all">{isAr ? 'كل الأيام' : 'All Days'}</option>
+                        {bazaarDays.map(day => (<option key={day.date} value={day.date}>{day.label}</option>))}
+                    </select>
+                </div>
+                <div className="min-w-[120px]">
+                    <label className="block text-xs font-medium text-gray-500 mb-1.5">{isAr ? 'من الساعة' : 'From Hour'}</label>
+                    <select value={startHour} onChange={(e) => setStartHour(parseInt(e.target.value))}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500/20 outline-none bg-white">
+                        {hourOptions.map(h => (<option key={h} value={h}>{h.toString().padStart(2, '0')}:00</option>))}
+                    </select>
+                </div>
+                <div className="min-w-[120px]">
+                    <label className="block text-xs font-medium text-gray-500 mb-1.5">{isAr ? 'إلى الساعة' : 'To Hour'}</label>
+                    <select value={endHour} onChange={(e) => setEndHour(parseInt(e.target.value))}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500/20 outline-none bg-white">
+                        {hourOptions.map(h => (<option key={h} value={h}>{h.toString().padStart(2, '0')}:59</option>))}
+                    </select>
+                </div>
+                <button onClick={() => window.print()}
+                    className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium">
+                    🖨️ {isAr ? 'طباعة' : 'Print'}
+                </button>
+            </div>
+            <div className="hidden print-only text-center mb-4">
+                <h2 className="text-xl font-bold">{isAr ? 'تقرير البازار' : 'Bazaar Report'} - {bazaar.name}</h2>
+                <p className="text-sm text-gray-600">{selectedDay !== 'all' ? `${selectedDay} | ` : ''}{startHour.toString().padStart(2, '0')}:00 - {endHour.toString().padStart(2, '0')}:59</p>
+            </div>
             {/* Summary Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                 {[
-                    { label: isAr ? 'إجمالي المبيعات' : 'Total Sales', value: `${report.totalSales.toLocaleString()} EGP`, icon: TrendingUp, color: 'text-green-600 bg-green-50' },
-                    { label: isAr ? 'عدد الطلبات' : 'Orders', value: report.orderCount, icon: ShoppingCart, color: 'text-blue-600 bg-blue-50' },
-                    { label: isAr ? 'عدد العملاء' : 'Customers', value: report.customerCount, icon: Users, color: 'text-purple-600 bg-purple-50' },
+                    { label: isAr ? 'إجمالي المبيعات' : 'Total Sales', value: `${computedReport.totalSales.toLocaleString()} EGP`, icon: TrendingUp, color: 'text-green-600 bg-green-50' },
+                    { label: isAr ? 'عدد الطلبات' : 'Orders', value: computedReport.orderCount, icon: ShoppingCart, color: 'text-blue-600 bg-blue-50' },
+                    { label: isAr ? 'عدد العملاء' : 'Customers', value: computedReport.customerCount, icon: Users, color: 'text-purple-600 bg-purple-50' },
                 ].map((card, i) => (
                     <div key={i} className="bg-white rounded-xl border p-5">
                         <div className="flex items-center gap-3 mb-2">
@@ -342,13 +455,13 @@ function ReportTab({ report, isAr }: { report: BazaarReport; isAr: boolean }) {
             </div>
 
             {/* Payment Breakdown */}
-            {report.paymentBreakdown.length > 0 && (
+            {computedReport.paymentBreakdown.length > 0 && (
                 <div className="bg-white rounded-xl border p-6">
                     <h3 className="text-sm font-semibold text-gray-500 uppercase mb-4 flex items-center gap-2">
                         <CreditCard size={16} /> {isAr ? 'طرق الدفع' : 'Payment Methods'}
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        {report.paymentBreakdown.map((pm, i) => (
+                        {computedReport.paymentBreakdown.map((pm, i) => (
                             <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                                 <div>
                                     <p className="font-medium text-gray-900 capitalize">{pm.method}</p>
@@ -362,13 +475,13 @@ function ReportTab({ report, isAr }: { report: BazaarReport; isAr: boolean }) {
             )}
 
             {/* Top Products */}
-            {report.topProducts.length > 0 && (
+            {computedReport.topProducts.length > 0 && (
                 <div className="bg-white rounded-xl border p-6">
                     <h3 className="text-sm font-semibold text-gray-500 uppercase mb-4 flex items-center gap-2">
                         <Trophy size={16} /> {isAr ? 'المنتجات الأكثر مبيعاً' : 'Top Products'}
                     </h3>
                     <div className="space-y-2">
-                        {report.topProducts.slice(0, 10).map((product, i) => (
+                        {computedReport.topProducts.slice(0, 10).map((product, i) => (
                             <div key={i} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors">
                                 <div className="flex items-center gap-3">
                                     <span className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold ${i === 0 ? 'bg-yellow-100 text-yellow-700' :
@@ -389,13 +502,13 @@ function ReportTab({ report, isAr }: { report: BazaarReport; isAr: boolean }) {
             )}
 
             {/* Top Staff */}
-            {report.topStaff.length > 0 && (
+            {computedReport.topStaff.length > 0 && (
                 <div className="bg-white rounded-xl border p-6">
                     <h3 className="text-sm font-semibold text-gray-500 uppercase mb-4 flex items-center gap-2">
                         <Award size={16} /> {isAr ? 'أكتر Staff مبيعات' : 'Top Staff'}
                     </h3>
                     <div className="space-y-2">
-                        {report.topStaff.map((staff, i) => (
+                        {computedReport.topStaff.map((staff, i) => (
                             <div key={i} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors">
                                 <div className="flex items-center gap-3">
                                     <span className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold ${i === 0 ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-50 text-gray-500'

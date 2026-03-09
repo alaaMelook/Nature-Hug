@@ -19,6 +19,7 @@ interface BazaarWithStats extends Bazaar {
 
 interface BazaarsScreenProps {
     bazaars: BazaarWithStats[];
+    isPosOnly?: boolean;
 }
 
 const statusColors: Record<string, string> = {
@@ -35,7 +36,7 @@ const statusLabels: Record<string, { en: string; ar: string }> = {
     cancelled: { en: "Cancelled", ar: "ملغي" },
 };
 
-export default function BazaarsScreen({ bazaars }: BazaarsScreenProps) {
+export default function BazaarsScreen({ bazaars, isPosOnly = false }: BazaarsScreenProps) {
     const { t, i18n } = useTranslation();
     const router = useRouter();
     const params = useParams();
@@ -44,6 +45,8 @@ export default function BazaarsScreen({ bazaars }: BazaarsScreenProps) {
     const [statusFilter, setStatusFilter] = useState<string>("all");
 
     const filtered = bazaars.filter(b => {
+        // POS-only: show only active bazaars
+        if (isPosOnly && b.status !== 'active') return false;
         const matchSearch = !search || b.name.toLowerCase().includes(search.toLowerCase()) || b.location.toLowerCase().includes(search.toLowerCase());
         const matchStatus = statusFilter === "all" || b.status === statusFilter;
         return matchSearch && matchStatus;
@@ -81,59 +84,69 @@ export default function BazaarsScreen({ bazaars }: BazaarsScreenProps) {
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
                         <Store className="text-primary-600" size={28} />
-                        {i18n.language === 'ar' ? 'البازارات' : 'Bazaars'}
+                        {isPosOnly
+                            ? (i18n.language === 'ar' ? 'نقطة البيع' : 'Point of Sale')
+                            : (i18n.language === 'ar' ? 'البازارات' : 'Bazaars')}
                     </h1>
                     <p className="text-sm text-gray-500 mt-1">
-                        {i18n.language === 'ar' ? 'إدارة البازارات والأحداث الخارجية' : 'Manage bazaars and offline events'}
+                        {isPosOnly
+                            ? (i18n.language === 'ar' ? 'اختار البازار لبدء البيع' : 'Select a bazaar to start selling')
+                            : (i18n.language === 'ar' ? 'إدارة البازارات والأحداث الخارجية' : 'Manage bazaars and offline events')}
                     </p>
                 </div>
-                <Link
-                    href={`/${lang}/admin/bazaars/create`}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium shadow-sm"
-                >
-                    <Plus size={18} />
-                    {i18n.language === 'ar' ? 'بازار جديد' : 'New Bazaar'}
-                </Link>
+                {!isPosOnly && (
+                    <Link
+                        href={`/${lang}/admin/bazaars/create`}
+                        className="flex items-center gap-2 px-4 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium shadow-sm"
+                    >
+                        <Plus size={18} />
+                        {i18n.language === 'ar' ? 'بازار جديد' : 'New Bazaar'}
+                    </Link>
+                )}
             </div>
 
-            {/* Summary Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-                {[
-                    { label: i18n.language === 'ar' ? 'الكل' : 'Total', value: bazaars.length, color: 'bg-gray-50 border-gray-200' },
-                    { label: i18n.language === 'ar' ? 'نشط' : 'Active', value: bazaars.filter(b => b.status === 'active').length, color: 'bg-green-50 border-green-200' },
-                    { label: i18n.language === 'ar' ? 'إجمالي المبيعات' : 'Total Sales', value: `${bazaars.reduce((a, b) => a + b.totalSales, 0).toLocaleString()} EGP`, color: 'bg-blue-50 border-blue-200' },
-                    { label: i18n.language === 'ar' ? 'إجمالي الطلبات' : 'Total Orders', value: bazaars.reduce((a, b) => a + b.orderCount, 0), color: 'bg-purple-50 border-purple-200' },
-                ].map((card, i) => (
-                    <div key={i} className={`${card.color} border rounded-xl p-4`}>
-                        <p className="text-xs font-medium text-gray-500 uppercase">{card.label}</p>
-                        <p className="text-xl font-bold text-gray-900 mt-1">{card.value}</p>
-                    </div>
-                ))}
-            </div>
-
-            {/* Filters */}
-            <div className="flex flex-col sm:flex-row gap-3 mb-6">
-                <div className="relative flex-1">
-                    <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
-                        type="text"
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none"
-                        placeholder={i18n.language === 'ar' ? 'بحث بالاسم أو المكان...' : 'Search by name or location...'}
-                    />
-                </div>
-                <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="px-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none bg-white"
-                >
-                    <option value="all">{i18n.language === 'ar' ? 'كل الحالات' : 'All Status'}</option>
-                    {Object.entries(statusLabels).map(([key, val]) => (
-                        <option key={key} value={key}>{i18n.language === 'ar' ? val.ar : val.en}</option>
+            {/* Summary Cards - hidden for POS-only */}
+            {!isPosOnly && (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+                    {[
+                        { label: i18n.language === 'ar' ? 'الكل' : 'Total', value: bazaars.length, color: 'bg-gray-50 border-gray-200' },
+                        { label: i18n.language === 'ar' ? 'نشط' : 'Active', value: bazaars.filter(b => b.status === 'active').length, color: 'bg-green-50 border-green-200' },
+                        { label: i18n.language === 'ar' ? 'إجمالي المبيعات' : 'Total Sales', value: `${bazaars.reduce((a, b) => a + b.totalSales, 0).toLocaleString()} EGP`, color: 'bg-blue-50 border-blue-200' },
+                        { label: i18n.language === 'ar' ? 'إجمالي الطلبات' : 'Total Orders', value: bazaars.reduce((a, b) => a + b.orderCount, 0), color: 'bg-purple-50 border-purple-200' },
+                    ].map((card, i) => (
+                        <div key={i} className={`${card.color} border rounded-xl p-4`}>
+                            <p className="text-xs font-medium text-gray-500 uppercase">{card.label}</p>
+                            <p className="text-xl font-bold text-gray-900 mt-1">{card.value}</p>
+                        </div>
                     ))}
-                </select>
-            </div>
+                </div>
+            )}
+
+            {/* Filters - hidden for POS-only */}
+            {!isPosOnly && (
+                <div className="flex flex-col sm:flex-row gap-3 mb-6">
+                    <div className="relative flex-1">
+                        <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <input
+                            type="text"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none"
+                            placeholder={i18n.language === 'ar' ? 'بحث بالاسم أو المكان...' : 'Search by name or location...'}
+                        />
+                    </div>
+                    <select
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                        className="px-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none bg-white"
+                    >
+                        <option value="all">{i18n.language === 'ar' ? 'كل الحالات' : 'All Status'}</option>
+                        {Object.entries(statusLabels).map(([key, val]) => (
+                            <option key={key} value={key}>{i18n.language === 'ar' ? val.ar : val.en}</option>
+                        ))}
+                    </select>
+                </div>
+            )}
 
             {/* Bazaar List */}
             {filtered.length === 0 ? (
@@ -179,36 +192,42 @@ export default function BazaarsScreen({ bazaars }: BazaarsScreenProps) {
                                     </div>
                                     <div className="flex items-center gap-2 shrink-0">
                                         <Link
-                                            href={`/${lang}/admin/bazaars/${bazaar.id}`}
+                                            href={`/${lang}/admin/bazaars/${bazaar.id}${isPosOnly ? '?mode=pos' : ''}`}
                                             className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-primary-700 bg-primary-50 rounded-lg hover:bg-primary-100 transition-colors"
                                         >
                                             <Eye size={16} />
-                                            {i18n.language === 'ar' ? 'تفاصيل' : 'Details'}
+                                            {isPosOnly
+                                                ? (i18n.language === 'ar' ? 'ابدأ البيع' : 'Start POS')
+                                                : (i18n.language === 'ar' ? 'تفاصيل' : 'Details')}
                                         </Link>
-                                        <button
-                                            onClick={() => handleDelete(bazaar.id, bazaar.name)}
-                                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
+                                        {!isPosOnly && (
+                                            <button
+                                                onClick={() => handleDelete(bazaar.id, bazaar.name)}
+                                                className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
 
-                                {/* Stats Row */}
-                                <div className="flex items-center gap-6 mt-4 pt-4 border-t border-gray-100">
-                                    <div className="flex items-center gap-2 text-sm">
-                                        <ShoppingCart size={16} className="text-gray-400" />
-                                        <span className="text-gray-600">
-                                            <span className="font-semibold text-gray-900">{bazaar.orderCount}</span> {i18n.language === 'ar' ? 'طلب' : 'orders'}
-                                        </span>
+                                {/* Stats Row - hide for POS-only */}
+                                {!isPosOnly && (
+                                    <div className="flex items-center gap-6 mt-4 pt-4 border-t border-gray-100">
+                                        <div className="flex items-center gap-2 text-sm">
+                                            <ShoppingCart size={16} className="text-gray-400" />
+                                            <span className="text-gray-600">
+                                                <span className="font-semibold text-gray-900">{bazaar.orderCount}</span> {i18n.language === 'ar' ? 'طلب' : 'orders'}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-sm">
+                                            <TrendingUp size={16} className="text-gray-400" />
+                                            <span className="text-gray-600">
+                                                <span className="font-semibold text-gray-900">{bazaar.totalSales.toLocaleString()} EGP</span> {i18n.language === 'ar' ? 'مبيعات' : 'sales'}
+                                            </span>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-2 text-sm">
-                                        <TrendingUp size={16} className="text-gray-400" />
-                                        <span className="text-gray-600">
-                                            <span className="font-semibold text-gray-900">{bazaar.totalSales.toLocaleString()} EGP</span> {i18n.language === 'ar' ? 'مبيعات' : 'sales'}
-                                        </span>
-                                    </div>
-                                </div>
+                                )}
                             </div>
                         </motion.div>
                     ))}

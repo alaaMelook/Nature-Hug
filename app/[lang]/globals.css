@@ -77,3 +77,41 @@ button {
 .normalize_cursor {
     cursor: default;
 }
+
+/* Print styles for bazaar report */
+@media print {
+    /* Hide sidebar, header, tabs, and non-printable elements */
+    aside, nav, header, .no-print {
+        display: none !important;
+    }
+
+    /* Make main content full width */
+    main, [role="main"] {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    /* Show print-only elements */
+    .print-only {
+        display: block !important;
+    }
+
+    /* Clean background */
+    body {
+        background: white !important;
+    }
+
+    /* Remove shadows and borders for cleaner print */
+    .print-report .rounded-xl {
+        border: 1px solid #e5e7eb !important;
+        box-shadow: none !important;
+    }
+
+    /* Page setup */
+    @page {
+        size: A4;
+        margin: 1.5cm;
+    }
+}
