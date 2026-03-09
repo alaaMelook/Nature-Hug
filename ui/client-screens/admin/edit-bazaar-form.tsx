@@ -149,7 +149,7 @@ export default function EditBazaarForm({ bazaar }: EditBazaarFormProps) {
                         </label>
                         <select
                             value={status}
-                            onChange={(e) => setStatus(e.target.value)}
+                            onChange={(e) => setStatus(e.target.value as "upcoming" | "active" | "completed" | "cancelled")}
                             className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none bg-white"
                         >
                             <option value="upcoming">{isAr ? 'قادم' : 'Upcoming'}</option>
