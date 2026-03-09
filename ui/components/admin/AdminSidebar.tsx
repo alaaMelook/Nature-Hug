@@ -18,7 +18,8 @@ import {
   Wallet,
   Heart,
   Palette,
-  UsersRound
+  UsersRound,
+  Store
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
@@ -84,6 +85,15 @@ export default function AdminSidebar({
       name: t("promoCodes"),
       href: "/admin/promo-codes",
       icon: Tag,
+    },
+    {
+      name: i18n.language === 'ar' ? 'البازارات' : 'Bazaars',
+      href: "/admin/bazaars",
+      icon: Store,
+      submenu: [
+        { name: i18n.language === 'ar' ? 'كل البازارات' : 'All Bazaars', href: "/admin/bazaars" },
+        { name: i18n.language === 'ar' ? 'بازار جديد' : 'New Bazaar', href: "/admin/bazaars/create" },
+      ]
     },
     {
       name: t("shippingNav") || "Shipping",

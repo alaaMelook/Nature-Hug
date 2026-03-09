@@ -1,0 +1,742 @@
+"use client";
+
+import React, { useState, useMemo, useEffect, useCallback } from "react";
+import { useRouter, useParams } from "next/navigation";
+import { useTranslation } from "react-i18next";
+import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
+import {
+    ArrowLeft, Store, ShoppingCart, TrendingUp, Users, Package,
+    Plus, Minus, X, Search, Loader2, DollarSign, Tag,
+    BarChart3, Phone, User, CreditCard, Banknote, Wallet,
+    ChevronDown, Check, Trophy, Award, Star, Pencil
+} from "lucide-react";
+import { Bazaar } from "@/domain/entities/database/bazaar";
+import { ProductView } from "@/domain/entities/views/shop/productView";
+import { PromoCode } from "@/domain/entities/database/promoCode";
+import { OrderDetailsView } from "@/domain/entities/views/admin/orderDetailsView";
+import { createAdminOrderAction } from "@/ui/hooks/admin/useAdminCreateOrder";
+
+interface BazaarReport {
+    totalSales: number;
+    orderCount: number;
+    customerCount: number;
+    topProducts: { name: string; quantity: number; revenue: number }[];
+    topStaff: { name: string; orderCount: number; totalSales: number }[];
+    paymentBreakdown: { method: string; count: number; total: number }[];
+}
+
+interface POSItem {
+    product: ProductView;
+    quantity: number;
+    unitPrice: number;
+}
+
+interface BazaarDetailScreenProps {
+    bazaar: Bazaar;
+    report: BazaarReport;
+    orders: OrderDetailsView[];
+    products: ProductView[];
+    promoCodes: PromoCode[];
+}
+
+type ActiveTab = 'report' | 'pos' | 'orders';
+
+const PAYMENT_METHODS = [
+    { key: 'cash', label: 'Cash', labelAr: 'كاش', icon: Banknote, color: 'bg-green-50 border-green-300 text-green-700' },
+    { key: 'instapay', label: 'InstaPay', labelAr: 'إنستاباي', icon: CreditCard, color: 'bg-blue-50 border-blue-300 text-blue-700' },
+    { key: 'wallet', label: 'Wallet', labelAr: 'محفظة', icon: Wallet, color: 'bg-purple-50 border-purple-300 text-purple-700' },
+];
+
+export default function BazaarDetailScreen({ bazaar, report, orders, products, promoCodes }: BazaarDetailScreenProps) {
+    const { t, i18n } = useTranslation();
+    const router = useRouter();
+    const params = useParams();
+    const lang = params?.lang as string;
+    const isAr = i18n.language === 'ar';
+
+    const [activeTab, setActiveTab] = useState<ActiveTab>('report');
+
+    // ====== POS STATE ======
+    const [customerName, setCustomerName] = useState("");
+    const [customerPhone, setCustomerPhone] = useState("");
+    const [posItems, setPosItems] = useState<POSItem[]>([]);
+    const [productSearch, setProductSearch] = useState("");
+    const [promoCodeInput, setPromoCodeInput] = useState("");
+    const [appliedPromos, setAppliedPromos] = useState<PromoCode[]>([]);
+    const [paymentMethod, setPaymentMethod] = useState("cash");
+    const [posLoading, setPosLoading] = useState(false);
+    const [showProducts, setShowProducts] = useState(false);
+
+    // Customer search
+    const [customerSearchQuery, setCustomerSearchQuery] = useState("");
+    const [customerSearchResults, setCustomerSearchResults] = useState<any[]>([]);
+    const [searchingCustomers, setSearchingCustomers] = useState(false);
+    const [showCustomerSearch, setShowCustomerSearch] = useState(false);
+
+    // Customer search with debounce
+    useEffect(() => {
+        if (customerSearchQuery.length < 2) {
+            setCustomerSearchResults([]);
+            return;
+        }
+        const timer = setTimeout(async () => {
+            setSearchingCustomers(true);
+            try {
+                const res = await fetch(`/api/admin/customers/search?q=${encodeURIComponent(customerSearchQuery)}`);
+                const data = await res.json();
+                if (Array.isArray(data)) setCustomerSearchResults(data);
+            } catch {
+                console.error("Customer search error");
+            } finally {
+                setSearchingCustomers(false);
+            }
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [customerSearchQuery]);
+
+    const filteredProducts = useMemo(() => {
+        if (!productSearch.trim()) return products;
+        const s = productSearch.toLowerCase();
+        return products.filter(p => p.name.toLowerCase().includes(s) || p.slug.toLowerCase().includes(s));
+    }, [products, productSearch]);
+
+    const subtotal = useMemo(() => posItems.reduce((acc, item) => acc + (item.unitPrice * item.quantity), 0), [posItems]);
+
+    const discount = useMemo(() => {
+        if (appliedPromos.length === 0) return 0;
+        let remaining = subtotal;
+        let total = 0;
+        // Fixed amounts first
+        appliedPromos.forEach(promo => {
+            if (promo.amount_off && promo.amount_off > 0) {
+                const d = Math.min(promo.amount_off, remaining);
+                total += d;
+                remaining -= d;
+            }
+        });
+        // Then percentages
+        appliedPromos.forEach(promo => {
+            if (promo.percentage_off && promo.percentage_off > 0) {
+                const d = remaining * (promo.percentage_off / 100);
+                total += d;
+                remaining -= d;
+            }
+        });
+        return Math.min(total, subtotal);
+    }, [appliedPromos, subtotal]);
+
+    const grandTotal = subtotal - discount;
+
+    const addProduct = (product: ProductView) => {
+        const existing = posItems.find(item => item.product.slug === product.slug);
+        if (existing) {
+            setPosItems(prev => prev.map(item =>
+                item.product.slug === product.slug ? { ...item, quantity: item.quantity + 1 } : item
+            ));
+        } else {
+            setPosItems(prev => [...prev, { product, quantity: 1, unitPrice: product.price }]);
+        }
+        setShowProducts(false);
+        setProductSearch("");
+    };
+
+    const updateQuantity = (slug: string, delta: number) => {
+        setPosItems(prev => prev.map(item => {
+            if (item.product.slug === slug) {
+                const newQty = item.quantity + delta;
+                if (newQty <= 0) return item;
+                return { ...item, quantity: newQty };
+            }
+            return item;
+        }));
+    };
+
+    const removeItem = (slug: string) => {
+        setPosItems(prev => prev.filter(item => item.product.slug !== slug));
+    };
+
+    const updateUnitPrice = (slug: string, newPrice: number) => {
+        if (isNaN(newPrice) || newPrice < 0) return;
+        setPosItems(prev => prev.map(item =>
+            item.product.slug === slug ? { ...item, unitPrice: newPrice } : item
+        ));
+    };
+
+    const applyPromoCode = () => {
+        const promo = promoCodes.find(p =>
+            p.code.toLowerCase() === promoCodeInput.toLowerCase() && p.is_active
+        );
+        if (promo) {
+            if (appliedPromos.some(p => p.id === promo.id)) {
+                toast.error(isAr ? 'الكود مطبق بالفعل' : 'Code already applied');
+                return;
+            }
+            setAppliedPromos(prev => [...prev, promo]);
+            setPromoCodeInput("");
+            toast.success(isAr ? `تم تطبيق ${promo.code}` : `Applied ${promo.code}`);
+        } else {
+            toast.error(isAr ? 'كود غير صحيح' : 'Invalid promo code');
+        }
+    };
+
+    const handlePOSSubmit = async () => {
+        if (!customerName.trim()) {
+            toast.error(isAr ? 'اسم العميل مطلوب' : 'Customer name is required');
+            return;
+        }
+        if (!customerPhone.trim()) {
+            toast.error(isAr ? 'رقم التليفون مطلوب' : 'Phone number is required');
+            return;
+        }
+        if (posItems.length === 0) {
+            toast.error(isAr ? 'أضف منتجات للأوردر' : 'Add products to the order');
+            return;
+        }
+
+        setPosLoading(true);
+        try {
+            const orderData = {
+                guest_name: customerName,
+                guest_phone: customerPhone,
+                guest_phone2: null,
+                guest_email: null,
+                guest_address: { address: `Bazaar: ${bazaar.name}`, governorate_slug: 'cairo' },
+                subtotal,
+                discount_total: discount,
+                shipping_total: 0,
+                tax_total: 0,
+                grand_total: grandTotal,
+                payment_method: paymentMethod,
+                payment_status: "paid",
+                status: "completed",
+                note: `Bazaar Order - ${bazaar.name}`,
+                promo_code_id: appliedPromos[0]?.id ?? null,
+                bazaar_id: bazaar.id,
+                items: posItems.map(item => ({
+                    product_id: item.product.id,
+                    variant_id: item.product.variant_id,
+                    quantity: item.quantity,
+                    unit_price: item.unitPrice,
+                    discount: 0
+                }))
+            };
+
+            const result = await createAdminOrderAction(orderData);
+
+            if (result.error) {
+                toast.error(result.error);
+            } else {
+                toast.success(isAr ? '✅ تم تسجيل الأوردر بنجاح' : '✅ Order recorded successfully');
+                // Reset POS
+                setCustomerName("");
+                setCustomerPhone("");
+                setPosItems([]);
+                setAppliedPromos([]);
+                setPromoCodeInput("");
+                setPaymentMethod("cash");
+                router.refresh();
+            }
+        } catch (error) {
+            console.error("POS submit error:", error);
+            toast.error(isAr ? 'حدث خطأ' : 'An error occurred');
+        } finally {
+            setPosLoading(false);
+        }
+    };
+
+    const tabs = [
+        { key: 'report' as ActiveTab, label: isAr ? '📊 التقرير' : '📊 Report', icon: BarChart3 },
+        { key: 'pos' as ActiveTab, label: isAr ? '🛒 نقطة البيع' : '🛒 POS', icon: ShoppingCart },
+        { key: 'orders' as ActiveTab, label: isAr ? '📋 الطلبات' : '📋 Orders', icon: Package },
+    ];
+
+    return (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-4 sm:p-6 max-w-7xl mx-auto">
+            {/* Header */}
+            <div className="flex items-center gap-4 mb-6">
+                <button onClick={() => router.push(`/${lang}/admin/bazaars`)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                    <ArrowLeft size={20} />
+                </button>
+                <div className="flex-1">
+                    <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                        <Store className="text-primary-600" size={24} />
+                        {bazaar.name}
+                    </h1>
+                    <p className="text-sm text-gray-500">{bazaar.location} • {bazaar.start_date} → {bazaar.end_date}</p>
+                </div>
+                <button
+                    onClick={() => router.push(`/${lang}/admin/bazaars/${bazaar.id}/edit`)}
+                    className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
+                >
+                    <Pencil size={16} />
+                    {isAr ? 'تعديل' : 'Edit'}
+                </button>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex gap-2 mb-6 bg-gray-100 rounded-xl p-1">
+                {tabs.map(tab => (
+                    <button
+                        key={tab.key}
+                        onClick={() => setActiveTab(tab.key)}
+                        className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${activeTab === tab.key
+                            ? 'bg-white text-primary-700 shadow-sm'
+                            : 'text-gray-500 hover:text-gray-700'
+                            }`}
+                    >
+                        {tab.label}
+                    </button>
+                ))}
+            </div>
+
+            {/* Tab Content */}
+            {activeTab === 'report' && <ReportTab report={report} isAr={isAr} />}
+            {activeTab === 'pos' && (
+                <POSTab
+                    isAr={isAr}
+                    customerName={customerName} setCustomerName={setCustomerName}
+                    customerPhone={customerPhone} setCustomerPhone={setCustomerPhone}
+                    posItems={posItems} showProducts={showProducts} setShowProducts={setShowProducts}
+                    productSearch={productSearch} setProductSearch={setProductSearch}
+                    filteredProducts={filteredProducts} addProduct={addProduct}
+                    updateQuantity={updateQuantity} removeItem={removeItem}
+                    updateUnitPrice={updateUnitPrice}
+                    promoCodeInput={promoCodeInput} setPromoCodeInput={setPromoCodeInput}
+                    applyPromoCode={applyPromoCode} appliedPromos={appliedPromos}
+                    setAppliedPromos={setAppliedPromos}
+                    paymentMethod={paymentMethod} setPaymentMethod={setPaymentMethod}
+                    subtotal={subtotal} discount={discount} grandTotal={grandTotal}
+                    posLoading={posLoading} handlePOSSubmit={handlePOSSubmit}
+                    customerSearchQuery={customerSearchQuery} setCustomerSearchQuery={setCustomerSearchQuery}
+                    customerSearchResults={customerSearchResults} searchingCustomers={searchingCustomers}
+                    showCustomerSearch={showCustomerSearch} setShowCustomerSearch={setShowCustomerSearch}
+                    setCustomerSearchResults={setCustomerSearchResults}
+                    t={t}
+                />
+            )}
+            {activeTab === 'orders' && <OrdersTab orders={orders} isAr={isAr} lang={lang} />}
+        </motion.div>
+    );
+}
+
+// ======================== REPORT TAB ========================
+function ReportTab({ report, isAr }: { report: BazaarReport; isAr: boolean }) {
+    return (
+        <div className="space-y-6">
+            {/* Summary Cards */}
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                {[
+                    { label: isAr ? 'إجمالي المبيعات' : 'Total Sales', value: `${report.totalSales.toLocaleString()} EGP`, icon: TrendingUp, color: 'text-green-600 bg-green-50' },
+                    { label: isAr ? 'عدد الطلبات' : 'Orders', value: report.orderCount, icon: ShoppingCart, color: 'text-blue-600 bg-blue-50' },
+                    { label: isAr ? 'عدد العملاء' : 'Customers', value: report.customerCount, icon: Users, color: 'text-purple-600 bg-purple-50' },
+                ].map((card, i) => (
+                    <div key={i} className="bg-white rounded-xl border p-5">
+                        <div className="flex items-center gap-3 mb-2">
+                            <div className={`p-2 rounded-lg ${card.color}`}><card.icon size={20} /></div>
+                            <span className="text-sm font-medium text-gray-500">{card.label}</span>
+                        </div>
+                        <p className="text-2xl font-bold text-gray-900">{card.value}</p>
+                    </div>
+                ))}
+            </div>
+
+            {/* Payment Breakdown */}
+            {report.paymentBreakdown.length > 0 && (
+                <div className="bg-white rounded-xl border p-6">
+                    <h3 className="text-sm font-semibold text-gray-500 uppercase mb-4 flex items-center gap-2">
+                        <CreditCard size={16} /> {isAr ? 'طرق الدفع' : 'Payment Methods'}
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        {report.paymentBreakdown.map((pm, i) => (
+                            <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div>
+                                    <p className="font-medium text-gray-900 capitalize">{pm.method}</p>
+                                    <p className="text-xs text-gray-500">{pm.count} {isAr ? 'طلب' : 'orders'}</p>
+                                </div>
+                                <p className="font-bold text-gray-900">{pm.total.toLocaleString()} EGP</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Top Products */}
+            {report.topProducts.length > 0 && (
+                <div className="bg-white rounded-xl border p-6">
+                    <h3 className="text-sm font-semibold text-gray-500 uppercase mb-4 flex items-center gap-2">
+                        <Trophy size={16} /> {isAr ? 'المنتجات الأكثر مبيعاً' : 'Top Products'}
+                    </h3>
+                    <div className="space-y-2">
+                        {report.topProducts.slice(0, 10).map((product, i) => (
+                            <div key={i} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors">
+                                <div className="flex items-center gap-3">
+                                    <span className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold ${i === 0 ? 'bg-yellow-100 text-yellow-700' :
+                                        i === 1 ? 'bg-gray-100 text-gray-700' :
+                                            i === 2 ? 'bg-orange-100 text-orange-700' :
+                                                'bg-gray-50 text-gray-500'
+                                        }`}>{i + 1}</span>
+                                    <span className="font-medium text-gray-900">{product.name}</span>
+                                </div>
+                                <div className="flex items-center gap-4 text-sm">
+                                    <span className="text-gray-500">{product.quantity} {isAr ? 'قطعة' : 'pcs'}</span>
+                                    <span className="font-semibold text-gray-900">{product.revenue.toLocaleString()} EGP</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Top Staff */}
+            {report.topStaff.length > 0 && (
+                <div className="bg-white rounded-xl border p-6">
+                    <h3 className="text-sm font-semibold text-gray-500 uppercase mb-4 flex items-center gap-2">
+                        <Award size={16} /> {isAr ? 'أكتر Staff مبيعات' : 'Top Staff'}
+                    </h3>
+                    <div className="space-y-2">
+                        {report.topStaff.map((staff, i) => (
+                            <div key={i} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors">
+                                <div className="flex items-center gap-3">
+                                    <span className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold ${i === 0 ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-50 text-gray-500'
+                                        }`}>{i + 1}</span>
+                                    <span className="font-medium text-gray-900">{staff.name}</span>
+                                </div>
+                                <div className="flex items-center gap-4 text-sm">
+                                    <span className="text-gray-500">{staff.orderCount} {isAr ? 'طلب' : 'orders'}</span>
+                                    <span className="font-semibold text-gray-900">{staff.totalSales.toLocaleString()} EGP</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ======================== POS TAB ========================
+function POSTab({
+    isAr, customerName, setCustomerName, customerPhone, setCustomerPhone,
+    posItems, showProducts, setShowProducts, productSearch, setProductSearch,
+    filteredProducts, addProduct, updateQuantity, removeItem, updateUnitPrice,
+    promoCodeInput, setPromoCodeInput, applyPromoCode, appliedPromos, setAppliedPromos,
+    paymentMethod, setPaymentMethod,
+    subtotal, discount, grandTotal, posLoading, handlePOSSubmit,
+    customerSearchQuery, setCustomerSearchQuery, customerSearchResults,
+    searchingCustomers, showCustomerSearch, setShowCustomerSearch, setCustomerSearchResults, t
+}: any) {
+    return (
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+            {/* Left: Products & Customer */}
+            <div className="lg:col-span-3 space-y-4">
+                {/* Customer Quick Entry */}
+                <div className="bg-white rounded-xl border p-4">
+                    <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-sm font-semibold text-gray-500 uppercase flex items-center gap-2">
+                            <User size={16} /> {isAr ? 'بيانات العميل' : 'Customer'}
+                        </h3>
+                        <button
+                            onClick={() => setShowCustomerSearch(!showCustomerSearch)}
+                            className="text-xs px-2 py-1 bg-primary-50 text-primary-700 rounded-md hover:bg-primary-100"
+                        >
+                            {isAr ? '🔍 بحث' : '🔍 Search'}
+                        </button>
+                    </div>
+
+                    {showCustomerSearch && (
+                        <div className="mb-3 p-3 bg-gray-50 rounded-lg">
+                            <input
+                                type="text"
+                                value={customerSearchQuery}
+                                onChange={(e) => setCustomerSearchQuery(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500/20 outline-none"
+                                placeholder={isAr ? 'بحث بالاسم أو الرقم...' : 'Search by name or phone...'}
+                                autoFocus
+                            />
+                            {searchingCustomers && <Loader2 className="w-4 h-4 animate-spin mt-2 mx-auto text-gray-400" />}
+                            {customerSearchResults.length > 0 && (
+                                <div className="mt-2 max-h-32 overflow-y-auto space-y-1">
+                                    {customerSearchResults.map((c: any, idx: number) => (
+                                        <button
+                                            key={idx}
+                                            onClick={() => {
+                                                setCustomerName(c.name || "");
+                                                setCustomerPhone(c.phone || "");
+                                                setShowCustomerSearch(false);
+                                                setCustomerSearchQuery("");
+                                                setCustomerSearchResults([]);
+                                            }}
+                                            className="w-full text-left p-2 hover:bg-white rounded text-sm"
+                                        >
+                                            <p className="font-medium">{c.name || 'No name'}</p>
+                                            <p className="text-xs text-gray-500">{c.phone}</p>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <input
+                            type="text"
+                            value={customerName}
+                            onChange={(e) => setCustomerName(e.target.value)}
+                            className="px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500/20 outline-none"
+                            placeholder={isAr ? 'اسم العميل *' : 'Customer Name *'}
+                        />
+                        <div className="relative">
+                            <Phone className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                            <input
+                                type="tel"
+                                value={customerPhone}
+                                onChange={(e) => setCustomerPhone(e.target.value)}
+                                className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500/20 outline-none"
+                                placeholder="01xxxxxxxxx *"
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Products Grid */}
+                <div className="bg-white rounded-xl border p-4">
+                    <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-sm font-semibold text-gray-500 uppercase flex items-center gap-2">
+                            <Package size={16} /> {isAr ? 'المنتجات' : 'Products'}
+                        </h3>
+                        <button
+                            onClick={() => setShowProducts(!showProducts)}
+                            className="flex items-center gap-2 px-3 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm font-medium"
+                        >
+                            <Plus size={16} /> {isAr ? 'إضافة' : 'Add'}
+                        </button>
+                    </div>
+
+                    {/* Product Search & Grid */}
+                    <AnimatePresence>
+                        {showProducts && (
+                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden mb-4">
+                                <div className="relative mb-3">
+                                    <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                                    <input
+                                        type="text"
+                                        value={productSearch}
+                                        onChange={(e) => setProductSearch(e.target.value)}
+                                        className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500/20 outline-none"
+                                        placeholder={isAr ? 'بحث المنتجات...' : 'Search products...'}
+                                        autoFocus
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-64 overflow-y-auto">
+                                    {filteredProducts.map((product: ProductView) => (
+                                        <button
+                                            key={product.slug}
+                                            onClick={() => addProduct(product)}
+                                            className="text-left p-3 border border-gray-200 rounded-lg hover:border-primary-400 hover:bg-primary-50 transition-colors"
+                                        >
+                                            <p className="font-medium text-sm text-gray-900 truncate">{product.name}</p>
+                                            <p className="text-xs text-primary-600 font-semibold mt-1">{product.price} EGP</p>
+                                        </button>
+                                    ))}
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    {/* Cart Items */}
+                    {posItems.length === 0 ? (
+                        <div className="text-center py-8 text-gray-400">
+                            <ShoppingCart size={40} className="mx-auto mb-2 opacity-50" />
+                            <p className="text-sm">{isAr ? 'أضف منتجات للأوردر' : 'Add products to order'}</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-2">
+                            {posItems.map((item: POSItem) => (
+                                <div key={item.product.slug} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-medium text-sm text-gray-900 truncate">{item.product.name}</p>
+                                        <div className="flex items-center gap-1 mt-0.5">
+                                            <input
+                                                type="number"
+                                                value={item.unitPrice}
+                                                onChange={(e) => updateUnitPrice(item.product.slug, parseFloat(e.target.value) || 0)}
+                                                className="w-20 text-xs text-gray-500 bg-transparent border-b border-dashed border-gray-300 focus:border-primary-500 outline-none py-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                min="0"
+                                                step="0.01"
+                                            />
+                                            <span className="text-xs text-gray-400">EGP</span>
+                                            {item.unitPrice !== item.product.price && (
+                                                <span className="text-xs text-orange-500 line-through ml-1">{item.product.price}</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                        <button onClick={() => updateQuantity(item.product.slug, -1)} className="p-1 hover:bg-gray-200 rounded"><Minus size={14} /></button>
+                                        <span className="w-6 text-center text-sm font-medium">{item.quantity}</span>
+                                        <button onClick={() => updateQuantity(item.product.slug, 1)} className="p-1 hover:bg-gray-200 rounded"><Plus size={14} /></button>
+                                    </div>
+                                    <span className="text-sm font-semibold w-20 text-right">{(item.unitPrice * item.quantity).toLocaleString()} EGP</span>
+                                    <button onClick={() => removeItem(item.product.slug)} className="p-1 text-red-500 hover:bg-red-50 rounded"><X size={14} /></button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Right: Summary & Payment */}
+            <div className="lg:col-span-2 space-y-4">
+                {/* Promo Code */}
+                <div className="bg-white rounded-xl border p-4">
+                    <h3 className="text-sm font-semibold text-gray-500 uppercase mb-3 flex items-center gap-2">
+                        <Tag size={16} /> {isAr ? 'كود خصم' : 'Promo Code'}
+                    </h3>
+                    {appliedPromos.length > 0 && (
+                        <div className="space-y-2 mb-3">
+                            {appliedPromos.map((promo: PromoCode) => (
+                                <div key={promo.id} className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg p-2">
+                                    <div className="flex items-center gap-2">
+                                        <Tag className="w-4 h-4 text-green-600" />
+                                        <span className="font-medium text-green-700 text-sm">{promo.code}</span>
+                                        <span className="text-xs text-green-600">
+                                            {promo.percentage_off ? `${promo.percentage_off}%` : `${promo.amount_off} EGP`}
+                                        </span>
+                                    </div>
+                                    <button onClick={() => setAppliedPromos((prev: PromoCode[]) => prev.filter((p: PromoCode) => p.id !== promo.id))} className="text-red-500"><X size={14} /></button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    <div className="flex gap-2">
+                        <input
+                            type="text"
+                            value={promoCodeInput}
+                            onChange={(e) => setPromoCodeInput(e.target.value)}
+                            className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500/20 outline-none"
+                            placeholder={isAr ? 'أدخل الكود' : 'Enter code'}
+                        />
+                        <button onClick={applyPromoCode} disabled={!promoCodeInput.trim()} className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 text-sm font-medium">
+                            {isAr ? 'تطبيق' : 'Apply'}
+                        </button>
+                    </div>
+                </div>
+
+                {/* Payment Method */}
+                <div className="bg-white rounded-xl border p-4">
+                    <h3 className="text-sm font-semibold text-gray-500 uppercase mb-3 flex items-center gap-2">
+                        <CreditCard size={16} /> {isAr ? 'طريقة الدفع' : 'Payment'}
+                    </h3>
+                    <div className="grid grid-cols-3 gap-2">
+                        {PAYMENT_METHODS.map(pm => (
+                            <button
+                                key={pm.key}
+                                onClick={() => setPaymentMethod(pm.key)}
+                                className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border-2 transition-all text-sm font-medium ${paymentMethod === pm.key
+                                    ? `${pm.color} border-current`
+                                    : 'bg-gray-50 border-transparent text-gray-500 hover:bg-gray-100'
+                                    }`}
+                            >
+                                <pm.icon size={20} />
+                                <span>{isAr ? pm.labelAr : pm.label}</span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Order Summary */}
+                <div className="bg-white rounded-xl border p-4">
+                    <h3 className="text-sm font-semibold text-gray-500 uppercase mb-3 flex items-center gap-2">
+                        <DollarSign size={16} /> {isAr ? 'ملخص الطلب' : 'Summary'}
+                    </h3>
+                    <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                            <span className="text-gray-600">{isAr ? 'المجموع الفرعي' : 'Subtotal'}</span>
+                            <span className="font-medium">{subtotal.toLocaleString()} EGP</span>
+                        </div>
+                        {discount > 0 && (
+                            <div className="flex justify-between text-green-600">
+                                <span>{isAr ? 'الخصم' : 'Discount'}</span>
+                                <span className="font-medium">-{discount.toLocaleString()} EGP</span>
+                            </div>
+                        )}
+                        <div className="flex justify-between items-center pt-3 border-t text-lg font-bold">
+                            <span>{isAr ? 'الإجمالي' : 'Total'}</span>
+                            <span className="text-primary-600">{grandTotal.toLocaleString()} EGP</span>
+                        </div>
+                    </div>
+
+                    <button
+                        onClick={handlePOSSubmit}
+                        disabled={posLoading || posItems.length === 0}
+                        className="w-full mt-4 py-3 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                    >
+                        {posLoading ? (
+                            <><Loader2 className="animate-spin" size={20} /> {isAr ? 'جاري التسجيل...' : 'Recording...'}</>
+                        ) : (
+                            <><Check size={20} /> {isAr ? 'تأكيد الأوردر' : 'Confirm Order'}</>
+                        )}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ======================== ORDERS TAB ========================
+function OrdersTab({ orders, isAr, lang }: { orders: any[]; isAr: boolean; lang: string }) {
+    const router = useRouter();
+
+    if (orders.length === 0) {
+        return (
+            <div className="text-center py-16 bg-white rounded-xl border">
+                <ShoppingCart size={48} className="mx-auto mb-3 text-gray-300" />
+                <p className="text-gray-500 font-medium">{isAr ? 'لا توجد طلبات' : 'No orders yet'}</p>
+            </div>
+        );
+    }
+
+    return (
+        <div className="bg-white rounded-xl border overflow-hidden">
+            <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                    <thead className="bg-gray-50 border-b">
+                        <tr>
+                            <th className="px-4 py-3 text-left font-medium text-gray-500">#</th>
+                            <th className="px-4 py-3 text-left font-medium text-gray-500">{isAr ? 'العميل' : 'Customer'}</th>
+                            <th className="px-4 py-3 text-left font-medium text-gray-500">{isAr ? 'الإجمالي' : 'Total'}</th>
+                            <th className="px-4 py-3 text-left font-medium text-gray-500">{isAr ? 'الدفع' : 'Payment'}</th>
+                            <th className="px-4 py-3 text-left font-medium text-gray-500">{isAr ? 'الحالة' : 'Status'}</th>
+                            <th className="px-4 py-3 text-left font-medium text-gray-500">{isAr ? 'بواسطة' : 'By'}</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                        {orders.map(order => (
+                            <tr
+                                key={order.order_id}
+                                onClick={() => router.push(`/${lang}/admin/orders/${order.order_id}`)}
+                                className="hover:bg-gray-50 cursor-pointer transition-colors"
+                            >
+                                <td className="px-4 py-3 font-medium text-gray-900">#{order.order_id}</td>
+                                <td className="px-4 py-3">
+                                    <p className="font-medium text-gray-900">{order.customer_name}</p>
+                                </td>
+                                <td className="px-4 py-3 font-semibold text-gray-900">{order.grand_total?.toLocaleString()} EGP</td>
+                                <td className="px-4 py-3 capitalize text-gray-600">{order.payment_method}</td>
+                                <td className="px-4 py-3">
+                                    <span className={`text-xs font-medium px-2 py-1 rounded-full ${order.status === 'completed' ? 'bg-green-100 text-green-700' :
+                                        order.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                                            'bg-yellow-100 text-yellow-700'
+                                        }`}>
+                                        {order.status}
+                                    </span>
+                                </td>
+                                <td className="px-4 py-3 text-gray-500 text-xs">{order.created_by_user_name || '—'}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+}

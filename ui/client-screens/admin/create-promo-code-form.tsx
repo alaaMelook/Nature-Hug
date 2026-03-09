@@ -1,15 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createPromoCodeAction } from "@/ui/hooks/admin/promo-codes";
 import { ProductAdminView } from "@/domain/entities/views/admin/productAdminView";
 import { ProfileView } from "@/domain/entities/views/shop/profileView";
-import { Save, ArrowLeft, Check, Search, Users } from "lucide-react";
+import { Save, ArrowLeft, Check, Search, Users, Store } from "lucide-react";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import { PromoCode } from "@/domain/entities/database/promoCode";
 import { motion } from "framer-motion";
+import { Bazaar } from "@/domain/entities/database/bazaar";
 
 interface CreatePromoCodeFormProps {
     products: ProductAdminView[];
@@ -45,6 +46,17 @@ export default function CreatePromoCodeForm({ products, customers = [] }: Create
     const [amountOff, setAmountOff] = useState<number>(0);
     const [minOrderAmount, setMinOrderAmount] = useState<string>("");
     const [autoApply, setAutoApply] = useState<boolean>(false);
+    // Bazaar restriction state
+    const [bazaarOnly, setBazaarOnly] = useState<boolean>(false);
+    const [bazaarId, setBazaarId] = useState<number | null>(null);
+    const [bazaarList, setBazaarList] = useState<Bazaar[]>([]);
+
+    // Fetch bazaars on mount
+    useEffect(() => {
+        fetch('/api/admin/bazaars').then(r => r.json()).then(data => {
+            if (Array.isArray(data)) setBazaarList(data);
+        }).catch(console.error);
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -78,6 +90,8 @@ export default function CreatePromoCodeForm({ products, customers = [] }: Create
                 stacking_mode: stackingMode,
                 min_order_amount: minOrderAmount ? parseFloat(minOrderAmount) : undefined,
                 auto_apply: autoApply,
+                bazaar_only: bazaarOnly,
+                bazaar_id: bazaarOnly ? bazaarId : null,
             } as PromoCode);
 
             if (result.success) {
@@ -352,6 +366,50 @@ export default function CreatePromoCodeForm({ products, customers = [] }: Create
                                     <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
                                 </div>
                             </label>
+                        </div>
+
+                        {/* Bazaar Only Toggle */}
+                        <div className="pt-4 border-t border-gray-100">
+                            <label className="flex items-center justify-between cursor-pointer group">
+                                <div>
+                                    <span className="block text-sm font-medium text-gray-900 flex items-center gap-2">
+                                        <Store className="w-4 h-4 text-orange-600" />
+                                        {i18n.language === 'ar' ? 'بازار فقط' : 'Bazaar Only'}
+                                    </span>
+                                    <span className="block text-xs text-gray-500">
+                                        {i18n.language === 'ar' ? 'هذا الكود يعمل فقط في البازار ولن يظهر أونلاين' : 'This code only works in bazaar POS and won\'t appear online'}
+                                    </span>
+                                </div>
+                                <div className="relative">
+                                    <input
+                                        type="checkbox"
+                                        checked={bazaarOnly}
+                                        onChange={(e) => setBazaarOnly(e.target.checked)}
+                                        className="sr-only peer"
+                                    />
+                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
+                                </div>
+                            </label>
+                            {bazaarOnly && (
+                                <div className="mt-3">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        {i18n.language === 'ar' ? 'اختر البازار' : 'Select Bazaar'}
+                                    </label>
+                                    <select
+                                        value={bazaarId ?? ''}
+                                        onChange={(e) => setBazaarId(e.target.value ? parseInt(e.target.value) : null)}
+                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none text-sm bg-white"
+                                    >
+                                        <option value="">{i18n.language === 'ar' ? 'كل البازارات' : 'All Bazaars'}</option>
+                                        {bazaarList.map(bz => (
+                                            <option key={bz.id} value={bz.id}>{bz.name} ({bz.location})</option>
+                                        ))}
+                                    </select>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        {i18n.language === 'ar' ? 'اختياري: حدد بازار معين أو اتركه فارغ لكل البازارات' : 'Optional: Select a specific bazaar or leave for all bazaars'}
+                                    </p>
+                                </div>
+                            )}
                         </div>
 
                         {/* Time Validity Section */}

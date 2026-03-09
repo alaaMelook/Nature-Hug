@@ -33,6 +33,7 @@ interface AdminOrderData {
         unit_price: number;
         discount: number;
     }[];
+    bazaar_id?: number | null;
 }
 
 export async function createAdminOrderAction(data: AdminOrderData) {
@@ -60,6 +61,8 @@ export async function createAdminOrderAction(data: AdminOrderData) {
             promo_code_id: data.promo_code_id,
             // Add the creator's customer_id to track who created this order
             created_by_customer_id: currentUser?.id || null,
+            // Link to bazaar if applicable
+            bazaar_id: data.bazaar_id || null,
             items: data.items.map(item => ({
                 product_id: item.product_id,
                 variant_id: item.variant_id,
@@ -73,27 +76,38 @@ export async function createAdminOrderAction(data: AdminOrderData) {
         console.log(`[createAdminOrderAction] Order payload - discount_total: ${orderPayload.discount_total}, subtotal: ${orderPayload.subtotal}, grand_total: ${orderPayload.grand_total}`);
         const result = await new CreateOrder().execute(orderPayload);
 
-        // WORKAROUND: Direct update to ensure discount_total and grand_total are saved correctly
+        // WORKAROUND: Direct update to ensure discount_total, grand_total, and bazaar_id are saved correctly
         // This is needed because the RPC might not be extracting these values from order_data JSON
-        if (data.discount_total > 0 || data.shipping_total !== undefined) {
-            const supabase = await createSupabaseServerClient();
-            const { error: updateError } = await supabase.schema('store')
+        // Using supabaseAdmin to bypass RLS
+        if (data.discount_total > 0 || data.shipping_total !== undefined || data.bazaar_id) {
+            const { supabaseAdmin } = await import("@/data/datasources/supabase/admin");
+            const updatePayload: Record<string, any> = {
+                discount_total: data.discount_total,
+                grand_total: data.grand_total,
+                shipping_total: data.shipping_total,
+                status: data.status,
+                payment_status: data.payment_status,
+            };
+            // Add bazaar_id if this is a bazaar order
+            if (data.bazaar_id) {
+                updatePayload.bazaar_id = data.bazaar_id;
+            }
+            const { error: updateError } = await supabaseAdmin.schema('store')
                 .from('orders')
-                .update({
-                    discount_total: data.discount_total,
-                    grand_total: data.grand_total,
-                    shipping_total: data.shipping_total
-                })
+                .update(updatePayload)
                 .eq('id', result.order_id);
 
             if (updateError) {
-                console.error('[createAdminOrderAction] Failed to update order totals:', updateError);
+                console.error('[createAdminOrderAction] Failed to update order:', updateError);
             } else {
-                console.log(`[createAdminOrderAction] Successfully updated order ${result.order_id} with discount=${data.discount_total}, total=${data.grand_total}`);
+                console.log(`[createAdminOrderAction] Successfully updated order ${result.order_id} with discount=${data.discount_total}, total=${data.grand_total}, bazaar_id=${data.bazaar_id}, status=${data.status}`);
             }
         }
 
         revalidatePath('/admin/orders', 'layout');
+        if (data.bazaar_id) {
+            revalidatePath('/admin/bazaars', 'layout');
+        }
 
         return { order_id: result.order_id };
     } catch (error: any) {

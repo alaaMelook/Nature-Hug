@@ -32,4 +32,5 @@ export interface Order {
     sessionId: string | null;
     cancel_requested?: boolean;  // Distributor requested cancellation
     created_by_distributor_id?: number | null;  // ID of distributor who created this order
+    bazaar_id?: number | null;  // ID of bazaar this order belongs to (null = online order)
 }

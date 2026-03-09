@@ -7,6 +7,7 @@ import { ProductAdminView } from "@/domain/entities/views/admin/productAdminView
 import { Category } from "@/domain/entities/database/category";
 import { ReviewAdminView } from "@/domain/entities/views/admin/reviewAdminView";
 import { PromoCode } from "@/domain/entities/database/promoCode";
+import { Bazaar } from "@/domain/entities/database/bazaar";
 import { Governorate } from "@/domain/entities/database/governorate";
 import { AccountReportView, ProductSalesReport, ReportSummary } from "@/domain/entities/views/admin/reportViews";
 
@@ -1406,5 +1407,302 @@ export class IAdminServerRepository implements AdminRepository {
 
         console.log("[IAdminRepository] getInventoryData result:", items.length, "items");
         return items;
+    }
+
+    // ============================================
+    // BAZAAR METHODS
+    // ============================================
+
+    async getAllBazaars(): Promise<Bazaar[]> {
+        console.log("[IAdminRepository] getAllBazaars called.");
+        const { data, error } = await supabaseAdmin.schema('store')
+            .from('bazaars')
+            .select('*')
+            .order('start_date', { ascending: false });
+
+        if (error) {
+            console.error("[IAdminRepository] getAllBazaars error:", error);
+            throw error;
+        }
+        return data || [];
+    }
+
+    async getBazaarById(id: number): Promise<Bazaar | null> {
+        console.log(`[IAdminRepository] getBazaarById called for id: ${id}`);
+        const { data, error } = await supabaseAdmin.schema('store')
+            .from('bazaars')
+            .select('*')
+            .eq('id', id)
+            .maybeSingle();
+
+        if (error) {
+            console.error("[IAdminRepository] getBazaarById error:", error);
+            throw error;
+        }
+        return data;
+    }
+
+    async createBazaar(bazaar: Partial<Bazaar>): Promise<number> {
+        console.log("[IAdminRepository] createBazaar called with:", bazaar);
+        const { data, error } = await supabaseAdmin.schema('store')
+            .from('bazaars')
+            .insert(bazaar)
+            .select('id')
+            .single();
+
+        if (error) {
+            console.error("[IAdminRepository] createBazaar error:", error);
+            throw error;
+        }
+        return data.id;
+    }
+
+    async updateBazaar(bazaar: Partial<Bazaar>): Promise<void> {
+        console.log("[IAdminRepository] updateBazaar called with:", bazaar);
+        const { id, ...updateData } = bazaar;
+        if (!id) throw new Error("Bazaar ID is required for update");
+
+        const { error } = await supabaseAdmin.schema('store')
+            .from('bazaars')
+            .update(updateData)
+            .eq('id', id);
+
+        if (error) {
+            console.error("[IAdminRepository] updateBazaar error:", error);
+            throw error;
+        }
+    }
+
+    async deleteBazaar(id: number): Promise<void> {
+        console.log("[IAdminRepository] deleteBazaar called with id:", id);
+        const { error } = await supabaseAdmin.schema('store')
+            .from('bazaars')
+            .delete()
+            .eq('id', id);
+
+        if (error) {
+            console.error("[IAdminRepository] deleteBazaar error:", error);
+            throw error;
+        }
+    }
+
+    async getBazaarOrders(bazaarId: number): Promise<any[]> {
+        console.log(`[IAdminRepository] getBazaarOrders called for bazaarId: ${bazaarId}`);
+        const { data: orders, error } = await supabaseAdmin.schema('store')
+            .from('orders')
+            .select('id, customer_id, grand_total, subtotal, discount_total, payment_method, payment_status, status, note, created_at, created_by_customer_id')
+            .eq('bazaar_id', bazaarId)
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error("[IAdminRepository] getBazaarOrders error:", error);
+            throw error;
+        }
+
+        if (!orders || orders.length === 0) return [];
+
+        // Get customer names
+        const customerIds = [...new Set(orders.map(o => o.customer_id).filter(Boolean))];
+        let customerNameMap: Record<number, string> = {};
+        if (customerIds.length > 0) {
+            const { data: customers } = await supabaseAdmin.schema('store')
+                .from('customers')
+                .select('id, name')
+                .in('id', customerIds);
+            customerNameMap = (customers || []).reduce((acc: Record<number, string>, c: any) => {
+                acc[c.id] = c.name || 'Guest';
+                return acc;
+            }, {});
+        }
+
+        // Get creator/staff names
+        const creatorIds = [...new Set(orders.map(o => o.created_by_customer_id).filter(Boolean))];
+        let creatorNameMap: Record<number, string> = {};
+        if (creatorIds.length > 0) {
+            const { data: creators } = await supabaseAdmin.schema('store')
+                .from('customers')
+                .select('id, name')
+                .in('id', creatorIds);
+            creatorNameMap = (creators || []).reduce((acc: Record<number, string>, c: any) => {
+                acc[c.id] = c.name || 'Staff';
+                return acc;
+            }, {});
+        }
+
+        // Get order items
+        const orderIds = orders.map(o => o.id);
+        const { data: items } = await supabaseAdmin.schema('store')
+            .from('order_items')
+            .select('order_id, product_id, variant_id, quantity, unit_price')
+            .in('order_id', orderIds);
+
+        const itemsByOrder: Record<number, any[]> = {};
+        for (const item of (items || [])) {
+            if (!itemsByOrder[item.order_id]) itemsByOrder[item.order_id] = [];
+            itemsByOrder[item.order_id].push(item);
+        }
+
+        return orders.map(order => ({
+            order_id: order.id,
+            customer_name: customerNameMap[order.customer_id] || 'Guest',
+            grand_total: order.grand_total,
+            subtotal: order.subtotal,
+            discount_total: order.discount_total,
+            payment_method: order.payment_method,
+            payment_status: order.payment_status,
+            status: order.status,
+            note: order.note,
+            created_at: order.created_at,
+            created_by_user_name: creatorNameMap[order.created_by_customer_id] || null,
+            item_count: (itemsByOrder[order.id] || []).reduce((sum: number, i: any) => sum + i.quantity, 0),
+        }));
+    }
+
+    async getBazaarReport(bazaarId: number): Promise<{
+        totalSales: number;
+        orderCount: number;
+        customerCount: number;
+        topProducts: { name: string; quantity: number; revenue: number }[];
+        topStaff: { name: string; orderCount: number; totalSales: number }[];
+        paymentBreakdown: { method: string; count: number; total: number }[];
+    }> {
+        console.log(`[IAdminRepository] getBazaarReport called for bazaarId: ${bazaarId}`);
+
+        // Get all bazaar orders with details
+        const { data: orders, error: ordersError } = await supabaseAdmin.schema('store')
+            .from('orders')
+            .select('id, grand_total, payment_method, created_by_customer_id, customer_id')
+            .eq('bazaar_id', bazaarId)
+            .neq('status', 'cancelled');
+
+        if (ordersError) {
+            console.error("[IAdminRepository] getBazaarReport orders error:", ordersError);
+            throw ordersError;
+        }
+
+        if (!orders || orders.length === 0) {
+            return {
+                totalSales: 0, orderCount: 0, customerCount: 0,
+                topProducts: [], topStaff: [], paymentBreakdown: []
+            };
+        }
+
+        const orderIds = orders.map(o => o.id);
+
+        // Get order items
+        const { data: items, error: itemsError } = await supabaseAdmin.schema('store')
+            .from('order_items')
+            .select('order_id, product_id, variant_id, quantity, unit_price')
+            .in('order_id', orderIds);
+
+        if (itemsError) {
+            console.error("[IAdminRepository] getBazaarReport items error:", itemsError);
+            throw itemsError;
+        }
+
+        // Get product names
+        const productIds = [...new Set((items || []).map(i => i.product_id).filter(Boolean))];
+        let productNameMap: Record<number, string> = {};
+        if (productIds.length > 0) {
+            const { data: products } = await supabaseAdmin.schema('store')
+                .from('products')
+                .select('id, name_en')
+                .in('id', productIds);
+            productNameMap = (products || []).reduce((acc: Record<number, string>, p: any) => {
+                acc[p.id] = p.name_en;
+                return acc;
+            }, {});
+        }
+
+        // Get variant names
+        const variantIds = [...new Set((items || []).map(i => i.variant_id).filter(Boolean))];
+        let variantNameMap: Record<number, string> = {};
+        if (variantIds.length > 0) {
+            const { data: variants } = await supabaseAdmin.schema('store')
+                .from('product_variants')
+                .select('id, name_en, product_id')
+                .in('id', variantIds);
+            variantNameMap = (variants || []).reduce((acc: Record<number, string>, v: any) => {
+                acc[v.id] = `${productNameMap[v.product_id] || 'Product'} - ${v.name_en}`;
+                return acc;
+            }, {});
+        }
+
+        // Get staff names
+        const staffIds = [...new Set(orders.map(o => o.created_by_customer_id).filter(Boolean))];
+        let staffNameMap: Record<number, string> = {};
+        if (staffIds.length > 0) {
+            const { data: customers } = await supabaseAdmin.schema('store')
+                .from('customers')
+                .select('id, name')
+                .in('id', staffIds);
+            staffNameMap = (customers || []).reduce((acc: Record<number, string>, c: any) => {
+                acc[c.id] = c.name || 'Unknown';
+                return acc;
+            }, {});
+        }
+
+        // Calculate totals
+        const totalSales = orders.reduce((acc, o) => acc + (o.grand_total || 0), 0);
+
+        // Unique customers by customer_id
+        const uniqueCustomers = new Set(orders.map(o => o.customer_id).filter(Boolean));
+        const customerCount = uniqueCustomers.size;
+
+        // Top products
+        const productAgg: Record<string, { name: string; quantity: number; revenue: number }> = {};
+        for (const item of (items || [])) {
+            const name = item.variant_id
+                ? (variantNameMap[item.variant_id] || 'Unknown')
+                : (productNameMap[item.product_id] || 'Unknown');
+            const key = `${item.product_id}-${item.variant_id || 0}`;
+            if (!productAgg[key]) productAgg[key] = { name, quantity: 0, revenue: 0 };
+            productAgg[key].quantity += item.quantity;
+            productAgg[key].revenue += item.quantity * item.unit_price;
+        }
+        const topProducts = Object.values(productAgg).sort((a, b) => b.quantity - a.quantity);
+
+        // Top staff
+        const staffAgg: Record<number, { name: string; orderCount: number; totalSales: number }> = {};
+        for (const order of orders) {
+            const staffId = order.created_by_customer_id;
+            if (!staffId) continue;
+            if (!staffAgg[staffId]) {
+                staffAgg[staffId] = { name: staffNameMap[staffId] || 'Unknown', orderCount: 0, totalSales: 0 };
+            }
+            staffAgg[staffId].orderCount++;
+            staffAgg[staffId].totalSales += order.grand_total || 0;
+        }
+        const topStaff = Object.values(staffAgg).sort((a, b) => b.totalSales - a.totalSales);
+
+        // Payment breakdown
+        const paymentAgg: Record<string, { method: string; count: number; total: number }> = {};
+        for (const order of orders) {
+            const method = order.payment_method || 'Unknown';
+            if (!paymentAgg[method]) paymentAgg[method] = { method, count: 0, total: 0 };
+            paymentAgg[method].count++;
+            paymentAgg[method].total += order.grand_total || 0;
+        }
+        const paymentBreakdown = Object.values(paymentAgg);
+
+        return { totalSales, orderCount: orders.length, customerCount, topProducts, topStaff, paymentBreakdown };
+    }
+
+    async getAllBazaarsWithStats(): Promise<(Bazaar & { totalSales: number; orderCount: number })[]> {
+        const bazaars = await this.getAllBazaars();
+        const result: (Bazaar & { totalSales: number; orderCount: number })[] = [];
+
+        for (const bazaar of bazaars) {
+            const { data: orders } = await supabaseAdmin.schema('store')
+                .from('orders')
+                .select('grand_total')
+                .eq('bazaar_id', bazaar.id)
+                .neq('status', 'cancelled');
+
+            const totalSales = (orders || []).reduce((acc, o) => acc + (o.grand_total || 0), 0);
+            result.push({ ...bazaar, totalSales, orderCount: (orders || []).length });
+        }
+
+        return result;
     }
 }

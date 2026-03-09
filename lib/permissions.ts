@@ -38,6 +38,14 @@ export const STAFF_PERMISSIONS: StaffPermission[] = [
     },
     { key: 'promo_codes', label: 'Promo Codes', labelAr: 'أكواد الخصم', routes: ['/admin/promo-codes'] },
     {
+        key: 'bazaars', label: 'Bazaars', labelAr: 'البازارات', routes: ['/admin/bazaars'],
+        children: [
+            { key: 'bazaars.all', label: 'All Bazaars', labelAr: 'كل البازارات', route: '/admin/bazaars' },
+            { key: 'bazaars.create', label: 'Create Bazaar', labelAr: 'إنشاء بازار', route: '/admin/bazaars/create' },
+            { key: 'bazaars.pos', label: 'POS Only', labelAr: 'نقطة البيع فقط', route: '/admin/bazaars' },
+        ]
+    },
+    {
         key: 'shipping', label: 'Shipping', labelAr: 'الشحن', routes: ['/admin/shipping'],
         children: [
             { key: 'shipping.dashboard', label: 'Shipping Dashboard', labelAr: 'لوحة الشحن', route: '/admin/shipping' },

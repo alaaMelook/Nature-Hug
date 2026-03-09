@@ -20,4 +20,6 @@ export interface PromoCode {
     amount_off?: number; // Fixed amount discount in EGP (alternative to percentage_off)
     min_order_amount?: number; // Minimum cart total required to use this promo code
     auto_apply?: boolean; // If true, discount applies automatically at checkout without entering code
+    bazaar_only?: boolean; // If true, this promo code only works in bazaar POS (hidden from online store)
+    bazaar_id?: number | null; // If set, this promo code only works for this specific bazaar
 }
