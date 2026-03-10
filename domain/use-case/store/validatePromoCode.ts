@@ -61,16 +61,17 @@ export class ValidatePromoCode {
                     return { isValid: false, error: "Not enough products in cart" };
                 }
 
+                const discountPct = (promo.bogo_discount_percentage ?? 100) / 100;
                 totalDiscount = 0;
                 let i = promo.bogo_get_count;
                 for (const item of sortedProducts) {
                     if (i === 0) break;
                     else if (item.quantity > i) {
-                        totalDiscount += item.price * i;
+                        totalDiscount += item.price * i * discountPct;
                         break;
                     }
                     else {
-                        totalDiscount += item.price * item.quantity;
+                        totalDiscount += item.price * item.quantity * discountPct;
                         i -= item.quantity;
                     }
                 }
@@ -108,21 +109,20 @@ export class ValidatePromoCode {
                 if (cartCount < promo.bogo_buy_count + promo.bogo_get_count) {
                     return { isValid: false, error: "Not enough products in cart" };
                 }
+                const discountPct = (promo.bogo_discount_percentage ?? 100) / 100;
                 totalDiscount = 0;
                 let i = promo.bogo_get_count;
                 for (const item of sortedProducts) {
                     if (i === 0) break;
                     else if (item.quantity > i) {
-                        totalDiscount += item.price * i;
+                        totalDiscount += item.price * i * discountPct;
                         break;
                     }
                     else {
-                        totalDiscount += item.price * item.quantity;
+                        totalDiscount += item.price * item.quantity * discountPct;
                         i -= item.quantity;
                     }
                 }
-
-
             }
             else if (promo.free_shipping) {
                 totalDiscount = 0;

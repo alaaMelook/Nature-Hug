@@ -16,8 +16,15 @@ export interface StaffPermission {
 }
 
 export const STAFF_PERMISSIONS: StaffPermission[] = [
+    { key: 'announcements', label: 'Announcements', labelAr: 'الإعلانات', routes: ['/admin/announcements'] },
     { key: 'dashboard', label: 'Dashboard', labelAr: 'لوحة التحكم', routes: ['/admin'] },
-    { key: 'customers', label: 'Customers', labelAr: 'العملاء', routes: ['/admin/customers'] },
+    {
+        key: 'people', label: 'People', labelAr: 'الأشخاص', routes: ['/admin/customers', '/admin/people'],
+        children: [
+            { key: 'people.customers', label: 'Customers', labelAr: 'العملاء', route: '/admin/customers' },
+            { key: 'people.team_members', label: 'Team Members', labelAr: 'فريق العمل', route: '/admin/people/team-members' },
+        ]
+    },
     { key: 'materials', label: 'Materials', labelAr: 'المواد الخام', routes: ['/admin/materials'] },
     {
         key: 'products', label: 'Products', labelAr: 'المنتجات', routes: ['/admin/products'],
@@ -71,7 +78,6 @@ export const STAFF_PERMISSIONS: StaffPermission[] = [
     { key: 'wishlists', label: 'Wishlists', labelAr: 'قوائم الأمنيات', routes: ['/admin/wishlists'] },
     { key: 'gallery', label: 'Gallery', labelAr: 'المعرض', routes: ['/admin/gallery'] },
     { key: 'themes', label: 'Themes', labelAr: 'الثيمات', routes: ['/admin/themes'] },
-    { key: 'team_members', label: 'Team Members', labelAr: 'فريق العمل', routes: ['/admin/people'] },
 ] as const;
 
 export type StaffPermissionKey = string;

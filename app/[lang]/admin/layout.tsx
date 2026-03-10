@@ -73,16 +73,21 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             redirect("/");
         }
 
+        // Always grant announcements access to staff implicitly
+        if (!staffPermissions.includes('announcements')) {
+            staffPermissions.push('announcements');
+        }
+
         // Check if current route is allowed
-        // Allow the base /admin route only if they have dashboard permission
+        // Redirect staff to announcements by default instead of dashboard
         const isBaseAdmin = pathname.match(/\/admin\/?$/);
         const hasDashboard = staffPermissions.includes('dashboard');
 
-        if (isBaseAdmin && !hasDashboard) {
+        if (isBaseAdmin) {
             const segments = pathname.split('/').filter(Boolean);
             const lang = segments[0] || 'en';
-            redirect(`/${lang}${getFirstAllowedRoute(staffPermissions)}`);
-        } else if (!isBaseAdmin && !hasPermissionForRoute(staffPermissions, pathname)) {
+            redirect(`/${lang}/admin/announcements`);
+        } else if (!hasPermissionForRoute(staffPermissions, pathname)) {
             const segments = pathname.split('/').filter(Boolean);
             const lang = segments[0] || 'en';
             redirect(`/${lang}${getFirstAllowedRoute(staffPermissions)}`);

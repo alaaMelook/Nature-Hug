@@ -131,13 +131,17 @@ export default function PromoCodesScreen({ initialPromoCodes }: PromoCodesScreen
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                {promo.is_bogo ? (
+                                            {promo.is_bogo ? (
                                                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                                                        {t("buyGet", { buy: promo.bogo_buy_count, get: promo.bogo_get_count })}
+                                                        Buy {promo.bogo_buy_count} Get {promo.bogo_get_count} at {promo.bogo_discount_percentage ?? 100}% off
+                                                    </span>
+                                                ) : promo.amount_off && promo.amount_off > 0 ? (
+                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                        {promo.amount_off} EGP {t("off")}
                                                     </span>
                                                 ) : (
                                                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                                        {promo.percentage_off}{t("off")}
+                                                        {promo.percentage_off}% {t("off")}
                                                     </span>
                                                 )}
                                             </td>

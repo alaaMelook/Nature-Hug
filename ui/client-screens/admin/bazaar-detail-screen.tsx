@@ -69,6 +69,22 @@ export default function BazaarDetailScreen({ bazaar, report, orders, products, p
     const [posLoading, setPosLoading] = useState(false);
     const [showProducts, setShowProducts] = useState(false);
 
+    // Payment info (InstaPay/Wallet numbers & QR)
+    const [paymentInfoMap, setPaymentInfoMap] = useState<Record<string, { account_number?: string; account_name?: string; qr_code_url?: string }>>({});
+
+    useEffect(() => {
+        fetch('/api/admin/payment-info')
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const map: Record<string, any> = {};
+                    data.data.forEach((info: any) => { map[info.method] = info; });
+                    setPaymentInfoMap(map);
+                }
+            })
+            .catch(() => {});
+    }, []);
+
     // Customer search
     const [customerSearchQuery, setCustomerSearchQuery] = useState("");
     const [customerSearchResults, setCustomerSearchResults] = useState<any[]>([]);
@@ -108,24 +124,53 @@ export default function BazaarDetailScreen({ bazaar, report, orders, products, p
         if (appliedPromos.length === 0) return 0;
         let remaining = subtotal;
         let total = 0;
-        // Fixed amounts first
+
         appliedPromos.forEach(promo => {
-            if (promo.amount_off && promo.amount_off > 0) {
+            // BOGO logic: Buy X Get Y at Z% off cheapest
+            if (promo.is_bogo && promo.bogo_buy_count > 0 && promo.bogo_get_count > 0) {
+                // Expand cart items into individual unit prices
+                const unitPrices: number[] = [];
+                posItems.forEach(item => {
+                    for (let i = 0; i < item.quantity; i++) {
+                        unitPrices.push(item.unitPrice);
+                    }
+                });
+                // Sort ascending (cheapest first)
+                unitPrices.sort((a, b) => a - b);
+
+                const groupSize = promo.bogo_buy_count + promo.bogo_get_count;
+                const totalUnits = unitPrices.length;
+                const discountPct = (promo.bogo_discount_percentage ?? 100) / 100;
+
+                // For each complete group of (buy+get), discount the cheapest 'get' items
+                let bogoDiscount = 0;
+                const fullGroups = Math.floor(totalUnits / groupSize);
+                // The cheapest items in each group get the discount
+                // Since sorted ascending, the first (fullGroups * get_count) cheapest items get discounted
+                const discountedCount = fullGroups * promo.bogo_get_count;
+                for (let i = 0; i < discountedCount && i < unitPrices.length; i++) {
+                    bogoDiscount += unitPrices[i] * discountPct;
+                }
+
+                total += bogoDiscount;
+                remaining -= bogoDiscount;
+            }
+            // Fixed amount off
+            else if (promo.amount_off && promo.amount_off > 0) {
                 const d = Math.min(promo.amount_off, remaining);
                 total += d;
                 remaining -= d;
             }
-        });
-        // Then percentages
-        appliedPromos.forEach(promo => {
-            if (promo.percentage_off && promo.percentage_off > 0) {
+            // Percentage off
+            else if (promo.percentage_off && promo.percentage_off > 0) {
                 const d = remaining * (promo.percentage_off / 100);
                 total += d;
                 remaining -= d;
             }
         });
+
         return Math.min(total, subtotal);
-    }, [appliedPromos, subtotal]);
+    }, [appliedPromos, subtotal, posItems]);
 
     const grandTotal = subtotal - discount;
 
@@ -320,6 +365,8 @@ export default function BazaarDetailScreen({ bazaar, report, orders, products, p
                     customerSearchResults={customerSearchResults} searchingCustomers={searchingCustomers}
                     showCustomerSearch={showCustomerSearch} setShowCustomerSearch={setShowCustomerSearch}
                     setCustomerSearchResults={setCustomerSearchResults}
+                    promoCodes={promoCodes} bazaar={bazaar}
+                    paymentInfoMap={paymentInfoMap}
                     t={t}
                 />
             )}
@@ -537,8 +584,20 @@ function POSTab({
     paymentMethod, setPaymentMethod,
     subtotal, discount, grandTotal, posLoading, handlePOSSubmit,
     customerSearchQuery, setCustomerSearchQuery, customerSearchResults,
-    searchingCustomers, showCustomerSearch, setShowCustomerSearch, setCustomerSearchResults, t
+    searchingCustomers, showCustomerSearch, setShowCustomerSearch, setCustomerSearchResults,
+    promoCodes, bazaar, paymentInfoMap, t
 }: any) {
+    // Get bazaar-specific promos that are active and not already applied
+    const bazaarPromos = (promoCodes || []).filter((p: PromoCode) =>
+        p.is_active &&
+        p.bazaar_only &&
+        (p.bazaar_id === bazaar?.id || !p.bazaar_id) &&
+        !appliedPromos.some((ap: PromoCode) => ap.id === p.id)
+    );
+
+    const quickApplyPromo = (promo: PromoCode) => {
+        setAppliedPromos((prev: PromoCode[]) => [...prev, promo]);
+    };
     return (
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
             {/* Left: Products & Customer */}
@@ -713,7 +772,9 @@ function POSTab({
                                         <Tag className="w-4 h-4 text-green-600" />
                                         <span className="font-medium text-green-700 text-sm">{promo.code}</span>
                                         <span className="text-xs text-green-600">
-                                            {promo.percentage_off ? `${promo.percentage_off}%` : `${promo.amount_off} EGP`}
+                                            {promo.is_bogo
+                                                ? `Buy ${promo.bogo_buy_count} Get ${promo.bogo_get_count} at ${promo.bogo_discount_percentage}% off`
+                                                : promo.percentage_off ? `${promo.percentage_off}%` : `${promo.amount_off} EGP`}
                                         </span>
                                     </div>
                                     <button onClick={() => setAppliedPromos((prev: PromoCode[]) => prev.filter((p: PromoCode) => p.id !== promo.id))} className="text-red-500"><X size={14} /></button>
@@ -733,6 +794,35 @@ function POSTab({
                             {isAr ? 'تطبيق' : 'Apply'}
                         </button>
                     </div>
+
+                    {/* Available Bazaar Offers */}
+                    {bazaarPromos.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-gray-100">
+                            <p className="text-xs font-medium text-gray-500 mb-2">{isAr ? 'عروض متاحة' : 'Available Offers'}</p>
+                            <div className="space-y-1.5">
+                                {bazaarPromos.map((promo: PromoCode) => (
+                                    <button
+                                        key={promo.id}
+                                        onClick={() => quickApplyPromo(promo)}
+                                        className="w-full flex items-center justify-between p-2.5 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 transition-colors text-left"
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <Tag className="w-4 h-4 text-purple-600" />
+                                            <div>
+                                                <span className="font-medium text-purple-800 text-sm">{promo.code}</span>
+                                                <span className="text-xs text-purple-600 block">
+                                                    {promo.is_bogo
+                                                        ? `Buy ${promo.bogo_buy_count} Get ${promo.bogo_get_count} at ${promo.bogo_discount_percentage ?? 100}% off`
+                                                        : promo.percentage_off ? `${promo.percentage_off}% off` : `${promo.amount_off} EGP off`}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <span className="text-xs font-medium text-purple-600 bg-purple-100 px-2 py-1 rounded">{isAr ? 'تطبيق' : 'Apply'}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Payment Method */}
@@ -755,6 +845,34 @@ function POSTab({
                             </button>
                         ))}
                     </div>
+                    {/* Payment Details (InstaPay / Wallet) */}
+                    {(paymentMethod === 'instapay' || paymentMethod === 'wallet') && paymentInfoMap[paymentMethod] && (
+                        (() => {
+                            const info = paymentInfoMap[paymentMethod];
+                            const hasInfo = info.account_number || info.account_name || info.qr_code_url;
+                            if (!hasInfo) return null;
+                            return (
+                                <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                    {info.account_name && (
+                                        <p className="text-sm text-gray-700">
+                                            <span className="font-medium">{isAr ? 'الاسم:' : 'Name:'}</span> {info.account_name}
+                                        </p>
+                                    )}
+                                    {info.account_number && (
+                                        <p className="text-sm text-gray-700 mt-1">
+                                            <span className="font-medium">{isAr ? 'الرقم:' : 'Number:'}</span>{' '}
+                                            <span className="font-mono text-base select-all">{info.account_number}</span>
+                                        </p>
+                                    )}
+                                    {info.qr_code_url && (
+                                        <div className="mt-2 flex justify-center">
+                                            <img src={info.qr_code_url} alt="QR Code" className="w-40 h-40 rounded-lg border border-gray-200 object-contain bg-white" />
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })()
+                    )}
                 </div>
 
                 {/* Order Summary */}
@@ -767,12 +885,10 @@ function POSTab({
                             <span className="text-gray-600">{isAr ? 'المجموع الفرعي' : 'Subtotal'}</span>
                             <span className="font-medium">{subtotal.toLocaleString()} EGP</span>
                         </div>
-                        {discount > 0 && (
-                            <div className="flex justify-between text-green-600">
-                                <span>{isAr ? 'الخصم' : 'Discount'}</span>
-                                <span className="font-medium">-{discount.toLocaleString()} EGP</span>
-                            </div>
-                        )}
+                        <div className={`flex justify-between ${discount > 0 ? 'text-green-600' : 'text-gray-400'}`}>
+                            <span>{isAr ? 'الخصم' : 'Discount'}</span>
+                            <span className="font-medium">{discount > 0 ? `-${discount.toLocaleString()} EGP` : '0 EGP'}</span>
+                        </div>
                         <div className="flex justify-between items-center pt-3 border-t text-lg font-bold">
                             <span>{isAr ? 'الإجمالي' : 'Total'}</span>
                             <span className="text-primary-600">{grandTotal.toLocaleString()} EGP</span>

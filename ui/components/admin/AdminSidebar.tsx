@@ -19,7 +19,8 @@ import {
   Heart,
   Palette,
   UsersRound,
-  Store
+  Store,
+  Megaphone
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
@@ -45,13 +46,23 @@ export default function AdminSidebar({
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
   const [mounted, setMounted] = useState(false);
   const [wishlistCount, setWishlistCount] = useState(0);
+  const [unreadAnnouncementsCount, setUnreadAnnouncementsCount] = useState(0);
 
 
 
   // Navigation defined before hooks that depend on it
   const navigation = [
+    { name: i18n.language === 'ar' ? 'الإعلانات' : 'Announcements', href: "/admin/announcements", icon: Megaphone, badge: unreadAnnouncementsCount },
     { name: t("dashboard"), href: "/admin", icon: Home },
-    { name: t("customers"), href: "/admin/customers", icon: Users },
+    {
+      name: i18n.language === 'ar' ? 'الأشخاص' : 'People',
+      href: "/admin/customers",
+      icon: UsersRound,
+      submenu: [
+        { name: i18n.language === 'ar' ? 'العملاء' : 'Customers', href: "/admin/customers" },
+        { name: i18n.language === 'ar' ? 'فريق العمل' : 'Team Members', href: "/admin/people/team-members" },
+      ]
+    },
     {
       name: t("materials"),
       href: "/admin/materials",
@@ -123,19 +134,12 @@ export default function AdminSidebar({
         { name: "📊 Business Analysis", href: "/admin/finance/business-analysis" },
         { name: "💰 Cashflow", href: "/admin/finance/cashflow" },
         { name: "📁 Categories", href: "/admin/finance/cashflow-categories" },
+        { name: "💳 Payment Info", href: "/admin/finance/payment-info" },
       ]
     },
     { name: t("wishlists") || "Wishlists", href: "/admin/wishlists", icon: Heart, badge: wishlistCount },
     { name: t("gallery"), href: "/admin/gallery", icon: Image },
     { name: t("siteThemes") || "Themes", href: "/admin/themes", icon: Palette },
-    {
-      name: "People",
-      href: "/admin/people",
-      icon: UsersRound,
-      submenu: [
-        { name: "👥 Team Members", href: "/admin/people/team-members" },
-      ]
-    },
   ];
 
   // Filter navigation for staff role based on permissions
@@ -217,6 +221,25 @@ export default function AdminSidebar({
       }
     };
     fetchWishlistCount();
+  }, []);
+
+  // Fetch unread announcements count
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      try {
+        const res = await fetch('/api/admin/announcements');
+        const data = await res.json();
+        if (data.success && data.currentMemberId) {
+          const unread = (data.data || []).filter(
+            (a: any) => !a.read_by?.includes(data.currentMemberId)
+          ).length;
+          setUnreadAnnouncementsCount(unread);
+        }
+      } catch (error) {
+        console.error('Failed to fetch announcements count:', error);
+      }
+    };
+    fetchUnreadCount();
   }, []);
 
   // Initialize expanded menus based on current path

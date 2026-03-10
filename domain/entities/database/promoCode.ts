@@ -8,6 +8,7 @@ export interface PromoCode {
     is_bogo: boolean;
     bogo_buy_count: number;
     bogo_get_count: number;
+    bogo_discount_percentage: number; // Discount % on the cheapest "get" items (100 = fully free, 50 = half price)
     is_active: boolean;
     free_shipping: boolean;
     eligible_customer_ids?: number[]; // null or empty = all customers can use this code
