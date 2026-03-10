@@ -260,12 +260,12 @@ export default function BazaarDetailScreen({ bazaar, report, orders, products, p
     return (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-4 sm:p-6 max-w-7xl mx-auto">
             {/* Header */}
-            <div className="flex items-center gap-4 mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-6">
                 <button onClick={() => router.push(`/${lang}/admin/bazaars`)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
                     <ArrowLeft size={20} />
                 </button>
                 <div className="flex-1">
-                    <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                    <h1 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
                         <Store className="text-primary-600" size={24} />
                         {bazaar.name}
                     </h1>
@@ -283,12 +283,12 @@ export default function BazaarDetailScreen({ bazaar, report, orders, products, p
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-2 mb-6 bg-gray-100 rounded-xl p-1">
+            <div className="flex gap-1 sm:gap-2 mb-6 bg-gray-100 rounded-xl p-1 overflow-x-auto scrollbar-hide">
                 {tabs.map(tab => (
                     <button
                         key={tab.key}
                         onClick={() => setActiveTab(tab.key)}
-                        className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${activeTab === tab.key
+                        className={`flex-1 flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all ${activeTab === tab.key
                             ? 'bg-white text-primary-700 shadow-sm'
                             : 'text-gray-500 hover:text-gray-700'
                             }`}
@@ -405,8 +405,8 @@ function ReportTab({ report, orders, bazaar, isAr }: { report: BazaarReport; ord
     return (
         <div className="space-y-6 print-report">
             {/* Filter Bar + Print */}
-            <div className="bg-white rounded-xl border p-4 flex flex-wrap items-end gap-4 no-print">
-                <div className="flex-1 min-w-[180px]">
+            <div className="bg-white rounded-xl border p-3 sm:p-4 flex flex-wrap items-end gap-3 sm:gap-4 no-print">
+                <div className="w-full sm:flex-1 sm:min-w-[180px]">
                     <label className="block text-xs font-medium text-gray-500 mb-1.5">{isAr ? 'اليوم' : 'Day'}</label>
                     <select value={selectedDay} onChange={(e) => setSelectedDay(e.target.value)}
                         className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500/20 outline-none bg-white">
@@ -414,14 +414,14 @@ function ReportTab({ report, orders, bazaar, isAr }: { report: BazaarReport; ord
                         {bazaarDays.map(day => (<option key={day.date} value={day.date}>{day.label}</option>))}
                     </select>
                 </div>
-                <div className="min-w-[120px]">
+                <div className="flex-1 min-w-[100px] sm:min-w-[120px]">
                     <label className="block text-xs font-medium text-gray-500 mb-1.5">{isAr ? 'من الساعة' : 'From Hour'}</label>
                     <select value={startHour} onChange={(e) => setStartHour(parseInt(e.target.value))}
                         className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500/20 outline-none bg-white">
                         {hourOptions.map(h => (<option key={h} value={h}>{h.toString().padStart(2, '0')}:00</option>))}
                     </select>
                 </div>
-                <div className="min-w-[120px]">
+                <div className="flex-1 min-w-[100px] sm:min-w-[120px]">
                     <label className="block text-xs font-medium text-gray-500 mb-1.5">{isAr ? 'إلى الساعة' : 'To Hour'}</label>
                     <select value={endHour} onChange={(e) => setEndHour(parseInt(e.target.value))}
                         className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500/20 outline-none bg-white">
@@ -429,7 +429,7 @@ function ReportTab({ report, orders, bazaar, isAr }: { report: BazaarReport; ord
                     </select>
                 </div>
                 <button onClick={() => window.print()}
-                    className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium">
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium">
                     🖨️ {isAr ? 'طباعة' : 'Print'}
                 </button>
             </div>
@@ -666,7 +666,7 @@ function POSTab({
                     ) : (
                         <div className="space-y-2">
                             {posItems.map((item: POSItem) => (
-                                <div key={item.product.slug} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                                <div key={item.product.slug} className="flex flex-wrap items-center gap-2 sm:gap-3 p-3 bg-gray-50 rounded-lg">
                                     <div className="flex-1 min-w-0">
                                         <p className="font-medium text-sm text-gray-900 truncate">{item.product.name}</p>
                                         <div className="flex items-center gap-1 mt-0.5">
@@ -674,7 +674,7 @@ function POSTab({
                                                 type="number"
                                                 value={item.unitPrice}
                                                 onChange={(e) => updateUnitPrice(item.product.slug, parseFloat(e.target.value) || 0)}
-                                                className="w-20 text-xs text-gray-500 bg-transparent border-b border-dashed border-gray-300 focus:border-primary-500 outline-none py-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                className="w-16 sm:w-20 text-xs text-gray-500 bg-transparent border-b border-dashed border-gray-300 focus:border-primary-500 outline-none py-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                 min="0"
                                                 step="0.01"
                                             />
@@ -685,12 +685,12 @@ function POSTab({
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-1.5">
-                                        <button onClick={() => updateQuantity(item.product.slug, -1)} className="p-1 hover:bg-gray-200 rounded"><Minus size={14} /></button>
+                                        <button onClick={() => updateQuantity(item.product.slug, -1)} className="p-1.5 sm:p-1 hover:bg-gray-200 rounded"><Minus size={14} /></button>
                                         <span className="w-6 text-center text-sm font-medium">{item.quantity}</span>
-                                        <button onClick={() => updateQuantity(item.product.slug, 1)} className="p-1 hover:bg-gray-200 rounded"><Plus size={14} /></button>
+                                        <button onClick={() => updateQuantity(item.product.slug, 1)} className="p-1.5 sm:p-1 hover:bg-gray-200 rounded"><Plus size={14} /></button>
                                     </div>
-                                    <span className="text-sm font-semibold w-20 text-right">{(item.unitPrice * item.quantity).toLocaleString()} EGP</span>
-                                    <button onClick={() => removeItem(item.product.slug)} className="p-1 text-red-500 hover:bg-red-50 rounded"><X size={14} /></button>
+                                    <span className="text-sm font-semibold text-right">{(item.unitPrice * item.quantity).toLocaleString()} EGP</span>
+                                    <button onClick={() => removeItem(item.product.slug)} className="p-1.5 sm:p-1 text-red-500 hover:bg-red-50 rounded"><X size={14} /></button>
                                 </div>
                             ))}
                         </div>

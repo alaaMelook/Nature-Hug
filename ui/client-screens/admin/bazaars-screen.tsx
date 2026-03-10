@@ -168,8 +168,8 @@ export default function BazaarsScreen({ bazaars, isPosOnly = false }: BazaarsScr
                             animate={{ opacity: 1, y: 0 }}
                             className="bg-white rounded-xl border hover:shadow-md transition-shadow"
                         >
-                            <div className="p-5">
-                                <div className="flex items-start justify-between gap-4">
+                            <div className="p-4 sm:p-5">
+                                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4">
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-3 mb-2">
                                             <h3 className="text-lg font-semibold text-gray-900 truncate">
@@ -190,7 +190,7 @@ export default function BazaarsScreen({ bazaars, isPosOnly = false }: BazaarsScr
                                             </span>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-2 shrink-0">
+                                    <div className="flex items-center gap-2">
                                         <Link
                                             href={`/${lang}/admin/bazaars/${bazaar.id}${isPosOnly ? '?mode=pos' : ''}`}
                                             className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-primary-700 bg-primary-50 rounded-lg hover:bg-primary-100 transition-colors"
