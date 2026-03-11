@@ -25,6 +25,7 @@ interface AdminOrderData {
     payment_status: string;
     status: string;
     note: string | null;
+    paid_amount?: number | null;
     promo_code_id: number | null;
     items: {
         product_id: number;
@@ -87,6 +88,7 @@ export async function createAdminOrderAction(data: AdminOrderData) {
                 shipping_total: data.shipping_total,
                 status: data.status,
                 payment_status: data.payment_status,
+                ...(data.paid_amount !== undefined && data.paid_amount !== null ? { paid_amount: data.paid_amount } : {}),
             };
             // Add bazaar_id if this is a bazaar order
             if (data.bazaar_id) {

@@ -6,8 +6,8 @@ import { GetAllPromoCodes } from "@/domain/use-case/admin/promo-codes/getAllProm
 import { redirect } from "next/navigation";
 import { getAdminStaffPermissions } from "@/lib/admin-helpers";
 
-export default async function BazaarDetailPage({ params }: { params: Promise<{ id: string }> }) {
-    const { id } = await params;
+export default async function BazaarDetailPage({ params }: { params: Promise<{ id: string; lang: string }> }) {
+    const { id, lang } = await params;
     const bazaarId = parseInt(id);
     const bazaarsUc = new Bazaars();
 
@@ -28,7 +28,7 @@ export default async function BazaarDetailPage({ params }: { params: Promise<{ i
     // Load products and promo codes
     try {
         [products, promoCodes] = await Promise.all([
-            new IProductServerRepository().viewAll(),
+            new IProductServerRepository(lang as any).viewAll(),
             new GetAllPromoCodes().execute(),
         ]);
     } catch (error) {
@@ -56,7 +56,7 @@ export default async function BazaarDetailPage({ params }: { params: Promise<{ i
             report={report}
             orders={orders}
             products={products}
-            promoCodes={promoCodes.filter((p: any) => p.bazaar_id === bazaarId || !p.bazaar_only)}
+            promoCodes={promoCodes.filter((p: any) => p.bazaar_id === bazaarId || !p.bazaar_only || (p.bazaar_only && !p.bazaar_id))}
             isPosOnly={isPosOnly}
             currentUserId={customerId}
         />

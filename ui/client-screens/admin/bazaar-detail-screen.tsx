@@ -68,6 +68,8 @@ export default function BazaarDetailScreen({ bazaar, report, orders, products, p
     const [paymentMethod, setPaymentMethod] = useState("cash");
     const [posLoading, setPosLoading] = useState(false);
     const [showProducts, setShowProducts] = useState(false);
+    const [paidAmount, setPaidAmount] = useState<number>(0);
+    const [paidTouched, setPaidTouched] = useState(false);
 
     // Payment info (InstaPay/Wallet numbers & QR)
     const [paymentInfoMap, setPaymentInfoMap] = useState<Record<string, { account_number?: string; account_name?: string; qr_code_url?: string }>>({});
@@ -173,6 +175,16 @@ export default function BazaarDetailScreen({ bazaar, report, orders, products, p
     }, [appliedPromos, subtotal, posItems]);
 
     const grandTotal = subtotal - discount;
+
+    // Auto-fill paid amount with grandTotal when not manually edited
+    useEffect(() => {
+        if (!paidTouched) {
+            setPaidAmount(grandTotal);
+        }
+    }, [grandTotal, paidTouched]);
+
+    // Change = Paid - Total
+    const changeAmount = paidAmount - grandTotal;
 
     const addProduct = (product: ProductView) => {
         const existing = posItems.find(item => item.product.slug === product.slug);
@@ -281,6 +293,8 @@ export default function BazaarDetailScreen({ bazaar, report, orders, products, p
                 setAppliedPromos([]);
                 setPromoCodeInput("");
                 setPaymentMethod("cash");
+                setPaidAmount(0);
+                setPaidTouched(false);
                 router.refresh();
             }
         } catch (error) {
@@ -360,6 +374,8 @@ export default function BazaarDetailScreen({ bazaar, report, orders, products, p
                     setAppliedPromos={setAppliedPromos}
                     paymentMethod={paymentMethod} setPaymentMethod={setPaymentMethod}
                     subtotal={subtotal} discount={discount} grandTotal={grandTotal}
+                    paidAmount={paidAmount} setPaidAmount={setPaidAmount} setPaidTouched={setPaidTouched}
+                    changeAmount={changeAmount}
                     posLoading={posLoading} handlePOSSubmit={handlePOSSubmit}
                     customerSearchQuery={customerSearchQuery} setCustomerSearchQuery={setCustomerSearchQuery}
                     customerSearchResults={customerSearchResults} searchingCustomers={searchingCustomers}
@@ -582,7 +598,9 @@ function POSTab({
     filteredProducts, addProduct, updateQuantity, removeItem, updateUnitPrice,
     promoCodeInput, setPromoCodeInput, applyPromoCode, appliedPromos, setAppliedPromos,
     paymentMethod, setPaymentMethod,
-    subtotal, discount, grandTotal, posLoading, handlePOSSubmit,
+    subtotal, discount, grandTotal, paidAmount, setPaidAmount, setPaidTouched,
+    changeAmount,
+    posLoading, handlePOSSubmit,
     customerSearchQuery, setCustomerSearchQuery, customerSearchResults,
     searchingCustomers, showCustomerSearch, setShowCustomerSearch, setCustomerSearchResults,
     promoCodes, bazaar, paymentInfoMap, t
@@ -700,15 +718,26 @@ function POSTab({
                                         autoFocus
                                     />
                                 </div>
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-64 overflow-y-auto">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-72 overflow-y-auto p-1">
                                     {filteredProducts.map((product: ProductView) => (
                                         <button
                                             key={product.slug}
                                             onClick={() => addProduct(product)}
-                                            className="text-left p-3 border border-gray-200 rounded-lg hover:border-primary-400 hover:bg-primary-50 transition-colors"
+                                            className="text-left p-2.5 border border-gray-200 rounded-xl hover:border-primary-400 hover:bg-primary-50 hover:shadow-sm transition-all group"
                                         >
-                                            <p className="font-medium text-sm text-gray-900 truncate">{product.name}</p>
-                                            <p className="text-xs text-primary-600 font-semibold mt-1">{product.price} EGP</p>
+                                            <div className="flex items-start gap-2">
+                                                {product.image ? (
+                                                    <img src={product.image} alt={product.name} className="w-10 h-10 rounded-lg object-cover flex-shrink-0 border border-gray-100" />
+                                                ) : (
+                                                    <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+                                                        <Package size={16} className="text-gray-400" />
+                                                    </div>
+                                                )}
+                                                <div className="min-w-0 flex-1">
+                                                    <p className="font-medium text-xs text-gray-900 leading-tight line-clamp-2 group-hover:text-primary-700">{product.name}</p>
+                                                    <p className="text-xs text-primary-600 font-bold mt-1">{product.price} EGP</p>
+                                                </div>
+                                            </div>
                                         </button>
                                     ))}
                                 </div>
@@ -892,6 +921,32 @@ function POSTab({
                         <div className="flex justify-between items-center pt-3 border-t text-lg font-bold">
                             <span>{isAr ? 'الإجمالي' : 'Total'}</span>
                             <span className="text-primary-600">{grandTotal.toLocaleString()} EGP</span>
+                        </div>
+
+                        {/* Paid Amount (editable) */}
+                        <div className="flex justify-between items-center pt-3 border-t border-dashed">
+                            <span className="text-gray-600 text-sm font-medium">{isAr ? 'المدفوع' : 'Paid'}</span>
+                            <div className="flex items-center gap-1">
+                                <input
+                                    type="number"
+                                    value={paidAmount}
+                                    onChange={(e) => {
+                                        setPaidTouched(true);
+                                        setPaidAmount(parseFloat(e.target.value) || 0);
+                                    }}
+                                    onFocus={(e) => e.target.select()}
+                                    className="w-24 px-2 py-1.5 border border-gray-200 rounded-lg text-sm text-right font-medium focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                    placeholder="0"
+                                    min="0"
+                                />
+                                <span className="text-xs text-gray-400">EGP</span>
+                            </div>
+                        </div>
+
+                        {/* Change (auto-calculated) */}
+                        <div className={`flex justify-between items-center text-sm font-semibold ${changeAmount >= 0 ? 'text-blue-600' : 'text-red-500'}`}>
+                            <span>{isAr ? 'الباقي' : 'Change'}</span>
+                            <span>{changeAmount.toLocaleString()} EGP</span>
                         </div>
                     </div>
 
