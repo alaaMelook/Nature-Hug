@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect, useCallback } from "react";
+import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
@@ -70,6 +70,8 @@ export default function BazaarDetailScreen({ bazaar, report, orders, products, p
     const [showProducts, setShowProducts] = useState(false);
     const [paidAmount, setPaidAmount] = useState<number>(0);
     const [paidTouched, setPaidTouched] = useState(false);
+    const paidAmountRef = useRef(paidAmount);
+    paidAmountRef.current = paidAmount;
 
     // Payment info (InstaPay/Wallet numbers & QR)
     const [paymentInfoMap, setPaymentInfoMap] = useState<Record<string, { account_number?: string; account_name?: string; qr_code_url?: string }>>({});
@@ -195,7 +197,6 @@ export default function BazaarDetailScreen({ bazaar, report, orders, products, p
         } else {
             setPosItems(prev => [...prev, { product, quantity: 1, unitPrice: product.price }]);
         }
-        setShowProducts(false);
         setProductSearch("");
     };
 
@@ -264,7 +265,7 @@ export default function BazaarDetailScreen({ bazaar, report, orders, products, p
                 discount_total: discount,
                 shipping_total: 0,
                 tax_total: 0,
-                grand_total: paidAmount,
+                grand_total: paidAmountRef.current,
                 payment_method: paymentMethod,
                 payment_status: "paid",
                 status: "completed",
@@ -735,7 +736,12 @@ function POSTab({
                                                 )}
                                                 <div className="min-w-0 flex-1">
                                                     <p className="font-medium text-xs text-gray-900 leading-tight line-clamp-2 group-hover:text-primary-700">{product.name}</p>
-                                                    <p className="text-xs text-primary-600 font-bold mt-1">{product.price} EGP</p>
+                                                    <div className="flex items-center justify-between mt-1">
+                                                        <p className="text-xs text-primary-600 font-bold">{product.price} EGP</p>
+                                                        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${product.stock > 5 ? 'bg-green-50 text-green-600' : product.stock > 0 ? 'bg-orange-50 text-orange-600' : 'bg-red-50 text-red-600'}`}>
+                                                            {product.stock > 0 ? `${product.stock}` : isAr ? 'نفد' : 'Out'}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </button>
