@@ -1490,7 +1490,7 @@ export class IAdminServerRepository implements AdminRepository {
         console.log(`[IAdminRepository] getBazaarOrders called for bazaarId: ${bazaarId}`);
         const { data: orders, error } = await supabaseAdmin.schema('store')
             .from('orders')
-            .select('id, customer_id, grand_total, subtotal, discount_total, payment_method, payment_status, status, note, created_at, created_by_customer_id')
+            .select('id, customer_id, grand_total, subtotal, discount_total, payment_method, payment_status, status, note, created_at, created_by_customer_id, guest_name')
             .eq('bazaar_id', bazaarId)
             .order('created_at', { ascending: false });
 
@@ -1544,7 +1544,7 @@ export class IAdminServerRepository implements AdminRepository {
 
         return orders.map(order => ({
             order_id: order.id,
-            customer_name: customerNameMap[order.customer_id] || 'Guest',
+            customer_name: order.guest_name || customerNameMap[order.customer_id] || 'Guest',
             grand_total: order.grand_total,
             subtotal: order.subtotal,
             discount_total: order.discount_total,

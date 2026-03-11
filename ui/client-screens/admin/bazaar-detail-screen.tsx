@@ -623,6 +623,45 @@ function POSTab({
     searchingCustomers, showCustomerSearch, setShowCustomerSearch, setCustomerSearchResults,
     promoCodes, bazaar, paymentInfoMap, t
 }: any) {
+    const [phoneLookupMatch, setPhoneLookupMatch] = useState<string | null>(null);
+    const [phoneLooking, setPhoneLooking] = useState(false);
+
+    // Auto-lookup customer by phone number
+    useEffect(() => {
+        const phone = customerPhone?.replace(/\s/g, '');
+        if (!phone || phone.length < 8) {
+            setPhoneLookupMatch(null);
+            return;
+        }
+        const timer = setTimeout(async () => {
+            setPhoneLooking(true);
+            try {
+                const res = await fetch(`/api/admin/customers/search?q=${encodeURIComponent(phone)}`);
+                const data = await res.json();
+                if (Array.isArray(data) && data.length > 0) {
+                    const match = data.find((c: any) => c.phone === phone || c.phone === `+2${phone}` || `+2${c.phone}` === phone);
+                    if (match) {
+                        setPhoneLookupMatch(match.name);
+                        if (!customerName.trim()) {
+                            setCustomerName(match.name || '');
+                        }
+                    } else if (data[0]) {
+                        setPhoneLookupMatch(data[0].name);
+                        if (!customerName.trim()) {
+                            setCustomerName(data[0].name || '');
+                        }
+                    }
+                } else {
+                    setPhoneLookupMatch(null);
+                }
+            } catch {
+                setPhoneLookupMatch(null);
+            } finally {
+                setPhoneLooking(false);
+            }
+        }, 400);
+        return () => clearTimeout(timer);
+    }, [customerPhone]);
     // Get bazaar-specific promos that are active and not already applied
     const bazaarPromos = (promoCodes || []).filter((p: PromoCode) =>
         p.is_active &&
@@ -701,9 +740,20 @@ function POSTab({
                                 value={customerPhone}
                                 onChange={(e) => setCustomerPhone(e.target.value)}
                                 className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500/20 outline-none"
-                                placeholder="01xxxxxxxxx *"
+                                placeholder="01xxxxxxxxx"
                             />
+                            {phoneLooking && (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-400 absolute right-3 top-1/2 -translate-y-1/2" />
+                            )}
+                            {!phoneLooking && phoneLookupMatch && (
+                                <Check className="w-3.5 h-3.5 text-green-500 absolute right-3 top-1/2 -translate-y-1/2" />
+                            )}
                         </div>
+                        {phoneLookupMatch && (
+                            <p className="text-[11px] text-green-600 col-span-full -mt-1">
+                                ✓ {isAr ? `عميل مسجل: ${phoneLookupMatch}` : `Registered: ${phoneLookupMatch}`}
+                            </p>
+                        )}
                     </div>
                 </div>
 
