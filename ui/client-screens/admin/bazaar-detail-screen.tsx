@@ -328,6 +328,12 @@ export default function BazaarDetailScreen({ bazaar, report, orders, products, p
             { key: 'orders' as ActiveTab, label: isAr ? '📋 الطلبات' : '📋 Orders', icon: Package },
         ];
 
+    // Filter orders if user is POS only (staff)
+    const displayedOrders = useMemo(() => {
+        if (!isPosOnly || !currentUserId) return orders;
+        return orders.filter(o => o.created_by_customer_id === currentUserId);
+    }, [orders, isPosOnly, currentUserId]);
+
     return (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-4 sm:p-6 max-w-7xl mx-auto">
             {/* Header */}

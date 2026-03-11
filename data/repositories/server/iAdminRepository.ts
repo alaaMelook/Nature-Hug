@@ -1553,6 +1553,7 @@ export class IAdminServerRepository implements AdminRepository {
             status: order.status,
             note: order.note,
             created_at: order.created_at,
+            created_by_customer_id: order.created_by_customer_id,
             created_by_user_name: creatorNameMap[order.created_by_customer_id] || null,
             item_count: (itemsByOrder[order.id] || []).reduce((sum: number, i: any) => sum + i.quantity, 0),
         }));

@@ -21,7 +21,7 @@ export interface OrderDetailsView {
     discount_total: number;
     governorate_slug: string;
     // Creator information (for admin/moderator created orders)
-    created_by_user_id: string | null;
+    created_by_customer_id: number | null;
     created_by_user_name: string | null;
     created_by_user_role: 'admin' | 'moderator' | null;
     // Order notes
