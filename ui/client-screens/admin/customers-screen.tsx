@@ -119,9 +119,8 @@ export function CustomersScreen({ allCustomers }: { allCustomers: ProfileView[] 
         const hasEmail = customer.email && customer.email.trim() !== "";
         const hasOrders = (customer.total_orders ?? 0) > 0;
         const hasPhone = customer.phone && customer.phone.some(p => p && p.trim() !== "");
-        // Customer is valid if they have orders, or have (name or email) and orders/phone
-        // Show ONLY customers with orders OR customers with accounts
-        return hasOrders || hasEmail;
+        // Customer is valid if they have a name or phone
+        return hasName || hasPhone || hasOrders || hasEmail;
     };
 
     useEffect(() => {

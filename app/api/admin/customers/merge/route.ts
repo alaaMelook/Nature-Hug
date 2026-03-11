@@ -177,40 +177,60 @@ export async function POST(request: Request) {
     }
 }
 
-// GET: Find duplicate customers (same phone number)
+// GET: Find duplicate customers (same phone number OR same name)
 export async function GET(request: Request) {
     try {
-        // Get all customers with their phone numbers
+        // Get all customers with phone or name
         const { data: customers, error } = await supabaseAdmin
             .schema('store')
             .from('customers')
             .select('id, name, phone, email, auth_user_id')
-            .not('phone', 'is', null)
-            .order('phone');
+            .limit(10000);
 
         if (error) {
             return NextResponse.json({ error: error.message }, { status: 500 });
         }
 
-        // Group by phone number
+        const duplicates: { phone: string; customers: any[] }[] = [];
+
+        // 1. Group by phone number
         const phoneGroups: Record<string, any[]> = {};
         (customers || []).forEach(customer => {
             const phone = customer.phone?.trim();
             if (phone) {
-                if (!phoneGroups[phone]) {
-                    phoneGroups[phone] = [];
-                }
+                if (!phoneGroups[phone]) phoneGroups[phone] = [];
                 phoneGroups[phone].push(customer);
             }
         });
 
-        // Filter to only groups with duplicates
-        const duplicates = Object.entries(phoneGroups)
+        // Add phone-based duplicates
+        Object.entries(phoneGroups)
             .filter(([_, group]) => group.length > 1)
-            .map(([phone, customers]) => ({
-                phone,
-                customers
-            }));
+            .forEach(([phone, custs]) => {
+                duplicates.push({ phone: `📞 ${phone}`, customers: custs });
+            });
+
+        // 2. Group by exact name (for customers with names but different/no phones)
+        const nameGroups: Record<string, any[]> = {};
+        (customers || []).forEach(customer => {
+            const name = customer.name?.trim().toLowerCase();
+            if (name && name.length > 2) {
+                if (!nameGroups[name]) nameGroups[name] = [];
+                nameGroups[name].push(customer);
+            }
+        });
+
+        // Add name-based duplicates (only if not already caught by phone)
+        const alreadyGroupedIds = new Set(duplicates.flatMap(d => d.customers.map((c: any) => c.id)));
+        Object.entries(nameGroups)
+            .filter(([_, group]) => group.length > 1)
+            .forEach(([name, custs]) => {
+                // Skip if ALL customers in this group are already in phone groups
+                const hasNew = custs.some(c => !alreadyGroupedIds.has(c.id));
+                if (hasNew) {
+                    duplicates.push({ phone: `👤 ${custs[0].name}`, customers: custs });
+                }
+            });
 
         return NextResponse.json(duplicates);
 

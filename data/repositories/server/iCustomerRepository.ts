@@ -101,14 +101,82 @@ export class ICustomerServerRepository implements CustomerRepository {
 
     async getAllCustomers(): Promise<ProfileView[]> {
         console.log("[ICustomerRepository] getAllCustomers called.");
-        const supabase = await createSupabaseServerClient();
-        const { data, status, statusText, error } = await supabase.schema('store').from('profile_view').select('*');
-        console.log("[ICustomerRepository] getAllCustomers result:", { data, status, statusText });
-        if (error) {
-            console.error("[ICustomerRepository] getAllCustomers error:", error);
-            throw error;
+        const { supabaseAdmin } = await import("@/data/datasources/supabase/admin");
+
+        // 1. Get all customers
+        const { data: customers, error: custError } = await supabaseAdmin.schema('store')
+            .from('customers')
+            .select('id, name, phone, phone2, email, auth_user_id, created_at')
+            .not('name', 'is', null)
+            .order('created_at', { ascending: false })
+            .limit(10000);
+
+        if (custError) {
+            console.error("[ICustomerRepository] getAllCustomers error:", custError);
+            throw custError;
         }
-        return data || [];
+
+        // Filter to only those with name or phone
+        const allCustomers = (customers || []).filter(c => c.name || c.phone);
+        if (allCustomers.length === 0) return [];
+
+        // Get members (team/staff)
+        const { data: members } = await supabaseAdmin.schema('store')
+            .from('members')
+            .select('user_id, role');
+        const memberMap: Record<number, string> = {};
+        (members || []).forEach((m: any) => { memberMap[m.user_id] = m.role || 'member'; });
+
+        // 2. Get ALL order counts (grouped in JS)
+        const { data: allOrders } = await supabaseAdmin.schema('store')
+            .from('orders')
+            .select('customer_id')
+            .limit(50000);
+
+        const orderCountMap: Record<number, number> = {};
+        (allOrders || []).forEach((o: any) => {
+            if (o.customer_id) orderCountMap[o.customer_id] = (orderCountMap[o.customer_id] || 0) + 1;
+        });
+
+        // 3. Get ALL addresses
+        const { data: allAddresses } = await supabaseAdmin.schema('store')
+            .from('customer_addresses')
+            .select('id, customer_id, address, governorate_slug, created_at')
+            .limit(10000);
+
+        const { data: governorates } = await supabaseAdmin.schema('store')
+            .from('shipping_governorates')
+            .select('slug, name_en, name_ar, fees');
+
+        const govMap: Record<string, any> = {};
+        (governorates || []).forEach((g: any) => { govMap[g.slug] = g; });
+
+        const addressMap: Record<number, any[]> = {};
+        (allAddresses || []).forEach((a: any) => {
+            if (!addressMap[a.customer_id]) addressMap[a.customer_id] = [];
+            addressMap[a.customer_id].push({
+                id: a.id, customer_id: a.customer_id,
+                address: a.address,
+                governorate: govMap[a.governorate_slug] || null,
+                created_at: a.created_at
+            });
+        });
+
+        // 4. Build ProfileView
+        const result: ProfileView[] = allCustomers.map(c => ({
+            id: c.id,
+            name: c.name || '',
+            phone: [c.phone, c.phone2].filter(Boolean) as string[],
+            email: c.email || '',
+            address: addressMap[c.id] || [],
+            created_at: c.created_at,
+            role: memberMap[c.id] || null,
+            total_orders: orderCountMap[c.id] || 0,
+            has_account: !!c.auth_user_id
+        }));
+
+        console.log("[ICustomerRepository] getAllCustomers result:", result.length, "customers");
+        return result;
     }
 
     async getAllMembers(): Promise<MemberView[]> {
