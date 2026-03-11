@@ -8,5 +8,6 @@ export interface Bazaar {
     end_date: string;
     status: BazaarStatus;
     notes: string | null;
+    governorate_slug: string | null;
     created_at: string;
 }

@@ -1,12 +1,14 @@
 "use client";
 // Bazaar creation form component
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
-import { ArrowLeft, Store, Save, Loader2 } from "lucide-react";
+import { ArrowLeft, Store, Save, Loader2, MapPin } from "lucide-react";
 import { toast } from "sonner";
+import { Governorate } from "@/domain/entities/database/governorate";
+import { getGovernoratesAction } from "@/ui/hooks/admin/shippingActions";
 
 export default function CreateBazaarForm() {
     const { t, i18n } = useTranslation();
@@ -16,11 +18,19 @@ export default function CreateBazaarForm() {
 
     const [name, setName] = useState("");
     const [location, setLocation] = useState("");
+    const [governorateSlug, setGovernorateSlug] = useState("cairo");
+    const [governorates, setGovernorates] = useState<Governorate[]>([]);
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
     const [notes, setNotes] = useState("");
     const [status, setStatus] = useState<string>("upcoming");
     const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        getGovernoratesAction().then(res => {
+            if (res.success && res.data) setGovernorates(res.data);
+        });
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -42,6 +52,7 @@ export default function CreateBazaarForm() {
                 body: JSON.stringify({
                     name: name.trim(),
                     location: location.trim(),
+                    governorate_slug: governorateSlug,
                     start_date: startDate,
                     end_date: endDate,
                     notes: notes.trim() || null,
@@ -111,6 +122,24 @@ export default function CreateBazaarForm() {
                             className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none"
                             placeholder={i18n.language === 'ar' ? 'مثال: نادي المعادي' : 'e.g. Maadi Club'}
                         />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                            <MapPin size={14} />
+                            {i18n.language === 'ar' ? 'المحافظة' : 'Governorate'} *
+                        </label>
+                        <select
+                            value={governorateSlug}
+                            onChange={(e) => setGovernorateSlug(e.target.value)}
+                            className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none bg-white"
+                        >
+                            {governorates.map(g => (
+                                <option key={g.slug} value={g.slug}>
+                                    {i18n.language === 'ar' ? g.name_ar : g.name_en}
+                                </option>
+                            ))}
+                        </select>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

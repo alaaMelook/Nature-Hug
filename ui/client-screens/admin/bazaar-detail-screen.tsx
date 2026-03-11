@@ -268,7 +268,7 @@ export default function BazaarDetailScreen({ bazaar, report, orders, products, p
                 guest_phone: customerPhone,
                 guest_phone2: null,
                 guest_email: null,
-                guest_address: { address: `Bazaar: ${bazaar.name}`, governorate_slug: 'cairo' },
+                guest_address: { address: `Bazaar: ${bazaar.name}`, governorate_slug: bazaar.governorate_slug || 'cairo' },
                 subtotal,
                 discount_total: discount,
                 shipping_total: 0,
