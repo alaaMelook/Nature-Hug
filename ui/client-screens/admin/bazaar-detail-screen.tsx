@@ -264,7 +264,7 @@ export default function BazaarDetailScreen({ bazaar, report, orders, products, p
                 discount_total: discount,
                 shipping_total: 0,
                 tax_total: 0,
-                grand_total: grandTotal,
+                grand_total: paidAmount,
                 payment_method: paymentMethod,
                 payment_status: "paid",
                 status: "completed",
