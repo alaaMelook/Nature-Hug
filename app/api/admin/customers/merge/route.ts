@@ -191,7 +191,15 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: error.message }, { status: 500 });
         }
 
-        const duplicates: { phone: string; customers: any[] }[] = [];
+        // Fetch ignored groups
+        const { data: ignoredData, error: ignoredError } = await supabaseAdmin
+            .schema('store')
+            .from('ignored_duplicates')
+            .select('group_id');
+            
+        const ignoredGroups = new Set((ignoredData || []).map(row => row.group_id));
+
+        const duplicates: { groupId: string; phone: string; reason: 'phone' | 'name'; customers: any[] }[] = [];
 
         // 1. Group by phone number
         const phoneGroups: Record<string, any[]> = {};
@@ -207,7 +215,10 @@ export async function GET(request: Request) {
         Object.entries(phoneGroups)
             .filter(([_, group]) => group.length > 1)
             .forEach(([phone, custs]) => {
-                duplicates.push({ phone: `📞 ${phone}`, customers: custs });
+                const groupId = `phone_${phone}`;
+                if (!ignoredGroups.has(groupId)) {
+                    duplicates.push({ groupId, phone: `📞 ${phone}`, reason: 'phone', customers: custs });
+                }
             });
 
         // 2. Group by exact name (for customers with names but different/no phones)
@@ -228,7 +239,10 @@ export async function GET(request: Request) {
                 // Skip if ALL customers in this group are already in phone groups
                 const hasNew = custs.some(c => !alreadyGroupedIds.has(c.id));
                 if (hasNew) {
-                    duplicates.push({ phone: `👤 ${custs[0].name}`, customers: custs });
+                    const groupId = `name_${name}`;
+                    if (!ignoredGroups.has(groupId)) {
+                        duplicates.push({ groupId, phone: `👤 ${custs[0].name}`, reason: 'name', customers: custs });
+                    }
                 }
             });
 
@@ -239,3 +253,32 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: err.message }, { status: 500 });
     }
 }
+
+// DELETE: Ignore a duplicate group
+export async function DELETE(request: Request) {
+    try {
+        const { searchParams } = new URL(request.url);
+        const groupId = searchParams.get('groupId');
+
+        if (!groupId) {
+            return NextResponse.json({ error: "groupId is required" }, { status: 400 });
+        }
+
+        const { error } = await supabaseAdmin
+            .schema('store')
+            .from('ignored_duplicates')
+            .insert({ group_id: groupId });
+
+        if (error && error.code !== '23505') { // ignore duplicate key err
+            console.error("[Merge Customers] DELETE ignore error:", error);
+            return NextResponse.json({ error: "Failed to ignore duplicate" }, { status: 500 });
+        }
+
+        return NextResponse.json({ success: true, message: `Group ${groupId} ignored` });
+
+    } catch (err: any) {
+        console.error("[Merge Customers] DELETE Exception:", err);
+        return NextResponse.json({ error: err.message }, { status: 500 });
+    }
+}
+

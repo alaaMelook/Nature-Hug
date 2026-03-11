@@ -232,7 +232,7 @@ export class ICustomerServerRepository implements CustomerRepository {
             status,
             statusText,
             error
-        } = await supabase.schema('store').from('shipping_governorates').select('*').eq('slug', slug).single();
+        } = await supabase.schema('store').from('shipping_governorates').select('*').eq('slug', slug).maybeSingle();
         console.log("[ICustomerRepository] fetchGovernorate result:", { data, status, statusText });
         if (error) {
             console.error("[ICustomerRepository] fetchGovernorate error:", error);

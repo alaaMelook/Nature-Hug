@@ -9,7 +9,9 @@ import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import { toast } from "sonner";
 
 interface DuplicateGroup {
+    groupId: string;
     phone: string;
+    reason: 'phone' | 'name';
     customers: { id: number; name: string; email: string; auth_user_id: string | null }[];
 }
 
@@ -77,6 +79,30 @@ export function CustomersScreen({ allCustomers }: { allCustomers: ProfileView[] 
             toast.error("Failed to merge customers");
         } finally {
             setMerging(false);
+        }
+    };
+
+    // Handle dismiss duplicate group
+    const handleDismissGroup = async (groupId: string, e: React.MouseEvent) => {
+        e.stopPropagation(); // prevent opening the group
+        if (!confirm("Are you sure you want to dismiss this duplicate group? It won't be shown again.")) return;
+
+        try {
+            const res = await fetch(`/api/admin/customers/merge?groupId=${encodeURIComponent(groupId)}`, {
+                method: 'DELETE'
+            });
+            const data = await res.json();
+            
+            if (data.success) {
+                setDuplicates(prev => prev.filter(g => g.groupId !== groupId));
+                toast.success("Group dismissed");
+                if (selectedGroup?.groupId === groupId) setSelectedGroup(null);
+            } else {
+                toast.error(data.error || "Failed to dismiss");
+            }
+        } catch (error) {
+            console.error("Dismiss error:", error);
+            toast.error("An error occurred");
         }
     };
 
@@ -534,24 +560,39 @@ export function CustomersScreen({ allCustomers }: { allCustomers: ProfileView[] 
                                         </div>
                                         <div className="space-y-2">
                                             {duplicates.map(group => (
-                                                <button
-                                                    key={group.phone}
-                                                    onClick={() => setSelectedGroup(group)}
+                                                <div
+                                                    key={group.groupId}
                                                     className="w-full flex items-center justify-between p-4 rounded-lg border border-amber-200 hover:border-amber-400 hover:bg-amber-50 transition-colors text-left"
                                                 >
-                                                    <div>
-                                                        <p className="font-medium text-gray-900">
-                                                            📞 {group.phone}
-                                                        </p>
+                                                    <div className="flex-1 cursor-pointer" onClick={() => setSelectedGroup(group)}>
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <p className="font-medium text-gray-900">
+                                                                {group.phone}
+                                                            </p>
+                                                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${group.reason === 'phone' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>
+                                                                {group.reason === 'phone' ? 'Phone Match' : 'Name Match'}
+                                                            </span>
+                                                        </div>
                                                         <p className="text-sm text-gray-500">
-                                                            {group.customers.length} customers with this phone
+                                                            {group.customers.length} customers with this {group.reason}
                                                         </p>
                                                         <p className="text-xs text-gray-400 mt-1">
                                                             {group.customers.map(c => c.name || `#${c.id}`).join('  •  ')}
                                                         </p>
                                                     </div>
-                                                    <span className="text-amber-600">→</span>
-                                                </button>
+                                                    <div className="flex items-center gap-2">
+                                                        <button 
+                                                            onClick={(e) => handleDismissGroup(group.groupId, e)}
+                                                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                            title="Dismiss this duplicate pair"
+                                                        >
+                                                            <X size={18} />
+                                                        </button>
+                                                        <button onClick={() => setSelectedGroup(group)} className="p-1.5 text-amber-600">
+                                                            →
+                                                        </button>
+                                                    </div>
+                                                </div>
                                             ))}
                                         </div>
                                     </div>
