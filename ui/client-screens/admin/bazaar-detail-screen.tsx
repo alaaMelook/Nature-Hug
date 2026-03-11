@@ -255,10 +255,7 @@ export default function BazaarDetailScreen({ bazaar, report, orders, products, p
             toast.error(isAr ? 'اسم العميل مطلوب' : 'Customer name is required');
             return;
         }
-        if (!customerPhone.trim()) {
-            toast.error(isAr ? 'رقم التليفون مطلوب' : 'Phone number is required');
-            return;
-        }
+        
         if (posItems.length === 0) {
             toast.error(isAr ? 'أضف منتجات للأوردر' : 'Add products to the order');
             return;
