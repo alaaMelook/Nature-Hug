@@ -72,6 +72,11 @@ export default function BazaarDetailScreen({ bazaar, report, orders, products, p
     const [paidTouched, setPaidTouched] = useState(false);
     const paidAmountRef = useRef(paidAmount);
     paidAmountRef.current = paidAmount;
+    const [posNote, setPosNote] = useState("");
+    const [totalOverride, setTotalOverride] = useState<number>(0);
+    const [totalTouched, setTotalTouched] = useState(false);
+    const totalOverrideRef = useRef(totalOverride);
+    totalOverrideRef.current = totalOverride;
 
     // Payment info (InstaPay/Wallet numbers & QR)
     const [paymentInfoMap, setPaymentInfoMap] = useState<Record<string, { account_number?: string; account_name?: string; qr_code_url?: string }>>({});
@@ -178,15 +183,21 @@ export default function BazaarDetailScreen({ bazaar, report, orders, products, p
 
     const grandTotal = subtotal - discount;
 
-    // Auto-fill paid amount with grandTotal when not manually edited
+    // Auto-fill paid amount with finalTotal when not manually edited
+    const finalTotal = totalTouched ? totalOverride : grandTotal;
+    useEffect(() => {
+        if (!totalTouched) {
+            setTotalOverride(grandTotal);
+        }
+    }, [grandTotal, totalTouched]);
     useEffect(() => {
         if (!paidTouched) {
-            setPaidAmount(grandTotal);
+            setPaidAmount(finalTotal);
         }
-    }, [grandTotal, paidTouched]);
+    }, [finalTotal, paidTouched]);
 
-    // Change = Paid - Total
-    const changeAmount = paidAmount - grandTotal;
+    // Change = Paid - Final Total
+    const changeAmount = paidAmount - finalTotal;
 
     const addProduct = (product: ProductView) => {
         const existing = posItems.find(item => item.product.slug === product.slug);
@@ -265,11 +276,11 @@ export default function BazaarDetailScreen({ bazaar, report, orders, products, p
                 discount_total: discount,
                 shipping_total: 0,
                 tax_total: 0,
-                grand_total: paidAmountRef.current,
+                grand_total: totalOverrideRef.current,
                 payment_method: paymentMethod,
                 payment_status: "paid",
                 status: "completed",
-                note: `Bazaar Order - ${bazaar.name}`,
+                note: posNote ? `Bazaar Order - ${bazaar.name} | ${posNote}` : `Bazaar Order - ${bazaar.name}`,
                 promo_code_id: appliedPromos[0]?.id ?? null,
                 bazaar_id: bazaar.id,
                 items: posItems.map(item => ({
@@ -296,6 +307,9 @@ export default function BazaarDetailScreen({ bazaar, report, orders, products, p
                 setPaymentMethod("cash");
                 setPaidAmount(0);
                 setPaidTouched(false);
+                setPosNote("");
+                setTotalOverride(0);
+                setTotalTouched(false);
                 router.refresh();
             }
         } catch (error) {
@@ -377,6 +391,10 @@ export default function BazaarDetailScreen({ bazaar, report, orders, products, p
                     subtotal={subtotal} discount={discount} grandTotal={grandTotal}
                     paidAmount={paidAmount} setPaidAmount={setPaidAmount} setPaidTouched={setPaidTouched}
                     changeAmount={changeAmount}
+                    posNote={posNote} setPosNote={setPosNote}
+                    totalOverride={totalOverride} setTotalOverride={setTotalOverride}
+                    totalTouched={totalTouched} setTotalTouched={setTotalTouched}
+                    finalTotal={finalTotal}
                     posLoading={posLoading} handlePOSSubmit={handlePOSSubmit}
                     customerSearchQuery={customerSearchQuery} setCustomerSearchQuery={setCustomerSearchQuery}
                     customerSearchResults={customerSearchResults} searchingCustomers={searchingCustomers}
@@ -601,6 +619,8 @@ function POSTab({
     paymentMethod, setPaymentMethod,
     subtotal, discount, grandTotal, paidAmount, setPaidAmount, setPaidTouched,
     changeAmount,
+    posNote, setPosNote,
+    totalOverride, setTotalOverride, totalTouched, setTotalTouched, finalTotal,
     posLoading, handlePOSSubmit,
     customerSearchQuery, setCustomerSearchQuery, customerSearchResults,
     searchingCustomers, showCustomerSearch, setShowCustomerSearch, setCustomerSearchResults,
@@ -926,8 +946,27 @@ function POSTab({
                         </div>
                         <div className="flex justify-between items-center pt-3 border-t text-lg font-bold">
                             <span>{isAr ? 'الإجمالي' : 'Total'}</span>
-                            <span className="text-primary-600">{grandTotal.toLocaleString()} EGP</span>
+                            <div className="flex items-center gap-1">
+                                <input
+                                    type="number"
+                                    value={totalOverride}
+                                    onChange={(e) => {
+                                        setTotalTouched(true);
+                                        setTotalOverride(parseFloat(e.target.value) || 0);
+                                    }}
+                                    onFocus={(e) => e.target.select()}
+                                    className={`w-28 px-2 py-1.5 border rounded-lg text-sm text-right font-bold focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${totalTouched ? 'border-primary-400 text-primary-600' : 'border-gray-200 text-primary-600'}`}
+                                    placeholder="0"
+                                    min="0"
+                                />
+                                <span className="text-xs text-gray-400">EGP</span>
+                            </div>
                         </div>
+                        {totalTouched && totalOverride !== grandTotal && (
+                            <p className="text-[10px] text-orange-500 text-right">
+                                {isAr ? `الإجمالي الأصلي: ${grandTotal.toLocaleString()} EGP` : `Original: ${grandTotal.toLocaleString()} EGP`}
+                            </p>
+                        )}
 
                         {/* Paid Amount (editable) */}
                         <div className="flex justify-between items-center pt-3 border-t border-dashed">
@@ -954,6 +993,20 @@ function POSTab({
                             <span>{isAr ? 'الباقي' : 'Change'}</span>
                             <span>{changeAmount.toLocaleString()} EGP</span>
                         </div>
+                    </div>
+
+                    {/* Note */}
+                    <div className="bg-white rounded-xl border p-4">
+                        <label className="text-xs font-semibold text-gray-500 uppercase mb-2 block">
+                            {isAr ? '📝 ملاحظات' : '📝 Note'}
+                        </label>
+                        <textarea
+                            value={posNote}
+                            onChange={(e) => setPosNote(e.target.value)}
+                            rows={2}
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm resize-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none placeholder-gray-400"
+                            placeholder={isAr ? 'أضف ملاحظة على الأوردر...' : 'Add a note to the order...'}
+                        />
                     </div>
 
                     <button
