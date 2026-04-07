@@ -94,7 +94,7 @@ export default function InventoryReportPage() {
 
     // Logo
     const logoUrl =
-      "https://reqrsmboabgxshacmkst.supabase.co/storage/v1/object/public/nature-hug/logos/logo.jpg";
+      "/logo.jpg";
     const logo = await fetch(logoUrl)
       .then((res) => res.blob())
       .then(
