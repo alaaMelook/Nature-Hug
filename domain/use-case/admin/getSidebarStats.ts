@@ -35,7 +35,7 @@ export class GetSidebarStats {
 
             // Calculate Orders Warning Count
             // Logic: Order Status is 'Processing'
-            const ordersWarningCount = { pending: orders.filter((o: OrderDetailsView) => o.order_status.toLowerCase() === 'pending').length, processing: orders.filter((o: OrderDetailsView) => o.order_status.toLowerCase() === 'processing').length, packing: orders.filter((o: OrderDetailsView) => o.order_status.toLowerCase() === 'processing' && !o.packed).length };
+            const ordersWarningCount = { pending: orders.filter((o: OrderDetailsView) => (o.order_status ?? '').toLowerCase() === 'pending').length, processing: orders.filter((o: OrderDetailsView) => (o.order_status ?? '').toLowerCase() === 'processing').length, packing: orders.filter((o: OrderDetailsView) => (o.order_status ?? '').toLowerCase() === 'processing' && !o.packed).length };
 
             return {
                 productsWarningCount,

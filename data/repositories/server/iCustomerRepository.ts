@@ -96,6 +96,20 @@ export class ICustomerServerRepository implements CustomerRepository {
             console.error("[ICustomerRepository] viewProfile error:", error);
             throw error;
         }
+        // Normalize phone: DB may return string, null, or array — ensure it's always string[]
+        if (data) {
+            if (!data.phone) {
+                data.phone = [];
+            } else if (typeof data.phone === 'string') {
+                data.phone = [data.phone];
+            } else if (!Array.isArray(data.phone)) {
+                data.phone = [];
+            }
+            // Also handle phone2 if present
+            if (data.phone2 && typeof data.phone2 === 'string' && !data.phone.includes(data.phone2)) {
+                data.phone.push(data.phone2);
+            }
+        }
         return data;
     }
 

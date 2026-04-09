@@ -443,7 +443,7 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
                                     {t(order.order_status) || order.order_status}
                                 </span>
                                 {/* Show Paid for completed/delivered orders, or Prepaid for orders marked as paid but not yet delivered */}
-                                {(['delivered', 'completed'].includes(order.order_status.toLowerCase())) ? (
+                                {(['delivered', 'completed'].includes((order.order_status ?? '').toLowerCase())) ? (
                                     <span className="px-3 py-1.5 rounded-full text-xs sm:text-sm font-bold uppercase tracking-wide shadow-sm bg-green-100 text-green-700">
                                         {t("paid") || "Paid"}
                                     </span>

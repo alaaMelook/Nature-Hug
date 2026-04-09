@@ -325,6 +325,12 @@ export const resources = {
       confirmBulkReject: "Are you sure you want to reject selected orders?",
       bulkActionSuccess: "Bulk action completed successfully",
       bulkActionFailed: "Bulk action failed",
+      sendToShippingBulk: "Send to Shipping",
+      confirmBulkShipping: "Send {{count}} orders to shipping company?",
+      skippingNonProcessing: "({{count}} orders will be skipped - not in Processing status)",
+      noProcessingOrdersSelected: "No orders in 'Processing' status selected",
+      bulkShippingSuccess: "✅ {{count}} orders sent to shipping successfully!",
+      bulkShippingFailed: "❌ {{count}} orders failed: {{ids}}",
 
       fillRequiredFields: "Please fill all required fields",
       addOrder: "Add Order",

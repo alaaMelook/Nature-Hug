@@ -133,7 +133,7 @@ export function ProfileScreen({ profile, governorates, promoCodes = [] }: { prof
                             {profile?.phone?.map((p, index) => (
                                 <EditablePhoneField
                                     key={index}
-                                    label={t("profileScreen.phone", { index: profile?.phone.length > 1 ? index + 1 : "" })}
+                                    label={t("profileScreen.phone", { index: (profile?.phone?.length ?? 0) > 1 ? index + 1 : "" })}
                                     value={p ?? ""}
                                     loading={loading}
                                     onChange={(val) => setEditingPhone({ index: index + 1, phone: val })}
@@ -148,7 +148,7 @@ export function ProfileScreen({ profile, governorates, promoCodes = [] }: { prof
                                     value={newPhone?.phone ?? ""}
                                     newItem
                                     loading={loading}
-                                    onChange={(val) => setNewPhone({ index: (profile?.phone.length ?? 0) + 1, phone: val })}
+                                    onChange={(val) => setNewPhone({ index: (profile?.phone?.length ?? 0) + 1, phone: val })}
                                     onSave={() => handlePhoneSave(newPhone)}
                                 />
                             )}

@@ -25,7 +25,7 @@ export async function GET(
                 created_at,
                 product:products!inner(
                     slug,
-                    name_en,
+                    name,
                     name_ar,
                     price,
                     image_url
@@ -53,7 +53,7 @@ export async function GET(
             return {
                 ...item,
                 variant,
-                display_name_en: variant ? `${(item.product as any)?.name_en} - ${variant.name_en}` : (item.product as any)?.name_en,
+                display_name_en: variant ? `${(item.product as any)?.name} - ${variant.name_en}` : (item.product as any)?.name,
                 display_name_ar: variant ? `${(item.product as any)?.name_ar} - ${variant.name_ar}` : (item.product as any)?.name_ar,
                 display_price: variant?.price || (item.product as any)?.price,
                 display_image: variant?.image || (item.product as any)?.image_url

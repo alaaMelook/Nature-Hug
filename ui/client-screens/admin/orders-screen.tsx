@@ -11,7 +11,7 @@ import { generateInvoicePDF } from "@/lib/utils/invoiceGenerator";
 import { Loader2 } from "lucide-react";
 import { statusColor } from "@/lib/utils/statusColors";
 import { PromoCode } from "@/domain/entities/database/promoCode";
-import { FilterIcon, FileSpreadsheet } from "lucide-react";
+import { FilterIcon, FileSpreadsheet, Truck } from "lucide-react";
 import { exportOrdersToExcel } from "@/lib/utils/excelExporter";
 
 export function OrdersScreen({ initialOrders, promoCodes = [] }: { initialOrders: OrderDetailsView[], promoCodes?: PromoCode[] }) {
@@ -157,6 +157,57 @@ export function OrdersScreen({ initialOrders, promoCodes = [] }: { initialOrders
         }
     };
 
+    const handleBulkShipping = async () => {
+        if (selectedOrders.length === 0) return;
+
+        // Filter to only processing orders
+        const processingOrders = orders.filter(
+            o => selectedOrders.includes(o.order_id) && o.order_status === 'processing'
+        );
+
+        if (processingOrders.length === 0) {
+            toast.error(t("noProcessingOrdersSelected") || "No orders in 'Processing' status selected");
+            return;
+        }
+
+        const nonProcessingCount = selectedOrders.length - processingOrders.length;
+        let confirmMsg = (t("confirmBulkShipping") || "Send {{count}} orders to shipping company?").replace("{{count}}", processingOrders.length.toString());
+        if (nonProcessingCount > 0) {
+            confirmMsg += "\n" + (t("skippingNonProcessing") || "({{count}} orders will be skipped - not in Processing status)").replace("{{count}}", nonProcessingCount.toString());
+        }
+
+        if (!confirm(confirmMsg)) return;
+
+        setProcessingBulk(true);
+        try {
+            const { bulkSendToShippingAction } = await import("@/ui/hooks/admin/orders");
+            const result = await bulkSendToShippingAction(processingOrders.map(o => o.order_id));
+
+            if (result.successCount > 0) {
+                toast.success(
+                    (t("bulkShippingSuccess") || "✅ {{count}} orders sent to shipping successfully!")
+                        .replace("{{count}}", result.successCount.toString())
+                );
+            }
+            if (result.failCount > 0) {
+                const failedIds = result.results.filter(r => !r.success).map(r => `#${r.orderId}`).join(", ");
+                toast.error(
+                    (t("bulkShippingFailed") || "❌ {{count}} orders failed: {{ids}}")
+                        .replace("{{count}}", result.failCount.toString())
+                        .replace("{{ids}}", failedIds)
+                );
+            }
+
+            setSelectedOrders([]);
+            router.refresh();
+        } catch (error) {
+            console.error("Bulk shipping failed:", error);
+            toast.error(t("bulkActionFailed"));
+        } finally {
+            setProcessingBulk(false);
+        }
+    };
+
 
     return (
         <motion.div
@@ -218,6 +269,14 @@ export function OrdersScreen({ initialOrders, promoCodes = [] }: { initialOrders
                             >
                                 <FileSpreadsheet className="w-4 h-4" />
                                 {t("exportExcel") || "Export Excel"} ({selectedOrders.length})
+                            </button>
+                            <button
+                                onClick={handleBulkShipping}
+                                disabled={processingBulk}
+                                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50 font-medium transition-colors shadow-md flex items-center gap-2"
+                            >
+                                <Truck className="w-4 h-4" />
+                                {t("sendToShippingBulk") || "Send to Shipping"} ({orders.filter(o => selectedOrders.includes(o.order_id) && o.order_status === 'processing').length})
                             </button>
                             <button
                                 onClick={() => handleBulkAction('accept')}
@@ -442,7 +501,7 @@ export function OrdersScreen({ initialOrders, promoCodes = [] }: { initialOrders
                                                 <div className="flex flex-col gap-1">
                                                     <span className="text-sm font-medium text-gray-900">{order.payment_method}</span>
                                                     {/* Show Paid for completed/delivered orders, or Prepaid for orders marked as paid but not yet delivered */}
-                                                    {(['delivered', 'completed'].includes(order.order_status.toLowerCase())) ? (
+                                                    {(['delivered', 'completed'].includes((order.order_status ?? '').toLowerCase())) ? (
                                                         <span className="text-xs px-2.5 py-1 rounded-full font-bold w-fit bg-green-100 text-green-700">
                                                             {t("paid") || "Paid"}
                                                         </span>
@@ -566,7 +625,7 @@ export function OrdersScreen({ initialOrders, promoCodes = [] }: { initialOrders
                                                 <div className="flex flex-col gap-1 text-sm">
                                                     <div><span className="font-medium">{t("payment")}:</span> {order.payment_method}</div>
                                                     {/* Show Paid for completed/delivered orders, or Prepaid for orders marked as paid but not yet delivered */}
-                                                    {(['delivered', 'completed'].includes(order.order_status.toLowerCase())) ? (
+                                                    {(['delivered', 'completed'].includes((order.order_status ?? '').toLowerCase())) ? (
                                                         <span className="text-xs px-2.5 py-1 rounded-full font-bold w-fit bg-green-100 text-green-700">
                                                             {t("paid") || "Paid"}
                                                         </span>
@@ -690,6 +749,14 @@ export function OrdersScreen({ initialOrders, promoCodes = [] }: { initialOrders
                             <button onClick={() => setSelectedOrders([])} className="text-gray-500 text-sm font-medium px-2 py-1 bg-gray-100 rounded">{t("clear") || "Clear"}</button>
                         </div>
                         <div className="grid grid-cols-2 gap-2">
+                            <button
+                                onClick={handleBulkShipping}
+                                disabled={processingBulk}
+                                className="col-span-2 bg-blue-600 text-white px-2 py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium text-sm transition-colors text-center flex items-center justify-center gap-2 shadow-md"
+                            >
+                                <Truck className="w-4 h-4" />
+                                {t("sendToShippingBulk") || "Send to Shipping"} ({orders.filter(o => selectedOrders.includes(o.order_id) && o.order_status === 'processing').length})
+                            </button>
                             <button
                                 onClick={() => handleBulkAction('accept')}
                                 disabled={processingBulk}

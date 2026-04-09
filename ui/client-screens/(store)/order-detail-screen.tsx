@@ -67,7 +67,7 @@ export default function OrderDetailScreen({ order, fromCheckout }: {
 
         const statusOrder = ['pending', 'processing', 'shipped', 'out for delivery', 'delivered', 'completed'];
         const failedStatuses = ['cancelled', 'returned', 'refunded', 'failed', 'declined'];
-        const normalizedStatus = status.toLowerCase();
+        const normalizedStatus = (status ?? '').toLowerCase();
         const isFailed = failedStatuses.includes(normalizedStatus);
         const currentIndex = isFailed ? -1 : statusOrder.indexOf(normalizedStatus === 'completed' ? 'delivered' : normalizedStatus);
 
@@ -167,8 +167,8 @@ export default function OrderDetailScreen({ order, fromCheckout }: {
                             <h1 className="text-2xl font-bold text-amber-800">{t("ordersScreen.orderNumber", { id: order.order_id })}</h1>
                             <p className="text-sm text-gray-600">{t("ordersScreen.placed", { date: formatted })}</p>
                             <div
-                                className={`inline-flex items-center mt-3 px-3 py-1 rounded-full text-xs font-medium ${statusColor(order.order_status)}`}>
-                                {t(order.order_status)}
+                                className={`inline-flex items-center mt-3 px-3 py-1 rounded-full text-xs font-medium ${statusColor(order.order_status ?? 'pending')}`}>
+                                {t(order.order_status ?? 'pending')}
                             </div>
                         </div>
 

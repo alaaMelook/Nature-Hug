@@ -84,7 +84,7 @@ export function CheckoutUserScreen({ governorates, user }: { governorates: Gover
         }
 
         // Phone number validation - check saved phone or new phone
-        const hasPhone = (user.phone[0] && user.phone[0] !== '') || (data.guest_phone && data.guest_phone.trim() !== '');
+        const hasPhone = (user.phone?.[0] && user.phone[0] !== '') || (data.guest_phone && data.guest_phone.trim() !== '');
         if (!hasPhone) {
             setError('guest_phone', { type: 'manual', message: t('checkout.errors.required', { field: t('checkout.phone') }) });
             toast.error(t('checkout.errors.phoneRequired') || 'Phone number is required');
@@ -152,8 +152,8 @@ export function CheckoutUserScreen({ governorates, user }: { governorates: Gover
             status: 'pending',
             guest_email: data.guest_email,
             guest_name: data.guest_name,
-            guest_phone: data.guest_phone,
-            guest_phone2: data.guest_phone2 ?? null,
+            guest_phone: data.guest_phone || user?.phone?.[0] || null,
+            guest_phone2: data.guest_phone2 || user?.phone?.[1] || null,
             subtotal: subtotal,
             discount_total: totalDiscount,
             shipping_total: shippingTotal,
@@ -258,7 +258,7 @@ export function CheckoutUserScreen({ governorates, user }: { governorates: Gover
 
                                         <div className="relative">
                                             <label className="text-sm font-medium text-gray-700 mb-1.5 block">{t('checkout.phone')}</label>
-                                            {user.phone[0] === null || user.phone[0] === '' ? (
+                                            {!user.phone?.[0] || user.phone[0] === '' ? (
                                                 <div className="relative">
                                                     <input
                                                         {...register('guest_phone', { required: t('checkout.errors.required', { field: t('checkout.phone') }) })}
@@ -278,7 +278,7 @@ export function CheckoutUserScreen({ governorates, user }: { governorates: Gover
                                                         type="text"
                                                         readOnly
                                                         disabled
-                                                        value={user?.phone[0] ?? ''}
+                                                        value={user?.phone?.[0] ?? ''}
                                                         className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-500 cursor-not-allowed"
                                                     />
                                                     <Phone className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -288,7 +288,7 @@ export function CheckoutUserScreen({ governorates, user }: { governorates: Gover
 
                                         <div className="relative">
                                             <label className="text-sm font-medium text-gray-700 mb-1.5 block">{t('checkout.altPhone')}</label>
-                                            {user.phone.length < 2 || user.phone[1] === null || user.phone[1] === '' ? (
+                                            {!user.phone || user.phone.length < 2 || user.phone[1] === null || user.phone[1] === '' ? (
                                                 <div className="relative">
                                                     <input
                                                         type="text"
@@ -304,7 +304,7 @@ export function CheckoutUserScreen({ governorates, user }: { governorates: Gover
                                                         type="text"
                                                         readOnly
                                                         disabled
-                                                        value={user?.phone[1] ?? ''}
+                                                        value={user?.phone?.[1] ?? ''}
                                                         className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-500 cursor-not-allowed"
                                                     />
                                                     <Phone className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />

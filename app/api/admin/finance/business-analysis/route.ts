@@ -44,7 +44,7 @@ export async function GET(request: Request) {
             const { data: orderItems, error: itemsError } = await supabaseAdmin
                 .schema('store')
                 .from('order_items')
-                .select('product_id, variant_id, quantity, products(name_en), product_variants(name_en)')
+                .select('product_id, variant_id, quantity, products(name), product_variants(name_en)')
                 .in('order_id', orderIds);
 
             if (itemsError) {
@@ -102,7 +102,7 @@ export async function GET(request: Request) {
                             // Get product name
                             const productName = item.variant_id
                                 ? (item.product_variants as any)?.name_en || `Variant #${item.variant_id}`
-                                : (item.products as any)?.name_en || `Product #${item.product_id}`;
+                                : (item.products as any)?.name || `Product #${item.product_id}`;
 
                             // Check if already exists in breakdown
                             const existingIdx = cogsBreakdown.findIndex(c =>

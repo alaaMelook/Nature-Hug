@@ -13,18 +13,32 @@ export async function getCustomerPromoCodes(customerId: number): Promise<PromoCo
     // 2. eligible_customer_ids contains this customer's ID
     // 3. valid_until is null OR in the future
     // 4. valid_from is null OR in the past
-    const { data, error } = await supabaseAdmin
+    // Try with string ID first (the column stores IDs as strings in some cases)
+    // Then fallback to number if that fails
+    let data: any = null;
+    let error: any = null;
+
+    // First try with string ID
+    const result1 = await supabaseAdmin
         .schema('store')
         .from('promo_codes')
         .select('*')
         .eq('is_active', true)
-        .contains('eligible_customer_ids', [customerId]);
-
-    console.log("[getCustomerPromoCodes] Raw query result:", { data, error, customerId });
-
-    if (error) {
-        console.error('Error fetching customer promo codes:', error);
-        return [];
+        .contains('eligible_customer_ids', [String(customerId)]);
+    
+    if (!result1.error) {
+        data = result1.data;
+    } else {
+        // Fallback: try with number ID
+        const result2 = await supabaseAdmin
+            .schema('store')
+            .from('promo_codes')
+            .select('*')
+            .eq('is_active', true)
+            .contains('eligible_customer_ids', [customerId]);
+        
+        data = result2.data;
+        error = result2.error;
     }
 
     // Filter by date validity in code (since Supabase OR logic with nulls is complex)
