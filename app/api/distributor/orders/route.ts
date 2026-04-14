@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
 
             verifiedItems.push({
                 product_id: item.product_id,
-                variant_id: item.variant_id,
+                variant_id: item.variant_id || null,
                 quantity: item.quantity,
                 unit_price: unitPrice,
                 discount: 0

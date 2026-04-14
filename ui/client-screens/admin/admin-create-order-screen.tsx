@@ -368,7 +368,7 @@ export function AdminCreateOrderScreen({ products, governorates, promoCodes }: A
                 promo_code_id: appliedPromos[0]?.id ?? null,
                 items: orderItems.map(item => ({
                     product_id: item.product.id,
-                    variant_id: item.product.variant_id,
+                    variant_id: item.product.variant_id || null,
                     quantity: item.quantity,
                     unit_price: item.unitPrice,
                     discount: 0

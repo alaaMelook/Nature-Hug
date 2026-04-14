@@ -48,7 +48,7 @@ export async function createOrder(data: Partial<Order>, isAdmin: boolean, items:
 
         verifiedItems.push({
             product_id: dbProduct.id || dbProduct.product_id, // Handle view structure variability
-            variant_id: item.variant_id,
+            variant_id: item.variant_id || null,
             quantity: item.quantity,
             unit_price: unitPrice,
             discount: 0 // Will be distributed later if needed, or kept 0 and discount applied to order total

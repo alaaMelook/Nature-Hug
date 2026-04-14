@@ -135,7 +135,7 @@ export function DistributorCreateOrderScreen({ products, governorates, lang }: D
                     grand_total: grandTotal,
                     items: orderItems.map(item => ({
                         product_id: item.product.id,
-                        variant_id: item.product.variant_id,
+                        variant_id: item.product.variant_id || null,
                         quantity: item.quantity,
                         unit_price: item.unitPrice,
                     }))

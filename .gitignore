@@ -54,3 +54,22 @@ app/admin/materials/*
 !app/admin/materials/*.ts*
 app/admin/orders/*
 !app/admin/orders/*.ts*
+
+# Database dumps & migration scripts (contain secrets)
+*.sql
+!supabase/migrations/*.sql
+db-export/
+supabase/.temp/
+
+# One-off migration/fix scripts
+check-*.js
+fix-*.js
+import-*.js
+create-*.js
+migrate-*.js
+setup-*.js
+full-import.js
+retry-data.js
+get-views.js
+sync-databases.js
+export_*.json

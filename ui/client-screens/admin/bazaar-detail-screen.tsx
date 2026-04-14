@@ -282,7 +282,7 @@ export default function BazaarDetailScreen({ bazaar, report, orders, products, p
                 bazaar_id: bazaar.id,
                 items: posItems.map(item => ({
                     product_id: item.product.id,
-                    variant_id: item.product.variant_id,
+                    variant_id: item.product.variant_id || null,
                     quantity: item.quantity,
                     unit_price: item.unitPrice,
                     discount: 0
