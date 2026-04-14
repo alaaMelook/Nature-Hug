@@ -91,12 +91,16 @@ export async function syncOrderStatusAction(order: OrderDetailsView) {
 
         let updates: Partial<OrderDetailsView> = {};
         let shouldUpdate = false;
+        let shouldRestoreStock = false;
+
+        const statusLower = latestStatus.toLowerCase().trim();
 
         // Logic Mapping
-        if (latestStatus === "Picked Up" && order.order_status !== "shipped" && order.order_status !== "delivered") {
+        if ((statusLower === "picked up" || statusLower === "in transit" || statusLower === "in progress")
+            && order.order_status !== "shipped" && order.order_status !== "delivered" && order.order_status !== "returned") {
             updates.order_status = "shipped";
             shouldUpdate = true;
-        } else if (latestStatus === "Delivered") {
+        } else if (statusLower === "delivered" || statusLower === "completed") {
             if (order.order_status !== "delivered") {
                 updates.order_status = "delivered";
                 shouldUpdate = true;
@@ -105,9 +109,35 @@ export async function syncOrderStatusAction(order: OrderDetailsView) {
                 updates.payment_status = "paid";
                 shouldUpdate = true;
             }
+        } else if (statusLower === "returned" || statusLower === "rts" || statusLower === "returned to shipper"
+            || statusLower.includes("returned") || statusLower.includes("rts")) {
+            if (order.order_status !== "returned") {
+                updates.order_status = "returned";
+                shouldUpdate = true;
+                shouldRestoreStock = true;
+            }
+        } else if (statusLower === "cancelled" || statusLower === "canceled" || statusLower.includes("cancel")) {
+            if (order.order_status !== "cancelled") {
+                updates.order_status = "cancelled";
+                shouldUpdate = true;
+                shouldRestoreStock = true;
+            }
         }
 
         if (shouldUpdate) {
+            // Restore stock if order is returned or cancelled by shipping company
+            if (shouldRestoreStock) {
+                try {
+                    const { restoreOrderStock, restorePackagingForOrder } = await import("@/lib/services/stockService");
+                    await restoreOrderStock(order.order_id);
+                    await restorePackagingForOrder(order.order_id);
+                    console.log(`[syncOrderStatus] Stock restored for order ${order.order_id} (status: ${latestStatus})`);
+                } catch (stockError) {
+                    console.error(`[syncOrderStatus] Failed to restore stock for order ${order.order_id}:`, stockError);
+                    // Continue with status update even if stock restore fails
+                }
+            }
+
             await ordersUseCase.update({ ...updates, order_id: order.order_id });
             revalidatePath("/[lang]/admin/orders", "page");
             revalidatePath(`/[lang]/admin/orders/${order.order_id}`, "page");

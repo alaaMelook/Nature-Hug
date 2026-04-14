@@ -3,6 +3,7 @@ export const orderStatus = [
     'Processing',
     'Out For Delivery',
     'Shipped',
+    'Delivered',
     'Completed',
     'Cancelled',
     'Returned',
