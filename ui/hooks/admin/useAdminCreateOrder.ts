@@ -29,7 +29,7 @@ interface AdminOrderData {
     promo_code_id: number | null;
     items: {
         product_id: number;
-        variant_id: number;
+        variant_id: number | null;
         quantity: number;
         unit_price: number;
         discount: number;
