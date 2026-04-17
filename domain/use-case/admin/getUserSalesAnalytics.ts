@@ -220,26 +220,47 @@ export class GetUserSalesAnalytics {
         if (productIds.length > 0) {
             const { data: products } = await supabaseAdmin.schema('store')
                 .from('products')
-                .select('id, name_en')
+                .select('id, name')
                 .in('id', productIds);
-            productNameMap = (products || []).reduce((acc, p) => { acc[p.id] = p.name_en || 'Unknown'; return acc; }, {} as Record<number, string>);
+            productNameMap = (products || []).reduce((acc, p) => { acc[p.id] = p.name || 'Unknown'; return acc; }, {} as Record<number, string>);
         }
 
-        // Fetch variant names
+        // Fetch variant names (include product_id for fallback)
         const variantIds = [...new Set(Object.values(agg).map(a => a.variant_id).filter(Boolean))] as number[];
         let variantNameMap: Record<number, string> = {};
         if (variantIds.length > 0) {
             const { data: variants } = await supabaseAdmin.schema('store')
                 .from('product_variants')
-                .select('id, name_en')
+                .select('id, name_en, product_id')
                 .in('id', variantIds);
             variantNameMap = (variants || []).reduce((acc, v) => { acc[v.id] = v.name_en || ''; return acc; }, {} as Record<number, string>);
+
+            // For deleted parent products, use variant name as product name fallback
+            for (const v of (variants || [])) {
+                if (!productNameMap[v.product_id] && v.name_en) {
+                    productNameMap[v.product_id] = v.name_en;
+                }
+            }
+        }
+
+        // For products still missing, try to find ANY variant belonging to that product
+        const missingProductIds = productIds.filter(id => !productNameMap[id]);
+        if (missingProductIds.length > 0) {
+            const { data: fallbackVariants } = await supabaseAdmin.schema('store')
+                .from('product_variants')
+                .select('product_id, name_en')
+                .in('product_id', missingProductIds);
+            for (const v of (fallbackVariants || [])) {
+                if (!productNameMap[v.product_id] && v.name_en) {
+                    productNameMap[v.product_id] = v.name_en;
+                }
+            }
         }
 
         // Build result
         const results: TopSellingProduct[] = Object.values(agg).map(a => ({
             product_id: a.product_id,
-            product_name: productNameMap[a.product_id] || `Deleted Product #${a.product_id}`,
+            product_name: productNameMap[a.product_id] || `Product #${a.product_id}`,
             variant_id: a.variant_id,
             variant_name: a.variant_id ? (variantNameMap[a.variant_id] || null) : null,
             total_quantity: a.totalQty,

@@ -1613,10 +1613,10 @@ export class IAdminServerRepository implements AdminRepository {
         if (productIds.length > 0) {
             const { data: products } = await supabaseAdmin.schema('store')
                 .from('products')
-                .select('id, name_en')
+                .select('id, name')
                 .in('id', productIds);
             productNameMap = (products || []).reduce((acc: Record<number, string>, p: any) => {
-                acc[p.id] = p.name_en;
+                acc[p.id] = p.name;
                 return acc;
             }, {});
         }
@@ -1630,9 +1630,30 @@ export class IAdminServerRepository implements AdminRepository {
                 .select('id, name_en, product_id')
                 .in('id', variantIds);
             variantNameMap = (variants || []).reduce((acc: Record<number, string>, v: any) => {
-                acc[v.id] = `${productNameMap[v.product_id] || 'Product'} - ${v.name_en}`;
+                acc[v.id] = `${productNameMap[v.product_id] || v.name_en} - ${v.name_en}`;
                 return acc;
             }, {});
+
+            // For deleted parent products, use variant name as fallback
+            for (const v of (variants || [])) {
+                if (!productNameMap[v.product_id] && v.name_en) {
+                    productNameMap[v.product_id] = v.name_en;
+                }
+            }
+        }
+
+        // For products still missing (no variant found yet), try to find any variant
+        const missingProductIds = productIds.filter(id => !productNameMap[id]);
+        if (missingProductIds.length > 0) {
+            const { data: fallbackVariants } = await supabaseAdmin.schema('store')
+                .from('product_variants')
+                .select('product_id, name_en')
+                .in('product_id', missingProductIds);
+            for (const v of (fallbackVariants || [])) {
+                if (!productNameMap[v.product_id] && v.name_en) {
+                    productNameMap[v.product_id] = v.name_en;
+                }
+            }
         }
 
         // Get staff names

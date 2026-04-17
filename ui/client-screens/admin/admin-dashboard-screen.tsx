@@ -429,7 +429,7 @@ export function AdminDashboardScreen({ actionStats }: {
                                     <div className="flex-1 min-w-0">
                                         <p className="font-medium text-gray-900 truncate">
                                             {product.product_name}
-                                            {product.variant_name && (
+                                            {product.variant_name && product.variant_name !== product.product_name && (
                                                 <span className="text-gray-400 font-normal"> — {product.variant_name}</span>
                                             )}
                                         </p>
