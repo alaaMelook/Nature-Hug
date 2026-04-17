@@ -81,10 +81,11 @@ export default function ProductFilters({ onFilterChangeAction, initCategories, c
                         <select
                             id="sortBy"
                             name="sortBy"
-                            value={currentFilters?.sortBy || 'name-asc'}
+                            value={currentFilters?.sortBy || 'default'}
                             onChange={handleInputChange}
                             className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md"
                         >
+                            <option value="default">{i18n.language === 'ar' ? 'الافتراضي' : 'Default'}</option>
                             <option value="name-asc">{t('nameAsc')}</option>
                             <option value="name-desc">{t('nameDesc')}</option>
                             <option value="price-asc">{t('priceAsc')}</option>
@@ -163,10 +164,11 @@ export default function ProductFilters({ onFilterChangeAction, initCategories, c
                                         <select
                                             id="sortBy"
                                             name="sortBy"
-                                            value={currentFilters?.sortBy || 'name-asc'}
+                                            value={currentFilters?.sortBy || 'default'}
                                             onChange={handleInputChange}
                                             className="mt-1 block w-full px-2 py-2 mx-2 border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 text-sm rounded-md"
                                         >
+                                            <option value="default">{i18n.language === 'ar' ? 'الافتراضي' : 'Default'}</option>
                                             <option value="name-asc">{t('nameAsc')}</option>
                                             <option value="name-desc">{t('nameDesc')}</option>
                                             <option value="price-asc">{t('priceAsc')}</option>

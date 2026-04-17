@@ -540,13 +540,54 @@ export class IAdminServerRepository implements AdminRepository {
             }
         }
 
-        // Attach categories to each product and map image_url to image
-        return data.map((product: any) => ({
-            ...product,
-            image: product.image_url || product.image || '',
-            categories: categoriesMap[product.product_id] || [],
-            category_ids: (categoriesMap[product.product_id] || []).map((c: any) => c.id)
-        }));
+        // Group: separate parent products (variant_id = null) and variants
+        const parentRows = data.filter((r: any) => r.variant_id === null);
+        const variantRows = data.filter((r: any) => r.variant_id !== null);
+
+        // Map variants by product_id
+        const variantsByProductId: Record<number, any[]> = {};
+        for (const v of variantRows) {
+            if (!variantsByProductId[v.product_id]) {
+                variantsByProductId[v.product_id] = [];
+            }
+            variantsByProductId[v.product_id].push(v);
+        }
+
+        // Build result: merge variants into parent products
+        return parentRows.map((product: any) => {
+            const variants = variantsByProductId[product.product_id] || [];
+            const hasVariants = variants.length > 0;
+
+            // If product has variants, sum variant stocks for the total
+            const totalStock = hasVariants
+                ? variants.reduce((sum: number, v: any) => sum + (v.stock || 0), 0)
+                : product.stock;
+
+            return {
+                ...product,
+                image: product.image_url || product.image || '',
+                stock: totalStock,
+                categories: categoriesMap[product.product_id] || [],
+                category_ids: (categoriesMap[product.product_id] || []).map((c: any) => c.id),
+                variants: variants.map((v: any) => ({
+                    id: v.variant_id,
+                    product_id: v.product_id,
+                    name_en: v.name_en || '',
+                    name_ar: v.name_ar || '',
+                    price: v.price || 0,
+                    stock: v.stock || 0,
+                    discount: v.discount || 0,
+                    description_en: v.description_en || '',
+                    description_ar: v.description_ar || '',
+                    type_en: '',
+                    type_ar: '',
+                    image: v.image_url || v.image || '',
+                    gallery: v.gallery || [],
+                    slug: v.slug || '',
+                    materials: []
+                }))
+            };
+        });
     }
 
     async getProductForEdit(slug: string): Promise<ProductAdminView | null> {

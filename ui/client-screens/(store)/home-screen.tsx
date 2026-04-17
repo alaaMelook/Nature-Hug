@@ -21,16 +21,13 @@ export function HomeScreen({ initialProducts: products, categories }: { initialP
         setMounted(true);
     }, []);
 
-    // Sort products: discounted products first, then by created_at (already sorted from API)
+    // Sort products: discounted products first, then preserve admin sort_order (already from API)
     const sortedProducts = useMemo(() => {
         if (!products) return [];
-        return [...products].sort((a, b) => {
-            const aHasDiscount = a.discount != null && a.discount > 0;
-            const bHasDiscount = b.discount != null && b.discount > 0;
-            if (aHasDiscount && !bHasDiscount) return -1;
-            if (!aHasDiscount && bHasDiscount) return 1;
-            return 0; // Keep original order (by created_at) for same discount status
-        });
+        // Stable sort: discounted products first, but maintain relative order within each group
+        const discounted = products.filter(p => p.discount != null && p.discount > 0);
+        const regular = products.filter(p => !(p.discount != null && p.discount > 0));
+        return [...discounted, ...regular];
     }, [products]);
 
 

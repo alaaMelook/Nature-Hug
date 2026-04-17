@@ -24,7 +24,7 @@ export class IProductServerRepository implements ProductRepository {
             status,
             statusText,
             error
-        } = await supabase.schema('store').from(`products_view_${this.lang}`).select('*');
+        } = await supabase.schema('store').from(`products_view_${this.lang}`).select('*').order('sort_order', { ascending: true, nullsFirst: false });
 
         console.log("[IProductRepository] viewAll result:", { data, status, statusText });
         if (error) {
@@ -121,7 +121,7 @@ export class IProductServerRepository implements ProductRepository {
             status,
             statusText,
             error
-        } = await supabase.schema('store').from(`products_view_${this.lang}`).select('*').order('created_at', { ascending: false }).limit(count);
+        } = await supabase.schema('store').from(`products_view_${this.lang}`).select('*').order('sort_order', { ascending: true }).limit(count);
 
         console.log("[IProductRepository] viewRecent result:", { data, status, statusText });
         if (error) {

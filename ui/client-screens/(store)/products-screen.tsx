@@ -20,7 +20,7 @@ export function ProductsScreen({ initProducts, initCategories }: {
     const [filters, setFilters] = useState({
         search: '',
         category: categoryParam || '',
-        sortBy: 'name-asc',
+        sortBy: 'default',
         inStock: false,
         onSale: false
     });
@@ -96,6 +96,8 @@ export function ProductsScreen({ initProducts, initCategories }: {
 
             // Second priority: Apply selected sort criteria
             switch (filters.sortBy) {
+                case 'default':
+                    return 0; // Keep API order (sort_order from admin)
                 case 'name-asc':
                     return a.name.localeCompare(b.name);
                 case 'name-desc':

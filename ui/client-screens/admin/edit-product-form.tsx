@@ -6,6 +6,7 @@ import { ProductAdminView } from "@/domain/entities/views/admin/productAdminView
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { updateProductAction } from "@/ui/hooks/admin/products";
+import { Lock } from "lucide-react";
 import { Category } from "@/domain/entities/database/category";
 import { CategoryMultiSelect } from "@/ui/components/admin/CategoryMultiSelect";
 
@@ -60,6 +61,25 @@ export function EditProductForm({ initialCategories, initialProduct }: EditProdu
                 {/* Basic Info Section */}
                 <div className="bg-white rounded-lg shadow-sm border p-6 space-y-4">
                     <h2 className="text-lg font-semibold text-gray-700 border-b pb-2">{t("basicInfo") || "Basic Info"}</h2>
+
+                    {/* Slug */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Slug</label>
+                        <div className="relative flex items-center">
+                            <input
+                                value={initialProduct.slug}
+                                disabled
+                                className="w-full rounded-lg p-2 border bg-gray-100 border-gray-200 text-gray-500 cursor-not-allowed font-mono text-sm"
+                            />
+                            <div className={`absolute ${i18n.dir() === 'rtl' ? 'left-2' : 'right-2'} p-1 text-gray-400`}>
+                                <Lock size={14} />
+                            </div>
+                        </div>
+                        <p className="text-[10px] text-gray-400 mt-1 flex items-center gap-1">
+                            <Lock size={10} />
+                            {i18n.language === 'ar' ? 'الـ Slug لا يمكن تغييره' : 'Slug cannot be changed'}
+                        </p>
+                    </div>
 
                     {/* Name EN */}
                     <div>
