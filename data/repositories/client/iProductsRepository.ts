@@ -142,17 +142,136 @@ export class IProductClientRepository implements ProductRepository {
 
     async viewDetailedBySlug(slug: string): Promise<ProductDetailView> {
         console.log("[IProductRepository] Detailed called with slug:", slug);
-        const { data, status, statusText, error } = await supabase
-            .schema('store')
-            .rpc(`get_product_detail_${this.lang}`, { slug })
-            .single();
+        const isAr = this.lang === 'ar';
 
-        console.log("[IProductRepository] Detailed result:", { data, status, statusText });
-        if (error) {
-            console.error("[IProductRepository] Detailed error:", error);
-            throw error;
+        // 1. Try products table first
+        let product: any = null;
+        let productId: number | null = null;
+        let variantId: number | null = null;
+
+        const { data: productData } = await supabase.schema('store')
+            .from('products')
+            .select('*')
+            .eq('slug', slug)
+            .maybeSingle();
+
+        if (productData) {
+            product = productData;
+            productId = productData.id;
+        } else {
+            const { data: variantData } = await supabase.schema('store')
+                .from('product_variants')
+                .select('*, products!inner(*)')
+                .eq('slug', slug)
+                .maybeSingle();
+
+            if (variantData) {
+                variantId = variantData.id;
+                productId = variantData.product_id;
+                product = { ...variantData.products, _variant: variantData };
+            }
         }
-        return data as ProductDetailView;
+
+        if (!product || !productId) {
+            throw { code: 'NOT_FOUND', message: `Product not found: ${slug}` };
+        }
+
+        // 2. Get variants
+        const { data: variants } = await supabase.schema('store')
+            .from('product_variants')
+            .select('id, name_en, name_ar, price, stock, slug, type_en, type_ar')
+            .eq('product_id', productId);
+
+        // 3. Get reviews
+        const { data: reviews } = await supabase.schema('store')
+            .from('reviews')
+            .select('id, rating, comment, created_at, customer_id, status, customers(name, governorate)')
+            .eq('product_id', productId)
+            .order('created_at', { ascending: false });
+
+        // 4. Get materials
+        const materialKey = variantId ? 'variant_id' : 'product_id';
+        const materialKeyValue = variantId || productId;
+        const { data: materialsUsed } = await supabase.schema('store')
+            .from('materials_used')
+            .select('id, grams_used, measurement_unit, material_id')
+            .eq(materialKey, materialKeyValue);
+
+        let materialsData: any[] = [];
+        if (materialsUsed && materialsUsed.length > 0) {
+            const matIds = materialsUsed.map((m: any) => m.material_id);
+            const { data: mats } = await supabase.schema('admin')
+                .from('materials')
+                .select('id, name, material_type')
+                .in('id', matIds);
+            materialsData = mats || [];
+        }
+
+        // 5. Get category
+        const { data: catLinks } = await supabase.schema('store')
+            .from('product_categories')
+            .select('category_id, categories(name_en, name_ar)')
+            .eq('product_id', productId)
+            .limit(1);
+
+        // 6. Avg rating
+        const approvedReviews = (reviews || []).filter((r: any) => r.status === 'approved');
+        const avgRating = approvedReviews.length > 0
+            ? Math.round((approvedReviews.reduce((sum: number, r: any) => sum + r.rating, 0) / approvedReviews.length) * 10) / 10
+            : 0;
+
+        const source = product._variant || product;
+
+        return {
+            product_id: productId,
+            variant_id: variantId || undefined,
+            name: isAr ? (source.name_ar || product.name_ar || '') : (source.name_en || product.name || ''),
+            description: isAr ? (source.description_ar || product.description_ar || '') : (source.description_en || product.description || ''),
+            price: source.price || product.price || 0,
+            stock: source.stock || product.stock || 0,
+            discount: source.discount || product.discount || 0,
+            image: source.image || product.image_url || '',
+            category_name: catLinks?.[0]?.categories
+                ? (isAr ? (catLinks[0].categories as any).name_ar : (catLinks[0].categories as any).name_en)
+                : null,
+            skin_type: product.skin_type || null,
+            type: isAr ? (source.type_ar || product.product_type || '') : (source.type_en || product.product_type || ''),
+            slug: source.slug || product.slug,
+            product_type: product.product_type || null,
+            highlight: isAr ? (product.highlight_ar || '') : (product.highlight_en || ''),
+            faq: isAr ? (product.faq_ar || {}) : (product.faq_en || {}),
+            created_at: source.created_at || product.created_at,
+            gallery: source.gallery || product.gallery || [],
+            variants: (variants || []).map((v: any) => ({
+                id: v.id,
+                name: isAr ? (v.name_ar || '') : (v.name_en || ''),
+                price: v.price || 0,
+                stock: v.stock || 0,
+                slug: v.slug || '',
+                type: isAr ? (v.type_ar || '') : (v.type_en || ''),
+            })),
+            reviews: (reviews || []).map((r: any) => ({
+                id: r.id,
+                rating: r.rating,
+                comment: r.comment,
+                created_at: r.created_at,
+                customer_name: r.customers?.name || null,
+                customer_governorate: r.customers?.governorate || null,
+                customer_id: r.customer_id,
+                status: r.status,
+            })),
+            materials: (materialsUsed || []).map((mu: any) => {
+                const mat = materialsData.find((m: any) => m.id === mu.material_id);
+                return {
+                    id: mu.id,
+                    material_name: mat?.name || 'Unknown',
+                    grams_used: mu.grams_used,
+                    measurement_unit: mu.measurement_unit,
+                    material_type: mat?.material_type || null,
+                };
+            }),
+            avg_rating: avgRating,
+        } as ProductDetailView;
     }
 
     async viewByCategory(categoryName: string): Promise<ProductView[]> {

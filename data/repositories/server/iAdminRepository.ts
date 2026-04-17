@@ -232,9 +232,9 @@ export class IAdminServerRepository implements AdminRepository {
         const { error: productError } = await supabaseAdmin.schema('store')
             .from('products')
             .update({
-                name_en: product.name_en,
+                name: product.name_en,
                 name_ar: product.name_ar,
-                description_en: product.description_en || '',
+                description: product.description_en || '',
                 description_ar: product.description_ar || '',
                 price: product.price,
                 discount: product.discount || 0,
@@ -679,9 +679,9 @@ export class IAdminServerRepository implements AdminRepository {
         const result: ProductAdminView = {
             product_id: product.id,
             variant_id: null,
-            name_en: product.name_en || '',
+            name_en: product.name || '',
             name_ar: product.name_ar || '',
-            description_en: product.description_en || '',
+            description_en: product.description || '',
             description_ar: product.description_ar || '',
             price: product.price || 0,
             discount: product.discount || 0,
