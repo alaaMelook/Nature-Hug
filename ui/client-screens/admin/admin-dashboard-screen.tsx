@@ -1,10 +1,13 @@
 "use client";
 
-import { Users, Package, ShoppingCart, DollarSign, TrendingUp, TrendingDown, TrendingUpDown, ClipboardList, Truck, BrickWall, AlertCircle, Star, ArrowRight, BadgeDollarSignIcon, HandCoins, ShoppingBasket } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Users, Package, ShoppingCart, DollarSign, TrendingUp, TrendingDown, TrendingUpDown, ClipboardList, Truck, BrickWall, AlertCircle, Star, ArrowRight, BadgeDollarSignIcon, HandCoins, ShoppingBasket, Trophy } from "lucide-react";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { useAdminDashboard } from "@/ui/hooks/admin/useAdminDashboard";
+import { getTopSellingProductsAction } from "@/ui/hooks/admin/useAnalytics";
+import type { TopSellingProduct } from "@/domain/use-case/admin/getUserSalesAnalytics";
 
 interface StatCard {
     title: string;
@@ -34,6 +37,27 @@ export function AdminDashboardScreen({ actionStats }: {
 }) {
     const { t } = useTranslation();
     const { data: dashboard, loading, error, startDate, setStartDate, endDate, setEndDate } = useAdminDashboard();
+
+    // Top Selling Products
+    const [topProducts, setTopProducts] = useState<TopSellingProduct[]>([]);
+    const [topProductsLoading, setTopProductsLoading] = useState(false);
+
+    useEffect(() => {
+        let mounted = true;
+        async function fetchTopProducts() {
+            setTopProductsLoading(true);
+            try {
+                const products = await getTopSellingProductsAction(startDate, endDate, 10);
+                if (mounted) setTopProducts(products);
+            } catch (err) {
+                console.error("Failed to fetch top products:", err);
+            } finally {
+                if (mounted) setTopProductsLoading(false);
+            }
+        }
+        fetchTopProducts();
+        return () => { mounted = false; };
+    }, [startDate, endDate]);
 
     const statCards: StatCard[] = [
         {
@@ -364,6 +388,62 @@ export function AdminDashboardScreen({ actionStats }: {
                             </div>
                         </Link>
                     ))}
+                </div>
+            </motion.div>
+
+            {/* Top Selling Products */}
+            <motion.div variants={itemVariants}>
+                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <Trophy className="w-5 h-5 text-amber-500" />
+                    {t("topSellingProducts") || "Top Selling Products"}
+                </h3>
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    {topProductsLoading ? (
+                        <div className="p-6 space-y-3">
+                            {Array(5).fill(0).map((_, i) => (
+                                <div key={i} className="flex items-center gap-4 animate-pulse">
+                                    <div className="w-8 h-8 bg-gray-200 rounded-full" />
+                                    <div className="flex-1">
+                                        <div className="w-32 h-4 bg-gray-200 rounded" />
+                                    </div>
+                                    <div className="w-16 h-4 bg-gray-200 rounded" />
+                                </div>
+                            ))}
+                        </div>
+                    ) : topProducts.length === 0 ? (
+                        <div className="p-8 text-center text-gray-400">
+                            <Package className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                            <p>{t("noDataAvailable") || "No sales data for this period"}</p>
+                        </div>
+                    ) : (
+                        <div className="divide-y divide-gray-50">
+                            {topProducts.map((product, i) => (
+                                <div key={`${product.product_id}-${product.variant_id || 0}`}
+                                    className="flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors">
+                                    <span className={`w-8 h-8 flex items-center justify-center rounded-full text-sm font-bold ${
+                                        i === 0 ? 'bg-yellow-100 text-yellow-700' :
+                                        i === 1 ? 'bg-gray-100 text-gray-700' :
+                                        i === 2 ? 'bg-orange-100 text-orange-700' :
+                                        'bg-gray-50 text-gray-500'
+                                    }`}>{i + 1}</span>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-medium text-gray-900 truncate">
+                                            {product.product_name}
+                                            {product.variant_name && (
+                                                <span className="text-gray-400 font-normal"> — {product.variant_name}</span>
+                                            )}
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center gap-4 text-sm">
+                                        <span className="text-gray-500 whitespace-nowrap">{product.total_quantity} {t("pcs") || "pcs"}</span>
+                                        <span className="font-semibold text-gray-900 whitespace-nowrap">
+                                            {t("{{price, currency}}", { price: product.total_revenue })}
+                                        </span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </motion.div>
         </motion.div>

@@ -103,8 +103,12 @@ export function AdminCreateOrderScreen({ products, governorates, promoCodes }: A
     const handleSelectCustomer = (customer: CustomerSearchResult) => {
         setSelectedCustomer(customer);
         setCustomerName(customer.name);
-        setCustomerPhone(customer.phone);
-        setCustomerPhone2(customer.phone2 || "");
+
+        // Ensure the primary phone is always populated — fall back to phone2 if needed
+        const primaryPhone = customer.phone || customer.phone2 || "";
+        const secondaryPhone = customer.phone ? (customer.phone2 || "") : "";
+        setCustomerPhone(primaryPhone);
+        setCustomerPhone2(secondaryPhone);
         setCustomerEmail(customer.email || "");
 
         // Set address from first address if available

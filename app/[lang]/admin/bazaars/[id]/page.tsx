@@ -15,15 +15,17 @@ export default async function BazaarDetailPage({ params }: { params: Promise<{ i
     if (!bazaar) redirect("/admin/bazaars");
 
     let report: { totalSales: number; orderCount: number; customerCount: number; topProducts: { name: string; quantity: number; revenue: number }[]; topStaff: { name: string; orderCount: number; totalSales: number }[]; paymentBreakdown: { method: string; count: number; total: number }[] } = { totalSales: 0, orderCount: 0, customerCount: 0, topProducts: [], topStaff: [], paymentBreakdown: [] };
+    let myReport: typeof report | null = null;
     let orders: any[] = [];
     let products: any[] = [];
     let promoCodes: any[] = [];
 
     // Check if current user is POS-only staff (uses cached function)
-    const { customerId, permissions } = await getAdminStaffPermissions();
+    const { customerId, permissions, role } = await getAdminStaffPermissions();
     const isPosOnly = permissions.length > 0
         && permissions.includes('bazaars.pos')
         && !permissions.includes('bazaars');
+    const isAdmin = role === 'admin';
 
     // Load products and promo codes
     try {
@@ -44,6 +46,15 @@ export default async function BazaarDetailPage({ params }: { params: Promise<{ i
         }
     }
 
+    // Load personal report for non-admin staff
+    if (!isAdmin && customerId) {
+        try {
+            myReport = await bazaarsUc.getReport(bazaarId, customerId);
+        } catch (error) {
+            console.error("[BazaarDetailPage] Error loading personal report:", error);
+        }
+    }
+
     try {
         orders = await bazaarsUc.getOrders(bazaarId);
     } catch (error) {
@@ -54,11 +65,13 @@ export default async function BazaarDetailPage({ params }: { params: Promise<{ i
         <BazaarDetailScreen
             bazaar={bazaar}
             report={report}
+            myReport={myReport}
             orders={orders}
             products={products}
             promoCodes={promoCodes.filter((p: any) => p.bazaar_id === bazaarId || !p.bazaar_only || (p.bazaar_only && !p.bazaar_id))}
             isPosOnly={isPosOnly}
             currentUserId={customerId}
+            userRole={role}
         />
     );
 }

@@ -30,6 +30,36 @@ export class Orders {
         }
     }
 
+    /**
+     * Get all orders created by a specific user (RBAC: staff sees only their own orders)
+     */
+    async getAllForUser(creatorCustomerId: number) {
+        try {
+            const allOrders = await this.repo.getOrderDetails();
+            return allOrders.filter(o => o.created_by_customer_id === creatorCustomerId);
+        } catch (error) {
+            console.error("[getAllOrdersForUser] Error:", error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get recent pending orders created by a specific user
+     */
+    async getRecentForUser(creatorCustomerId: number) {
+        try {
+            let result = await this.repo.getOrderDetails();
+            result = result.filter(
+                (order) => order.created_by_customer_id === creatorCustomerId &&
+                           order.payment_status !== 'failed' && order.order_status === 'pending'
+            );
+            return result.slice(0, 5);
+        } catch (error) {
+            console.error("[getRecentOrdersForUser] Error:", error);
+            throw error;
+        }
+    }
+
     async update(order: Partial<OrderDetailsView>) {
         try {
             console.log("[updateOrderStatus] execute called.");

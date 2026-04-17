@@ -1559,7 +1559,7 @@ export class IAdminServerRepository implements AdminRepository {
         }));
     }
 
-    async getBazaarReport(bazaarId: number): Promise<{
+    async getBazaarReport(bazaarId: number, creatorCustomerId?: number): Promise<{
         totalSales: number;
         orderCount: number;
         customerCount: number;
@@ -1567,14 +1567,20 @@ export class IAdminServerRepository implements AdminRepository {
         topStaff: { name: string; orderCount: number; totalSales: number }[];
         paymentBreakdown: { method: string; count: number; total: number }[];
     }> {
-        console.log(`[IAdminRepository] getBazaarReport called for bazaarId: ${bazaarId}`);
+        console.log(`[IAdminRepository] getBazaarReport called for bazaarId: ${bazaarId}${creatorCustomerId ? `, creatorId: ${creatorCustomerId}` : ''}`);
 
-        // Get all bazaar orders with details
-        const { data: orders, error: ordersError } = await supabaseAdmin.schema('store')
+        // Get bazaar orders with details — optionally filtered by creator
+        let ordersQuery = supabaseAdmin.schema('store')
             .from('orders')
             .select('id, grand_total, payment_method, created_by_customer_id, customer_id')
             .eq('bazaar_id', bazaarId)
             .neq('status', 'cancelled');
+
+        if (creatorCustomerId) {
+            ordersQuery = ordersQuery.eq('created_by_customer_id', creatorCustomerId);
+        }
+
+        const { data: orders, error: ordersError } = await ordersQuery;
 
         if (ordersError) {
             console.error("[IAdminRepository] getBazaarReport orders error:", ordersError);
@@ -1650,12 +1656,15 @@ export class IAdminServerRepository implements AdminRepository {
         const uniqueCustomers = new Set(orders.map(o => o.customer_id).filter(Boolean));
         const customerCount = uniqueCustomers.size;
 
-        // Top products
+        // Top products — use product/variant name with fallback for deleted products
         const productAgg: Record<string, { name: string; quantity: number; revenue: number }> = {};
         for (const item of (items || [])) {
-            const name = item.variant_id
-                ? (variantNameMap[item.variant_id] || 'Unknown')
-                : (productNameMap[item.product_id] || 'Unknown');
+            let name: string;
+            if (item.variant_id) {
+                name = variantNameMap[item.variant_id] || productNameMap[item.product_id] || `Deleted Product #${item.product_id}`;
+            } else {
+                name = productNameMap[item.product_id] || `Deleted Product #${item.product_id}`;
+            }
             const key = `${item.product_id}-${item.variant_id || 0}`;
             if (!productAgg[key]) productAgg[key] = { name, quantity: 0, revenue: 0 };
             productAgg[key].quantity += item.quantity;

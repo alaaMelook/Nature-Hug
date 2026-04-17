@@ -68,9 +68,9 @@ export class Bazaars {
         }
     }
 
-    async getReport(bazaarId: number) {
+    async getReport(bazaarId: number, creatorCustomerId?: number) {
         try {
-            return await this.repo.getBazaarReport(bazaarId);
+            return await this.repo.getBazaarReport(bazaarId, creatorCustomerId);
         } catch (error) {
             console.error("[Bazaars] getReport error:", error);
             throw error;

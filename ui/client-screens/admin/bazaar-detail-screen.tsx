@@ -35,11 +35,13 @@ interface POSItem {
 interface BazaarDetailScreenProps {
     bazaar: Bazaar;
     report: BazaarReport;
+    myReport?: BazaarReport | null;
     orders: OrderDetailsView[];
     products: ProductView[];
     promoCodes: PromoCode[];
     isPosOnly?: boolean;
     currentUserId?: number | null;
+    userRole?: 'admin' | 'moderator' | 'staff' | null;
 }
 
 type ActiveTab = 'report' | 'pos' | 'orders';
@@ -50,7 +52,7 @@ const PAYMENT_METHODS = [
     { key: 'wallet', label: 'Wallet', labelAr: 'محفظة', icon: Wallet, color: 'bg-purple-50 border-purple-300 text-purple-700' },
 ];
 
-export default function BazaarDetailScreen({ bazaar, report, orders, products, promoCodes, isPosOnly = false, currentUserId }: BazaarDetailScreenProps) {
+export default function BazaarDetailScreen({ bazaar, report, myReport, orders, products, promoCodes, isPosOnly = false, currentUserId, userRole }: BazaarDetailScreenProps) {
     const { t, i18n } = useTranslation();
     const router = useRouter();
     const params = useParams();
@@ -328,11 +330,12 @@ export default function BazaarDetailScreen({ bazaar, report, orders, products, p
             { key: 'orders' as ActiveTab, label: isAr ? '📋 الطلبات' : '📋 Orders', icon: Package },
         ];
 
-    // Filter orders if user is POS only (staff)
+    // Filter orders: staff sees only their own, admin sees all
     const displayedOrders = useMemo(() => {
-        if (!isPosOnly || !currentUserId) return orders;
+        if (userRole === 'admin') return orders;
+        if (!currentUserId) return orders;
         return orders.filter(o => o.created_by_customer_id === currentUserId);
-    }, [orders, isPosOnly, currentUserId]);
+    }, [orders, currentUserId, userRole]);
 
     return (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-4 sm:p-6 max-w-7xl mx-auto">
@@ -408,7 +411,89 @@ export default function BazaarDetailScreen({ bazaar, report, orders, products, p
                     t={t}
                 />
             )}
-            {activeTab === 'orders' && <OrdersTab orders={orders} isAr={isAr} lang={lang} />}
+            {activeTab === 'orders' && (
+                <div className="space-y-6">
+                    {/* My Stats — for non-admin users */}
+                    {myReport && userRole !== 'admin' && (
+                        <div className="space-y-4">
+                            <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                                <Star className="text-yellow-500" size={20} />
+                                {isAr ? 'إحصائياتي' : 'My Stats'}
+                            </h3>
+
+                            {/* Summary Cards */}
+                            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+                                {[
+                                    { label: isAr ? 'إجمالي مبيعاتي' : 'My Total Sales', value: `${myReport.totalSales.toLocaleString()} EGP`, icon: TrendingUp, color: 'text-green-600 bg-green-50' },
+                                    { label: isAr ? 'عدد طلباتي' : 'My Orders', value: myReport.orderCount, icon: ShoppingCart, color: 'text-blue-600 bg-blue-50' },
+                                    { label: isAr ? 'عملائي' : 'My Customers', value: myReport.customerCount, icon: Users, color: 'text-purple-600 bg-purple-50' },
+                                ].map((card, i) => (
+                                    <div key={i} className="bg-white rounded-xl border p-4">
+                                        <div className="flex items-center gap-2 mb-1.5">
+                                            <div className={`p-1.5 rounded-lg ${card.color}`}><card.icon size={16} /></div>
+                                            <span className="text-xs font-medium text-gray-500">{card.label}</span>
+                                        </div>
+                                        <p className="text-xl font-bold text-gray-900">{card.value}</p>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* My Top Products */}
+                            {myReport.topProducts.length > 0 && (
+                                <div className="bg-white rounded-xl border p-4">
+                                    <h4 className="text-sm font-semibold text-gray-500 uppercase mb-3 flex items-center gap-2">
+                                        <Trophy size={14} /> {isAr ? 'أكتر منتجات بعتها' : 'My Top Products'}
+                                    </h4>
+                                    <div className="space-y-1.5">
+                                        {myReport.topProducts.slice(0, 10).map((product, i) => (
+                                            <div key={i} className="flex items-center justify-between p-2.5 hover:bg-gray-50 rounded-lg transition-colors">
+                                                <div className="flex items-center gap-2.5">
+                                                    <span className={`w-5 h-5 flex items-center justify-center rounded-full text-[10px] font-bold ${
+                                                        i === 0 ? 'bg-yellow-100 text-yellow-700' :
+                                                        i === 1 ? 'bg-gray-100 text-gray-700' :
+                                                        i === 2 ? 'bg-orange-100 text-orange-700' :
+                                                        'bg-gray-50 text-gray-500'
+                                                    }`}>{i + 1}</span>
+                                                    <span className="font-medium text-gray-900 text-sm">{product.name}</span>
+                                                </div>
+                                                <div className="flex items-center gap-3 text-sm">
+                                                    <span className="text-gray-500">{product.quantity} {isAr ? 'قطعة' : 'pcs'}</span>
+                                                    <span className="font-semibold text-gray-900">{product.revenue.toLocaleString()} EGP</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* My Payment Breakdown */}
+                            {myReport.paymentBreakdown.length > 0 && (
+                                <div className="bg-white rounded-xl border p-4">
+                                    <h4 className="text-sm font-semibold text-gray-500 uppercase mb-3 flex items-center gap-2">
+                                        <CreditCard size={14} /> {isAr ? 'طرق الدفع' : 'Payment Methods'}
+                                    </h4>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                        {myReport.paymentBreakdown.map((pm, i) => (
+                                            <div key={i} className="flex items-center justify-between p-2.5 bg-gray-50 rounded-lg">
+                                                <div>
+                                                    <p className="font-medium text-gray-900 capitalize text-sm">{pm.method}</p>
+                                                    <p className="text-xs text-gray-500">{pm.count} {isAr ? 'طلب' : 'orders'}</p>
+                                                </div>
+                                                <p className="font-bold text-gray-900 text-sm">{pm.total.toLocaleString()} EGP</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            <hr className="border-gray-200" />
+                        </div>
+                    )}
+
+                    {/* Orders List */}
+                    <OrdersTab orders={displayedOrders} isAr={isAr} lang={lang} />
+                </div>
+            )}
         </motion.div>
     );
 }

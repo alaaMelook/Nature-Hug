@@ -1,6 +1,7 @@
 import { supabaseAdmin } from "@/data/datasources/supabase/admin";
 import { NextResponse } from "next/server";
 import { DashboardStats } from "@/domain/entities/views/admin/dashboardMetricsView";
+import { getAdminStaffPermissions } from "@/lib/admin-helpers";
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
@@ -12,7 +13,11 @@ export async function GET(request: Request) {
     }
 
     try {
-        // Get base stats from RPC
+        // === RBAC: Get current user's role ===
+        const { customerId, role } = await getAdminStaffPermissions();
+        const isAdmin = role === 'admin';
+
+        // Get base stats from RPC (global stats — admin only gets meaningful data here)
         const { data: baseStats, error: rpcError } = await supabaseAdmin
             .schema('admin')
             .rpc('get_dashboard_stats', { p_start_date: startDate, p_end_date: endDate })
@@ -25,11 +30,18 @@ export async function GET(request: Request) {
 
         // === CUSTOMER COUNT ===
         // Use order_details view which has all the proper data
-        // Get ALL orders with customer info
-        const { data: allOrders, error: ordersError } = await supabaseAdmin
+        // Get orders with customer info — RBAC scoped
+        let ordersQuery = supabaseAdmin
             .schema('admin')
             .from('order_details')
-            .select('customer_email, phone_numbers, order_date');
+            .select('customer_email, phone_numbers, order_date, created_by_customer_id');
+
+        // Staff only sees their own orders
+        if (!isAdmin && customerId) {
+            ordersQuery = ordersQuery.eq('created_by_customer_id', customerId);
+        }
+
+        const { data: allOrders, error: ordersError } = await ordersQuery;
 
         if (ordersError) {
             console.error("Orders error:", ordersError);
@@ -152,18 +164,42 @@ export async function GET(request: Request) {
             console.log("[Dashboard Stats] GA4 fetch skipped:", gaError);
         }
 
-        // Merge with RPC results
-        const stats: DashboardStats = {
-            ...baseStats as DashboardStats,
-            total_customers: totalCustomers,
-            current_period_customers: periodCustomers,
-            customers_change: customersChange,
-            current_period_conversion_rate: conversionRate,
-            visitors: visitors,
-            visitor_conversion_rate: visitorConversionRate
-        };
+        // === RBAC: For non-admin users, compute scoped stats from filtered orders ===
+        let finalStats: DashboardStats;
 
-        return NextResponse.json(stats);
+        if (!isAdmin && customerId) {
+            // Staff sees: their own order counts, revenue, customers from their orders
+            const staffOrders = allOrders || [];
+            const staffOrdersInPeriod = staffOrders.filter(o => {
+                const d = new Date(o.order_date);
+                return d >= start && d <= end;
+            });
+
+            finalStats = {
+                ...baseStats as DashboardStats,
+                total_customers: totalCustomers,
+                current_period_customers: periodCustomers,
+                customers_change: customersChange,
+                total_orders: staffOrders.length,
+                current_period_orders: staffOrdersInPeriod.length,
+                current_period_conversion_rate: conversionRate,
+                visitors: 0, // GA visitors are global, not per-user
+                visitor_conversion_rate: "0"
+            };
+        } else {
+            // Admin sees global stats
+            finalStats = {
+                ...baseStats as DashboardStats,
+                total_customers: totalCustomers,
+                current_period_customers: periodCustomers,
+                customers_change: customersChange,
+                current_period_conversion_rate: conversionRate,
+                visitors: visitors,
+                visitor_conversion_rate: visitorConversionRate
+            };
+        }
+
+        return NextResponse.json(finalStats);
 
     } catch (err: any) {
         console.error("[Dashboard Stats] Error:", err);
