@@ -17,19 +17,28 @@ interface ImageSelectorProps {
 
 export function ImageSelector({ images, onSelect, selectedUrl, onClose }: ImageSelectorProps) {
     const { t } = useTranslation();
-    const [selected, setSelected] = useState<string | undefined>(selectedUrl);
+    const [selectedUrls, setSelectedUrls] = useState<string[]>(selectedUrl ? [selectedUrl] : []);
     const [localImages, setLocalImages] = useState(images);
     const [refreshing, setRefreshing] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [deletingUrl, setDeletingUrl] = useState<string | null>(null);
 
-    const handleSelect = (url: string) => {
-        setSelected(url);
+    const handleToggleSelect = (url: string) => {
+        setSelectedUrls(prev => {
+            if (prev.includes(url)) {
+                return prev.filter(u => u !== url);
+            } else {
+                return [...prev, url];
+            }
+        });
     };
 
     const handleConfirm = () => {
-        if (selected) {
-            onSelect(selected);
+        if (selectedUrls.length > 0) {
+            // Call onSelect for each selected URL
+            for (const url of selectedUrls) {
+                onSelect(url);
+            }
             onClose();
         }
     };
@@ -67,15 +76,10 @@ export function ImageSelector({ images, onSelect, selectedUrl, onClose }: ImageS
         if (!confirm(t('confirmDeleteImage'))) return;
 
         setDeletingUrl(url);
-        // Extract filename from URL if needed, or use the image object's name property if available
-        // Assuming the repository needs the filename. 
-        // If the 'image' object has the name, use it.
-        // Based on GetAllImages use case, 'image' is the object from storage list.
-
         const result = await deleteImageAction(imageName);
         if (result.success) {
             setLocalImages(localImages.filter(img => img.url !== url));
-            if (selected === url) setSelected(undefined);
+            setSelectedUrls(prev => prev.filter(u => u !== url));
             toast.success(t('imageDeleted'));
         } else {
             toast.error(t('errorDeletingImage'));
@@ -89,7 +93,14 @@ export function ImageSelector({ images, onSelect, selectedUrl, onClose }: ImageS
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
             <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[80vh] flex flex-col">
                 <div className="p-4 border-b flex justify-between items-center">
-                    <h2 className="text-lg font-semibold">{t('selectFromGallery')}</h2>
+                    <div className="flex items-center gap-3">
+                        <h2 className="text-lg font-semibold">{t('selectFromGallery')}</h2>
+                        {selectedUrls.length > 0 && (
+                            <span className="text-sm bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">
+                                {selectedUrls.length} selected
+                            </span>
+                        )}
+                    </div>
                     <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
                         ✕
                     </button>
@@ -117,37 +128,41 @@ export function ImageSelector({ images, onSelect, selectedUrl, onClose }: ImageS
                         </div>
 
                         {/* Images */}
-                        {localImages.map((img, index) => (
-                            <div
-                                key={index}
-                                className={`relative cursor-pointer border-2 rounded-lg overflow-hidden aspect-square group ${selected === img.url ? 'border-blue-500' : 'border-transparent'}`}
-                                onClick={() => handleSelect(img.url)}
-                            >
-                                <Image
-                                    src={img.url}
-                                    alt={`Gallery image ${index}`}
-                                    className="w-full h-full object-cover"
-                                    fill={true}
-                                />
-                                {selected === img.url && (
-                                    <div className="absolute top-2 right-2 bg-blue-500 text-white rounded-full p-1 z-10">
-                                        <CheckCircle size={16} />
-                                    </div>
-                                )}
-                                <button
-                                    onClick={(e) => handleDelete(e, img.url, img.image.name)}
-                                    disabled={deletingUrl === img.url}
-                                    className="absolute top-2 left-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-red-600"
-                                    title={t('deleteImage')}
+                        {localImages.map((img, index) => {
+                            const isSelected = selectedUrls.includes(img.url);
+                            const selectionOrder = selectedUrls.indexOf(img.url) + 1;
+                            return (
+                                <div
+                                    key={index}
+                                    className={`relative cursor-pointer border-2 rounded-lg overflow-hidden aspect-square group transition-all ${isSelected ? 'border-blue-500 ring-2 ring-blue-200' : 'border-transparent hover:border-gray-300'}`}
+                                    onClick={() => handleToggleSelect(img.url)}
                                 >
-                                    {deletingUrl === img.url ? (
-                                        <Loader2 size={16} className="animate-spin" />
-                                    ) : (
-                                        <Trash2 size={16} />
+                                    <Image
+                                        src={img.url}
+                                        alt={`Gallery image ${index}`}
+                                        className="w-full h-full object-cover"
+                                        fill={true}
+                                    />
+                                    {isSelected && (
+                                        <div className="absolute top-2 right-2 bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold z-10 shadow-md">
+                                            {selectionOrder}
+                                        </div>
                                     )}
-                                </button>
-                            </div>
-                        ))}
+                                    <button
+                                        onClick={(e) => handleDelete(e, img.url, img.image.name)}
+                                        disabled={deletingUrl === img.url}
+                                        className="absolute top-2 left-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-red-600"
+                                        title={t('deleteImage')}
+                                    >
+                                        {deletingUrl === img.url ? (
+                                            <Loader2 size={16} className="animate-spin" />
+                                        ) : (
+                                            <Trash2 size={16} />
+                                        )}
+                                    </button>
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
                 <div className="p-4 flex justify-between ">
@@ -155,26 +170,18 @@ export function ImageSelector({ images, onSelect, selectedUrl, onClose }: ImageS
                         onClick={refreshImages}
                         className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded"
                     > <AnimatePresence>
-                            {/* 1. Conditionally render the spinner when 'refreshing' is true */}
                             {refreshing ? (
                                 <motion.div
-                                    key="spinner-icon" // Required key for AnimatePresence
-
-                                    // Defines the initial state (when mounting)
+                                    key="spinner-icon"
                                     initial={{ rotate: 0 }}
-
-                                    // Defines the continuous, rotating animation
                                     animate={{
-                                        rotate: 360, // Target rotation
+                                        rotate: 360,
                                         transition: {
-                                            // Rotation transition settings:
                                             repeat: Infinity,
                                             ease: "linear",
                                             duration: 1.0,
                                         },
                                     }}
-
-                                    // Defines the exit animation (when 'refreshing' becomes false)
                                     exit={{
                                         transition: { duration: 0.2 }
                                     }}
@@ -186,6 +193,15 @@ export function ImageSelector({ images, onSelect, selectedUrl, onClose }: ImageS
                     </button>
 
                     <div className="p-4 flex justify-end gap-2">
+                        {selectedUrls.length > 0 && (
+                            <button
+                                type="button"
+                                onClick={() => setSelectedUrls([])}
+                                className="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded text-sm"
+                            >
+                                Clear all
+                            </button>
+                        )}
                         <button
                             onClick={onClose}
                             className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded"
@@ -194,10 +210,13 @@ export function ImageSelector({ images, onSelect, selectedUrl, onClose }: ImageS
                         </button>
                         <button
                             onClick={handleConfirm}
-                            disabled={!selected}
-                            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                            disabled={selectedUrls.length === 0}
+                            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
                         >
-                            {t('selectImage')}
+                            {selectedUrls.length > 1
+                                ? `Select ${selectedUrls.length} images`
+                                : t('selectImage')
+                            }
                         </button>
                     </div> </div>
             </div>

@@ -828,6 +828,18 @@ export function CreateProductForm({ initialImages, initialCategories, editMode =
                                                                             <Star size={8} className="text-amber-500" />
                                                                         </div>
                                                                     </div>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            const currentGallery = watch(`variants.${index}.gallery`) || [];
+                                                                            const newGallery = currentGallery.filter((_, i) => i !== imgIndex);
+                                                                            setValue(`variants.${index}.gallery`, newGallery);
+                                                                        }}
+                                                                        className="absolute top-0.5 right-0.5 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                                                    >
+                                                                        <Trash2 size={8} />
+                                                                    </button>
                                                                 </div>
                                                             ) : null
                                                         ))}
