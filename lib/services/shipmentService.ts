@@ -126,12 +126,26 @@ class ShipmentService {
         return this.request<ShipmentDetailsEx>(`${API_URL}/api/ClientUsers/V6/GetShipmentDetails/${awb}`);
     }
 
+    /**
+     * Create a single shipment using SaveShipmentEx (replaces deprecated SaveShipment).
+     * SaveShipmentEx accepts an array of shipments, so we wrap the single shipment in an array.
+     */
     public async createShipment(shipment: Shipment): Promise<ShipmentDetails> {
-        const data = await this.request<ShipmentDetails[]>(`${API_URL}/api/ClientUsers/V6/SaveShipment`, {
+        const data = await this.request<ShipmentDetails[]>(`${API_URL}/api/ClientUsers/V6/SaveShipmentEx`, {
             method: "POST",
-            body: JSON.stringify(shipment)
+            body: JSON.stringify([shipment])
         });
         return data[0];
+    }
+
+    /**
+     * Create multiple shipments in a single request using SaveShipmentEx.
+     */
+    public async createShipments(shipments: Shipment[]): Promise<ShipmentDetails[]> {
+        return this.request<ShipmentDetails[]>(`${API_URL}/api/ClientUsers/V6/SaveShipmentEx`, {
+            method: "POST",
+            body: JSON.stringify(shipments)
+        });
     }
 
     public async getDashboardLink(): Promise<string | null> {
