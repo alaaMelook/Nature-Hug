@@ -6,7 +6,8 @@ import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import {
     Store, Plus, Calendar, MapPin, Eye, Trash2,
-    TrendingUp, ShoppingCart, Search, MoreVertical
+    TrendingUp, ShoppingCart, Search, MoreVertical,
+    Lock, Unlock
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -43,6 +44,7 @@ export default function BazaarsScreen({ bazaars, isPosOnly = false }: BazaarsScr
     const lang = params?.lang as string;
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState<string>("all");
+    const [salesLocked, setSalesLocked] = useState(true);
 
     const filtered = bazaars.filter(b => {
         // POS-only: show only active bazaars
@@ -109,14 +111,27 @@ export default function BazaarsScreen({ bazaars, isPosOnly = false }: BazaarsScr
             {!isPosOnly && (
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
                     {[
-                        { label: i18n.language === 'ar' ? 'الكل' : 'Total', value: bazaars.length, color: 'bg-gray-50 border-gray-200' },
-                        { label: i18n.language === 'ar' ? 'نشط' : 'Active', value: bazaars.filter(b => b.status === 'active').length, color: 'bg-green-50 border-green-200' },
-                        { label: i18n.language === 'ar' ? 'إجمالي المبيعات' : 'Total Sales', value: `${bazaars.reduce((a, b) => a + b.totalSales, 0).toLocaleString()} EGP`, color: 'bg-blue-50 border-blue-200' },
-                        { label: i18n.language === 'ar' ? 'إجمالي الطلبات' : 'Total Orders', value: bazaars.reduce((a, b) => a + b.orderCount, 0), color: 'bg-purple-50 border-purple-200' },
+                        { label: i18n.language === 'ar' ? 'الكل' : 'Total', value: bazaars.length, color: 'bg-gray-50 border-gray-200', isSales: false },
+                        { label: i18n.language === 'ar' ? 'نشط' : 'Active', value: bazaars.filter(b => b.status === 'active').length, color: 'bg-green-50 border-green-200', isSales: false },
+                        { label: i18n.language === 'ar' ? 'إجمالي المبيعات' : 'Total Sales', value: `${bazaars.reduce((a, b) => a + b.totalSales, 0).toLocaleString()} EGP`, color: 'bg-blue-50 border-blue-200', isSales: true },
+                        { label: i18n.language === 'ar' ? 'إجمالي الطلبات' : 'Total Orders', value: bazaars.reduce((a, b) => a + b.orderCount, 0), color: 'bg-purple-50 border-purple-200', isSales: false },
                     ].map((card, i) => (
-                        <div key={i} className={`${card.color} border rounded-xl p-4`}>
-                            <p className="text-xs font-medium text-gray-500 uppercase">{card.label}</p>
-                            <p className="text-xl font-bold text-gray-900 mt-1">{card.value}</p>
+                        <div key={i} className={`${card.color} border rounded-xl p-4 relative`}>
+                            <div className="flex items-center justify-between">
+                                <p className="text-xs font-medium text-gray-500 uppercase">{card.label}</p>
+                                {card.isSales && (
+                                    <button
+                                        onClick={() => setSalesLocked(!salesLocked)}
+                                        className="p-1 hover:bg-white/60 rounded-md transition-colors"
+                                        title={salesLocked ? (i18n.language === 'ar' ? 'إظهار المبيعات' : 'Show sales') : (i18n.language === 'ar' ? 'إخفاء المبيعات' : 'Hide sales')}
+                                    >
+                                        {salesLocked ? <Lock size={14} className="text-gray-400" /> : <Unlock size={14} className="text-gray-400" />}
+                                    </button>
+                                )}
+                            </div>
+                            <p className="text-xl font-bold text-gray-900 mt-1">
+                                {card.isSales && salesLocked ? '******' : card.value}
+                            </p>
                         </div>
                     ))}
                 </div>
@@ -223,7 +238,7 @@ export default function BazaarsScreen({ bazaars, isPosOnly = false }: BazaarsScr
                                         <div className="flex items-center gap-2 text-sm">
                                             <TrendingUp size={16} className="text-gray-400" />
                                             <span className="text-gray-600">
-                                                <span className="font-semibold text-gray-900">{bazaar.totalSales.toLocaleString()} EGP</span> {i18n.language === 'ar' ? 'مبيعات' : 'sales'}
+                                                <span className="font-semibold text-gray-900">{salesLocked ? '******' : `${bazaar.totalSales.toLocaleString()} EGP`}</span> {i18n.language === 'ar' ? 'مبيعات' : 'sales'}
                                             </span>
                                         </div>
                                     </div>

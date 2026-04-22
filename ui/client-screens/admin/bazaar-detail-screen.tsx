@@ -257,6 +257,18 @@ export default function BazaarDetailScreen({ bazaar, report, myReport, orders, p
             toast.error(isAr ? 'اسم العميل مطلوب' : 'Customer name is required');
             return;
         }
+
+        // Validate phone number (required)
+        const cleanPhone = customerPhone.replace(/\s|-/g, '');
+        if (!cleanPhone) {
+            toast.error(isAr ? 'رقم الموبايل مطلوب' : 'Phone number is required');
+            return;
+        }
+        const egyptPhoneRegex = /^01[0125]\d{8}$/;
+        if (!egyptPhoneRegex.test(cleanPhone)) {
+            toast.error(isAr ? 'رقم الموبايل غير صحيح. الصيغة: 01XXXXXXXXX' : 'Invalid phone number. Format: 01XXXXXXXXX');
+            return;
+        }
         
         if (posItems.length === 0) {
             toast.error(isAr ? 'أضف منتجات للأوردر' : 'Add products to the order');
@@ -829,9 +841,21 @@ function POSTab({
                             <input
                                 type="tel"
                                 value={customerPhone}
-                                onChange={(e) => setCustomerPhone(e.target.value)}
-                                className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500/20 outline-none"
-                                placeholder="01xxxxxxxxx"
+                                onChange={(e) => {
+                                    // Allow only digits
+                                    const val = e.target.value.replace(/[^\d]/g, '');
+                                    setCustomerPhone(val);
+                                }}
+                                maxLength={11}
+                                className={`w-full pl-10 pr-3 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-primary-500/20 outline-none ${
+                                    customerPhone.trim() && !/^01[0125]\d{8}$/.test(customerPhone.replace(/\s|-/g, ''))
+                                        ? 'border-red-300 focus:border-red-400'
+                                        : customerPhone.trim() && /^01[0125]\d{8}$/.test(customerPhone.replace(/\s|-/g, ''))
+                                            ? 'border-green-300 focus:border-green-400'
+                                            : 'border-gray-200 focus:border-primary-500'
+                                }`}
+                                placeholder={isAr ? '01XXXXXXXXX *' : '01XXXXXXXXX *'}
+                                dir="ltr"
                             />
                             {phoneLooking && (
                                 <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-400 absolute right-3 top-1/2 -translate-y-1/2" />
@@ -840,6 +864,11 @@ function POSTab({
                                 <Check className="w-3.5 h-3.5 text-green-500 absolute right-3 top-1/2 -translate-y-1/2" />
                             )}
                         </div>
+                        {customerPhone.trim() && !/^01[0125]\d{8}$/.test(customerPhone.replace(/\s|-/g, '')) && (
+                            <p className="text-[11px] text-red-500 col-span-full -mt-1">
+                                {isAr ? 'الصيغة الصحيحة: 01XXXXXXXXX (يبدأ بـ 010, 011, 012, أو 015)' : 'Format: 01XXXXXXXXX (starts with 010, 011, 012, or 015)'}
+                            </p>
+                        )}
                         {phoneLookupMatch && (
                             <p className="text-[11px] text-green-600 col-span-full -mt-1">
                                 ✓ {isAr ? `عميل مسجل: ${phoneLookupMatch}` : `Registered: ${phoneLookupMatch}`}
