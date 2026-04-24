@@ -80,8 +80,10 @@ class ShipmentService {
         };
     }
 
-    private async request<T>(url: string, options: RequestInit = {}, retry = true,): Promise<T> {
+    private async request<T>(url: string, options: RequestInit = {}, retry = true, rateLimitRetry = true): Promise<T> {
         await this.ensureAuth();
+
+        console.log(`[ShipmentService] Request: ${options.method || 'GET'} ${url}`);
 
         const response = await fetch(url, {
             ...options,
@@ -93,20 +95,30 @@ class ShipmentService {
 
         if (response.status === 401 && retry) {
             console.warn("[ShipmentService] 401 Unauthorized, retrying login...");
-            this.token = null; // Clear token
-            await this.login(); // Re-login
-            return this.request<T>(url, options, false); // Retry once
+            this.token = null;
+            await this.login();
+            return this.request<T>(url, options, false, rateLimitRetry);
+        }
+
+        // Handle rate limiting - wait and retry once
+        if (response.status === 429 && rateLimitRetry) {
+            console.warn("[ShipmentService] 429 Rate limited, waiting 1.5s and retrying...");
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            return this.request<T>(url, options, retry, false);
         }
 
         if (!response.ok) {
             const text = await response.text();
             console.log("[ShipmentService] sent body ", options.body);
             console.error(`[ShipmentService] Request failed: ${response.status} ${url}`, text);
+            if (response.status === 403) {
+                this.token = null;
+            }
             throw new Error(`API Error: ${response.status} ${text}`);
         }
         const text = await response.text();
         const json = JSON.parse(text);
-        console.log("[ShipmentService] Request Json ", json);
+        console.log("[ShipmentService] Request success for:", url);
         return json;
     }
 
@@ -127,25 +139,46 @@ class ShipmentService {
     }
 
     /**
-     * Create a single shipment using SaveShipmentEx (replaces deprecated SaveShipment).
-     * SaveShipmentEx accepts an array of shipments, so we wrap the single shipment in an array.
+     * Create a single shipment using SaveShipmentEx.
+     * VSoft API expects: { allMustValid, hasAWBs, shipments: [...] }
      */
     public async createShipment(shipment: Shipment): Promise<ShipmentDetails> {
-        const data = await this.request<ShipmentDetails[]>(`${API_URL}/api/ClientUsers/V6/SaveShipmentEx`, {
+        const data = await this.request<any>(`${API_URL}/api/ClientUsers/V6/SaveShipmentEx`, {
             method: "POST",
-            body: JSON.stringify([shipment])
+            body: JSON.stringify({
+                allMustValid: true,
+                hasAWBs: false,
+                shipments: [shipment]
+            })
         });
-        return data[0];
+        // Response has successResponses array
+        if (data.successResponses && data.successResponses.length > 0) {
+            return data.successResponses[0];
+        }
+        // If no success, throw with details from badResponses
+        const errorMsg = data.badResponses?.[0]?.message 
+            || data.generalResponse?.message 
+            || "No valid shipment";
+        throw new Error(errorMsg);
     }
 
     /**
      * Create multiple shipments in a single request using SaveShipmentEx.
      */
     public async createShipments(shipments: Shipment[]): Promise<ShipmentDetails[]> {
-        return this.request<ShipmentDetails[]>(`${API_URL}/api/ClientUsers/V6/SaveShipmentEx`, {
+        const data = await this.request<any>(`${API_URL}/api/ClientUsers/V6/SaveShipmentEx`, {
             method: "POST",
-            body: JSON.stringify(shipments)
+            body: JSON.stringify({
+                allMustValid: false,
+                hasAWBs: false,
+                shipments: shipments
+            })
         });
+        if (data.successResponses && data.successResponses.length > 0) {
+            return data.successResponses;
+        }
+        const errorMsg = data.generalResponse?.message || "No valid shipments";
+        throw new Error(errorMsg);
     }
 
     public async getDashboardLink(): Promise<string | null> {

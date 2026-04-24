@@ -68,13 +68,22 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
 
     useEffect(() => {
         if (order.awb && order.order_status !== 'cancelled' && order.order_status !== 'returned' && !(order.order_status === 'delivered' && order.payment_status === 'paid')) {
-            import("@/ui/hooks/admin/orders").then(async (mod) => {
-                const res = await mod.syncOrderStatusAction(order);
-                setIsSyncing(false);
-                if (res.updated) {
-                    router.refresh();
-                }
-            });
+            // Small delay to avoid rate limiting with concurrent ShipmentTracking API call
+            const timer = setTimeout(() => {
+                import("@/ui/hooks/admin/orders").then(async (mod) => {
+                    try {
+                        const res = await mod.syncOrderStatusAction(order);
+                        setIsSyncing(false);
+                        if (res.updated) {
+                            router.refresh();
+                        }
+                    } catch (err) {
+                        console.error("[OrderDetails] Sync failed:", err);
+                        setIsSyncing(false);
+                    }
+                });
+            }, 2000);
+            return () => clearTimeout(timer);
         } else {
             setIsSyncing(false);
         }

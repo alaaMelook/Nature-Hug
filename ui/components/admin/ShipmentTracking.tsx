@@ -42,19 +42,34 @@ export function ShipmentTracking({ awb }: { awb: string }) {
     // Assuming details contains status history or current status
     return (
         <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-                <span className="text-gray-500">{t("status")}:</span>
-                <span className="font-medium">{details.Status || details.status || "N/A"}</span>
-            </div>
-            {/* Add more details as needed based on API response */}
-            {details.History && Array.isArray(details.History) && (
+            {details.shipmentInfo && details.shipmentInfo.length > 0 && (
+                <>
+                    <div className="flex justify-between text-sm">
+                        <span className="text-gray-500">{t("status")}:</span>
+                        <span className="font-medium">{details.shipmentInfo[0].StatusName || "N/A"}</span>
+                    </div>
+                    {details.shipmentInfo[0].RunnerName && (
+                        <div className="flex justify-between text-sm">
+                            <span className="text-gray-500">{t("courier") || "Courier"}:</span>
+                            <span className="font-medium">{details.shipmentInfo[0].RunnerName}</span>
+                        </div>
+                    )}
+                    {details.shipmentInfo[0].RunnerMobile && (
+                        <div className="flex justify-between text-sm">
+                            <span className="text-gray-500">{t("courierPhone") || "Phone"}:</span>
+                            <span className="font-medium direction-ltr">{details.shipmentInfo[0].RunnerMobile}</span>
+                        </div>
+                    )}
+                </>
+            )}
+            {details.tracking && Array.isArray(details.tracking) && details.tracking.length > 0 && (
                 <div className="mt-2 border-t pt-2">
                     <p className="text-xs font-semibold text-gray-500 mb-1">{t("history")}</p>
                     <ul className="space-y-1">
-                        {details.History.map((event: any, index: number) => (
+                        {details.tracking.map((event: any, index: number) => (
                             <li key={index} className="text-xs text-gray-600 flex justify-between">
-                                <span>{event.Status}</span>
-                                <span>{new Date(event.Date).toLocaleDateString()}</span>
+                                <span>{event.StatusName || event.StatusDescription}</span>
+                                <span>{new Date(event.AuditDate).toLocaleDateString()}</span>
                             </li>
                         ))}
                     </ul>
