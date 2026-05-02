@@ -49,7 +49,7 @@ export default function CreatePromoCodeForm({ products, customers = [] }: Create
     const [autoApply, setAutoApply] = useState<boolean>(false);
     // Bazaar restriction state
     const [bazaarOnly, setBazaarOnly] = useState<boolean>(false);
-    const [bazaarId, setBazaarId] = useState<number | null>(null);
+    const [bazaarIds, setBazaarIds] = useState<number[]>([]);
     const [bazaarList, setBazaarList] = useState<Bazaar[]>([]);
 
     // Fetch bazaars on mount
@@ -93,7 +93,7 @@ export default function CreatePromoCodeForm({ products, customers = [] }: Create
                 min_order_amount: minOrderAmount ? parseFloat(minOrderAmount) : undefined,
                 auto_apply: autoApply,
                 bazaar_only: bazaarOnly,
-                bazaar_id: bazaarOnly ? bazaarId : null,
+                bazaar_ids: bazaarOnly ? bazaarIds : [],
             } as PromoCode);
 
             if (result.success) {
@@ -414,20 +414,40 @@ export default function CreatePromoCodeForm({ products, customers = [] }: Create
                             {bazaarOnly && (
                                 <div className="mt-3">
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        {i18n.language === 'ar' ? 'اختر البازار' : 'Select Bazaar'}
+                                        {i18n.language === 'ar' ? 'اختر البازارات' : 'Select Bazaars'}
                                     </label>
-                                    <select
-                                        value={bazaarId ?? ''}
-                                        onChange={(e) => setBazaarId(e.target.value ? parseInt(e.target.value) : null)}
-                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none text-sm bg-white"
-                                    >
-                                        <option value="">{i18n.language === 'ar' ? 'كل البازارات' : 'All Bazaars'}</option>
+                                    <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-lg bg-white">
+                                        {bazaarList.length === 0 && (
+                                            <p className="text-sm text-gray-400 p-3 text-center">{i18n.language === 'ar' ? 'لا يوجد بازارات' : 'No bazaars found'}</p>
+                                        )}
                                         {bazaarList.map(bz => (
-                                            <option key={bz.id} value={bz.id}>{bz.name} ({bz.location})</option>
+                                            <label
+                                                key={bz.id}
+                                                className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-orange-50 transition-colors border-b border-gray-50 last:border-b-0 ${bazaarIds.includes(bz.id) ? 'bg-orange-50' : ''}`}
+                                            >
+                                                <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors flex-shrink-0 ${bazaarIds.includes(bz.id) ? 'bg-orange-500 border-orange-500' : 'border-gray-300 bg-white'}`}>
+                                                    {bazaarIds.includes(bz.id) && <Check className="h-3 w-3 text-white" />}
+                                                </div>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={bazaarIds.includes(bz.id)}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                            setBazaarIds(prev => [...prev, bz.id]);
+                                                        } else {
+                                                            setBazaarIds(prev => prev.filter(id => id !== bz.id));
+                                                        }
+                                                    }}
+                                                    className="sr-only"
+                                                />
+                                                <span className="text-sm text-gray-800">{bz.name} ({bz.location})</span>
+                                            </label>
                                         ))}
-                                    </select>
+                                    </div>
                                     <p className="text-xs text-gray-500 mt-1">
-                                        {i18n.language === 'ar' ? 'اختياري: حدد بازار معين أو اتركه فارغ لكل البازارات' : 'Optional: Select a specific bazaar or leave for all bazaars'}
+                                        {bazaarIds.length === 0
+                                            ? (i18n.language === 'ar' ? 'لم يتم اختيار بازار — سيعمل على كل البازارات' : 'No bazaars selected — will work on all bazaars')
+                                            : (i18n.language === 'ar' ? `${bazaarIds.length} بازار محدد` : `${bazaarIds.length} bazaar(s) selected`)}
                                     </p>
                                 </div>
                             )}

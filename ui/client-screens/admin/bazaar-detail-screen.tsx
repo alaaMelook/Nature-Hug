@@ -523,13 +523,22 @@ function ReportTab({ report, orders, bazaar, isAr }: { report: BazaarReport; ord
         const end = new Date(bazaar.end_date);
         let current = new Date(start);
         let dayNum = 1;
+        const seen = new Set<string>();
         while (current <= end) {
-            days.push({
-                label: `${isAr ? 'يوم' : 'Day'} ${dayNum} (${current.toLocaleDateString(isAr ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })})`,
-                date: current.toISOString().split('T')[0],
-            });
+            // Use local date parts to avoid UTC timezone shift duplicates
+            const y = current.getFullYear();
+            const m = String(current.getMonth() + 1).padStart(2, '0');
+            const d = String(current.getDate()).padStart(2, '0');
+            const dateStr = `${y}-${m}-${d}`;
+            if (!seen.has(dateStr)) {
+                seen.add(dateStr);
+                days.push({
+                    label: `${isAr ? 'يوم' : 'Day'} ${dayNum} (${current.toLocaleDateString(isAr ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })})`,
+                    date: dateStr,
+                });
+                dayNum++;
+            }
             current.setDate(current.getDate() + 1);
-            dayNum++;
         }
         return days;
     }, [bazaar.start_date, bazaar.end_date, isAr]);
@@ -593,7 +602,7 @@ function ReportTab({ report, orders, bazaar, isAr }: { report: BazaarReport; ord
                     <select value={selectedDay} onChange={(e) => setSelectedDay(e.target.value)}
                         className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500/20 outline-none bg-white">
                         <option value="all">{isAr ? 'كل الأيام' : 'All Days'}</option>
-                        {bazaarDays.map(day => (<option key={day.date} value={day.date}>{day.label}</option>))}
+                        {bazaarDays.map((day, idx) => (<option key={`day-${idx}`} value={day.date}>{day.label}</option>))}
                     </select>
                 </div>
                 <div className="flex-1 min-w-[100px] sm:min-w-[120px]">
@@ -766,12 +775,12 @@ function POSTab({
         return () => clearTimeout(timer);
     }, [customerPhone]);
     // Get bazaar-specific promos that are active and not already applied
-    const bazaarPromos = (promoCodes || []).filter((p: PromoCode) =>
-        p.is_active &&
-        p.bazaar_only &&
-        (p.bazaar_id === bazaar?.id || !p.bazaar_id) &&
-        !appliedPromos.some((ap: PromoCode) => ap.id === p.id)
-    );
+    const bazaarPromos = (promoCodes || []).filter((p: PromoCode) => {
+        if (!p.is_active || !p.bazaar_only) return false;
+        if (appliedPromos.some((ap: PromoCode) => ap.id === p.id)) return false;
+        const ids: number[] = p.bazaar_ids?.length ? p.bazaar_ids : (p.bazaar_id ? [p.bazaar_id] : []);
+        return ids.length === 0 || ids.includes(bazaar?.id);
+    });
 
     const quickApplyPromo = (promo: PromoCode) => {
         setAppliedPromos((prev: PromoCode[]) => [...prev, promo]);

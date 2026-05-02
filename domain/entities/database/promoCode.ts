@@ -22,5 +22,6 @@ export interface PromoCode {
     min_order_amount?: number; // Minimum cart total required to use this promo code
     auto_apply?: boolean; // If true, discount applies automatically at checkout without entering code
     bazaar_only?: boolean; // If true, this promo code only works in bazaar POS (hidden from online store)
-    bazaar_id?: number | null; // If set, this promo code only works for this specific bazaar
+    bazaar_id?: number | null; // DEPRECATED: single bazaar (kept for backward compatibility)
+    bazaar_ids?: number[]; // If set, this promo code only works for these specific bazaars
 }

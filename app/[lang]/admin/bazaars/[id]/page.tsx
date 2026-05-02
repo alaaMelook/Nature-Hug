@@ -68,7 +68,11 @@ export default async function BazaarDetailPage({ params }: { params: Promise<{ i
             myReport={myReport}
             orders={orders}
             products={products}
-            promoCodes={promoCodes.filter((p: any) => p.bazaar_id === bazaarId || !p.bazaar_only || (p.bazaar_only && !p.bazaar_id))}
+            promoCodes={promoCodes.filter((p: any) => {
+                if (!p.bazaar_only) return true; // not bazaar-only = always include
+                const ids: number[] = p.bazaar_ids?.length ? p.bazaar_ids : (p.bazaar_id ? [p.bazaar_id] : []);
+                return ids.length === 0 || ids.includes(bazaarId); // empty = all bazaars, or must include this bazaar
+            })}
             isPosOnly={isPosOnly}
             currentUserId={customerId}
             userRole={role}
