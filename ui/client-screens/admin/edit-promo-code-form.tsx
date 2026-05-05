@@ -335,7 +335,7 @@ export default function EditPromoCodeForm({ promoCode, products, customers = [] 
                                             <input
                                                 type="text" inputMode="numeric"
                                                 value={amountOff ?? "0"}
-                                                onChange={(e) => setAmountOff(parseFloat(e.target.value === '' ? "0" : e.target.value) ?? 0)}
+                                                onChange={(e) => setAmountOff(e.target.value)}
                                                 className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none pr-12"
                                             />
                                             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">{t("egp") || "EGP"}</span>

@@ -4,7 +4,7 @@ import { OrderDetailsView, OrderItemView } from "@/domain/entities/views/admin/o
 import { ProductView } from "@/domain/entities/views/shop/productView";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
     acceptOrderAction,
     rejectOrderAction,
@@ -14,11 +14,12 @@ import {
     cancelShippedOrderAction,
     deleteOrderAction
 } from "@/ui/hooks/admin/orders";
-import { User, MapPin, Phone, Package, Calendar, ArrowLeft, X, CreditCard, Mail, Loader2, Trash2, Edit2, Save, Plus, Search } from "lucide-react";
+import { User, MapPin, Phone, Package, Calendar, ArrowLeft, X, CreditCard, Mail, Loader2, Trash2, Edit2, Save, Plus, Search, ChevronDown } from "lucide-react";
 import { ShipmentTracking } from "@/ui/components/admin/ShipmentTracking";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { statusColor } from "@/lib/utils/statusColors";
+import { orderStatus } from "@/lib/utils/status";
 import { Shipment } from "@/domain/entities/shipment/shipment";
 import { Governorate } from "@/domain/entities/database/governorate";
 
@@ -31,6 +32,8 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
     const [deleting, setDeleting] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
+    const statusDropdownRef = useRef<HTMLDivElement>(null);
     const [editForm, setEditForm] = useState({
         customer_name: order.customer_name,
         customer_email: order.customer_email || '',
@@ -140,11 +143,13 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
                 result = await acceptOrderAction(order.order_id.toString());
             } else if (newStatus === 'declined') {
                 result = await rejectOrderAction(order.order_id.toString());
-            } else if (newStatus === 'cancelled' && order.order_status === 'processing') {
-                result = await cancelOrderAction(order.order_id.toString());
-            } else if (newStatus === 'cancelled' && order.order_status === 'out for delivery') {
-
-                result = await cancelShippedOrderAction(order);
+            } else if (newStatus === 'cancelled') {
+                // Use special cancel actions for specific states
+                if (order.awb && (order.order_status === 'out for delivery' || order.order_status === 'shipped')) {
+                    result = await cancelShippedOrderAction(order);
+                } else {
+                    result = await cancelOrderAction(order.order_id.toString());
+                }
             }
 
             else if (newStatus === 'out for delivery' && !isManual) {
@@ -229,6 +234,7 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
 
             if (result.success) {
                 toast.success(t("orderStatusUpdated", { status: t(newStatus) || newStatus }));
+                router.refresh();
             } else {
                 toast.error(result.error || t("failedToUpdateOrder"));
             }
@@ -482,9 +488,52 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
                         <div>
                             <h1 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-3 flex-wrap">
                                 {t("orderId")} #{order.order_id}
-                                <span className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-bold uppercase tracking-wide shadow-sm ${statusColor(order.order_status)}`}>
-                                    {t(order.order_status) || order.order_status}
-                                </span>
+                                {/* Status Dropdown - Custom styled */}
+                                <div className="relative" ref={statusDropdownRef}>
+                                    <button
+                                        type="button"
+                                        onClick={() => setStatusDropdownOpen(!statusDropdownOpen)}
+                                        disabled={updating}
+                                        className={`px-4 py-1.5 rounded-full text-xs sm:text-sm font-bold uppercase tracking-wide shadow-sm cursor-pointer outline-none transition-all disabled:opacity-50 flex items-center gap-1.5 hover:shadow-md ${statusColor(order.order_status)}`}
+                                    >
+                                        {updating ? (
+                                            <Loader2 size={14} className="animate-spin" />
+                                        ) : null}
+                                        {t(order.order_status) || order.order_status}
+                                        <ChevronDown size={14} className={`transition-transform ${statusDropdownOpen ? 'rotate-180' : ''}`} />
+                                    </button>
+                                    {statusDropdownOpen && (
+                                        <>
+                                            {/* Backdrop to close on click outside */}
+                                            <div className="fixed inset-0 z-40" onClick={() => setStatusDropdownOpen(false)} />
+                                            <div className="absolute top-full left-0 mt-2 z-50 bg-white rounded-xl shadow-2xl border border-gray-200 py-1 min-w-[200px] overflow-hidden">
+                                                {orderStatus.map((stat) => {
+                                                    const statLower = stat.toLowerCase();
+                                                    const isActive = order.order_status === statLower;
+                                                    return (
+                                                        <button
+                                                            key={stat}
+                                                            onClick={async () => {
+                                                                setStatusDropdownOpen(false);
+                                                                if (statLower === order.order_status) return;
+                                                                await handleStatusChange(statLower, true);
+                                                            }}
+                                                            className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors flex items-center gap-2 ${
+                                                                isActive
+                                                                    ? 'bg-gray-100 text-gray-900'
+                                                                    : 'text-gray-700 hover:bg-gray-50'
+                                                            }`}
+                                                        >
+                                                            <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${statusColor(statLower).split(' ')[0]}`} />
+                                                            {t(statLower) || stat}
+                                                            {isActive && <span className="ml-auto text-xs text-gray-400">✓</span>}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
                                 {/* Show Paid for completed/delivered orders, or Prepaid for orders marked as paid but not yet delivered */}
                                 {(['delivered', 'completed'].includes((order.order_status ?? '').toLowerCase())) ? (
                                     <span className="px-3 py-1.5 rounded-full text-xs sm:text-sm font-bold uppercase tracking-wide shadow-sm bg-green-100 text-green-700">
@@ -508,16 +557,7 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
                     >
                         📄 {t("exportInvoice")}
                     </button>
-                    {actions.neg && (
-                        <button
-                            onClick={() => handleStatusChange(actions.status_neg)}
-                            disabled={updating}
-                            className="flex-1 sm:flex-none px-4 py-2 bg-red-50 text-red-700 hover:bg-red-100 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 border border-red-100"
-                        >
-                            {t(actions.neg)}
-                        </button>
-                    )}
-                    {/* Separate Manual and Shipment actions for Processing state */}
+                    {/* Send to Shipment button - only for processing orders */}
                     {order.order_status === 'processing' && (
                         <>
                             <button
@@ -527,20 +567,14 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
                             >
                                 ✍️ {t("markAsOutForDelivery")} ({t("manual") || "Manual"})
                             </button>
+                            <button
+                                onClick={() => handleStatusChange('out for delivery', false)}
+                                disabled={updating}
+                                className="flex-1 sm:flex-none px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 shadow-md flex items-center gap-2"
+                            >
+                                <Package size={16} /> {t("sendToShipment") || "Send to Shipment"}
+                            </button>
                         </>
-                    )}
-                    {actions.pos && (
-                        <button
-                            onClick={() => handleStatusChange(actions.status_pos, false)}
-                            disabled={updating}
-                            className="flex-1 sm:flex-none px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 shadow-md flex items-center gap-2"
-                        >
-                            {order.order_status === 'processing' ? (
-                                <><Package size={16} /> {t("sendToShipment") || "Send to Shipment"}</>
-                            ) : (
-                                t(actions.pos)
-                            )}
-                        </button>
                     )}
                     {/* Delete Order Button */}
                     <button
