@@ -61,7 +61,7 @@ export default function EditPromoCodeForm({ promoCode, products, customers = [] 
     const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>(
         (promoCode.amount_off && promoCode.amount_off > 0) ? 'fixed' : 'percentage'
     );
-    const [amountOff, setAmountOff] = useState<number>(promoCode.amount_off || 0);
+    const [amountOff, setAmountOff] = useState<string>(promoCode.amount_off ? promoCode.amount_off.toString() : "0");
     const [minOrderAmount, setMinOrderAmount] = useState<string>(promoCode.min_order_amount?.toString() || "");
     const [autoApply, setAutoApply] = useState<boolean>(promoCode.auto_apply || false);
     // Bazaar restriction state
