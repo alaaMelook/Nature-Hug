@@ -160,28 +160,44 @@ export function OrdersScreen({ initialOrders, promoCodes = [] }: { initialOrders
     const handleBulkShipping = async () => {
         if (selectedOrders.length === 0) return;
 
-        // Filter to only processing orders
-        const processingOrders = orders.filter(
-            o => selectedOrders.includes(o.order_id) && o.order_status === 'processing'
+        // Filter to eligible orders (pending + processing)
+        const eligibleOrders = orders.filter(
+            o => selectedOrders.includes(o.order_id) && (o.order_status === 'processing' || o.order_status === 'pending')
         );
 
-        if (processingOrders.length === 0) {
-            toast.error(t("noProcessingOrdersSelected") || "No orders in 'Processing' status selected");
+        if (eligibleOrders.length === 0) {
+            toast.error(t("noEligibleOrdersForShipping") || "No orders in 'Pending' or 'Processing' status selected");
             return;
         }
 
-        const nonProcessingCount = selectedOrders.length - processingOrders.length;
-        let confirmMsg = (t("confirmBulkShipping") || "Send {{count}} orders to shipping company?").replace("{{count}}", processingOrders.length.toString());
-        if (nonProcessingCount > 0) {
-            confirmMsg += "\n" + (t("skippingNonProcessing") || "({{count}} orders will be skipped - not in Processing status)").replace("{{count}}", nonProcessingCount.toString());
+        const skippedCount = selectedOrders.length - eligibleOrders.length;
+        const pendingCount = eligibleOrders.filter(o => o.order_status === 'pending').length;
+        let confirmMsg = (t("confirmBulkShipping") || "Send {{count}} orders to shipping company?").replace("{{count}}", eligibleOrders.length.toString());
+        if (pendingCount > 0) {
+            confirmMsg += "\n" + (`${pendingCount} pending order(s) will be accepted first automatically.`);
+        }
+        if (skippedCount > 0) {
+            confirmMsg += "\n" + (t("skippingNonProcessing") || "({{count}} orders will be skipped - not eligible)").replace("{{count}}", skippedCount.toString());
         }
 
         if (!confirm(confirmMsg)) return;
 
         setProcessingBulk(true);
         try {
-            const { bulkSendToShippingAction } = await import("@/ui/hooks/admin/orders");
-            const result = await bulkSendToShippingAction(processingOrders.map(o => o.order_id));
+            const { acceptOrderAction, bulkSendToShippingAction } = await import("@/ui/hooks/admin/orders");
+
+            // Step 1: Accept pending orders first
+            const pendingOrders = eligibleOrders.filter(o => o.order_status === 'pending');
+            if (pendingOrders.length > 0) {
+                const acceptPromises = pendingOrders.map(o => acceptOrderAction(o.order_id.toString()));
+                await Promise.all(acceptPromises);
+                toast.success(
+                    `✅ ${pendingOrders.length} pending order(s) accepted`
+                );
+            }
+
+            // Step 2: Send all to shipping
+            const result = await bulkSendToShippingAction(eligibleOrders.map(o => o.order_id));
 
             if (result.successCount > 0) {
                 toast.success(
@@ -276,7 +292,7 @@ export function OrdersScreen({ initialOrders, promoCodes = [] }: { initialOrders
                                 className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50 font-medium transition-colors shadow-md flex items-center gap-2"
                             >
                                 <Truck className="w-4 h-4" />
-                                {t("sendToShippingBulk") || "Send to Shipping"} ({orders.filter(o => selectedOrders.includes(o.order_id) && o.order_status === 'processing').length})
+                                {t("sendToShippingBulk") || "Send to Shipping"} ({orders.filter(o => selectedOrders.includes(o.order_id) && (o.order_status === 'processing' || o.order_status === 'pending')).length})
                             </button>
                             <button
                                 onClick={() => handleBulkAction('accept')}
@@ -755,7 +771,7 @@ export function OrdersScreen({ initialOrders, promoCodes = [] }: { initialOrders
                                 className="col-span-2 bg-blue-600 text-white px-2 py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium text-sm transition-colors text-center flex items-center justify-center gap-2 shadow-md"
                             >
                                 <Truck className="w-4 h-4" />
-                                {t("sendToShippingBulk") || "Send to Shipping"} ({orders.filter(o => selectedOrders.includes(o.order_id) && o.order_status === 'processing').length})
+                                {t("sendToShippingBulk") || "Send to Shipping"} ({orders.filter(o => selectedOrders.includes(o.order_id) && (o.order_status === 'processing' || o.order_status === 'pending')).length})
                             </button>
                             <button
                                 onClick={() => handleBulkAction('accept')}

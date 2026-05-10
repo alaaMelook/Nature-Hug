@@ -879,6 +879,10 @@ export class IAdminServerRepository implements AdminRepository {
         // Order notes
         if ((order as any).note !== undefined) updateData.note = (order as any).note;
 
+        // Applied promo codes (JSONB) - used when removing/modifying promo codes on an order
+        if ((order as any).applied_promo_codes !== undefined) updateData.applied_promo_codes = (order as any).applied_promo_codes;
+        if ((order as any).promo_code_id !== undefined) updateData.promo_code_id = (order as any).promo_code_id;
+
         if (Object.keys(updateData).length > 0) {
             console.log("[IAdminRepository] updateOrder - Final updateData before call:", JSON.stringify(updateData, null, 2));
             const {

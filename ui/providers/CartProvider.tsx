@@ -1,5 +1,5 @@
 "use client";
-import React, { createContext, ReactNode, useContext, useEffect, useMemo, useState, } from "react";
+import React, { createContext, ReactNode, useContext, useEffect, useMemo, useRef, useState, } from "react";
 import { toast } from "sonner";
 import lz from 'lz-string';
 import { ProductView, CartItem } from "@/domain/entities/views/shop/productView";
@@ -28,6 +28,7 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
     const [cart, setCart] = useState<Cart>(emptyCart);
     const [loading, setLoading] = useState(true);
     const [isClient, setIsClient] = useState(false);
+    const autoApplyInProgress = useRef(false);
     const { t, i18n } = useTranslation();
     const itemsKey = useMemo(
         () => JSON.stringify(cart.items.map(i => ({ s: i.slug, q: i.quantity }))),
@@ -356,6 +357,13 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
 
     // --- Auto-Apply Promo Codes ---
     const applyAutoPromoCodes = async (customerId?: number) => {
+        // Prevent concurrent calls using ref lock
+        if (autoApplyInProgress.current) {
+            console.log('[CART] applyAutoPromoCodes already in progress, skipping');
+            return;
+        }
+        autoApplyInProgress.current = true;
+
         try {
             console.log('[CART] applyAutoPromoCodes called, customerId:', customerId, 'cart.items:', cart.items.length, 'netTotal:', cart.netTotal);
             const response = await fetch('/api/store/auto-apply-promos' + (customerId ? `?customerId=${customerId}` : ''));
@@ -369,46 +377,39 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
 
             // First, remove any auto-applied promos that are no longer active
             const activePromoIds = (autoApplyPromos || []).map((p: any) => p.id);
-            const existingAutoApplied = cart.promoCodes.filter(p => p.auto_apply);
-            const inactiveAutoApplied = existingAutoApplied.filter(p => !activePromoIds.includes(p.id));
 
-            if (inactiveAutoApplied.length > 0) {
-                console.log('[CART] Removing inactive auto-applied promos:', inactiveAutoApplied.map(p => p.code));
-                setCart(prevCart => {
-                    const newPromoCodes = prevCart.promoCodes.filter(p =>
-                        !p.auto_apply || activePromoIds.includes(p.id)
-                    );
-                    const totalDiscount = newPromoCodes.reduce((sum, p) => sum + p.discount, 0);
-                    const hasFreeShipping = newPromoCodes.some(p => p.free_shipping);
+            setCart(prevCart => {
+                const existingAutoApplied = prevCart.promoCodes.filter(p => p.auto_apply);
+                const hasInactive = existingAutoApplied.some(p => !activePromoIds.includes(p.id));
+                if (!hasInactive) return prevCart; // No changes needed
 
-                    return {
-                        ...prevCart,
-                        promoCodes: newPromoCodes,
-                        discount: totalDiscount,
-                        free_shipping: hasFreeShipping,
-                    };
-                });
-            }
+                console.log('[CART] Removing inactive auto-applied promos');
+                const newPromoCodes = prevCart.promoCodes.filter(p =>
+                    !p.auto_apply || activePromoIds.includes(p.id)
+                );
+                const totalDiscount = newPromoCodes.reduce((sum, p) => sum + p.discount, 0);
+                const hasFreeShipping = newPromoCodes.some(p => p.free_shipping);
+
+                return {
+                    ...prevCart,
+                    promoCodes: newPromoCodes,
+                    discount: totalDiscount,
+                    free_shipping: hasFreeShipping,
+                };
+            });
 
             if (!autoApplyPromos || autoApplyPromos.length === 0) {
                 console.log('[CART] No auto-apply promos available');
                 return;
             }
 
-            // Track which promos we've applied in this batch to avoid duplicates
-            // (cart.promoCodes won't update mid-loop since setCart is async)
-            const appliedInThisBatch = new Set<number>();
-
             // Apply each auto-apply promo code
             for (const promo of autoApplyPromos) {
-                // Skip if already applied (either in cart or in this batch)
-                if (cart.promoCodes.some(p => p.id === promo.id) || appliedInThisBatch.has(promo.id)) {
-                    console.log('[CART] Promo already applied, skipping:', promo.code);
+                // Skip if already applied - check using closure (initial guard)
+                if (cart.promoCodes.some(p => p.id === promo.id)) {
+                    console.log('[CART] Promo already applied (closure check), skipping:', promo.code);
                     continue;
                 }
-
-                // Mark as applied in this batch
-                appliedInThisBatch.add(promo.id);
 
                 console.log('[CART] Validating auto promo:', promo.code, 'for cart items:', cart.items.length);
                 // Validate and apply
@@ -428,6 +429,12 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
                     };
 
                     setCart(prevCart => {
+                        // CRITICAL: Check latest state to prevent duplicates
+                        if (prevCart.promoCodes.some(p => p.id === promo.id)) {
+                            console.log('[CART] Promo already in latest state, skipping duplicate:', promo.code);
+                            return prevCart; // Return unchanged — no duplicate
+                        }
+
                         // Recalculate all discounts sequentially
                         const allPromoCodes = [...prevCart.promoCodes, newPromo];
                         const subtotal = prevCart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -474,6 +481,8 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
             }
         } catch (error) {
             console.error('[CART] Failed to apply auto promos:', error);
+        } finally {
+            autoApplyInProgress.current = false;
         }
     };
 

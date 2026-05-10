@@ -392,6 +392,42 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
         }
     };
 
+    // Remove a promo code from the order
+    const handleRemovePromoCode = async (promoIndex: number) => {
+        if (!order.applied_promo_codes || !Array.isArray(order.applied_promo_codes)) return;
+
+        setSavingDiscount(true);
+        try {
+            const updatedPromos = order.applied_promo_codes.filter((_: any, i: number) => i !== promoIndex);
+            const newDiscountTotal = updatedPromos.reduce((sum: number, p: any) => sum + (p.discount || 0), 0);
+            const newTotal = Math.max(0, order.subtotal + order.shipping_total - newDiscountTotal);
+
+            const result = await updateOrderAction({
+                order_id: order.order_id,
+                discount_total: newDiscountTotal,
+                final_order_total: newTotal,
+                applied_promo_codes: updatedPromos.length > 0 ? updatedPromos : null,
+                // Clear promo_code_id if no promos remain
+                ...(updatedPromos.length === 0 ? { promo_code_id: null } : {}),
+            } as any);
+
+            if (result.success) {
+                toast.success(t("orderUpdated") || "Promo code removed");
+                // Update local discount input to reflect new value
+                setDiscountInput(newDiscountTotal.toString());
+                setDiscountDirty(false);
+                router.refresh();
+            } else {
+                toast.error(result.error || t("failedToUpdateOrder"));
+            }
+        } catch (error) {
+            console.error("Failed to remove promo code:", error);
+            toast.error(t("failedToUpdateOrder"));
+        } finally {
+            setSavingDiscount(false);
+        }
+    };
+
     // Add new product to order
     const addItemToOrder = (product: ProductView) => {
         const newItem = {
@@ -557,6 +593,55 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
                     >
                         📄 {t("exportInvoice")}
                     </button>
+                    {/* Accept & Reject buttons - only for pending orders */}
+                    {order.order_status === 'pending' && (
+                        <>
+                            <button
+                                onClick={async () => {
+                                    setUpdating(true);
+                                    try {
+                                        const result = await acceptOrderAction(order.order_id.toString());
+                                        if (result.success) {
+                                            toast.success(t("orderAccepted") || "Order accepted");
+                                            router.refresh();
+                                        } else {
+                                            toast.error(result.error || t("failedToUpdateOrder"));
+                                        }
+                                    } catch (e) {
+                                        toast.error(t("failedToUpdateOrder"));
+                                    } finally {
+                                        setUpdating(false);
+                                    }
+                                }}
+                                disabled={updating || isEditing}
+                                className="flex-1 sm:flex-none px-4 py-2 bg-green-600 text-white hover:bg-green-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 shadow-sm flex items-center justify-center gap-2"
+                            >
+                                ✅ {t("acceptOrder") || "Accept"}
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    setUpdating(true);
+                                    try {
+                                        const result = await rejectOrderAction(order.order_id.toString());
+                                        if (result.success) {
+                                            toast.success(t("orderRejected") || "Order rejected");
+                                            router.refresh();
+                                        } else {
+                                            toast.error(result.error || t("failedToUpdateOrder"));
+                                        }
+                                    } catch (e) {
+                                        toast.error(t("failedToUpdateOrder"));
+                                    } finally {
+                                        setUpdating(false);
+                                    }
+                                }}
+                                disabled={updating || isEditing}
+                                className="flex-1 sm:flex-none px-4 py-2 bg-red-500 text-white hover:bg-red-600 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 shadow-sm flex items-center justify-center gap-2"
+                            >
+                                ❌ {t("rejectOrder") || "Reject"}
+                            </button>
+                        </>
+                    )}
                     {/* Send to Shipment button - only for processing orders */}
                     {order.order_status === 'processing' && (
                         <>
@@ -982,15 +1067,23 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
                                                     className="w-32 px-3 py-1 border border-gray-300 rounded-lg text-sm text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                                 />
                                             </div>
-                                            {/* Show each promo code on a separate line */}
+                                            {/* Show each promo code on a separate line with remove button */}
                                             {order.applied_promo_codes && Array.isArray(order.applied_promo_codes) && order.applied_promo_codes.length > 0 && (
                                                 order.applied_promo_codes.map((promo: any, index: number) => (
-                                                    <div key={index} className="flex justify-between w-full text-red-400 px-2 text-xs">
-                                                        <span>
+                                                    <div key={index} className="flex justify-between items-center w-full text-red-400 px-2 text-xs">
+                                                        <span className="flex items-center gap-1">
                                                             {t("discount")}
                                                             <span className="ml-1">
                                                                 ({promo.code}{promo.auto_apply && ' 🔄'})
                                                             </span>
+                                                            <button
+                                                                onClick={() => handleRemovePromoCode(index)}
+                                                                disabled={savingDiscount}
+                                                                className="ml-1 p-0.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+                                                                title={t("removePromoCode") || "Remove promo code"}
+                                                            >
+                                                                <X size={12} />
+                                                            </button>
                                                         </span>
                                                         <span>-{t('{{price, currency}}', { price: promo.discount || 0 })}</span>
                                                     </div>
