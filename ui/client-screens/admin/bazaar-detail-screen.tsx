@@ -633,6 +633,15 @@ function ReportTab({ report, orders, bazaar, isAr }: { report: BazaarReport; ord
                     className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium">
                     🖨️ {isAr ? 'طباعة' : 'Print'}
                 </button>
+                <button onClick={() => {
+                    const link = document.createElement('a');
+                    link.href = `/api/admin/bazaars/${bazaar.id}/export-customers`;
+                    link.download = '';
+                    link.click();
+                }}
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium">
+                    📥 {isAr ? 'تصدير العملاء' : 'Export Customers'}
+                </button>
             </div>
             <div className="hidden print-only text-center mb-4">
                 <h2 className="text-xl font-bold">{isAr ? 'تقرير البازار' : 'Bazaar Report'} - {bazaar.name}</h2>
@@ -779,37 +788,51 @@ function POSTab({
 }: any) {
     const [phoneLookupMatch, setPhoneLookupMatch] = useState<string | null>(null);
     const [phoneLooking, setPhoneLooking] = useState(false);
+    const [customerHistory, setCustomerHistory] = useState<any>(null);
+    const [showHistory, setShowHistory] = useState(false);
 
-    // Auto-lookup customer by phone number
+    // Auto-lookup customer by phone number + fetch order history
     useEffect(() => {
         const phone = customerPhone?.replace(/\s/g, '');
         if (!phone || phone.length < 8) {
             setPhoneLookupMatch(null);
+            setCustomerHistory(null);
+            setShowHistory(false);
             return;
         }
         const timer = setTimeout(async () => {
             setPhoneLooking(true);
             try {
+                // Search for customer match
                 const res = await fetch(`/api/admin/customers/search?q=${encodeURIComponent(phone)}`);
                 const data = await res.json();
                 if (Array.isArray(data) && data.length > 0) {
                     const match = data.find((c: any) => c.phone === phone || c.phone === `+2${phone}` || `+2${c.phone}` === phone);
                     if (match) {
                         setPhoneLookupMatch(match.name);
-                        if (!customerName.trim()) {
-                            setCustomerName(match.name || '');
-                        }
+                        if (!customerName.trim()) setCustomerName(match.name || '');
                     } else if (data[0]) {
                         setPhoneLookupMatch(data[0].name);
-                        if (!customerName.trim()) {
-                            setCustomerName(data[0].name || '');
-                        }
+                        if (!customerName.trim()) setCustomerName(data[0].name || '');
                     }
                 } else {
                     setPhoneLookupMatch(null);
                 }
+
+                // Fetch customer order history
+                const histRes = await fetch(`/api/admin/customers/history?phone=${encodeURIComponent(phone)}`);
+                const histData = await histRes.json();
+                console.log('[POS] Customer history response:', histData);
+                if (histData.success && histData.customer?.totalOrders > 0) {
+                    setCustomerHistory(histData);
+                    setShowHistory(true);
+                } else {
+                    setCustomerHistory(null);
+                    setShowHistory(false);
+                }
             } catch {
                 setPhoneLookupMatch(null);
+                setCustomerHistory(null);
             } finally {
                 setPhoneLooking(false);
             }
@@ -898,7 +921,7 @@ function POSTab({
                                     setCustomerPhone(val);
                                 }}
                                 maxLength={11}
-                                className={`w-full pl-10 pr-3 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-primary-500/20 outline-none ${
+                            className={`w-full pl-10 pr-3 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-primary-500/20 outline-none ${
                                     customerPhone.trim() && !/^01[0125]\d{8}$/.test(customerPhone.replace(/\s|-/g, ''))
                                         ? 'border-red-300 focus:border-red-400'
                                         : customerPhone.trim() && /^01[0125]\d{8}$/.test(customerPhone.replace(/\s|-/g, ''))
@@ -927,6 +950,109 @@ function POSTab({
                         )}
                     </div>
                 </div>
+
+                {/* Customer History Panel */}
+                {customerHistory && customerHistory.customer && (
+                    <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl border border-purple-200 p-4">
+                        <button
+                            onClick={() => setShowHistory(!showHistory)}
+                            className="w-full flex items-center justify-between"
+                        >
+                            <div className="flex items-center gap-2">
+                                <span className="bg-purple-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                    {isAr ? 'عميل متكرر' : 'RETURNING'}
+                                </span>
+                                <span className="text-sm font-semibold text-purple-900">
+                                    {customerHistory.customer.name || (isAr ? 'عميل' : 'Customer')}
+                                </span>
+                                <span className="text-xs text-purple-600">
+                                    ({customerHistory.customer.totalOrders} {isAr ? 'طلب' : 'orders'})
+                                </span>
+                            </div>
+                            {showHistory ? <ChevronUp size={16} className="text-purple-500" /> : <ChevronDown size={16} className="text-purple-500" />}
+                        </button>
+
+                        <AnimatePresence>
+                            {showHistory && (
+                                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                                    {/* Summary Cards */}
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
+                                        <div className="bg-white/80 rounded-lg p-2.5 text-center">
+                                            <p className="text-[10px] text-gray-500 font-medium">{isAr ? 'إجمالي المنفق' : 'Total Spent'}</p>
+                                            <p className="text-sm font-bold text-gray-900">{customerHistory.customer.totalSpent?.toLocaleString()} EGP</p>
+                                        </div>
+                                        <div className="bg-white/80 rounded-lg p-2.5 text-center">
+                                            <p className="text-[10px] text-gray-500 font-medium">{isAr ? 'آخر طلب' : 'Last Order'}</p>
+                                            <p className="text-sm font-bold text-gray-900">
+                                                {customerHistory.customer.lastOrderDate
+                                                    ? new Date(customerHistory.customer.lastOrderDate).toLocaleDateString(isAr ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })
+                                                    : '—'}
+                                            </p>
+                                        </div>
+                                        <div className="bg-white/80 rounded-lg p-2.5 text-center">
+                                            <p className="text-[10px] text-gray-500 font-medium">{isAr ? 'بازار' : 'Bazaar'}</p>
+                                            <p className="text-sm font-bold text-gray-900">{customerHistory.customer.bazaarOrders}</p>
+                                        </div>
+                                        <div className="bg-white/80 rounded-lg p-2.5 text-center">
+                                            <p className="text-[10px] text-gray-500 font-medium">{isAr ? 'أونلاين' : 'Online'}</p>
+                                            <p className="text-sm font-bold text-gray-900">{customerHistory.customer.onlineOrders}</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Top Products */}
+                                    {customerHistory.customer.topProducts?.length > 0 && (
+                                        <div className="mt-3">
+                                            <p className="text-[10px] font-medium text-gray-500 mb-1.5">{isAr ? 'المنتجات المفضلة' : 'Favorite Products'}</p>
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {customerHistory.customer.topProducts.map((p: any, i: number) => (
+                                                    <span key={i} className="text-[11px] bg-white border border-purple-200 text-purple-800 px-2 py-0.5 rounded-full">
+                                                        {p.name} <span className="text-purple-500">×{p.quantity}</span>
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Order History */}
+                                    <div className="mt-3 space-y-1.5 max-h-48 overflow-y-auto">
+                                        <p className="text-[10px] font-medium text-gray-500">{isAr ? 'سجل الطلبات' : 'Order History'}</p>
+                                        {(customerHistory.orders || []).map((order: any) => (
+                                            <details key={order.orderId} className="bg-white rounded-lg border border-gray-100 group">
+                                                <summary className="flex items-center justify-between p-2.5 cursor-pointer text-sm hover:bg-gray-50 rounded-lg">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-medium text-gray-900">#{order.orderId}</span>
+                                                        <span className="text-[10px] text-gray-400">
+                                                            {new Date(order.date).toLocaleDateString(isAr ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric', year: '2-digit' })}
+                                                        </span>
+                                                        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
+                                                            order.type === 'bazaar' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+                                                        }`}>
+                                                            {order.type === 'bazaar' ? (order.bazaarName || (isAr ? 'بازار' : 'Bazaar')) : (isAr ? 'أونلاين' : 'Online')}
+                                                        </span>
+                                                        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
+                                                            order.status === 'completed' || order.status === 'delivered' ? 'bg-green-100 text-green-700' :
+                                                            order.status === 'cancelled' || order.status === 'refunded' ? 'bg-red-100 text-red-700' :
+                                                            'bg-yellow-100 text-yellow-700'
+                                                        }`}>{order.status}</span>
+                                                    </div>
+                                                    <span className="font-semibold text-gray-900 text-xs">{order.grandTotal?.toLocaleString()} EGP</span>
+                                                </summary>
+                                                <div className="px-2.5 pb-2.5 pt-0.5 border-t border-gray-50">
+                                                    {order.items.map((item: any, idx: number) => (
+                                                        <div key={idx} className="flex justify-between text-xs text-gray-600 py-0.5">
+                                                            <span>{item.name} ×{item.quantity}</span>
+                                                            <span>{(item.unitPrice * item.quantity).toLocaleString()} EGP</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </details>
+                                        ))}
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+                )}
 
                 {/* Products Grid */}
                 <div className="bg-white rounded-xl border p-4">
