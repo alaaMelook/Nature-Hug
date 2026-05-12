@@ -8,6 +8,7 @@ import { Category } from "@/domain/entities/database/category";
 import { ReviewAdminView } from "@/domain/entities/views/admin/reviewAdminView";
 import { PromoCode } from "@/domain/entities/database/promoCode";
 import { Bazaar } from "@/domain/entities/database/bazaar";
+import { BazaarExpense } from "@/domain/entities/database/bazaarExpense";
 import { Governorate } from "@/domain/entities/database/governorate";
 import { AccountReportView, ProductSalesReport, ReportSummary } from "@/domain/entities/views/admin/reportViews";
 
@@ -1608,18 +1609,35 @@ export class IAdminServerRepository implements AdminRepository {
         totalSales: number;
         orderCount: number;
         customerCount: number;
-        topProducts: { name: string; quantity: number; revenue: number }[];
+        allProducts: { name: string; product_id: number; variant_id: number | null; quantity: number; revenue: number; cost: number; remaining_stock: number }[];
         topStaff: { name: string; orderCount: number; totalSales: number }[];
         paymentBreakdown: { method: string; count: number; total: number }[];
+        financialSummary: {
+            grossRevenue: number;
+            totalProductCost: number;
+            totalExpenses: number;
+            netProfit: number;
+            profitMargin: number;
+            expenses: BazaarExpense[];
+        };
     }> {
         console.log(`[IAdminRepository] getBazaarReport called for bazaarId: ${bazaarId}${creatorCustomerId ? `, creatorId: ${creatorCustomerId}` : ''}`);
 
-        // Get bazaar orders with details — optionally filtered by creator
+        // 1. Fetch bazaar expenses
+        const { data: expenses } = await supabaseAdmin.schema('store')
+            .from('bazaar_expenses')
+            .select('*')
+            .eq('bazaar_id', bazaarId)
+            .order('created_at', { ascending: true });
+        const bazaarExpenses: BazaarExpense[] = (expenses || []) as BazaarExpense[];
+        const totalExpenses = bazaarExpenses.reduce((acc, e) => acc + (Number(e.amount) || 0), 0);
+
+        // 2. Get bazaar orders — exclude cancelled, refunded, returned
         let ordersQuery = supabaseAdmin.schema('store')
             .from('orders')
-            .select('id, grand_total, payment_method, created_by_customer_id, customer_id')
+            .select('id, grand_total, payment_method, created_by_customer_id, customer_id, status')
             .eq('bazaar_id', bazaarId)
-            .neq('status', 'cancelled');
+            .not('status', 'in', '(cancelled,refunded,returned)');
 
         if (creatorCustomerId) {
             ordersQuery = ordersQuery.eq('created_by_customer_id', creatorCustomerId);
@@ -1632,16 +1650,66 @@ export class IAdminServerRepository implements AdminRepository {
             throw ordersError;
         }
 
+        // 3. Fetch ALL products and variants from the store (for zero-sales inclusion)
+        const { data: allStoreProducts } = await supabaseAdmin.schema('store')
+            .from('products')
+            .select('id, name, stock');
+
+        const { data: allStoreVariants } = await supabaseAdmin.schema('store')
+            .from('product_variants')
+            .select('id, product_id, name_en, stock');
+
+        // Build a master product map: key = "productId-variantId"
+        const masterProductMap: Record<string, { name: string; product_id: number; variant_id: number | null; remaining_stock: number }> = {};
+        for (const p of (allStoreProducts || [])) {
+            // Check if this product has variants
+            const variants = (allStoreVariants || []).filter(v => v.product_id === p.id);
+            if (variants.length > 0) {
+                // Add each variant as a separate entry
+                for (const v of variants) {
+                    const key = `${p.id}-${v.id}`;
+                    masterProductMap[key] = {
+                        name: `${p.name} - ${v.name_en}`,
+                        product_id: p.id,
+                        variant_id: v.id,
+                        remaining_stock: v.stock || 0,
+                    };
+                }
+            } else {
+                // No variants — add the product itself
+                const key = `${p.id}-0`;
+                masterProductMap[key] = {
+                    name: p.name,
+                    product_id: p.id,
+                    variant_id: null,
+                    remaining_stock: p.stock || 0,
+                };
+            }
+        }
+
+        // 4. If no orders, return empty report with all products at zero sales
         if (!orders || orders.length === 0) {
+            const allProducts = Object.values(masterProductMap).map(p => ({
+                ...p, quantity: 0, revenue: 0, cost: 0,
+            }));
             return {
                 totalSales: 0, orderCount: 0, customerCount: 0,
-                topProducts: [], topStaff: [], paymentBreakdown: []
+                allProducts,
+                topStaff: [], paymentBreakdown: [],
+                financialSummary: {
+                    grossRevenue: 0,
+                    totalProductCost: 0,
+                    totalExpenses,
+                    netProfit: -totalExpenses,
+                    profitMargin: 0,
+                    expenses: bazaarExpenses,
+                },
             };
         }
 
         const orderIds = orders.map(o => o.id);
 
-        // Get order items
+        // 5. Get order items
         const { data: items, error: itemsError } = await supabaseAdmin.schema('store')
             .from('order_items')
             .select('order_id, product_id, variant_id, quantity, unit_price')
@@ -1652,56 +1720,99 @@ export class IAdminServerRepository implements AdminRepository {
             throw itemsError;
         }
 
-        // Get product names
-        const productIds = [...new Set((items || []).map(i => i.product_id).filter(Boolean))];
-        let productNameMap: Record<number, string> = {};
-        if (productIds.length > 0) {
-            const { data: products } = await supabaseAdmin.schema('store')
-                .from('products')
-                .select('id, name')
-                .in('id', productIds);
-            productNameMap = (products || []).reduce((acc: Record<number, string>, p: any) => {
-                acc[p.id] = p.name;
+        // 6. Compute per-product unit cost from materials
+        //    product_materials: { product_id, variant_id, material_id, grams_used }
+        //    materials: { id, price_per_gram }
+        const soldProductIds = [...new Set((items || []).map(i => i.product_id).filter(Boolean))];
+        const soldVariantIds = [...new Set((items || []).map(i => i.variant_id).filter(Boolean))];
+
+        // Fetch product_materials for sold products
+        let productMaterialLinks: any[] = [];
+        if (soldProductIds.length > 0) {
+            const { data: pmLinks } = await supabaseAdmin.schema('store')
+                .from('product_materials')
+                .select('product_id, variant_id, material_id, grams_used')
+                .in('product_id', soldProductIds);
+            productMaterialLinks = pmLinks || [];
+        }
+
+        // Fetch material prices
+        const materialIds = [...new Set(productMaterialLinks.map(pm => pm.material_id).filter(Boolean))];
+        let materialPriceMap: Record<number, number> = {};
+        if (materialIds.length > 0) {
+            const { data: materialsData } = await supabaseAdmin.schema('admin')
+                .from('materials')
+                .select('id, price_per_gram')
+                .in('id', materialIds);
+            materialPriceMap = (materialsData || []).reduce((acc: Record<number, number>, m: any) => {
+                acc[m.id] = Number(m.price_per_gram) || 0;
                 return acc;
             }, {});
         }
 
-        // Get variant names
-        const variantIds = [...new Set((items || []).map(i => i.variant_id).filter(Boolean))];
-        let variantNameMap: Record<number, string> = {};
-        if (variantIds.length > 0) {
-            const { data: variants } = await supabaseAdmin.schema('store')
-                .from('product_variants')
-                .select('id, name_en, product_id')
-                .in('id', variantIds);
-            variantNameMap = (variants || []).reduce((acc: Record<number, string>, v: any) => {
-                acc[v.id] = `${productNameMap[v.product_id] || v.name_en} - ${v.name_en}`;
-                return acc;
-            }, {});
+        // Build unit cost map: key = "productId-variantId" => cost per unit
+        const unitCostMap: Record<string, number> = {};
+        for (const pm of productMaterialLinks) {
+            const key = `${pm.product_id}-${pm.variant_id || 0}`;
+            const materialPrice = materialPriceMap[pm.material_id] || 0;
+            const gramsUsed = Number(pm.grams_used) || 0;
+            unitCostMap[key] = (unitCostMap[key] || 0) + (materialPrice * gramsUsed);
+        }
 
-            // For deleted parent products, use variant name as fallback
-            for (const v of (variants || [])) {
-                if (!productNameMap[v.product_id] && v.name_en) {
-                    productNameMap[v.product_id] = v.name_en;
-                }
+        // 7. Aggregate sold items — merge into master map
+        const soldAgg: Record<string, { quantity: number; revenue: number; cost: number }> = {};
+        for (const item of (items || [])) {
+            const key = `${item.product_id}-${item.variant_id || 0}`;
+            if (!soldAgg[key]) soldAgg[key] = { quantity: 0, revenue: 0, cost: 0 };
+            soldAgg[key].quantity += item.quantity;
+            soldAgg[key].revenue += item.quantity * item.unit_price;
+            const unitCost = unitCostMap[key] || 0;
+            soldAgg[key].cost += unitCost * item.quantity;
+        }
+
+        // 8. Build allProducts: merge master product map with sold aggregation
+        // First add all products from master map
+        const allProductsMap: Record<string, { name: string; product_id: number; variant_id: number | null; quantity: number; revenue: number; cost: number; remaining_stock: number }> = {};
+
+        for (const [key, product] of Object.entries(masterProductMap)) {
+            const sold = soldAgg[key] || { quantity: 0, revenue: 0, cost: 0 };
+            allProductsMap[key] = {
+                ...product,
+                quantity: sold.quantity,
+                revenue: sold.revenue,
+                cost: sold.cost,
+            };
+        }
+
+        // Also add any sold items that may have been deleted from the store
+        for (const [key, sold] of Object.entries(soldAgg)) {
+            if (!allProductsMap[key]) {
+                const [pidStr, vidStr] = key.split('-');
+                allProductsMap[key] = {
+                    name: `Deleted Product #${pidStr}`,
+                    product_id: parseInt(pidStr),
+                    variant_id: vidStr !== '0' ? parseInt(vidStr) : null,
+                    quantity: sold.quantity,
+                    revenue: sold.revenue,
+                    cost: sold.cost,
+                    remaining_stock: 0,
+                };
             }
         }
 
-        // For products still missing (no variant found yet), try to find any variant
-        const missingProductIds = productIds.filter(id => !productNameMap[id]);
-        if (missingProductIds.length > 0) {
-            const { data: fallbackVariants } = await supabaseAdmin.schema('store')
-                .from('product_variants')
-                .select('product_id, name_en')
-                .in('product_id', missingProductIds);
-            for (const v of (fallbackVariants || [])) {
-                if (!productNameMap[v.product_id] && v.name_en) {
-                    productNameMap[v.product_id] = v.name_en;
-                }
-            }
-        }
+        const allProducts = Object.values(allProductsMap).sort((a, b) => b.quantity - a.quantity);
 
-        // Get staff names
+        // 9. Calculate totals
+        const grossRevenue = orders.reduce((acc, o) => acc + (o.grand_total || 0), 0);
+        const totalProductCost = Object.values(soldAgg).reduce((acc, s) => acc + s.cost, 0);
+        const netProfit = grossRevenue - totalProductCost - totalExpenses;
+        const profitMargin = grossRevenue > 0 ? (netProfit / grossRevenue) * 100 : 0;
+
+        // Unique customers
+        const uniqueCustomers = new Set(orders.map(o => o.customer_id).filter(Boolean));
+        const customerCount = uniqueCustomers.size;
+
+        // 10. Get staff names
         const staffIds = [...new Set(orders.map(o => o.created_by_customer_id).filter(Boolean))];
         let staffNameMap: Record<number, string> = {};
         if (staffIds.length > 0) {
@@ -1714,29 +1825,6 @@ export class IAdminServerRepository implements AdminRepository {
                 return acc;
             }, {});
         }
-
-        // Calculate totals
-        const totalSales = orders.reduce((acc, o) => acc + (o.grand_total || 0), 0);
-
-        // Unique customers by customer_id
-        const uniqueCustomers = new Set(orders.map(o => o.customer_id).filter(Boolean));
-        const customerCount = uniqueCustomers.size;
-
-        // Top products — use product/variant name with fallback for deleted products
-        const productAgg: Record<string, { name: string; quantity: number; revenue: number }> = {};
-        for (const item of (items || [])) {
-            let name: string;
-            if (item.variant_id) {
-                name = variantNameMap[item.variant_id] || productNameMap[item.product_id] || `Deleted Product #${item.product_id}`;
-            } else {
-                name = productNameMap[item.product_id] || `Deleted Product #${item.product_id}`;
-            }
-            const key = `${item.product_id}-${item.variant_id || 0}`;
-            if (!productAgg[key]) productAgg[key] = { name, quantity: 0, revenue: 0 };
-            productAgg[key].quantity += item.quantity;
-            productAgg[key].revenue += item.quantity * item.unit_price;
-        }
-        const topProducts = Object.values(productAgg).sort((a, b) => b.quantity - a.quantity);
 
         // Top staff
         const staffAgg: Record<number, { name: string; orderCount: number; totalSales: number }> = {};
@@ -1761,7 +1849,22 @@ export class IAdminServerRepository implements AdminRepository {
         }
         const paymentBreakdown = Object.values(paymentAgg);
 
-        return { totalSales, orderCount: orders.length, customerCount, topProducts, topStaff, paymentBreakdown };
+        return {
+            totalSales: grossRevenue,
+            orderCount: orders.length,
+            customerCount,
+            allProducts,
+            topStaff,
+            paymentBreakdown,
+            financialSummary: {
+                grossRevenue,
+                totalProductCost,
+                totalExpenses,
+                netProfit,
+                profitMargin,
+                expenses: bazaarExpenses,
+            },
+        };
     }
 
     async getAllBazaarsWithStats(): Promise<(Bazaar & { totalSales: number; orderCount: number })[]> {
@@ -1773,12 +1876,73 @@ export class IAdminServerRepository implements AdminRepository {
                 .from('orders')
                 .select('grand_total')
                 .eq('bazaar_id', bazaar.id)
-                .neq('status', 'cancelled');
+                .not('status', 'in', '(cancelled,refunded,returned)');
 
             const totalSales = (orders || []).reduce((acc, o) => acc + (o.grand_total || 0), 0);
             result.push({ ...bazaar, totalSales, orderCount: (orders || []).length });
         }
 
         return result;
+    }
+
+    // ===================== BAZAAR EXPENSES CRUD =====================
+
+    async getBazaarExpenses(bazaarId: number): Promise<BazaarExpense[]> {
+        console.log(`[IAdminRepository] getBazaarExpenses called for bazaarId: ${bazaarId}`);
+        const { data, error } = await supabaseAdmin.schema('store')
+            .from('bazaar_expenses')
+            .select('*')
+            .eq('bazaar_id', bazaarId)
+            .order('created_at', { ascending: true });
+
+        if (error) {
+            console.error("[IAdminRepository] getBazaarExpenses error:", error);
+            throw error;
+        }
+        return (data || []) as BazaarExpense[];
+    }
+
+    async addBazaarExpense(expense: Partial<BazaarExpense>): Promise<number> {
+        console.log("[IAdminRepository] addBazaarExpense called with:", expense);
+        const { data, error } = await supabaseAdmin.schema('store')
+            .from('bazaar_expenses')
+            .insert(expense)
+            .select('id')
+            .single();
+
+        if (error) {
+            console.error("[IAdminRepository] addBazaarExpense error:", error);
+            throw error;
+        }
+        return data.id;
+    }
+
+    async updateBazaarExpense(expense: Partial<BazaarExpense>): Promise<void> {
+        console.log("[IAdminRepository] updateBazaarExpense called with:", expense);
+        const { id, ...updateData } = expense;
+        if (!id) throw new Error("Expense ID is required for update");
+
+        const { error } = await supabaseAdmin.schema('store')
+            .from('bazaar_expenses')
+            .update(updateData)
+            .eq('id', id);
+
+        if (error) {
+            console.error("[IAdminRepository] updateBazaarExpense error:", error);
+            throw error;
+        }
+    }
+
+    async deleteBazaarExpense(id: number): Promise<void> {
+        console.log("[IAdminRepository] deleteBazaarExpense called with id:", id);
+        const { error } = await supabaseAdmin.schema('store')
+            .from('bazaar_expenses')
+            .delete()
+            .eq('id', id);
+
+        if (error) {
+            console.error("[IAdminRepository] deleteBazaarExpense error:", error);
+            throw error;
+        }
     }
 }

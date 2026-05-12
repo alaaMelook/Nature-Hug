@@ -1,5 +1,6 @@
 import { IAdminServerRepository } from "@/data/repositories/server/iAdminRepository";
 import { Bazaar } from "@/domain/entities/database/bazaar";
+import { BazaarExpense } from "@/domain/entities/database/bazaarExpense";
 
 export class Bazaars {
     constructor(private repo = new IAdminServerRepository()) {
@@ -76,4 +77,43 @@ export class Bazaars {
             throw error;
         }
     }
+
+    // ===================== BAZAAR EXPENSES =====================
+
+    async getExpenses(bazaarId: number) {
+        try {
+            return await this.repo.getBazaarExpenses(bazaarId);
+        } catch (error) {
+            console.error("[Bazaars] getExpenses error:", error);
+            throw error;
+        }
+    }
+
+    async addExpense(expense: Partial<BazaarExpense>) {
+        try {
+            return await this.repo.addBazaarExpense(expense);
+        } catch (error) {
+            console.error("[Bazaars] addExpense error:", error);
+            throw error;
+        }
+    }
+
+    async updateExpense(expense: Partial<BazaarExpense>) {
+        try {
+            return await this.repo.updateBazaarExpense(expense);
+        } catch (error) {
+            console.error("[Bazaars] updateExpense error:", error);
+            throw error;
+        }
+    }
+
+    async deleteExpense(id: number) {
+        try {
+            return await this.repo.deleteBazaarExpense(id);
+        } catch (error) {
+            console.error("[Bazaars] deleteExpense error:", error);
+            throw error;
+        }
+    }
 }
+

@@ -9,8 +9,10 @@ import {
     ArrowLeft, Store, ShoppingCart, TrendingUp, Users, Package,
     Plus, Minus, X, Search, Loader2, DollarSign, Tag,
     BarChart3, Phone, User, CreditCard, Banknote, Wallet,
-    ChevronDown, Check, Trophy, Award, Star, Pencil
+    ChevronDown, Check, Trophy, Award, Star, Pencil,
+    AlertTriangle, Receipt, Trash2, ArrowUpDown, ChevronUp
 } from "lucide-react";
+import { BazaarExpense, BazaarExpenseCategory } from "@/domain/entities/database/bazaarExpense";
 import { Bazaar } from "@/domain/entities/database/bazaar";
 import { ProductView } from "@/domain/entities/views/shop/productView";
 import { PromoCode } from "@/domain/entities/database/promoCode";
@@ -21,9 +23,17 @@ interface BazaarReport {
     totalSales: number;
     orderCount: number;
     customerCount: number;
-    topProducts: { name: string; quantity: number; revenue: number }[];
+    allProducts: { name: string; product_id: number; variant_id: number | null; quantity: number; revenue: number; cost: number; remaining_stock: number }[];
     topStaff: { name: string; orderCount: number; totalSales: number }[];
     paymentBreakdown: { method: string; count: number; total: number }[];
+    financialSummary: {
+        grossRevenue: number;
+        totalProductCost: number;
+        totalExpenses: number;
+        netProfit: number;
+        profitMargin: number;
+        expenses: BazaarExpense[];
+    };
 }
 
 interface POSItem {
@@ -451,13 +461,13 @@ export default function BazaarDetailScreen({ bazaar, report, myReport, orders, p
                             </div>
 
                             {/* My Top Products */}
-                            {myReport.topProducts.length > 0 && (
+                            {myReport.allProducts.filter(p => p.quantity > 0).length > 0 && (
                                 <div className="bg-white rounded-xl border p-4">
                                     <h4 className="text-sm font-semibold text-gray-500 uppercase mb-3 flex items-center gap-2">
                                         <Trophy size={14} /> {isAr ? 'أكتر منتجات بعتها' : 'My Top Products'}
                                     </h4>
                                     <div className="space-y-1.5">
-                                        {myReport.topProducts.slice(0, 10).map((product, i) => (
+                                        {myReport.allProducts.filter(p => p.quantity > 0).slice(0, 10).map((product, i) => (
                                             <div key={i} className="flex items-center justify-between p-2.5 hover:bg-gray-50 rounded-lg transition-colors">
                                                 <div className="flex items-center gap-2.5">
                                                     <span className={`w-5 h-5 flex items-center justify-center rounded-full text-[10px] font-bold ${
@@ -584,8 +594,8 @@ function ReportTab({ report, orders, bazaar, isAr }: { report: BazaarReport; ord
             staffMap[name].totalSales += o.grand_total || 0;
         });
         return {
+            ...report,
             totalSales, orderCount, customerCount: uniqueCustomers.size,
-            topProducts: report.topProducts,
             topStaff: Object.entries(staffMap).map(([name, data]) => ({ name, ...data })).sort((a, b) => b.totalSales - a.totalSales),
             paymentBreakdown: Object.entries(paymentMap).map(([method, data]) => ({ method, ...data })),
         };
@@ -645,6 +655,36 @@ function ReportTab({ report, orders, bazaar, isAr }: { report: BazaarReport; ord
                 ))}
             </div>
 
+            {/* Financial Summary */}
+            {report.financialSummary && (
+                <div className="bg-white rounded-xl border p-6">
+                    <h3 className="text-sm font-semibold text-gray-500 uppercase mb-4 flex items-center gap-2">
+                        <Receipt size={16} /> {isAr ? 'الملخص المالي' : 'Financial Summary'}
+                    </h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                        {[
+                            { label: isAr ? 'إجمالي الإيرادات' : 'Gross Revenue', value: report.financialSummary.grossRevenue, color: 'text-blue-700 bg-blue-50' },
+                            { label: isAr ? 'تكلفة المنتجات' : 'Product Costs', value: -report.financialSummary.totalProductCost, color: 'text-orange-700 bg-orange-50' },
+                            { label: isAr ? 'مصاريف البازار' : 'Bazaar Expenses', value: -report.financialSummary.totalExpenses, color: 'text-red-700 bg-red-50' },
+                            { label: isAr ? 'صافي الربح' : 'Net Profit', value: report.financialSummary.netProfit, color: report.financialSummary.netProfit >= 0 ? 'text-green-700 bg-green-50' : 'text-red-700 bg-red-50' },
+                            { label: isAr ? 'هامش الربح' : 'Profit Margin', value: null, color: report.financialSummary.profitMargin >= 0 ? 'text-green-700 bg-green-50' : 'text-red-700 bg-red-50', pct: report.financialSummary.profitMargin },
+                        ].map((item, i) => (
+                            <div key={i} className={`p-3 rounded-lg ${item.color}`}>
+                                <p className="text-[11px] font-medium opacity-80 mb-1">{item.label}</p>
+                                <p className="text-lg font-bold">
+                                    {item.pct !== undefined && item.pct !== null
+                                        ? `${item.pct.toFixed(1)}%`
+                                        : `${(item.value || 0).toLocaleString()} EGP`}
+                                </p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Expenses Management */}
+            <ExpensesSection bazaarId={bazaar.id} expenses={report.financialSummary?.expenses || []} isAr={isAr} />
+
             {/* Payment Breakdown */}
             {computedReport.paymentBreakdown.length > 0 && (
                 <div className="bg-white rounded-xl border p-6">
@@ -665,26 +705,28 @@ function ReportTab({ report, orders, bazaar, isAr }: { report: BazaarReport; ord
                 </div>
             )}
 
-            {/* Top Products */}
-            {computedReport.topProducts.length > 0 && (
+            {/* All Products */}
+            {(computedReport.allProducts || []).length > 0 && (
                 <div className="bg-white rounded-xl border p-6">
                     <h3 className="text-sm font-semibold text-gray-500 uppercase mb-4 flex items-center gap-2">
-                        <Trophy size={16} /> {isAr ? 'المنتجات الأكثر مبيعاً' : 'Top Products'}
+                        <Trophy size={16} /> {isAr ? 'جميع المنتجات' : 'All Products'}
                     </h3>
                     <div className="space-y-2">
-                        {computedReport.topProducts.slice(0, 10).map((product, i) => (
-                            <div key={i} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors">
+                        {(computedReport.allProducts || []).map((product, i) => (
+                            <div key={i} className={`flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors ${product.quantity === 0 ? 'opacity-50' : ''}`}>
                                 <div className="flex items-center gap-3">
-                                    <span className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold ${i === 0 ? 'bg-yellow-100 text-yellow-700' :
+                                    <span className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold ${product.quantity === 0 ? 'bg-gray-50 text-gray-400' : i === 0 ? 'bg-yellow-100 text-yellow-700' :
                                         i === 1 ? 'bg-gray-100 text-gray-700' :
                                             i === 2 ? 'bg-orange-100 text-orange-700' :
                                                 'bg-gray-50 text-gray-500'
                                         }`}>{i + 1}</span>
                                     <span className="font-medium text-gray-900">{product.name}</span>
+                                    {product.cost === 0 && product.quantity > 0 && <AlertTriangle size={14} className="text-amber-500" />}
                                 </div>
                                 <div className="flex items-center gap-4 text-sm">
                                     <span className="text-gray-500">{product.quantity} {isAr ? 'قطعة' : 'pcs'}</span>
                                     <span className="font-semibold text-gray-900">{product.revenue.toLocaleString()} EGP</span>
+                                    <span className="text-xs text-gray-400">{isAr ? 'مخزون' : 'stock'}: {product.remaining_stock}</span>
                                 </div>
                             </div>
                         ))}
@@ -1256,6 +1298,105 @@ function OrdersTab({ orders, isAr, lang }: { orders: any[]; isAr: boolean; lang:
                     </tbody>
                 </table>
             </div>
+        </div>
+    );
+}
+
+// ======================== EXPENSES SECTION ========================
+const EXPENSE_CATEGORIES: { key: BazaarExpenseCategory; en: string; ar: string }[] = [
+    { key: 'booth_rental', en: 'Booth / Rental', ar: 'إيجار البوث' },
+    { key: 'transportation', en: 'Transportation', ar: 'مواصلات' },
+    { key: 'packaging', en: 'Packaging', ar: 'تغليف' },
+    { key: 'employee', en: 'Employee / Helper', ar: 'موظفين / مساعدين' },
+    { key: 'marketing', en: 'Marketing', ar: 'تسويق' },
+    { key: 'other', en: 'Other', ar: 'أخرى' },
+];
+
+function ExpensesSection({ bazaarId, expenses: initialExpenses, isAr }: { bazaarId: number; expenses: BazaarExpense[]; isAr: boolean }) {
+    const router = useRouter();
+    const [expenses, setExpenses] = useState<BazaarExpense[]>(initialExpenses);
+    const [showForm, setShowForm] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [category, setCategory] = useState<BazaarExpenseCategory>('booth_rental');
+    const [label, setLabel] = useState('');
+    const [amount, setAmount] = useState('');
+    const [notes, setNotes] = useState('');
+
+    const totalExpenses = expenses.reduce((a, e) => a + (Number(e.amount) || 0), 0);
+
+    const handleAdd = async () => {
+        if (!amount || Number(amount) <= 0) return;
+        setSaving(true);
+        try {
+            const res = await fetch(`/api/admin/bazaars/${bazaarId}/expenses`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ category, label: label || EXPENSE_CATEGORIES.find(c => c.key === category)?.[isAr ? 'ar' : 'en'] || '', amount: Number(amount), notes: notes || null }),
+            });
+            if (res.ok) {
+                setShowForm(false); setCategory('booth_rental'); setLabel(''); setAmount(''); setNotes('');
+                router.refresh();
+            }
+        } catch { } finally { setSaving(false); }
+    };
+
+    const handleDelete = async (id: number) => {
+        try {
+            await fetch(`/api/admin/bazaars/${bazaarId}/expenses/${id}`, { method: 'DELETE' });
+            setExpenses(prev => prev.filter(e => e.id !== id));
+            router.refresh();
+        } catch { }
+    };
+
+    return (
+        <div className="bg-white rounded-xl border p-6">
+            <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-semibold text-gray-500 uppercase flex items-center gap-2">
+                    <Receipt size={16} /> {isAr ? 'مصاريف البازار' : 'Bazaar Expenses'}
+                    <span className="text-xs font-bold text-gray-900 bg-gray-100 px-2 py-0.5 rounded-full">{totalExpenses.toLocaleString()} EGP</span>
+                </h3>
+                <button onClick={() => setShowForm(!showForm)} className="flex items-center gap-1 px-3 py-1.5 bg-primary-50 text-primary-700 rounded-lg hover:bg-primary-100 text-sm font-medium">
+                    <Plus size={14} /> {isAr ? 'إضافة' : 'Add'}
+                </button>
+            </div>
+
+            {showForm && (
+                <div className="mb-4 p-4 bg-gray-50 rounded-lg border space-y-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <select value={category} onChange={e => setCategory(e.target.value as BazaarExpenseCategory)} className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
+                            {EXPENSE_CATEGORIES.map(c => <option key={c.key} value={c.key}>{isAr ? c.ar : c.en}</option>)}
+                        </select>
+                        <input type="text" value={label} onChange={e => setLabel(e.target.value)} placeholder={isAr ? 'الوصف' : 'Label'} className="px-3 py-2 border border-gray-200 rounded-lg text-sm" />
+                        <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder={isAr ? 'المبلغ' : 'Amount'} min="0" step="0.01" className="px-3 py-2 border border-gray-200 rounded-lg text-sm [appearance:textfield]" />
+                        <button onClick={handleAdd} disabled={saving || !amount} className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 disabled:opacity-50">
+                            {saving ? '...' : isAr ? 'حفظ' : 'Save'}
+                        </button>
+                    </div>
+                    <input type="text" value={notes} onChange={e => setNotes(e.target.value)} placeholder={isAr ? 'ملاحظات (اختياري)' : 'Notes (optional)'} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
+                </div>
+            )}
+
+            {expenses.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-4">{isAr ? 'لا توجد مصاريف مسجلة' : 'No expenses recorded'}</p>
+            ) : (
+                <div className="space-y-1.5">
+                    {expenses.map(exp => (
+                        <div key={exp.id} className="flex items-center justify-between p-2.5 bg-gray-50 rounded-lg">
+                            <div className="flex items-center gap-3">
+                                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-200 text-gray-700 capitalize">
+                                    {EXPENSE_CATEGORIES.find(c => c.key === exp.category)?.[isAr ? 'ar' : 'en'] || exp.category}
+                                </span>
+                                <span className="text-sm text-gray-700">{exp.label}</span>
+                                {exp.notes && <span className="text-xs text-gray-400">({exp.notes})</span>}
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <span className="font-semibold text-sm text-gray-900">{Number(exp.amount).toLocaleString()} EGP</span>
+                                <button onClick={() => handleDelete(exp.id)} className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded"><Trash2 size={14} /></button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 }

@@ -14,7 +14,19 @@ export default async function BazaarDetailPage({ params }: { params: Promise<{ i
     const bazaar = await bazaarsUc.getById(bazaarId);
     if (!bazaar) redirect("/admin/bazaars");
 
-    let report: { totalSales: number; orderCount: number; customerCount: number; topProducts: { name: string; quantity: number; revenue: number }[]; topStaff: { name: string; orderCount: number; totalSales: number }[]; paymentBreakdown: { method: string; count: number; total: number }[] } = { totalSales: 0, orderCount: 0, customerCount: 0, topProducts: [], topStaff: [], paymentBreakdown: [] };
+    let report: {
+        totalSales: number; orderCount: number; customerCount: number;
+        allProducts: { name: string; product_id: number; variant_id: number | null; quantity: number; revenue: number; cost: number; remaining_stock: number }[];
+        topStaff: { name: string; orderCount: number; totalSales: number }[];
+        paymentBreakdown: { method: string; count: number; total: number }[];
+        financialSummary: {
+            grossRevenue: number; totalProductCost: number; totalExpenses: number;
+            netProfit: number; profitMargin: number; expenses: any[];
+        };
+    } = {
+        totalSales: 0, orderCount: 0, customerCount: 0, allProducts: [], topStaff: [], paymentBreakdown: [],
+        financialSummary: { grossRevenue: 0, totalProductCost: 0, totalExpenses: 0, netProfit: 0, profitMargin: 0, expenses: [] },
+    };
     let myReport: typeof report | null = null;
     let orders: any[] = [];
     let products: any[] = [];
