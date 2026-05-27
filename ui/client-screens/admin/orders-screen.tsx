@@ -11,8 +11,8 @@ import { generateInvoicePDF } from "@/lib/utils/invoiceGenerator";
 import { Loader2 } from "lucide-react";
 import { statusColor } from "@/lib/utils/statusColors";
 import { PromoCode } from "@/domain/entities/database/promoCode";
-import { FilterIcon, FileSpreadsheet, Truck } from "lucide-react";
-import { exportOrdersToExcel } from "@/lib/utils/excelExporter";
+import { FilterIcon, FileSpreadsheet, Truck, Users } from "lucide-react";
+import { exportOrdersToExcel, exportCustomersToExcel } from "@/lib/utils/excelExporter";
 
 export function OrdersScreen({ initialOrders, promoCodes = [] }: { initialOrders: OrderDetailsView[], promoCodes?: PromoCode[] }) {
     const { t, i18n } = useTranslation();
@@ -232,8 +232,18 @@ export function OrdersScreen({ initialOrders, promoCodes = [] }: { initialOrders
             className="p-6"
         >
             <div className="flex flex-col md:flex-row justify-between md:items-center mb-6 gap-4">
-                <div className="flex justify-between items-center w-full md:w-auto">
+                <div className="flex justify-between items-center w-full md:w-auto gap-3">
                     <h1 className="text-2xl font-bold">{t("allOrders")}</h1>
+                    <button
+                        onClick={() => {
+                            exportCustomersToExcel(orders);
+                            toast.success(t("excelExportStarted"));
+                        }}
+                        className="bg-purple-100 text-purple-700 px-4 py-2 rounded-lg hover:bg-purple-200 font-medium transition-colors border border-purple-200 flex items-center gap-2 text-sm"
+                    >
+                        <Users className="w-4 h-4" />
+                        {t("exportCustomers") || "Export Customers"}
+                    </button>
                 </div>
 
                 <div className="md:hidden flex gap-2 w-full">
