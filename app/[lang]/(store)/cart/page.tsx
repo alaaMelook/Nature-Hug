@@ -137,14 +137,28 @@ function CartItemRow({ item, updateQuantity, removeFromCart, t }: { item: any, u
                     )}
                 </div>
                 <div className="flex-grow">
-                    <h3 className="text-lg text-primary-950 font-semibold mb-5">
+                    <h3 className="text-lg text-primary-950 font-semibold mb-2">
                         {item.name}
                     </h3>
-                    <Counter
-                        quantity={item.quantity}
-                        onIncrease={() => handleUpdate(item.quantity + 1)}
-                        onDecrease={() => handleUpdate(item.quantity - 1)}
-                    />
+                    
+                    {item.selected_variants && (
+                        <div className="text-xs text-primary-800 bg-primary-50/50 p-2 rounded-lg mb-3 inline-block font-medium">
+                            {Object.values(item.selected_variants).map((details: any, idx) => (
+                                <div key={idx} className="flex items-center gap-1">
+                                    <span>•</span>
+                                    <span>{details.name}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    <div className="mt-2">
+                        <Counter
+                            quantity={item.quantity}
+                            onIncrease={() => handleUpdate(item.quantity + 1)}
+                            onDecrease={() => handleUpdate(item.quantity - 1)}
+                        />
+                    </div>
                 </div>
             </div>
             <div className="flex items-center gap-6 mt-4 sm:mt-0 sm:ml-auto">

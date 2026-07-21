@@ -58,7 +58,10 @@ export function ReviewsSlider({ product }: { product: ProductDetailView }) {
                             className="flex-none w-full sm:w-80 p-4 ml-4 mb-3 border border-gray-100 rounded-lg bg-primary-50 shadow-sm relative"
                         >
                             <StarRating rating={review.rating} />
-                            <p className="font-semibold text-primary-800 mt-1">{review.customer_name}-{review.customer_governorate}</p>
+                            <p className="font-semibold text-primary-800 mt-1">
+                                {review.customer_name || (t('customer') || 'Customer')}
+                                {review.customer_governorate ? ` - ${review.customer_governorate}` : ''}
+                            </p>
                             <p className="text-sm text-gray-600 mt-1">{review.comment}</p>
 
                             {/* Review Images */}

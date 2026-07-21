@@ -78,6 +78,7 @@ export default function AdminSidebar({
         { name: t("allProducts"), href: "/admin/products", badge: stats?.productsWarningCount?.products },
         { name: "Packaging Rules", href: "/admin/products/packaging-rules" },
         { name: t("categories"), href: "/admin/products/categories" },
+        { name: i18n.language === 'ar' ? 'الباقات' : 'Bundles', href: "/admin/products/bundles" },
         { name: t("reviews"), href: "/admin/products/reviews", badge: stats?.productsWarningCount?.reviews },
       ]
     },

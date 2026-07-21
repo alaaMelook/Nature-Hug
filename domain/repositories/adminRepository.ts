@@ -4,6 +4,7 @@ import { OrderDetailsView } from "@/domain/entities/views/admin/orderDetailsView
 import { ProductAdminView } from "@/domain/entities/views/admin/productAdminView";
 import { ReviewAdminView } from "@/domain/entities/views/admin/reviewAdminView";
 import { Category } from "../entities/database/category";
+import { BundleAdminView } from "@/domain/entities/views/admin/bundleAdminView";
 
 export interface AdminRepository {
     getOrderDetails(): Promise<OrderDetailsView[]>;
@@ -41,6 +42,10 @@ export interface AdminRepository {
 
     updateReviewStatus(reviewId: number, status: 'approved' | 'rejected' | 'pending'): Promise<void>;
 
+    createReview(review: { product_id: number; customer_name: string; rating: number; comment?: string; status: string }): Promise<void>;
+
+    deleteReview(reviewId: number): Promise<void>;
+
     getAllPromoCodes(): Promise<any[]>;
     createPromoCode(promoCode: any): Promise<void>;
     deletePromoCode(id: number): Promise<void>;
@@ -48,4 +53,15 @@ export interface AdminRepository {
     getAllGovernorates(): Promise<any[]>;
     updateGovernorateFees(slug: string, fees: number): Promise<void>;
     toggleProductVisibility(id: number, isVariant: boolean, visible: boolean): Promise<void>;
+
+    // Bundles
+    getAllBundles(): Promise<BundleAdminView[]>;
+    getBundleById(id: number): Promise<BundleAdminView | null>;
+    createBundle(bundle: Partial<BundleAdminView>): Promise<number>;
+    updateBundle(bundle: Partial<BundleAdminView>): Promise<void>;
+    deleteBundle(id: number): Promise<void>;
+    duplicateBundle(id: number): Promise<number>;
+    getAllProducts(): Promise<any[]>;
+    getProductsByCategory(categoryId: number): Promise<any[]>;
+    getVariantsByProduct(productId: number): Promise<any[]>;
 }

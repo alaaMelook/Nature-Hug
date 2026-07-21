@@ -183,11 +183,21 @@ export class IProductClientRepository implements ProductRepository {
             .eq('product_id', productId);
 
         // 3. Get reviews
-        const { data: reviews } = await supabase.schema('store')
+        let { data: reviews, error: revErr } = await supabase.schema('store')
             .from('reviews')
-            .select('id, rating, comment, created_at, customer_id, status, customers(name, governorate)')
+            .select('id, rating, comment, created_at, customer_id, status, customers(name)')
             .eq('product_id', productId)
             .order('created_at', { ascending: false });
+
+        if (revErr) {
+            console.warn("[IProductRepository] Reviews query failed, retrying without status column:", revErr.message);
+            const { data: fallbackReviews } = await supabase.schema('store')
+                .from('reviews')
+                .select('id, rating, comment, created_at, customer_id, customers(name)')
+                .eq('product_id', productId)
+                .order('created_at', { ascending: false });
+            reviews = fallbackReviews;
+        }
 
         // 4. Get materials
         const materialKey = variantId ? 'variant_id' : 'product_id';
@@ -215,7 +225,7 @@ export class IProductClientRepository implements ProductRepository {
             .limit(1);
 
         // 6. Avg rating
-        const approvedReviews = (reviews || []).filter((r: any) => r.status === 'approved');
+        const approvedReviews = (reviews || []).filter((r: any) => !r.status || r.status === 'approved');
         const avgRating = approvedReviews.length > 0
             ? Math.round((approvedReviews.reduce((sum: number, r: any) => sum + r.rating, 0) / approvedReviews.length) * 10) / 10
             : 0;
@@ -256,9 +266,9 @@ export class IProductClientRepository implements ProductRepository {
                 comment: r.comment,
                 created_at: r.created_at,
                 customer_name: r.customers?.name || null,
-                customer_governorate: r.customers?.governorate || null,
+                customer_governorate: null,
                 customer_id: r.customer_id,
-                status: r.status,
+                status: r.status || 'approved',
             })),
             materials: (materialsUsed || []).map((mu: any) => {
                 const mat = materialsData.find((m: any) => m.id === mu.material_id);

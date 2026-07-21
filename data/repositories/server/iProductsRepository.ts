@@ -132,6 +132,13 @@ export class IProductServerRepository implements ProductRepository {
     }
     async viewBySlug(slug: string): Promise<ProductView> {
         console.log("[IProductRepository] viewBySlug called with slug:", slug);
+        if (slug.startsWith('bundle-')) {
+            const cleanSlug = slug.replace('bundle-', '');
+            const bundles = await this.getStorefrontBundles();
+            const matched = bundles.find(b => b.slug === slug || b.slug === `bundle-${cleanSlug}`);
+            if (matched) return matched;
+            throw new Error(`Bundle not found: ${slug}`);
+        }
         const supabase = await createSupabaseServerClient();
         const { data, status, statusText, error } = await supabase
             .schema('store')
@@ -150,22 +157,43 @@ export class IProductServerRepository implements ProductRepository {
     async viewBySlugs(slugs: string[]): Promise<ProductView[]> {
         console.log("[IProductRepository] viewBySlugs called with slugs:", slugs);
         if (slugs.length === 0) return [];
+
+        const bundleSlugs = slugs.filter(s => s.startsWith('bundle-'));
+        const productSlugs = slugs.filter(s => !s.startsWith('bundle-'));
+
+        let bundleViews: ProductView[] = [];
+        if (bundleSlugs.length > 0) {
+            try {
+                const allBundles = await this.getStorefrontBundles();
+                bundleViews = allBundles.filter(b => bundleSlugs.includes(b.slug));
+            } catch (e) {
+                console.error("Error fetching bundles by slugs:", e);
+            }
+        }
+
+        if (productSlugs.length === 0) {
+            return bundleViews;
+        }
+
         const supabase = await createSupabaseServerClient();
         const { data, status, statusText, error } = await supabase
             .schema('store')
             .from(`products_view_${this.lang}`)
             .select('*')
-            .in('slug', slugs);
+            .in('slug', productSlugs);
         console.log("[IProductRepository] viewBySlugs result:", { data, status, statusText });
         if (error) {
             console.error("[IProductRepository] viewBySlugs error:", error);
             throw error;
         }
-        return data || [];
+        return [...(data || []), ...bundleViews];
     }
 
     async checkSlug(slug: string): Promise<boolean> {
         console.log("[IProductRepository] checkSlug called with slug:", slug);
+        if (slug.startsWith('bundle-')) {
+            return true;
+        }
         const supabase = await createSupabaseServerClient();
         const { data, status, statusText, error } = await supabase
             .schema('store')
@@ -235,11 +263,21 @@ export class IProductServerRepository implements ProductRepository {
             .eq('product_id', productId);
 
         // 4. Get reviews
-        const { data: reviews } = await supabase.schema('store')
+        let { data: reviews, error: revErr } = await supabase.schema('store')
             .from('reviews')
-            .select('id, rating, comment, created_at, customer_id, status, customers(name, governorate)')
+            .select('id, rating, comment, created_at, customer_id, status, customers(name)')
             .eq('product_id', productId)
             .order('created_at', { ascending: false });
+
+        if (revErr) {
+            console.warn("[IProductRepository] Reviews query failed, retrying without status column:", revErr.message);
+            const { data: fallbackReviews } = await supabase.schema('store')
+                .from('reviews')
+                .select('id, rating, comment, created_at, customer_id, customers(name)')
+                .eq('product_id', productId)
+                .order('created_at', { ascending: false });
+            reviews = fallbackReviews;
+        }
 
         // 5. Get materials
         const materialKey = variantId ? 'variant_id' : 'product_id';
@@ -268,7 +306,7 @@ export class IProductServerRepository implements ProductRepository {
             .limit(1);
 
         // 7. Compute avg rating
-        const approvedReviews = (reviews || []).filter((r: any) => r.status === 'approved');
+        const approvedReviews = (reviews || []).filter((r: any) => !r.status || r.status === 'approved');
         const avgRating = approvedReviews.length > 0
             ? Math.round((approvedReviews.reduce((sum: number, r: any) => sum + r.rating, 0) / approvedReviews.length) * 10) / 10
             : 0;
@@ -310,9 +348,9 @@ export class IProductServerRepository implements ProductRepository {
                 comment: r.comment,
                 created_at: r.created_at,
                 customer_name: r.customers?.name || null,
-                customer_governorate: r.customers?.governorate || null,
+                customer_governorate: null,
                 customer_id: r.customer_id,
-                status: r.status,
+                status: r.status || 'approved',
             })),
             materials: (materialsUsed || []).map((mu: any) => {
                 const mat = materialsData.find((m: any) => m.id === mu.material_id);
@@ -580,5 +618,176 @@ export class IProductServerRepository implements ProductRepository {
         return validCodes;
     }
 
+    // ─── BUNDLE STOREFRONT HELPERS ─────────────────────────────────────────────
 
+    async getStorefrontBundles(): Promise<ProductView[]> {
+        const supabase = await createSupabaseServerClient();
+        const { data: bundles, error } = await supabase.schema('store')
+            .from('bundles')
+            .select('*, category:category_id(id, name_en, name_ar)')
+            .eq('status', 'active')
+            .order('display_order', { ascending: true });
+
+        if (error || !bundles) return [];
+
+        const { data: items } = await supabase.schema('store')
+            .from('bundle_items')
+            .select('*, product:product_id(price, discount, stock), variant:variant_id(price, discount, stock)');
+
+        const itemsByBundleId: Record<number, any[]> = {};
+        for (const item of (items || [])) {
+            if (!itemsByBundleId[item.bundle_id]) itemsByBundleId[item.bundle_id] = [];
+            itemsByBundleId[item.bundle_id].push(item);
+        }
+
+        return bundles.map((b: any) => {
+            const rawItems = itemsByBundleId[b.id] || [];
+            let original_total = 0;
+            let minStock = 99999;
+
+            for (const item of rawItems) {
+                const prod = item.product || {};
+                const vr = item.variant || {};
+                const hasVariant = !!item.variant_id;
+                const price = hasVariant ? (vr.price ?? prod.price ?? 0) : (prod.price ?? 0);
+                const stock = hasVariant ? (vr.stock ?? 0) : (prod.stock ?? 0);
+                original_total += price * item.quantity;
+                const avail = Math.floor(stock / item.quantity);
+                if (avail < minStock) minStock = avail;
+            }
+
+            if (rawItems.length === 0) minStock = 0;
+
+            let final_price = original_total;
+            if (b.pricing_type === 'fixed_price') final_price = b.fixed_price;
+            else if (b.pricing_type === 'percentage_discount') final_price = original_total * (1 - (b.discount_value || 0) / 100);
+            else if (b.pricing_type === 'fixed_amount_discount') final_price = Math.max(0, original_total - (b.discount_value || 0));
+
+            const discount = original_total - final_price;
+
+            return {
+                id: b.id,
+                variant_id: 0,
+                name: b.name,
+                description: b.description || '',
+                price: original_total,
+                stock: minStock,
+                discount: discount > 0 ? discount : null,
+                image: b.image || null,
+                category_name: this.lang === 'ar' ? (b.category?.name_ar || b.category?.name_en || 'الباقات') : (b.category?.name_en || 'Bundles'),
+                category_names: [b.category?.name_en || 'Bundles', b.category?.name_ar || 'الباقات', 'Bundles', 'الباقات'],
+                skin_type: '',
+                slug: `bundle-${b.slug}`,
+                product_type: 'bundle',
+                created_at: b.created_at,
+                avg_rating: 5.0,
+                product_id: b.id
+            };
+        });
+    }
+
+    async getStorefrontBundleDetail(slug: string): Promise<import("@/domain/entities/views/shop/bundleDetailView").BundleDetailView | null> {
+        const supabase = await createSupabaseServerClient();
+        const isAr = this.lang === 'ar';
+
+        const { data: b, error } = await supabase.schema('store')
+            .from('bundles')
+            .select('*, category:category_id(id, name_en, name_ar)')
+            .eq('slug', slug)
+            .eq('status', 'active')
+            .maybeSingle();
+
+        if (error || !b) return null;
+
+        const { data: items } = await supabase.schema('store')
+            .from('bundle_items')
+            .select('id, bundle_id, product_id, quantity, notes, sort_order, product:product_id(id, name, name_ar, image_url, price, discount, stock, slug, description, description_ar)')
+            .eq('bundle_id', b.id)
+            .order('sort_order', { ascending: true });
+
+        const rawItems = (items || []) as any[];
+        const productIds = [...new Set(rawItems.map((i: any) => i.product_id as number))];
+        const variantsByProduct: Record<number, any[]> = {};
+
+        if (productIds.length > 0) {
+            const { data: allVariants } = await supabase.schema('store')
+                .from('product_variants')
+                .select('id, product_id, name_en, name_ar, price, discount, stock, image, slug, type_en, type_ar')
+                .in('product_id', productIds);
+
+            for (const v of (allVariants || [])) {
+                if (!variantsByProduct[v.product_id]) variantsByProduct[v.product_id] = [];
+                variantsByProduct[v.product_id].push(v);
+            }
+        }
+
+        let original_total = 0;
+        let minStock = 99999;
+
+        const mappedItems = rawItems.map((item: any) => {
+            const prod = (item.product || {}) as any;
+            const variants = variantsByProduct[item.product_id] || [];
+            original_total += (prod.price || 0) * item.quantity;
+            const avail = Math.floor((prod.stock || 0) / item.quantity);
+            if (avail < minStock) minStock = avail;
+
+            return {
+                id: item.id,
+                bundle_id: item.bundle_id,
+                product_id: item.product_id,
+                quantity: item.quantity,
+                notes: item.notes,
+                sort_order: item.sort_order,
+                product: {
+                    id: prod.id,
+                    name: isAr ? (prod.name_ar || prod.name || '') : (prod.name || prod.name_ar || ''),
+                    image: prod.image_url || '',
+                    price: prod.price || 0,
+                    discount: prod.discount || null,
+                    stock: prod.stock || 0,
+                    slug: prod.slug || '',
+                    description: isAr ? (prod.description_ar || prod.description || '') : (prod.description || prod.description_ar || '')
+                },
+                has_variants: variants.length > 0,
+                variants: variants.map((v: any) => ({
+                    id: v.id,
+                    name_en: v.name_en || '',
+                    name_ar: v.name_ar || '',
+                    price: v.price || 0,
+                    discount: v.discount || null,
+                    stock: v.stock || 0,
+                    image: v.image || null,
+                    slug: v.slug || '',
+                    type_en: v.type_en,
+                    type_ar: v.type_ar
+                }))
+            };
+        });
+
+        if (rawItems.length === 0) minStock = 0;
+
+        let final_price = original_total;
+        if (b.pricing_type === 'fixed_price') final_price = b.fixed_price || 0;
+        else if (b.pricing_type === 'percentage_discount') final_price = original_total * (1 - (b.discount_value || 0) / 100);
+        else if (b.pricing_type === 'fixed_amount_discount') final_price = Math.max(0, original_total - (b.discount_value || 0));
+
+        return {
+            id: b.id,
+            name: b.name,
+            slug: b.slug,
+            description: b.description || '',
+            image: b.image || null,
+            category_name: isAr ? (b.category?.name_ar || b.category?.name_en || 'الباقات') : (b.category?.name_en || 'Bundles'),
+            bundle_type: b.bundle_type,
+            pricing_type: b.pricing_type,
+            discount_value: b.discount_value || 0,
+            fixed_price: b.fixed_price || 0,
+            original_total,
+            final_price,
+            discount: original_total - final_price,
+            stock: minStock,
+            featured: b.featured,
+            items: mappedItems
+        };
+    }
 }

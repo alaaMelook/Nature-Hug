@@ -11,6 +11,7 @@ import { Bazaar } from "@/domain/entities/database/bazaar";
 import { BazaarExpense } from "@/domain/entities/database/bazaarExpense";
 import { Governorate } from "@/domain/entities/database/governorate";
 import { AccountReportView, ProductSalesReport, ReportSummary } from "@/domain/entities/views/admin/reportViews";
+import { BundleAdminView, BundleItemView } from "@/domain/entities/views/admin/bundleAdminView";
 
 export class IAdminServerRepository implements AdminRepository {
     async getOrderDetails(): Promise<OrderDetailsView[]> {
@@ -1107,7 +1108,10 @@ export class IAdminServerRepository implements AdminRepository {
             throw error;
         }
 
-        return (data || []);
+        return (data || []).map((r: any) => ({
+            ...r,
+            status: r.status || 'approved'
+        }));
     }
 
     async updateReviewStatus(reviewId: number, status: 'approved' | 'rejected' | 'pending'): Promise<void> {
@@ -1118,7 +1122,78 @@ export class IAdminServerRepository implements AdminRepository {
             .eq('id', reviewId);
 
         if (error) {
+            if (error.code === 'PGRST204' || error.message?.includes("'status' column")) {
+                console.warn("[IAdminRepository] Cannot update review status because 'status' column is missing in store.reviews");
+                return;
+            }
             console.error("[IAdminRepository] updateReviewStatus error:", error);
+            throw error;
+        }
+    }
+
+    async createReview(review: { product_id: number; customer_name: string; rating: number; comment?: string; status: string }): Promise<void> {
+        console.log("[IAdminRepository] createReview called with:", review);
+
+        let customerId: number | null = null;
+        if (review.customer_name && review.customer_name.trim()) {
+            const trimmedName = review.customer_name.trim();
+            const { data: existingCust } = await supabaseAdmin.schema('store')
+                .from('customers')
+                .select('id')
+                .eq('name', trimmedName)
+                .maybeSingle();
+
+            if (existingCust) {
+                customerId = existingCust.id;
+            } else {
+                const { data: newCust } = await supabaseAdmin.schema('store')
+                    .from('customers')
+                    .insert({ name: trimmedName })
+                    .select('id')
+                    .single();
+                if (newCust) {
+                    customerId = newCust.id;
+                }
+            }
+        }
+
+        const payload: any = {
+            product_id: review.product_id,
+            customer_id: customerId,
+            rating: review.rating,
+            comment: review.comment || null,
+            status: review.status,
+            created_at: new Date().toISOString(),
+        };
+
+        let { error } = await supabaseAdmin.schema('store')
+            .from('reviews')
+            .insert(payload);
+
+        if (error && (error.code === 'PGRST204' || error.message?.includes("'status' column"))) {
+            console.warn("[IAdminRepository] 'status' column missing in store.reviews, retrying insert without status...");
+            delete payload.status;
+            const fallback = await supabaseAdmin.schema('store')
+                .from('reviews')
+                .insert(payload);
+            error = fallback.error;
+        }
+
+        if (error) {
+            console.error("[IAdminRepository] createReview error:", error);
+            throw error;
+        }
+    }
+
+    async deleteReview(reviewId: number): Promise<void> {
+        console.log(`[IAdminRepository] deleteReview called for review ${reviewId}`);
+        const { error } = await supabaseAdmin.schema('store')
+            .from('reviews')
+            .delete()
+            .eq('id', reviewId);
+
+        if (error) {
+            console.error("[IAdminRepository] deleteReview error:", error);
             throw error;
         }
     }
@@ -1944,5 +2019,388 @@ export class IAdminServerRepository implements AdminRepository {
             console.error("[IAdminRepository] deleteBazaarExpense error:", error);
             throw error;
         }
+    }
+
+    // ===================== BUNDLES =====================
+
+    async getAllBundles(): Promise<BundleAdminView[]> {
+        console.log("[IAdminRepository] getAllBundles called.");
+        const { data: bundles, error: bundlesError } = await supabaseAdmin.schema('store')
+            .from('bundles')
+            .select('*, category:category_id(id, name_en, name_ar)')
+            .order('display_order', { ascending: true })
+            .order('created_at', { ascending: false });
+
+        if (bundlesError) {
+            console.error("[IAdminRepository] getAllBundles error:", bundlesError);
+            throw bundlesError;
+        }
+
+        if (!bundles || bundles.length === 0) return [];
+
+        // Fetch bundle items
+        const { data: items, error: itemsError } = await supabaseAdmin.schema('store')
+            .from('bundle_items')
+            .select(`
+                *,
+                product:product_id(id, name, name_ar, image_url, price, discount, stock),
+                variant:variant_id(id, name_en, name_ar, image, price, discount, stock)
+            `)
+            .order('sort_order', { ascending: true });
+
+        if (itemsError) {
+            console.error("[IAdminRepository] getAllBundles items error:", itemsError);
+            throw itemsError;
+        }
+
+        // Map items by bundle_id
+        const itemsByBundleId: Record<number, any[]> = {};
+        for (const item of (items || [])) {
+            if (!itemsByBundleId[item.bundle_id]) {
+                itemsByBundleId[item.bundle_id] = [];
+            }
+            itemsByBundleId[item.bundle_id].push(item);
+        }
+
+        return bundles.map((b: any) => {
+            const rawItems = itemsByBundleId[b.id] || [];
+            const mappedItems: BundleItemView[] = rawItems.map((item: any) => {
+                const prod = item.product || {};
+                const vr = item.variant || {};
+                const hasVariant = !!item.variant_id;
+
+                const price = hasVariant ? (vr.price ?? prod.price ?? 0) : (prod.price ?? 0);
+                const discount = hasVariant ? (vr.discount ?? prod.discount ?? 0) : (prod.discount ?? 0);
+                const stock = hasVariant ? (vr.stock ?? 0) : (prod.stock ?? 0);
+
+                return {
+                    id: item.id,
+                    bundle_id: item.bundle_id,
+                    product_id: item.product_id,
+                    variant_id: item.variant_id,
+                    quantity: item.quantity,
+                    notes: item.notes || '',
+                    sort_order: item.sort_order || 0,
+                    product_name_en: prod.name || '',
+                    product_name_ar: prod.name_ar || '',
+                    product_image: prod.image_url || '',
+                    variant_name_en: vr.name_en || '',
+                    variant_name_ar: vr.name_ar || '',
+                    variant_image: vr.image || '',
+                    price,
+                    discount,
+                    stock
+                };
+            });
+
+            const original_total = mappedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            let final_price = original_total;
+            if (b.pricing_type === 'fixed_price') {
+                final_price = b.fixed_price;
+            } else if (b.pricing_type === 'percentage_discount') {
+                final_price = original_total * (1 - (b.discount_value || 0) / 100);
+            } else if (b.pricing_type === 'fixed_amount_discount') {
+                final_price = Math.max(0, original_total - (b.discount_value || 0));
+            }
+
+            return {
+                ...b,
+                category_name_en: b.category?.name_en || '',
+                category_name_ar: b.category?.name_ar || '',
+                category: b.category,
+                items: mappedItems,
+                item_count: mappedItems.length,
+                original_total,
+                final_price
+            };
+        });
+    }
+
+    async getBundleById(id: number): Promise<BundleAdminView | null> {
+        console.log(`[IAdminRepository] getBundleById called for id: ${id}`);
+        const { data: b, error: bundleError } = await supabaseAdmin.schema('store')
+            .from('bundles')
+            .select('*, category:category_id(id, name_en, name_ar)')
+            .eq('id', id)
+            .maybeSingle();
+
+        if (bundleError) {
+            console.error("[IAdminRepository] getBundleById error:", bundleError);
+            throw bundleError;
+        }
+
+        if (!b) return null;
+
+        // Fetch bundle items
+        const { data: items, error: itemsError } = await supabaseAdmin.schema('store')
+            .from('bundle_items')
+            .select(`
+                *,
+                product:product_id(id, name, name_ar, image_url, price, discount, stock),
+                variant:variant_id(id, name_en, name_ar, image, price, discount, stock)
+            `)
+            .eq('bundle_id', id)
+            .order('sort_order', { ascending: true });
+
+        if (itemsError) {
+            console.error("[IAdminRepository] getBundleById items error:", itemsError);
+            throw itemsError;
+        }
+
+        const mappedItems: BundleItemView[] = (items || []).map((item: any) => {
+            const prod = item.product || {};
+            const vr = item.variant || {};
+            const hasVariant = !!item.variant_id;
+
+            const price = hasVariant ? (vr.price ?? prod.price ?? 0) : (prod.price ?? 0);
+            const discount = hasVariant ? (vr.discount ?? prod.discount ?? 0) : (prod.discount ?? 0);
+            const stock = hasVariant ? (vr.stock ?? 0) : (prod.stock ?? 0);
+
+            return {
+                id: item.id,
+                bundle_id: item.bundle_id,
+                product_id: item.product_id,
+                variant_id: item.variant_id,
+                quantity: item.quantity,
+                notes: item.notes || '',
+                sort_order: item.sort_order || 0,
+                product_name_en: prod.name || '',
+                product_name_ar: prod.name_ar || '',
+                product_image: prod.image_url || '',
+                variant_name_en: vr.name_en || '',
+                variant_name_ar: vr.name_ar || '',
+                variant_image: vr.image || '',
+                price,
+                discount,
+                stock
+            };
+        });
+
+        const original_total = mappedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        let final_price = original_total;
+        if (b.pricing_type === 'fixed_price') {
+            final_price = b.fixed_price;
+        } else if (b.pricing_type === 'percentage_discount') {
+            final_price = original_total * (1 - (b.discount_value || 0) / 100);
+        } else if (b.pricing_type === 'fixed_amount_discount') {
+            final_price = Math.max(0, original_total - (b.discount_value || 0));
+        }
+
+        return {
+            ...b,
+            category_name_en: b.category?.name_en || '',
+            category_name_ar: b.category?.name_ar || '',
+            category: b.category,
+            items: mappedItems,
+            item_count: mappedItems.length,
+            original_total,
+            final_price
+        };
+    }
+
+    async createBundle(bundle: Partial<BundleAdminView>): Promise<number> {
+        console.log("[IAdminRepository] createBundle called with:", bundle);
+        const { items, category, category_name_en, category_name_ar, item_count, original_total, final_price, ...bundleData } = bundle;
+
+        // Insert bundle
+        const { data, error } = await supabaseAdmin.schema('store')
+            .from('bundles')
+            .insert(bundleData)
+            .select('id')
+            .single();
+
+        if (error) {
+            console.error("[IAdminRepository] createBundle insert error:", error);
+            throw error;
+        }
+
+        const bundleId = data.id;
+
+        // Insert bundle items
+        if (items && items.length > 0) {
+            const itemsData = items.map((item, idx) => ({
+                bundle_id: bundleId,
+                product_id: item.product_id,
+                variant_id: item.variant_id || null,
+                quantity: item.quantity,
+                notes: item.notes || '',
+                sort_order: item.sort_order || idx
+            }));
+
+            const { error: itemsError } = await supabaseAdmin.schema('store')
+                .from('bundle_items')
+                .insert(itemsData);
+
+            if (itemsError) {
+                console.error("[IAdminRepository] createBundle items insert error:", itemsError);
+                throw itemsError;
+            }
+        }
+
+        return bundleId;
+    }
+
+    async updateBundle(bundle: Partial<BundleAdminView>): Promise<void> {
+        console.log("[IAdminRepository] updateBundle called with:", bundle);
+        const { id, items, category, category_name_en, category_name_ar, item_count, original_total, final_price, created_at, updated_at, ...bundleData } = bundle;
+
+        if (!id) throw new Error("Bundle ID is required for update");
+
+        // Update bundle
+        const { error } = await supabaseAdmin.schema('store')
+            .from('bundles')
+            .update({ ...bundleData, updated_at: new Date().toISOString() })
+            .eq('id', id);
+
+        if (error) {
+            console.error("[IAdminRepository] updateBundle error:", error);
+            throw error;
+        }
+
+        // Delete old items
+        const { error: deleteError } = await supabaseAdmin.schema('store')
+            .from('bundle_items')
+            .delete()
+            .eq('bundle_id', id);
+
+        if (deleteError) {
+            console.error("[IAdminRepository] updateBundle delete items error:", deleteError);
+            throw deleteError;
+        }
+
+        // Insert new items
+        if (items && items.length > 0) {
+            const itemsData = items.map((item, idx) => ({
+                bundle_id: id,
+                product_id: item.product_id,
+                variant_id: item.variant_id || null,
+                quantity: item.quantity,
+                notes: item.notes || '',
+                sort_order: item.sort_order || idx
+            }));
+
+            const { error: itemsError } = await supabaseAdmin.schema('store')
+                .from('bundle_items')
+                .insert(itemsData);
+
+            if (itemsError) {
+                console.error("[IAdminRepository] updateBundle items insert error:", itemsError);
+                throw itemsError;
+            }
+        }
+    }
+
+    async deleteBundle(id: number): Promise<void> {
+        console.log(`[IAdminRepository] deleteBundle called for id: ${id}`);
+        const { error } = await supabaseAdmin.schema('store')
+            .from('bundles')
+            .delete()
+            .eq('id', id);
+
+        if (error) {
+            console.error("[IAdminRepository] deleteBundle error:", error);
+            throw error;
+        }
+    }
+
+    async duplicateBundle(id: number): Promise<number> {
+        console.log(`[IAdminRepository] duplicateBundle called for id: ${id}`);
+        const bundle = await this.getBundleById(id);
+        if (!bundle) throw new Error("Bundle not found to duplicate");
+
+        const timestamp = Date.now().toString().slice(-4);
+        const duplicatedName = `${bundle.name} (Copy)`;
+        const duplicatedSlug = `${bundle.slug}-copy-${timestamp}`;
+
+        const { id: _, items, category, category_name_en, category_name_ar, item_count, original_total, final_price, created_at, updated_at, ...bundleData } = bundle;
+
+        const newBundleData = {
+            ...bundleData,
+            name: duplicatedName,
+            slug: duplicatedSlug,
+            status: 'draft' as const
+        };
+
+        const newId = await this.createBundle({
+            ...newBundleData,
+            items: items.map(item => ({ ...item, id: 0, bundle_id: 0 }))
+        });
+
+        return newId;
+    }
+
+    async getAllProducts(): Promise<any[]> {
+        console.log("[IAdminRepository] getAllProducts called.");
+        const { data, error } = await supabaseAdmin.schema('store')
+            .from('products')
+            .select('id, name, name_ar, price, discount, image_url, stock, slug, category_id')
+            .order('name', { ascending: true });
+
+        if (error) {
+            console.error("[IAdminRepository] getAllProducts error:", error);
+            throw error;
+        }
+
+        return data || [];
+    }
+
+    async getProductsByCategory(categoryId: number): Promise<any[]> {
+        console.log(`[IAdminRepository] getProductsByCategory called for categoryId: ${categoryId}`);
+        
+        // Fetch products linked via product_categories
+        const { data: catProds, error: catProdsError } = await supabaseAdmin.schema('store')
+            .from('product_categories')
+            .select('product_id')
+            .eq('category_id', categoryId);
+
+        if (catProdsError) {
+            console.error("[IAdminRepository] getProductsByCategory catProds error:", catProdsError);
+            throw catProdsError;
+        }
+
+        const productIds = (catProds || []).map(cp => cp.product_id);
+        
+        // Single category fallback schema
+        const { data: fallbackProds, error: fallbackError } = await supabaseAdmin.schema('store')
+            .from('products')
+            .select('id')
+            .eq('category_id', categoryId);
+            
+        if (!fallbackError && fallbackProds) {
+            fallbackProds.forEach(p => {
+                if (!productIds.includes(p.id)) productIds.push(p.id);
+            });
+        }
+
+        if (productIds.length === 0) return [];
+
+        const { data: products, error } = await supabaseAdmin.schema('store')
+            .from('products')
+            .select('id, name, name_ar, price, discount, image_url, stock, slug')
+            .in('id', productIds)
+            .eq('is_visible', true);
+
+        if (error) {
+            console.error("[IAdminRepository] getProductsByCategory error:", error);
+            throw error;
+        }
+
+        return products || [];
+    }
+
+    async getVariantsByProduct(productId: number): Promise<any[]> {
+        console.log(`[IAdminRepository] getVariantsByProduct called for productId: ${productId}`);
+        const { data, error } = await supabaseAdmin.schema('store')
+            .from('product_variants')
+            .select('id, product_id, name_en, name_ar, price, stock, discount, image, slug')
+            .eq('product_id', productId)
+            .eq('is_visible', true);
+
+        if (error) {
+            console.error("[IAdminRepository] getVariantsByProduct error:", error);
+            throw error;
+        }
+
+        return data || [];
     }
 }

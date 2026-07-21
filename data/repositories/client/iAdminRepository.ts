@@ -8,6 +8,7 @@ import { Category } from "@/domain/entities/database/category";
 import { Review } from "@/domain/entities/database/review";
 import { ReviewAdminView } from "@/domain/entities/views/admin/reviewAdminView";
 import { Governorate } from "@/domain/entities/database/governorate";
+import { BundleAdminView } from "@/domain/entities/views/admin/bundleAdminView";
 
 export class IAdminClientRepository implements AdminRepository {
     async toggleProductVisibility(id: number, isVariant: boolean, visible: boolean): Promise<void> {
@@ -362,6 +363,10 @@ export class IAdminClientRepository implements AdminRepository {
         }
     }
 
+    async createReview(_review: { product_id: number; customer_name: string; rating: number; comment?: string; status: string }): Promise<void> { throw new Error("Use server action"); }
+
+    async deleteReview(_reviewId: number): Promise<void> { throw new Error("Use server action"); }
+
     async getAllPromoCodes(): Promise<any[]> {
         console.log("[IAdminClientRepository] getAllPromoCodes called.");
         const { data, error } = await supabase.schema('store').from('promo_codes').select('*');
@@ -389,4 +394,16 @@ export class IAdminClientRepository implements AdminRepository {
             throw error;
         }
     }
+
+    // ===================== BUNDLES (client-side stubs — all ops use server actions) =====================
+    async getAllBundles(): Promise<BundleAdminView[]> { throw new Error("Use server action"); }
+    async getBundleById(_id: number): Promise<BundleAdminView | null> { throw new Error("Use server action"); }
+    async createBundle(_bundle: Partial<BundleAdminView>): Promise<number> { throw new Error("Use server action"); }
+    async updateBundle(_bundle: Partial<BundleAdminView>): Promise<void> { throw new Error("Use server action"); }
+    async deleteBundle(_id: number): Promise<void> { throw new Error("Use server action"); }
+    async duplicateBundle(_id: number): Promise<number> { throw new Error("Use server action"); }
+    async getAllProducts(): Promise<any[]> { throw new Error("Use server action"); }
+    async getProductsByCategory(_categoryId: number): Promise<any[]> { throw new Error("Use server action"); }
+    async getVariantsByProduct(_productId: number): Promise<any[]> { throw new Error("Use server action"); }
 }
+
