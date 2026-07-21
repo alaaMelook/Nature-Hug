@@ -109,14 +109,16 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
         try {
             const res = await validateCart(cart.items.map(i => ({ slug: i.slug, quantity: i.quantity })), i18n.language as LangKey);
 
-            setCart(prev => ({
-                ...prev,
-                // Recalculate discount based on VALIDATED items
-                discount: (prev.promoCode ? prev.discount : 0) + res.items.reduce((acc, item) => acc + (item.discount ?? 0) * item.quantity, 0),
-                items: res.items,
-                total: res.items.reduce((acc, item) => acc + (item.price * item.quantity), 0),
-                netTotal: res.items.reduce((acc, item) => acc + (item.price * item.quantity), 0) - (prev.discount || 0),
-            }));
+            setCart(prev => {
+                const subtotal = res.items.reduce((acc, item) => acc + ((item.price - (item.discount ?? 0)) * item.quantity), 0);
+                return {
+                    ...prev,
+                    discount: (prev.promoCode ? prev.discount : 0),
+                    items: res.items,
+                    total: subtotal,
+                    netTotal: subtotal - (prev.discount || 0),
+                };
+            });
 
             // Handle removed items
             if (res.removed.length > 0) {
@@ -278,7 +280,7 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
 
             // Recalculate all discounts sequentially
             const allPromoCodes = [...cart.promoCodes, newPromo];
-            const subtotal = cart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const subtotal = cart.items.reduce((sum, item) => sum + ((item.price - (item.discount || 0)) * item.quantity), 0);
             let remainingAmount = subtotal;
 
             // First pass: Apply all fixed amount discounts
@@ -437,7 +439,7 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
 
                         // Recalculate all discounts sequentially
                         const allPromoCodes = [...prevCart.promoCodes, newPromo];
-                        const subtotal = prevCart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                        const subtotal = prevCart.items.reduce((sum, item) => sum + ((item.price - (item.discount || 0)) * item.quantity), 0);
                         let remainingAmount = subtotal;
 
                         // First pass: Apply all fixed amount discounts
@@ -494,8 +496,8 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
     };
 
     const getCartTotal = (shipping: number) => {
-        // Calculate subtotal directly from items
-        const subtotal = cart.items?.reduce((sum, item) => sum + (item.price * item.quantity), 0) || 0;
+        // Calculate subtotal directly from items (using effective price after product discount)
+        const subtotal = cart.items?.reduce((sum, item) => sum + ((item.price - (item.discount || 0)) * item.quantity), 0) || 0;
 
         // Sequential discount calculation: first apply fixed amounts, then percentages on remaining
         let remainingAmount = subtotal;

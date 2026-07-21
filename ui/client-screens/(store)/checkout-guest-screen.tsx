@@ -81,8 +81,8 @@ export function CheckoutGuestScreen({ governorates }: { governorates: Governorat
         setLoading(true);
         const { termsAccepted, ...restData } = data;
 
-        // Calculate subtotal from items directly
-        const subtotal = cart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        // Calculate subtotal from items directly (using effective item prices)
+        const subtotal = cart.items.reduce((sum, item) => sum + (((item.price ?? 0) - (item.discount ?? 0)) * (item.quantity ?? 1)), 0);
 
         // Calculate discounts sequentially
         let remainingAmount = subtotal;

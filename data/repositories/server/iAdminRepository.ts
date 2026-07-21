@@ -2257,35 +2257,38 @@ export class IAdminServerRepository implements AdminRepository {
             throw error;
         }
 
-        // Delete old items
-        const { error: deleteError } = await supabaseAdmin.schema('store')
-            .from('bundle_items')
-            .delete()
-            .eq('bundle_id', id);
-
-        if (deleteError) {
-            console.error("[IAdminRepository] updateBundle delete items error:", deleteError);
-            throw deleteError;
-        }
-
-        // Insert new items
-        if (items && items.length > 0) {
-            const itemsData = items.map((item, idx) => ({
-                bundle_id: id,
-                product_id: item.product_id,
-                variant_id: item.variant_id || null,
-                quantity: item.quantity,
-                notes: item.notes || '',
-                sort_order: item.sort_order || idx
-            }));
-
-            const { error: itemsError } = await supabaseAdmin.schema('store')
+        // Update items only if items array was explicitly provided in payload
+        if (items !== undefined) {
+            // Delete old items
+            const { error: deleteError } = await supabaseAdmin.schema('store')
                 .from('bundle_items')
-                .insert(itemsData);
+                .delete()
+                .eq('bundle_id', id);
 
-            if (itemsError) {
-                console.error("[IAdminRepository] updateBundle items insert error:", itemsError);
-                throw itemsError;
+            if (deleteError) {
+                console.error("[IAdminRepository] updateBundle delete items error:", deleteError);
+                throw deleteError;
+            }
+
+            // Insert new items
+            if (items.length > 0) {
+                const itemsData = items.map((item, idx) => ({
+                    bundle_id: id,
+                    product_id: item.product_id,
+                    variant_id: item.variant_id || null,
+                    quantity: item.quantity,
+                    notes: item.notes || '',
+                    sort_order: item.sort_order || idx
+                }));
+
+                const { error: itemsError } = await supabaseAdmin.schema('store')
+                    .from('bundle_items')
+                    .insert(itemsData);
+
+                if (itemsError) {
+                    console.error("[IAdminRepository] updateBundle items insert error:", itemsError);
+                    throw itemsError;
+                }
             }
         }
     }

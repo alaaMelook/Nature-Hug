@@ -26,6 +26,17 @@ export async function updateBundleAction(bundle: Partial<BundleAdminView>) {
     }
 }
 
+export async function updateBundleStatusAction(id: number, status: 'active' | 'draft' | 'hidden') {
+    try {
+        await new Bundles().update({ id, status });
+        revalidatePath('/admin/products/bundles');
+        return { success: true };
+    } catch (error: any) {
+        console.error("Failed to update bundle status:", error);
+        return { success: false, error: error.message || "Failed to update bundle status" };
+    }
+}
+
 export async function deleteBundleAction(id: number) {
     try {
         await new Bundles().delete(id);

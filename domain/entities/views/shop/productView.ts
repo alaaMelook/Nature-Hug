@@ -15,6 +15,7 @@ export interface ProductView {
     created_at: string;
     avg_rating: number;
     product_id?: number; // Added for junction table queries
+    original_price?: number | null;
 }
 
 export interface CartItem extends ProductView {

@@ -44,22 +44,9 @@ export default function Navbar() {
 
     // Fix hydration mismatch
     const [mounted, setMounted] = useState(false);
-    const [hasBundles, setHasBundles] = useState(false);
 
     useEffect(() => {
         setMounted(true);
-        const checkBundles = async () => {
-            try {
-                const res = await fetch("/api/store/bundles");
-                if (res.ok) {
-                    const data = await res.json();
-                    setHasBundles(data && data.length > 0);
-                }
-            } catch (e) {
-                console.error("Failed to check active bundles:", e);
-            }
-        };
-        checkBundles();
     }, []);
 
     // Wishlist count
@@ -217,15 +204,6 @@ export default function Navbar() {
                             >
                                 {t('category')}
                             </button>
-
-                            {hasBundles && (
-                                <Link
-                                    href="/bundles"
-                                    className="text-primary-950 hover:text-primary-300 transition-colors duration-300 text-lg font-semibold"
-                                >
-                                    {language === 'ar' ? 'الباقات والعروض' : 'Bundles & Offers'}
-                                </Link>
-                            )}
                         </Fragment>
                     ) : item.key === 'home' ? (
                         <button
@@ -417,17 +395,6 @@ export default function Navbar() {
                             {t(item.key)}
                         </Link>
                     ))}
-
-                    {hasBundles && (
-                        <Link
-                            href="/bundles"
-                            className="text-primary-950 hover:text-primary-300 text-lg mx-5 flex font-semibold"
-                            onClick={() => setIsOpen(false)}
-                        >
-                            <Store className="w-5 h-5 mx-2 text-primary-900" />
-                            {language === 'ar' ? 'الباقات والعروض' : 'Bundles & Offers'}
-                        </Link>
-                    )}
 
 
                     {user ? (

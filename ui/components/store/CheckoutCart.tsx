@@ -96,13 +96,13 @@ export function CheckoutCart({ selectedGovernorate, onPurchase, customerId }: {
                                 <div className="flex-1 min-w-0 flex flex-col justify-center">
                                     <p className="text-sm font-medium text-gray-900 line-clamp-2 leading-snug">{item.name}</p>
                                     <div className="mt-1">
-                                        {item.discount && item.discount > 0 ? (
+                                        {item.original_price || (item.discount && item.discount > 0) ? (
                                             <div className="flex items-center gap-2">
                                                 <span className="text-sm font-semibold text-primary-600">
                                                     {t("{{price, currency}}", { price: ((item.price ?? 0) - (item.discount ?? 0)) * (item.quantity ?? 1) })}
                                                 </span>
                                                 <span className="text-xs text-gray-400 line-through">
-                                                    {t("{{price, currency}}", { price: (item.price ?? 0) * (item.quantity ?? 1) })}
+                                                    {t("{{price, currency}}", { price: ((item.original_price || item.price) ?? 0) * (item.quantity ?? 1) })}
                                                 </span>
                                             </div>
                                         ) : (
@@ -237,7 +237,7 @@ export function CheckoutCart({ selectedGovernorate, onPurchase, customerId }: {
                     <div className="flex justify-between text-sm">
                         <span className="text-gray-500">{t('checkout.subtotal')}</span>
                         <span className="font-medium text-gray-900">
-                            {t("{{price, currency}}", { price: cart.isAdmin ? 0 : cart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0) })}
+                            {t("{{price, currency}}", { price: cart.isAdmin ? 0 : cart.items.reduce((sum, item) => sum + (((item.price ?? 0) - (item.discount ?? 0)) * (item.quantity ?? 1)), 0) })}
                         </span>
                     </div>
 
@@ -252,8 +252,8 @@ export function CheckoutCart({ selectedGovernorate, onPurchase, customerId }: {
 
                     {/* Discount Row - calculated sequentially from promoCodes */}
                     {cart.promoCodes && cart.promoCodes.length > 0 && (() => {
-                        // Calculate subtotal from items directly
-                        const subtotal = cart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                        // Calculate subtotal from items directly (using effective item prices)
+                        const subtotal = cart.items.reduce((sum, item) => sum + (((item.price ?? 0) - (item.discount ?? 0)) * (item.quantity ?? 1)), 0);
                         // Sequential discount calculation for display
                         let remainingAmount = subtotal;
                         let totalDiscount = 0;

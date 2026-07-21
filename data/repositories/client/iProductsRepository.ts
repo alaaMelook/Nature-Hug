@@ -196,7 +196,8 @@ export class IProductClientRepository implements ProductRepository {
                 .select('id, rating, comment, created_at, customer_id, customers(name)')
                 .eq('product_id', productId)
                 .order('created_at', { ascending: false });
-            reviews = fallbackReviews;
+            // Map fallback to include status:null so the type matches the primary query shape
+            reviews = (fallbackReviews || []).map((r: any) => ({ ...r, status: null }));
         }
 
         // 4. Get materials

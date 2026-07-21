@@ -276,7 +276,8 @@ export class IProductServerRepository implements ProductRepository {
                 .select('id, rating, comment, created_at, customer_id, customers(name)')
                 .eq('product_id', productId)
                 .order('created_at', { ascending: false });
-            reviews = fallbackReviews;
+            // Map fallback to include status:null so the type matches the primary query shape
+            reviews = (fallbackReviews || []).map((r: any) => ({ ...r, status: null }));
         }
 
         // 5. Get materials
@@ -701,7 +702,7 @@ export class IProductServerRepository implements ProductRepository {
 
         const { data: items } = await supabase.schema('store')
             .from('bundle_items')
-            .select('id, bundle_id, product_id, quantity, notes, sort_order, product:product_id(id, name, name_ar, image_url, price, discount, stock, slug, description, description_ar)')
+            .select('id, bundle_id, product_id, variant_id, quantity, notes, sort_order, product:product_id(id, name, name_ar, image_url, price, discount, stock, slug, description, description_ar)')
             .eq('bundle_id', b.id)
             .order('sort_order', { ascending: true });
 
@@ -726,7 +727,18 @@ export class IProductServerRepository implements ProductRepository {
 
         const mappedItems = rawItems.map((item: any) => {
             const prod = (item.product || {}) as any;
-            const variants = variantsByProduct[item.product_id] || [];
+            const allProductVariants = variantsByProduct[item.product_id] || [];
+
+            // Find all variant_ids assigned to this product in the bundle
+            const assignedVariantIds = rawItems
+                .filter((ri: any) => ri.product_id === item.product_id && ri.variant_id !== null)
+                .map((ri: any) => ri.variant_id as number);
+
+            // If the admin selected specific variants, only allow those. Otherwise allow all product variants.
+            const allowedVariants = assignedVariantIds.length > 0
+                ? allProductVariants.filter((v: any) => assignedVariantIds.includes(v.id))
+                : allProductVariants;
+
             original_total += (prod.price || 0) * item.quantity;
             const avail = Math.floor((prod.stock || 0) / item.quantity);
             if (avail < minStock) minStock = avail;
@@ -748,8 +760,8 @@ export class IProductServerRepository implements ProductRepository {
                     slug: prod.slug || '',
                     description: isAr ? (prod.description_ar || prod.description || '') : (prod.description || prod.description_ar || '')
                 },
-                has_variants: variants.length > 0,
-                variants: variants.map((v: any) => ({
+                has_variants: allowedVariants.length > 0,
+                variants: allowedVariants.map((v: any) => ({
                     id: v.id,
                     name_en: v.name_en || '',
                     name_ar: v.name_ar || '',
@@ -763,6 +775,19 @@ export class IProductServerRepository implements ProductRepository {
                 }))
             };
         });
+
+        // Deduplicate: merge items with the same product_id (use MAX quantity)
+        const deduped = new Map<number, typeof mappedItems[0]>();
+        for (const item of mappedItems) {
+            if (deduped.has(item.product_id)) {
+                // Keep the max quantity (admin sets total slots via Qty field synced to all rows)
+                deduped.get(item.product_id)!.quantity = Math.max(deduped.get(item.product_id)!.quantity, item.quantity);
+            } else {
+                deduped.set(item.product_id, { ...item });
+            }
+        }
+        const dedupedItems = Array.from(deduped.values())
+            .sort((a, b) => a.sort_order - b.sort_order);
 
         if (rawItems.length === 0) minStock = 0;
 
@@ -787,7 +812,8 @@ export class IProductServerRepository implements ProductRepository {
             discount: original_total - final_price,
             stock: minStock,
             featured: b.featured,
-            items: mappedItems
+            rules: b.rules || null,
+            items: dedupedItems
         };
     }
 }

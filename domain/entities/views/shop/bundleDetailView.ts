@@ -16,6 +16,13 @@ export interface BundleDetailView {
     discount: number;
     stock: number;
     featured: boolean;
+    rules?: {
+        min_quantity?: number | null;
+        max_quantity?: number | null;
+        allow_duplicate_products?: boolean;
+        allow_duplicate_variants?: boolean;
+        max_variants_per_product?: number | null;
+    } | null;
     items: BundleDetailItem[];
 }
 

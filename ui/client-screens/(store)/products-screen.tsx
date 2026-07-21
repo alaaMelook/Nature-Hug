@@ -7,15 +7,31 @@ import { useTranslation } from "react-i18next";
 import { Category } from "@/domain/entities/database/category";
 import { motion } from "framer-motion";
 import { trackViewItemList } from "@/lib/analytics/gtag";
-
 import { useSearchParams } from "next/navigation";
+import { Layers } from "lucide-react";
 
-export function ProductsScreen({ initProducts, initCategories }: {
+export function ProductsScreen({ initProducts, initCategories, hasBundles = false }: {
     initProducts: ProductView[],
-    initCategories: Category[]
+    initCategories: Category[],
+    hasBundles?: boolean,
 }) {
     const searchParams = useSearchParams();
     const categoryParam = searchParams.get('category');
+    const { i18n } = useTranslation();
+    const isAr = i18n.language === 'ar';
+
+    // Build categories list — inject virtual "Bundles" category when bundles exist
+    const allCategories = useMemo(() => {
+        if (!hasBundles) return initCategories;
+        const bundlesCat: Category = {
+            id: -999,
+            name_en: 'Bundles',
+            name_ar: 'الباقات',
+            created_at: '',
+            image_url: '',
+        };
+        return [bundlesCat, ...initCategories];
+    }, [initCategories, hasBundles]);
 
     const [filters, setFilters] = useState({
         search: '',
@@ -52,14 +68,6 @@ export function ProductsScreen({ initProducts, initCategories }: {
     const filteredProducts = useMemo(() => {
         if (!products) return [];
 
-        // Debug: Log products with their category_names
-        console.log("[ProductsScreen] Products with category_names:", products.map(p => ({
-            name: p.name,
-            category_names: p.category_names,
-            category_name: p.category_name
-        })));
-        console.log("[ProductsScreen] Current filter category:", filters.category);
-
         let filtered = products.filter(product => {
             const searchMatch = product.name.toLowerCase().includes(filters.search.toLowerCase());
 
@@ -67,16 +75,12 @@ export function ProductsScreen({ initProducts, initCategories }: {
             let categoryMatch = true;
             if (filters.category) {
                 const filterCategoryLower = filters.category.toLowerCase();
-                // Check if product has category_names array (multi-category)
                 if (product.category_names && product.category_names.length > 0) {
                     categoryMatch = product.category_names.some(
                         catName => catName.toLowerCase() === filterCategoryLower
                     );
-                    console.log(`[ProductsScreen] ${product.name}: category_names=${JSON.stringify(product.category_names)}, filter=${filterCategoryLower}, match=${categoryMatch}`);
                 } else {
-                    // Fallback to legacy single category_name
                     categoryMatch = product.category_name?.toLowerCase() === filterCategoryLower;
-                    console.log(`[ProductsScreen] ${product.name}: category_name=${product.category_name}, filter=${filterCategoryLower}, match=${categoryMatch}`);
                 }
             }
 
@@ -139,14 +143,22 @@ export function ProductsScreen({ initProducts, initCategories }: {
             className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col lg:flex-row sm:gap-8 min-h-screen"
         >
             {/* Filters Column */}
-            <div
-                className="w-full lg:w-1/4 lg:sticky lg:top-40 h-fit "
-            >
-                <ProductFilters onFilterChangeAction={handleFilterChange} initCategories={initCategories} currentFilters={filters} />
+            <div className="w-full lg:w-1/4 lg:sticky lg:top-40 h-fit">
+                <ProductFilters onFilterChangeAction={handleFilterChange} initCategories={allCategories} currentFilters={filters} />
             </div>
 
             {/* Product Grid Column */}
             <div className="w-full lg:w-3/4">
+                {/* Bundles quick-filter chip — shows when hasBundles and no category selected */}
+                {hasBundles && !filters.category && (
+                    <button
+                        onClick={() => handleFilterChange({ category: 'Bundles' })}
+                        className="mb-4 flex items-center gap-2 text-xs font-semibold bg-primary-50 border border-primary-200 text-primary-800 px-4 py-2 rounded-full hover:bg-primary-100 transition-all"
+                    >
+                        <Layers size={13} />
+                        {isAr ? 'عرض الباقات فقط' : 'Show Bundles Only'}
+                    </button>
+                )}
                 <ProductGrid products={filteredProducts} isLoading={loading} perPage={itemsPerPage} />
             </div>
         </motion.div>

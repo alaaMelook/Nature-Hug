@@ -12,7 +12,106 @@ import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { WishlistButton } from "./WishlistButton";
 import { trackSelectItem } from "@/lib/analytics/gtag";
+import { ArrowLeft, ArrowRight, Layers, Percent } from "lucide-react";
 
+// ─── Bundle Card ────────────────────────────────────────────────────────────
+export function BundleCard({ product }: { product: ProductView }) {
+    const router = useRouter();
+    const { t, i18n } = useTranslation();
+    const isAr = i18n.language === 'ar';
+
+    // slug is stored as "bundle-xxx", clean it for the route
+    const cleanSlug = product.slug.replace(/^bundle-/, '');
+    const finalPrice = product.discount != null ? product.price - product.discount : product.price;
+    const pct = product.discount && product.price > 0
+        ? Math.round((product.discount / product.price) * 100)
+        : 0;
+
+    return (
+        <motion.div
+            variants={{
+                show: { opacity: 1, transition: { duration: 0.6, ease: 'easeInOut' } },
+                exit: { opacity: 0, transition: { duration: 0.4, ease: 'easeInOut' } },
+            }}
+            initial="hidden"
+            animate="show"
+            className="bg-white rounded-xl shadow-lg overflow-hidden flex flex-col border border-primary-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer z-2"
+            onClick={() => router.push(`/bundles/${cleanSlug}`)}
+        >
+            {/* Image */}
+            <div className="relative aspect-[4/3] bg-gray-100">
+                <Image
+                    src={product.image ?? 'https://placehold.co/400x300/D1D5DB/4B5563?text=Bundle'}
+                    alt={product.name}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    onError={(e) => { (e.target as HTMLImageElement).src = 'https://placehold.co/400x300/D1D5DB/4B5563?text=Bundle'; }}
+                />
+                {/* Discount badge */}
+                {pct > 0 && (
+                    <div className="absolute top-3 left-3 bg-red-500 text-white text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1 shadow">
+                        <Percent size={11} />
+                        <span>{isAr ? `وفر ${pct}%` : `Save ${pct}%`}</span>
+                    </div>
+                )}
+                {/* Bundle badge */}
+                <div className="absolute top-3 right-3 bg-primary-800/80 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <Layers size={10} />
+                    <span>{isAr ? 'باقة' : 'Bundle'}</span>
+                </div>
+                {/* Out of stock */}
+                {product.stock <= 0 && (
+                    <div className="absolute bottom-3 right-3 bg-neutral-600 text-white px-3 py-1 rounded-full text-xs font-medium shadow">
+                        {t('outOfStock')}
+                    </div>
+                )}
+            </div>
+
+            {/* Body */}
+            <div className="p-4 flex flex-col flex-grow">
+                <h3 className="text-sm sm:text-base font-bold text-gray-900 mb-1 line-clamp-2">{product.name}</h3>
+                {product.description && (
+                    <p className="text-[11px] text-gray-500 line-clamp-2 mb-3">{product.description}</p>
+                )}
+
+                {/* Pricing — original crossed out + final */}
+                <div className="mt-auto">
+                    <div className="flex items-baseline gap-2 flex-wrap mb-1">
+                        {product.discount != null && product.discount > 0 && (
+                            <span className="text-sm text-gray-400 line-through font-mono">
+                                {t('{{price, currency}}', { price: product.price })}
+                            </span>
+                        )}
+                        <span className="text-lg font-extrabold text-primary-900 font-mono">
+                            {t('{{price, currency}}', { price: finalPrice })}
+                        </span>
+                    </div>
+                    {product.discount != null && product.discount > 0 && (
+                        <p className="text-[10px] text-emerald-600 font-semibold mb-3">
+                            {isAr
+                                ? `${t('{{price, currency}}', { price: finalPrice })} بدلاً من ${t('{{price, currency}}', { price: product.price })}`
+                                : `${t('{{price, currency}}', { price: finalPrice })} instead of ${t('{{price, currency}}', { price: product.price })}`}
+                        </p>
+                    )}
+
+                    {/* CTA */}
+                    <button
+                        disabled={product.stock <= 0}
+                        onClick={(e) => { e.stopPropagation(); router.push(`/bundles/${cleanSlug}`); }}
+                        className="w-full flex items-center justify-center gap-2 bg-primary-800 hover:bg-primary-900 disabled:bg-gray-200 disabled:text-gray-400 text-white text-xs font-semibold py-2.5 px-3 rounded-lg transition-all"
+                    >
+                        {isAr ? <ArrowLeft size={14} /> : null}
+                        <span>{isAr ? 'اختر محتويات الباقة' : 'Customize & Order'}</span>
+                        {!isAr ? <ArrowRight size={14} /> : null}
+                    </button>
+                </div>
+            </div>
+        </motion.div>
+    );
+}
+
+// ─── Regular Product Card ────────────────────────────────────────────────────
 export function ProductCard({
     product,
     compact = false,
@@ -22,6 +121,11 @@ export function ProductCard({
 }) {
     const router = useRouter();
     const { t } = useTranslation();
+
+    // Bundles have product_type='bundle' — route them to /bundles/[slug]
+    if (product.product_type === 'bundle') {
+        return <BundleCard product={product} />;
+    }
 
     return (
         <motion.div

@@ -76,7 +76,7 @@ export default function CartPage() {
                             <div className="flex justify-between items-center text-slate-700 mb-4">
                                 <span className="text-lg">{t("subtotal")}</span>
                                 <span className="text-lg font-semibold text-slate-900">
-                                    {t("{{price, currency}}", { price: cart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0) })}
+                                    {t("{{price, currency}}", { price: cart.items.reduce((sum, item) => sum + (((item.price || 0) - (item.discount || 0)) * item.quantity), 0) })}
                                 </span>
                             </div>
                             <p className="text-sm text-slate-500 mb-6 flex">{t("checkoutInfo")}</p>
@@ -162,17 +162,17 @@ function CartItemRow({ item, updateQuantity, removeFromCart, t }: { item: any, u
                 </div>
             </div>
             <div className="flex items-center gap-6 mt-4 sm:mt-0 sm:ml-auto">
-                {item.discount ? (
-                    <div className="flex flex-col items-end gap-2">
-                        <p className="text-sm text-natural-500 line-through text-normal">
-                            {t("{{price, currency}}", { price: item.price })}
+                {item.original_price || item.discount ? (
+                    <div className="flex flex-col items-end gap-1">
+                        <p className="text-sm text-gray-400 line-through">
+                            {t("{{price, currency}}", { price: item.quantity * (item.original_price || item.price) })}
                         </p>
-                        <p className="text-xl text-primary-900 w-28 text-right text-semibold">
-                            {t("{{price, currency}}", { price: item.quantity * ((item.price || 0) - item.discount) })}
+                        <p className="text-xl text-primary-900 w-28 text-right font-semibold">
+                            {t("{{price, currency}}", { price: item.quantity * ((item.price || 0) - (item.discount || 0)) })}
                         </p>
                     </div>
                 ) : (
-                    <p className="text-xl text-primary-900 w-28 text-right text-semibold">
+                    <p className="text-xl text-primary-900 w-28 text-right font-semibold">
                         {t("{{price, currency}}", { price: item.quantity * (item.price || 0) })}
                     </p>
                 )}
