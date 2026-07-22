@@ -44,6 +44,7 @@ export interface ProductReviewView {
     customer_id?: number; // For identifying user's own reviews
     images?: string[]; // Review image URLs
     status?: 'pending' | 'approved' | 'rejected' | string; // Review moderation status
+    is_anonymous?: boolean;
 }
 
 /**

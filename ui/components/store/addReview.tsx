@@ -17,6 +17,7 @@ export function AddReview({ product }: { product: ProductDetailView }) {
     const { t } = useTranslation()
     const [rating, setRating] = useState(0)
     const [comment, setComment] = useState('')
+    const [isAnonymous, setIsAnonymous] = useState(false)
     const [loading, setLoading] = useState(false)
     const [hoverRating, setHoverRating] = useState(0)
     const [isExpanded, setIsExpanded] = useState(false)
@@ -74,10 +75,13 @@ export function AddReview({ product }: { product: ProductDetailView }) {
                 setUploadingImages(false);
             }
 
+            const finalComment = isAnonymous ? `[ANONYMOUS] ${comment}` : comment;
+
             const data = {
                 product: product.product_id,
                 rating: rating,
-                comment: comment,
+                comment: finalComment,
+                is_anonymous: isAnonymous,
                 imageUrls: imageUrls,
             };
 
@@ -93,6 +97,7 @@ export function AddReview({ product }: { product: ProductDetailView }) {
                 toast.success(t('reviewAddedSuccessfully'))
                 setRating(0);
                 setComment('');
+                setIsAnonymous(false);
                 setSelectedImages([]);
                 setImagePreviews([]);
                 setIsExpanded(false);
@@ -179,6 +184,19 @@ export function AddReview({ product }: { product: ProductDetailView }) {
                                     onChange={(e) => setComment(e.target.value)}
                                     placeholder={t('writeYourReviewHere')}
                                 />
+                                {/* Post Anonymously Option */}
+                                <div className="flex items-center gap-2 mt-2">
+                                    <input
+                                        type="checkbox"
+                                        id="isAnonymous"
+                                        checked={isAnonymous}
+                                        onChange={(e) => setIsAnonymous(e.target.checked)}
+                                        className="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500 cursor-pointer"
+                                    />
+                                    <label htmlFor="isAnonymous" className="text-sm font-medium text-gray-700 cursor-pointer select-none">
+                                        {t('postAnonymously') || 'التعليق كمجهول (Unknown)'}
+                                    </label>
+                                </div>
                                 <input
                                     name='rating'
                                     type={'number'}

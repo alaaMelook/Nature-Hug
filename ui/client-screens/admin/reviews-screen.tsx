@@ -80,7 +80,7 @@ function AddReviewModal({
         try {
             const result = await createReviewAction({
                 product_id: selectedProduct.id,
-                customer_name: customerName.trim() || "Admin",
+                customer_name: customerName.trim() || (isAr ? "عميل" : "Customer"),
                 rating,
                 comment: comment.trim() || undefined,
                 status,
@@ -571,7 +571,14 @@ export function ReviewsScreen({ reviews: initialReviews }: { reviews: ReviewAdmi
                                                         <User className="w-4 h-4" />
                                                     </div>
                                                     <div className="ml-3">
-                                                        <div className="text-sm font-medium text-gray-900">{review.customer_name}</div>
+                                                        <div className="text-sm font-medium text-gray-900 flex items-center gap-1.5">
+                                                            {review.customer_name}
+                                                            {(review.is_anonymous || review.comment?.startsWith('[ANONYMOUS]')) && (
+                                                                <span className="text-xs bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-normal">
+                                                                    ({t('anonymousBadge') || 'مجهول'})
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </td>
@@ -582,8 +589,8 @@ export function ReviewsScreen({ reviews: initialReviews }: { reviews: ReviewAdmi
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <div className="text-sm text-gray-500 max-w-xs truncate" title={review.comment}>
-                                                    {review.comment}
+                                                <div className="text-sm text-gray-500 max-w-xs truncate" title={review.comment?.replace(/^\[ANONYMOUS\]\s*/, '')}>
+                                                    {review.comment?.replace(/^\[ANONYMOUS\]\s*/, '')}
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
@@ -706,9 +713,14 @@ export function ReviewsScreen({ reviews: initialReviews }: { reviews: ReviewAdmi
                                             </div>
                                             <div>
                                                 <h3 className="text-sm font-semibold text-gray-900">{isAr ? review.product_name_ar : review.product_name_en}</h3>
-                                                <div className="flex items-center text-xs text-gray-500 mt-0.5">
+                                                <div className="flex items-center text-xs text-gray-500 mt-0.5 gap-1">
                                                     <User className="w-3 h-3 mr-1" />
-                                                    {review.customer_name}
+                                                    <span>{review.customer_name}</span>
+                                                    {(review.is_anonymous || review.comment?.startsWith('[ANONYMOUS]')) && (
+                                                        <span className="text-[10px] bg-amber-100 text-amber-800 px-1 py-0.2 rounded font-normal">
+                                                            ({t('anonymousBadge') || 'مجهول'})
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
@@ -729,7 +741,7 @@ export function ReviewsScreen({ reviews: initialReviews }: { reviews: ReviewAdmi
                                     </div>
 
                                     <div className="bg-gray-50 p-3 rounded-lg mb-3">
-                                        <p className="text-sm text-gray-700 italic">"{review.comment}"</p>
+                                        <p className="text-sm text-gray-700 italic">"{review.comment?.replace(/^\[ANONYMOUS\]\s*/, '')}"</p>
                                     </div>
 
                                     {/* Images in mobile view */}

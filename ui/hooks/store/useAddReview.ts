@@ -12,6 +12,7 @@ export async function postReview(data: {
     product: number;
     rating: number;
     comment: string;
+    is_anonymous?: boolean;
     imageUrls?: string[];  // Optional array of uploaded image URLs
 }) {
     console.log("[postReview] ========== SERVER ACTION CALLED ==========");
@@ -27,6 +28,7 @@ export async function postReview(data: {
         customer_id: user.id,
         rating: data['rating'],
         comment: data['comment'],
+        is_anonymous: data.is_anonymous,
     };
     if (!review.product_id) return { error: 'Product not found' };
 

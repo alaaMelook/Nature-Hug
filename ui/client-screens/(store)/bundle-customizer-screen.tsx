@@ -202,16 +202,16 @@ export function BundleCustomizerScreen({ bundle, lang }: { bundle: BundleDetailV
     const isReadyToAdd = isMixAndMatch ? mixSelected.size >= requiredCount : true;
 
     return (
-        <div className="bg-[#f8f7f5] min-h-screen font-cairo" dir={isAr ? "rtl" : "ltr"}>
+        <div className="bg-primary-50/40 min-h-screen" dir={isAr ? "rtl" : "ltr"}>
 
             {/* === Hero Header === */}
-            <div className="relative bg-gradient-to-br from-primary-950 via-primary-900 to-primary-800 overflow-hidden">
+            <div className="relative bg-gradient-to-r from-primary-800 via-primary-700 to-primary-600 overflow-hidden">
                 {bundle.image && (
-                    <div className="absolute inset-0 opacity-15">
+                    <div className="absolute inset-0 opacity-20">
                         <Image src={bundle.image} alt="" fill className="object-cover scale-110 blur-2xl" />
                     </div>
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-primary-950/80 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-primary-800/60 to-transparent" />
                 <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 pt-5 pb-8">
                     <button onClick={() => router.back()} className="flex items-center gap-1.5 text-white/70 hover:text-white text-xs font-semibold mb-5 transition-colors cursor-pointer">
                         <ChevronLeft size={15} className={isAr ? "rotate-180" : ""} />
@@ -219,7 +219,7 @@ export function BundleCustomizerScreen({ bundle, lang }: { bundle: BundleDetailV
                     </button>
                     <div className="flex flex-col sm:flex-row gap-5 items-start sm:items-center">
                         <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-2 border-white/20 shadow-2xl flex-shrink-0">
-                            <Image src={bundle.image || "https://placehold.co/200x200/1a1a2e/ffffff?text=Bundle"} alt={bundle.name} fill className="object-cover" />
+                            <Image src={bundle.image || "https://placehold.co/200x200/1a1a2e/ffffff?text=Bundle"} alt={bundle.name} fill sizes="96px" unoptimized className="object-cover" />
                         </div>
                         <div className="flex-grow">
                             <div className="flex flex-wrap gap-2 mb-2">
@@ -306,9 +306,9 @@ export function BundleCustomizerScreen({ bundle, lang }: { bundle: BundleDetailV
                     </div>
                 )}
 
-                <h2 className="text-sm font-extrabold text-gray-800 px-1">
+                <h2 className="text-base font-bold text-gray-700 px-1">
                     {isMixAndMatch
-                        ? (isAr ? "🛍️ المنتجات المتاحة للاختيار:" : "🛍️ Available Products:")
+                        ? (isAr ? "🛒 المنتجات المتاحة للاختيار:" : "🛒 Available Products:")
                         : (isAr ? "📦 مكونات الباقة:" : "📦 Bundle Contents:")}
                 </h2>
 
@@ -328,16 +328,16 @@ export function BundleCustomizerScreen({ bundle, lang }: { bundle: BundleDetailV
                         >
                             <div className={`bg-white rounded-2xl shadow-sm border-2 overflow-hidden transition-all duration-300 ${
                                 isMixAndMatch
-                                    ? isMixItemSelected ? "border-primary-500" : "border-gray-100 hover:border-gray-200"
-                                    : "border-gray-100"
+                                    ? isMixItemSelected ? "border-primary-500" : "border-gray-100 hover:border-primary-200"
+                                    : "border-primary-100"
                             }`}>
                                 {/* Card header */}
-                                <div className="flex items-start gap-4 p-4">
+                                <div className="flex items-start gap-4 p-5">
                                     <div className="relative flex-shrink-0">
-                                        <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden border border-gray-100 bg-gray-50 shadow-sm">
+                                        <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden border border-primary-100 bg-primary-50 shadow-sm">
                                             <Image
                                                 src={displayImage || "https://placehold.co/100x100/e5e7eb/9ca3af?text=Product"}
-                                                alt={prod.name} fill className="object-cover transition-all duration-300"
+                                                alt={prod.name} fill sizes="80px" unoptimized className="object-cover transition-all duration-300"
                                             />
                                             {isMixItemSelected && (
                                                 <div className="absolute inset-0 bg-primary-900/25 flex items-center justify-center">
@@ -356,13 +356,13 @@ export function BundleCustomizerScreen({ bundle, lang }: { bundle: BundleDetailV
                                     <div className="flex-grow min-w-0">
                                         <div className="flex items-start justify-between gap-2">
                                             <div className="min-w-0">
-                                                <h3 className="text-sm font-bold text-gray-900 truncate">{prod.name}</h3>
+                                                <h3 className="text-base font-bold text-gray-900 truncate">{prod.name}</h3>
                                                 {prod.description && (
-                                                    <p className="text-[11px] text-gray-400 line-clamp-2 mt-0.5 leading-relaxed">{prod.description}</p>
+                                                    <p className="text-xs text-gray-500 line-clamp-2 mt-1 leading-relaxed">{prod.description}</p>
                                                 )}
                                                 {item.quantity > 1 && (
-                                                    <span className="inline-block mt-1 text-[10px] font-bold text-primary-600 bg-primary-50 px-2 py-0.5 rounded-full">
-                                                        {isAr ? `${item.quantity} قطع` : `Qty: ${item.quantity}`}
+                                                    <span className="inline-block mt-1.5 text-xs font-semibold text-primary-700 bg-primary-50 border border-primary-200 px-2.5 py-0.5 rounded-full">
+                                                        {isAr ? `الكمية: ${item.quantity}` : `Qty: ${item.quantity}`}
                                                     </span>
                                                 )}
                                             </div>
@@ -386,15 +386,15 @@ export function BundleCustomizerScreen({ bundle, lang }: { bundle: BundleDetailV
 
                                 {/* Variant selector */}
                                 {hasVariants && (!isMixAndMatch || isMixItemSelected) && (
-                                    <div className="border-t border-gray-100 bg-gray-50/60 px-4 py-3 space-y-3">
+                                    <div className="border-t border-primary-100 bg-primary-50/40 px-5 py-4 space-y-4">
                                         {Array.from({ length: item.quantity }).map((_, slotIdx) => {
                                             const key = `${item.product_id}-${slotIdx}`;
                                             const currentSelectionId = selections[key];
                                             const currentDetail = selectionDetails[key];
                                             return (
                                                 <div key={slotIdx}>
-                                                    <div className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                                                        <Sparkles size={10} className="text-violet-400" />
+                                                    <div className="text-xs font-bold text-primary-700 mb-3 flex items-center gap-1.5">
+                                                        <Sparkles size={12} className="text-primary-500" />
                                                         {item.quantity > 1
                                                             ? (isAr ? `القطعة ${slotIdx + 1}:` : `Item #${slotIdx + 1}:`)
                                                             : (isAr ? "اختر النوع / الرائحة:" : "Choose variant / scent:")}
@@ -409,29 +409,29 @@ export function BundleCustomizerScreen({ bundle, lang }: { bundle: BundleDetailV
                                                                     key={v.id}
                                                                     onClick={() => !outOfStock && handleSelectVariant(item.product_id, slotIdx, v)}
                                                                     disabled={outOfStock}
-                                                                    className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold border-2 transition-all duration-200 min-h-[38px] cursor-pointer ${
+                                                                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border-2 transition-all duration-200 min-h-[44px] cursor-pointer ${
                                                                         isSelected
-                                                                            ? "bg-primary-800 border-primary-800 text-white shadow-md"
+                                                                            ? "bg-primary-700 border-primary-700 text-white shadow-md"
                                                                             : outOfStock
                                                                                 ? "bg-gray-100 border-gray-200 text-gray-300 cursor-not-allowed line-through"
-                                                                                : "bg-white border-gray-200 text-gray-700 hover:border-primary-300 hover:bg-primary-50"
+                                                                                : "bg-white border-primary-200 text-primary-800 hover:border-primary-400 hover:bg-primary-50"
                                                                     }`}
                                                                 >
                                                                     {v.image && (
-                                                                        <div className="relative w-5 h-5 rounded-full overflow-hidden flex-shrink-0">
-                                                                            <Image src={v.image} alt={optionName} fill className="object-cover" />
+                                                                        <div className="relative w-6 h-6 rounded-full overflow-hidden flex-shrink-0">
+                                                                            <Image src={v.image} alt={optionName} fill sizes="24px" className="object-cover" />
                                                                         </div>
                                                                     )}
-                                                                    {isSelected && !v.image && <Check size={11} />}
+                                                                    {isSelected && !v.image && <Check size={13} />}
                                                                     <span>{optionName}</span>
-                                                                    {outOfStock && <span className="text-[9px] text-red-400 font-normal">({isAr ? "نفد" : "Out"})</span>}
+                                                                    {outOfStock && <span className="text-[10px] text-red-400 font-normal">({isAr ? "نفد" : "Out"})</span>}
                                                                 </button>
                                                             );
                                                         })}
                                                     </div>
                                                     {currentDetail && (
-                                                        <div className="mt-2 flex items-center gap-2 text-[11px] text-emerald-700 font-semibold">
-                                                            <Check size={12} className="flex-shrink-0" />
+                                                        <div className="mt-2.5 flex items-center gap-2 text-xs text-primary-700 font-semibold bg-primary-50 border border-primary-200 rounded-lg px-3 py-1.5">
+                                                            <Check size={13} className="flex-shrink-0 text-primary-600" />
                                                             <span>{isAr ? "اخترت:" : "Selected:"} <span className="font-bold">{currentDetail.name}</span></span>
                                                         </div>
                                                     )}
@@ -443,11 +443,11 @@ export function BundleCustomizerScreen({ bundle, lang }: { bundle: BundleDetailV
 
                                 {/* No variants notice */}
                                 {!hasVariants && !isMixAndMatch && (
-                                    <div className="border-t border-gray-100 px-4 py-2.5 flex items-center gap-2">
-                                        <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                                            <Check size={11} className="text-emerald-600" />
+                                    <div className="border-t border-primary-100 px-5 py-3 flex items-center gap-2">
+                                        <div className="w-6 h-6 rounded-full bg-primary-100 flex items-center justify-center flex-shrink-0">
+                                            <Check size={13} className="text-primary-600" />
                                         </div>
-                                        <span className="text-[11px] text-gray-500 font-semibold">
+                                        <span className="text-sm text-gray-600 font-medium">
                                             {isAr ? "منتج ثابت — مضاف تلقائياً" : "Fixed product — added automatically"}
                                         </span>
                                     </div>
@@ -467,7 +467,7 @@ export function BundleCustomizerScreen({ bundle, lang }: { bundle: BundleDetailV
                                 {isAr ? "إجمالي الباقة" : "Bundle Total"}
                             </p>
                             <div className="flex items-baseline gap-2">
-                                <span className="text-xl font-extrabold text-primary-900 font-mono">
+                                <span className="text-xl font-extrabold text-primary-800 font-mono">
                                     {t("{{price, currency}}", { price: liveFinalPrice })}
                                 </span>
                                 {liveDiscount > 0 && (
@@ -524,11 +524,11 @@ export function BundleCustomizerScreen({ bundle, lang }: { bundle: BundleDetailV
                     <button
                         onClick={handleAddToCart}
                         disabled={bundle.stock <= 0 || !isReadyToAdd}
-                        className={`w-full flex items-center justify-center gap-2.5 py-3.5 px-6 rounded-2xl text-sm font-extrabold transition-all duration-200 cursor-pointer ${
+                        className={`w-full flex items-center justify-center gap-2.5 py-3 px-6 rounded-lg shadow-md text-xs sm:text-sm font-medium transition-all duration-200 cursor-pointer ${
                             bundle.stock <= 0
-                                ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                                ? "bg-gray-400 text-gray-200 cursor-not-allowed"
                                 : isReadyToAdd
-                                    ? "bg-primary-800 hover:bg-primary-900 active:scale-[0.99] text-white shadow-md"
+                                    ? "bg-primary-700 hover:bg-primary-200 hover:text-primary-700 active:scale-[0.99] text-primary-50"
                                     : "bg-amber-100 text-amber-700 border-2 border-amber-300"
                         }`}
                     >

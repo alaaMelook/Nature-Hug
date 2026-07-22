@@ -64,9 +64,16 @@ export default function ReviewsPage() {
                     {reviews.map((review) => (
                         <tr key={review.id}>
                             <td className="px-6 py-4 whitespace-nowrap">{review.products?.name_en}</td>
-                            <td className="px-6 py-4 whitespace-nowrap">{review.customers?.name}</td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                                {review.customers?.name}
+                                {(review.is_anonymous || review.comment?.startsWith('[ANONYMOUS]')) && (
+                                    <span className="ml-2 text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-normal">
+                                        (مجهول)
+                                    </span>
+                                )}
+                            </td>
                             <td className="px-6 py-4 whitespace-nowrap">{review.rating} / 5</td>
-                            <td className="px-6 py-4">{review.comment}</td>
+                            <td className="px-6 py-4">{review.comment?.replace(/^\[ANONYMOUS\]\s*/, '')}</td>
                             <td className="px-6 py-4 whitespace-nowrap">
                                 <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${review.status === 'approved' ? 'bg-green-100 text-green-800' :
                                         review.status === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'

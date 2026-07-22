@@ -52,17 +52,24 @@ export function ReviewsSlider({ product }: { product: ProductDetailView }) {
                 ref={emblaRef}
             >
                 <div className="flex w-full mx-10">
-                    {visibleReviews.length !== 0 && (visibleReviews.map(review => (
-                        <div
-                            key={review.id}
-                            className="flex-none w-full sm:w-80 p-4 ml-4 mb-3 border border-gray-100 rounded-lg bg-primary-50 shadow-sm relative"
-                        >
-                            <StarRating rating={review.rating} />
-                            <p className="font-semibold text-primary-800 mt-1">
-                                {review.customer_name || (t('customer') || 'Customer')}
-                                {review.customer_governorate ? ` - ${review.customer_governorate}` : ''}
-                            </p>
-                            <p className="text-sm text-gray-600 mt-1">{review.comment}</p>
+                    {visibleReviews.length !== 0 && (visibleReviews.map(review => {
+                        const isAnon = review.is_anonymous || review.comment?.startsWith('[ANONYMOUS]');
+                        const cleanComment = review.comment ? review.comment.replace(/^\[ANONYMOUS\]\s*/, '') : '';
+                        const displayName = isAnon
+                            ? (t('unknownUser') || 'مجهول')
+                            : (review.customer_name || t('customer') || 'Customer');
+
+                        return (
+                            <div
+                                key={review.id}
+                                className="flex-none w-full sm:w-80 p-4 ml-4 mb-3 border border-gray-100 rounded-lg bg-primary-50 shadow-sm relative"
+                            >
+                                <StarRating rating={review.rating} />
+                                <p className="font-semibold text-primary-800 mt-1">
+                                    {displayName}
+                                    {!isAnon && review.customer_governorate ? ` - ${review.customer_governorate}` : ''}
+                                </p>
+                                <p className="text-sm text-gray-600 mt-1">{cleanComment}</p>
 
                             {/* Review Images */}
                             {reviewImages[review.id] && reviewImages[review.id].length > 0 && (
@@ -84,7 +91,8 @@ export function ReviewsSlider({ product }: { product: ProductDetailView }) {
                                 </div>
                             )}
                         </div>
-                    )))
+                    );
+                    }))
                     }
                 </div>
                 <div className='flex justify-center'>

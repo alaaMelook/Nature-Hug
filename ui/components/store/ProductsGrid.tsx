@@ -12,7 +12,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { WishlistButton } from "./WishlistButton";
 import { trackSelectItem } from "@/lib/analytics/gtag";
-import { ArrowLeft, ArrowRight, Layers, Percent } from "lucide-react";
+import { Layers, Percent } from "lucide-react";
 
 // ─── Bundle Card ────────────────────────────────────────────────────────────
 export function BundleCard({ product }: { product: ProductView }) {
@@ -99,11 +99,9 @@ export function BundleCard({ product }: { product: ProductView }) {
                     <button
                         disabled={product.stock <= 0}
                         onClick={(e) => { e.stopPropagation(); router.push(`/bundles/${cleanSlug}`); }}
-                        className="w-full flex items-center justify-center gap-2 bg-primary-800 hover:bg-primary-900 disabled:bg-gray-200 disabled:text-gray-400 text-white text-xs font-semibold py-2.5 px-3 rounded-lg transition-all"
+                        className="w-full py-2.5 rounded-lg shadow-md flex items-center justify-center transition-colors duration-300 text-xs sm:text-sm font-medium bg-primary-700 text-primary-50 hover:bg-primary-200 hover:text-primary-700 cursor-pointer disabled:bg-gray-400 disabled:text-gray-200"
                     >
-                        {isAr ? <ArrowLeft size={14} /> : null}
-                        <span>{isAr ? 'اختر محتويات الباقة' : 'Customize & Order'}</span>
-                        {!isAr ? <ArrowRight size={14} /> : null}
+                        <span>{isAr ? 'تخصيص واختيار الباقة' : 'Customize & Order'}</span>
                     </button>
                 </div>
             </div>

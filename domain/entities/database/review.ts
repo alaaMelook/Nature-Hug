@@ -7,5 +7,6 @@ export interface Review {
     status: 'pending' | 'approved' | 'rejected' | string;
     created_at: string;
     images?: string[]; // URLs of uploaded review images
+    is_anonymous?: boolean;
 }
 

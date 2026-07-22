@@ -343,16 +343,21 @@ export class IProductServerRepository implements ProductRepository {
                 slug: v.slug || '',
                 type: isAr ? (v.type_ar || '') : (v.type_en || ''),
             })),
-            reviews: (reviews || []).map((r: any) => ({
-                id: r.id,
-                rating: r.rating,
-                comment: r.comment,
-                created_at: r.created_at,
-                customer_name: r.customers?.name || null,
-                customer_governorate: null,
-                customer_id: r.customer_id,
-                status: r.status || 'approved',
-            })),
+            reviews: (reviews || []).map((r: any) => {
+                const isAnon = r.is_anonymous || r.comment?.startsWith('[ANONYMOUS]');
+                const cleanComment = r.comment ? r.comment.replace(/^\[ANONYMOUS\]\s*/, '') : '';
+                return {
+                    id: r.id,
+                    rating: r.rating,
+                    comment: cleanComment,
+                    is_anonymous: isAnon,
+                    created_at: r.created_at,
+                    customer_name: r.customers?.name || null,
+                    customer_governorate: null,
+                    customer_id: r.customer_id,
+                    status: r.status || 'approved',
+                };
+            }),
             materials: (materialsUsed || []).map((mu: any) => {
                 const mat = materialsData.find((m: any) => m.id === mu.material_id);
                 return {
@@ -433,16 +438,17 @@ export class IProductServerRepository implements ProductRepository {
         // Use service role client to bypass RLS
         const { createSupabaseServiceClient } = await import("@/data/datasources/supabase/server");
         const supabase = await createSupabaseServiceClient();
+        const insertPayload: any = {
+            product_id: review.product_id,
+            customer_id: review.customer_id,
+            rating: review.rating,
+            comment: review.comment,
+        };
+
         const { data, status, statusText, error } = await supabase
             .schema('store')
             .from('reviews')
-            .insert({
-                product_id: review.product_id,
-                customer_id: review.customer_id,
-                rating: review.rating,
-                comment: review.comment,
-                status: 'pending', // Reviews show immediately but need admin approval
-            })
+            .insert(insertPayload)
             .select('id')
             .single();
         console.log("[IProductRepository] addReview result:", { data, status, statusText });

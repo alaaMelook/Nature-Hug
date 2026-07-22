@@ -1135,25 +1135,25 @@ export class IAdminServerRepository implements AdminRepository {
         console.log("[IAdminRepository] createReview called with:", review);
 
         let customerId: number | null = null;
-        if (review.customer_name && review.customer_name.trim()) {
-            const trimmedName = review.customer_name.trim();
-            const { data: existingCust } = await supabaseAdmin.schema('store')
-                .from('customers')
-                .select('id')
-                .eq('name', trimmedName)
-                .maybeSingle();
+        const inputName = review.customer_name?.trim();
+        const trimmedName = (!inputName || inputName.toLowerCase() === 'admin') ? 'عميل' : inputName;
 
-            if (existingCust) {
-                customerId = existingCust.id;
-            } else {
-                const { data: newCust } = await supabaseAdmin.schema('store')
-                    .from('customers')
-                    .insert({ name: trimmedName })
-                    .select('id')
-                    .single();
-                if (newCust) {
-                    customerId = newCust.id;
-                }
+        const { data: existingCust } = await supabaseAdmin.schema('store')
+            .from('customers')
+            .select('id')
+            .eq('name', trimmedName)
+            .maybeSingle();
+
+        if (existingCust) {
+            customerId = existingCust.id;
+        } else {
+            const { data: newCust } = await supabaseAdmin.schema('store')
+                .from('customers')
+                .insert({ name: trimmedName })
+                .select('id')
+                .single();
+            if (newCust) {
+                customerId = newCust.id;
             }
         }
 
