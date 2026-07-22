@@ -8,7 +8,8 @@ export default async function OrderPage({ params }: {
     const orderId = Number((await params).orderId);
     const cookie = await cookies();
     const fromCheckout = Boolean(cookie.get('fromCheckout')?.value ?? false);
-    const customerId = Number(cookie.get('customer')?.value);
+    const custStr = cookie.get('customer')?.value;
+    const customerId = custStr && !isNaN(Number(custStr)) ? Number(custStr) : null;
     const orderData = await new FetchOrder().execute(orderId, customerId);
 
     return (

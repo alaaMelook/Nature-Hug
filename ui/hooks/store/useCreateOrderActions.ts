@@ -41,18 +41,100 @@ export async function createOrder(data: Partial<Order>, isAdmin: boolean, items:
             continue; // Or throw error
         }
 
-        // Use price from DB. 
-        const unitPrice = dbProduct.price;
-        const lineTotal = unitPrice * item.quantity;
-        calculatedSubtotal += lineTotal;
+        const isBundle = item.product_type === 'bundle' || item.slug.startsWith('bundle-') || dbProduct.product_type === 'bundle';
 
-        verifiedItems.push({
-            product_id: dbProduct.id || dbProduct.product_id, // Handle view structure variability
-            variant_id: item.variant_id || null,
-            quantity: item.quantity,
-            unit_price: unitPrice,
-            discount: 0 // Will be distributed later if needed, or kept 0 and discount applied to order total
-        });
+        if (isBundle) {
+            const bundleId = dbProduct.id || dbProduct.product_id;
+            const supabase = await createSupabaseServerClient();
+            const { data: rawBundleItems } = await supabase
+                .schema('store')
+                .from('bundle_items')
+                .select('*, product:product_id(id, price), variant:variant_id(id, price)')
+                .eq('bundle_id', bundleId);
+
+            const bundleItems = rawBundleItems || [];
+
+            if (bundleItems.length > 0) {
+                let sumOriginal = 0;
+                for (const bi of bundleItems) {
+                    const price = bi.variant?.price || bi.product?.price || 100;
+                    sumOriginal += price * (bi.quantity || 1);
+                }
+
+                const bundleUnitPrice = item.price || dbProduct.price || 0;
+                let allocatedSum = 0;
+
+                for (let idx = 0; idx < bundleItems.length; idx++) {
+                    const bi = bundleItems[idx];
+                    const rawPrice = bi.variant?.price || bi.product?.price || 100;
+                    const itemQty = (bi.quantity || 1) * item.quantity;
+                    
+                    let propUnitPrice = 0;
+                    if (idx === bundleItems.length - 1) {
+                        propUnitPrice = Math.max(0, Math.round((bundleUnitPrice * item.quantity - allocatedSum) / itemQty));
+                    } else {
+                        const lineShare = sumOriginal > 0 ? ((rawPrice * (bi.quantity || 1)) / sumOriginal) : (1 / bundleItems.length);
+                        propUnitPrice = Math.round(bundleUnitPrice * lineShare);
+                        allocatedSum += propUnitPrice * itemQty;
+                    }
+
+                    let chosenVariantId = bi.variant_id || null;
+                    if ((item as any).selected_variants) {
+                        const selVars = (item as any).selected_variants;
+                        for (const key of Object.keys(selVars)) {
+                            if (key.startsWith(`${bi.product_id}-`) && selVars[key]?.id) {
+                                chosenVariantId = selVars[key].id;
+                                break;
+                            }
+                        }
+                    }
+
+                    calculatedSubtotal += propUnitPrice * itemQty;
+
+                    verifiedItems.push({
+                        product_id: bi.product_id,
+                        variant_id: chosenVariantId,
+                        quantity: itemQty,
+                        unit_price: propUnitPrice,
+                        discount: 0
+                    });
+                }
+            } else {
+                const supabase = await createSupabaseServerClient();
+                const { data: fallbackProd } = await supabase
+                    .schema('store')
+                    .from('products')
+                    .select('id')
+                    .limit(1)
+                    .single();
+
+                const fallbackPrice = item.price || dbProduct.price || 0;
+                const fallbackProductId = fallbackProd?.id || dbProduct.id || dbProduct.product_id;
+
+                calculatedSubtotal += fallbackPrice * item.quantity;
+
+                verifiedItems.push({
+                    product_id: fallbackProductId,
+                    variant_id: null,
+                    quantity: item.quantity,
+                    unit_price: fallbackPrice,
+                    discount: 0
+                });
+            }
+        } else {
+            // Use price from DB. 
+            const unitPrice = dbProduct.price;
+            const lineTotal = unitPrice * item.quantity;
+            calculatedSubtotal += lineTotal;
+
+            verifiedItems.push({
+                product_id: dbProduct.id || dbProduct.product_id,
+                variant_id: item.variant_id || null,
+                quantity: item.quantity,
+                unit_price: unitPrice,
+                discount: 0
+            });
+        }
     }
 
     // 2. Validate Promo Code & Calculate Discount
@@ -210,8 +292,52 @@ export async function createOrder(data: Partial<Order>, isAdmin: boolean, items:
             maxAge: 60 * 30
         });
 
-        // Send push notification via Telegram
-        const customerName = data.guest_name || 'Customer';
+        // Send push notification via Telegram with full customer details
+        let customerName = data.guest_name;
+        let customerPhone = data.guest_phone || data.guest_phone2;
+        let govSlug = data.guest_address?.governorate_slug;
+        let fullAddress = data.guest_address?.address;
+
+        try {
+            const supabase = await createSupabaseServerClient();
+
+            // Fetch customer name/phone if missing
+            const targetCustId = createdOrder.customer_id || data.customer_id;
+            if (targetCustId && (!customerName || !customerPhone)) {
+                const { data: cust } = await supabase
+                    .schema('store')
+                    .from('customers')
+                    .select('name, phone, phone2')
+                    .eq('id', targetCustId)
+                    .single();
+                if (cust) {
+                    if (!customerName) customerName = cust.name;
+                    if (!customerPhone) customerPhone = cust.phone || cust.phone2;
+                }
+            }
+
+            // Fetch address details if using shipping_address_id
+            if (data.shipping_address_id && (!govSlug || !fullAddress)) {
+                const { data: addr } = await supabase
+                    .schema('auth')
+                    .from('addresses')
+                    .select('address, governorates(slug, name_ar, name_en)')
+                    .eq('id', data.shipping_address_id)
+                    .single();
+
+                if (addr) {
+                    if (!fullAddress) fullAddress = addr.address;
+                    if (!govSlug) {
+                        const govObj: any = addr.governorates;
+                        govSlug = govObj?.name_ar || govObj?.name_en || govObj?.slug;
+                    }
+                }
+            }
+        } catch (err) {
+            console.error("[Telegram] Error enriching customer details:", err);
+        }
+
+        customerName = customerName || 'Customer';
         const totalAmount = sentOrder.grand_total || 0;
         const itemsForNotification = items.map(item => ({
             name: item.name,
@@ -223,9 +349,9 @@ export async function createOrder(data: Partial<Order>, isAdmin: boolean, items:
             orderId: createdOrder.order_id,
             customerName,
             totalAmount,
-            phone: data.guest_phone,
-            governorate: data.guest_address?.governorate_slug,
-            address: data.guest_address?.address,
+            phone: customerPhone || undefined,
+            governorate: govSlug || undefined,
+            address: fullAddress || undefined,
             items: itemsForNotification
         }).catch(err => console.error("[Telegram] Failed to send notification:", err));
 

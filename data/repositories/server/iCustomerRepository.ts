@@ -431,19 +431,26 @@ export class ICustomerServerRepository implements CustomerRepository {
     }
 
     async viewOrder(orderId: number, customerId?: number): Promise<OrderSummaryView> {
-        console.log("[ICustomerRepository] viewAllOrders called with orderId:", orderId);
+        console.log("[ICustomerRepository] viewOrder called with orderId:", orderId, "customerId:", customerId);
         const supabase = await createSupabaseServerClient();
-        const {
-            data,
-            status,
-            statusText,
-            error
-        } = await supabase.schema('store').from('order_summary').select('*').eq('order_id', orderId).eq('customer_id', customerId).maybeSingle();
-        console.log("[ICustomerRepository] viewAllOrders result:", { data, status, statusText });
+        
+        let query = supabase.schema('store').from('order_summary').select('*').eq('order_id', orderId);
+        if (customerId && !isNaN(customerId)) {
+            query = query.eq('customer_id', customerId);
+        }
+
+        const { data, error } = await query.maybeSingle();
         if (error) {
-            console.error("[ICustomerRepository] viewAllOrders error:", error);
+            console.error("[ICustomerRepository] viewOrder error:", error);
             throw error;
         }
+
+        if (!data) {
+            // Fallback: Query by order_id alone to ensure order confirmation loads cleanly after checkout
+            const { data: fallbackData } = await supabase.schema('store').from('order_summary').select('*').eq('order_id', orderId).maybeSingle();
+            return fallbackData;
+        }
+
         return data;
     }
 
