@@ -489,14 +489,12 @@ export function OrdersScreen({ initialOrders, promoCodes = [] }: { initialOrders
                                                     // 1. First check applied_promo_codes array (sum of all discounts)
                                                     // 2. Then check discount_total
                                                     // 3. Finally fallback to promo_percentage calculation
-                                                    let calculatedDiscount = 0;
+                                                    let calculatedDiscount = order.discount_total || 0;
 
-                                                    if (order.applied_promo_codes && Array.isArray(order.applied_promo_codes) && order.applied_promo_codes.length > 0) {
+                                                    if (calculatedDiscount === 0 && order.applied_promo_codes && Array.isArray(order.applied_promo_codes) && order.applied_promo_codes.length > 0) {
                                                         // Sum all discounts from applied promo codes
                                                         calculatedDiscount = order.applied_promo_codes.reduce((sum, promo) => sum + (promo.discount || 0), 0);
-                                                    } else if (order.discount_total > 0) {
-                                                        calculatedDiscount = order.discount_total;
-                                                    } else if (order.promo_percentage > 0) {
+                                                    } else if (calculatedDiscount === 0 && order.promo_percentage > 0) {
                                                         calculatedDiscount = order.subtotal * (order.promo_percentage / 100);
                                                     }
 
@@ -686,14 +684,12 @@ export function OrdersScreen({ initialOrders, promoCodes = [] }: { initialOrders
                                                 // 1. First check applied_promo_codes array (sum of all discounts)
                                                 // 2. Then check discount_total
                                                 // 3. Finally fallback to promo_percentage calculation
-                                                let calculatedDiscount = 0;
+                                                let calculatedDiscount = order.discount_total || 0;
 
-                                                if (order.applied_promo_codes && Array.isArray(order.applied_promo_codes) && order.applied_promo_codes.length > 0) {
+                                                if (calculatedDiscount === 0 && order.applied_promo_codes && Array.isArray(order.applied_promo_codes) && order.applied_promo_codes.length > 0) {
                                                     // Sum all discounts from applied promo codes
                                                     calculatedDiscount = order.applied_promo_codes.reduce((sum, promo) => sum + (promo.discount || 0), 0);
-                                                } else if (order.discount_total > 0) {
-                                                    calculatedDiscount = order.discount_total;
-                                                } else if (order.promo_percentage > 0) {
+                                                } else if (calculatedDiscount === 0 && order.promo_percentage > 0) {
                                                     calculatedDiscount = order.subtotal * (order.promo_percentage / 100);
                                                 }
 

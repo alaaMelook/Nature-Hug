@@ -88,7 +88,11 @@ export async function sendTelegramMessage(message: string): Promise<{ success: b
  * Send order notification to Telegram with full details
  */
 export async function sendOrderNotificationTelegram(
-    data: OrderNotificationData
+    data: OrderNotificationData & {
+        subtotal?: number;
+        discountTotal?: number;
+        shippingTotal?: number;
+    }
 ): Promise<{ success: boolean; error?: string; sent?: number; failed?: number }> {
     // Build items list
     let itemsList = '';
@@ -96,6 +100,18 @@ export async function sendOrderNotificationTelegram(
         itemsList = data.items.map((item, i) =>
             `   ${i + 1}. ${item.name} × ${item.quantity} = ${(item.price * item.quantity).toFixed(2)} ج.م`
         ).join('\n');
+    }
+
+    // Build price breakdown
+    let priceBreakdown = '';
+    if (data.subtotal !== undefined && data.subtotal !== data.totalAmount) {
+        priceBreakdown += `\n💵 <b>السعر قبل الخصم:</b> ${data.subtotal.toFixed(2)} ج.م`;
+    }
+    if (data.discountTotal && data.discountTotal > 0) {
+        priceBreakdown += `\n🏷️ <b>الخصم:</b> -${data.discountTotal.toFixed(2)} ج.م`;
+    }
+    if (data.shippingTotal !== undefined && data.shippingTotal > 0) {
+        priceBreakdown += `\n🚚 <b>الشحن:</b> ${data.shippingTotal.toFixed(2)} ج.م`;
     }
 
     const message = `
@@ -109,8 +125,8 @@ export async function sendOrderNotificationTelegram(
 
 📦 <b>المنتجات:</b>
 ${itemsList || '   لا توجد تفاصيل'}
-
-💰 <b>الإجمالي:</b> ${data.totalAmount.toFixed(2)} ج.م
+${priceBreakdown}
+💰 <b>الإجمالي النهائي:</b> ${data.totalAmount.toFixed(2)} ج.م
 
 🔗 <a href="https://www.naturehug.shop/admin/orders/${data.orderId}">عرض الطلب</a>
     `.trim();

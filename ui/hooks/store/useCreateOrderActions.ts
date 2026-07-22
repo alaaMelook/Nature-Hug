@@ -31,6 +31,7 @@ export async function createOrder(data: Partial<Order>, isAdmin: boolean, items:
     }
 
     let calculatedSubtotal = 0;
+    let bundleDiscountAccumulator = 0;
     const verifiedItems: Partial<OrderItem>[] = [];
 
     // Map items to Verified Order Items with DB prices
@@ -61,22 +62,16 @@ export async function createOrder(data: Partial<Order>, isAdmin: boolean, items:
                     sumOriginal += price * (bi.quantity || 1);
                 }
 
-                const bundleUnitPrice = item.price || dbProduct.price || 0;
-                let allocatedSum = 0;
+                const bundleFinalUnitPrice = item.price > 0 ? item.price : (dbProduct.discount ? dbProduct.price - dbProduct.discount : dbProduct.price);
+                const bundleDiscountPerUnit = Math.max(0, sumOriginal - bundleFinalUnitPrice);
+
+                calculatedSubtotal += sumOriginal * item.quantity;
+                bundleDiscountAccumulator += bundleDiscountPerUnit * item.quantity;
 
                 for (let idx = 0; idx < bundleItems.length; idx++) {
                     const bi = bundleItems[idx];
                     const rawPrice = bi.variant?.price || bi.product?.price || 100;
                     const itemQty = (bi.quantity || 1) * item.quantity;
-                    
-                    let propUnitPrice = 0;
-                    if (idx === bundleItems.length - 1) {
-                        propUnitPrice = Math.max(0, Math.round((bundleUnitPrice * item.quantity - allocatedSum) / itemQty));
-                    } else {
-                        const lineShare = sumOriginal > 0 ? ((rawPrice * (bi.quantity || 1)) / sumOriginal) : (1 / bundleItems.length);
-                        propUnitPrice = Math.round(bundleUnitPrice * lineShare);
-                        allocatedSum += propUnitPrice * itemQty;
-                    }
 
                     let chosenVariantId = bi.variant_id || null;
                     if ((item as any).selected_variants) {
@@ -89,13 +84,11 @@ export async function createOrder(data: Partial<Order>, isAdmin: boolean, items:
                         }
                     }
 
-                    calculatedSubtotal += propUnitPrice * itemQty;
-
                     verifiedItems.push({
                         product_id: bi.product_id,
                         variant_id: chosenVariantId,
                         quantity: itemQty,
-                        unit_price: propUnitPrice,
+                        unit_price: rawPrice,
                         discount: 0
                     });
                 }
@@ -192,6 +185,9 @@ export async function createOrder(data: Partial<Order>, isAdmin: boolean, items:
             calculatedDiscount = data.discount_total;
         }
     }
+
+    // Add bundle discounts to overall calculated discount
+    calculatedDiscount += bundleDiscountAccumulator;
 
     // 3. Calculate Shipping
     // First, check if any of the applied_promo_codes has free_shipping
@@ -321,15 +317,22 @@ export async function createOrder(data: Partial<Order>, isAdmin: boolean, items:
                 const { data: addr } = await supabase
                     .schema('auth')
                     .from('addresses')
-                    .select('address, governorates(slug, name_ar, name_en)')
+                    .select('address, governorate_id')
                     .eq('id', data.shipping_address_id)
                     .single();
 
                 if (addr) {
                     if (!fullAddress) fullAddress = addr.address;
-                    if (!govSlug) {
-                        const govObj: any = addr.governorates;
-                        govSlug = govObj?.name_ar || govObj?.name_en || govObj?.slug;
+                    if (!govSlug && addr.governorate_id) {
+                        const { data: gov } = await supabase
+                            .schema('store')
+                            .from('governorates')
+                            .select('name_ar, name_en, slug')
+                            .eq('id', addr.governorate_id)
+                            .single();
+                        if (gov) {
+                            govSlug = gov.name_ar || gov.name_en || gov.slug;
+                        }
                     }
                 }
             }
@@ -352,7 +355,10 @@ export async function createOrder(data: Partial<Order>, isAdmin: boolean, items:
             phone: customerPhone || undefined,
             governorate: govSlug || undefined,
             address: fullAddress || undefined,
-            items: itemsForNotification
+            items: itemsForNotification,
+            subtotal: calculatedSubtotal,
+            discountTotal: calculatedDiscount > 0 ? calculatedDiscount : undefined,
+            shippingTotal: calculatedShipping > 0 ? calculatedShipping : undefined,
         }).catch(err => console.error("[Telegram] Failed to send notification:", err));
 
         revalidatePath('/', 'layout');
