@@ -1009,10 +1009,9 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
                                                     }
                                                 }
 
-                                                const totalOriginal = order.items.reduce((sum, i) => sum + (i.quantity * (i.unit_price + (i.item_discount_per_unit || 0))), 0);
-                                                const totalFinal = order.items.reduce((sum, i) => sum + (i.quantity * i.unit_price), 0);
-                                                const hasDiscount = totalOriginal > totalFinal || (order.discount_total && order.discount_total > 0);
-                                                const displayOriginalPrice = hasDiscount ? (order.discount_total ? totalFinal + order.discount_total : totalOriginal) : totalFinal;
+                                                const bundleItemPrice = order.items.reduce((sum, i) => sum + (i.quantity * i.unit_price), 0);
+                                                const bundleOriginalPrice = order.items.reduce((sum, i) => sum + (i.quantity * (i.unit_price + (i.item_discount_per_unit || 0))), 0);
+                                                const hasDiscount = bundleOriginalPrice > bundleItemPrice;
 
                                                 return (
                                                     <tr className="hover:bg-gray-50 transition-colors">
@@ -1047,19 +1046,19 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
                                                                 <div className="flex flex-col items-end gap-0.5">
                                                                     <div className="flex items-center gap-1.5 justify-end flex-wrap">
                                                                         <span className="text-amber-800 font-bold text-sm sm:text-base">
-                                                                            {t('{{price, currency}}', { price: totalFinal })}
+                                                                            {t('{{price, currency}}', { price: bundleItemPrice })}
                                                                         </span>
                                                                         <span className="text-gray-400 line-through text-xs font-normal">
-                                                                            {t('{{price, currency}}', { price: displayOriginalPrice })}
+                                                                            {t('{{price, currency}}', { price: bundleOriginalPrice })}
                                                                         </span>
                                                                     </div>
                                                                 </div>
                                                             ) : (
-                                                                <span className="text-gray-900 font-medium">{t('{{price, currency}}', { price: totalFinal })}</span>
+                                                                <span className="text-gray-900 font-medium">{t('{{price, currency}}', { price: bundleItemPrice })}</span>
                                                             )}
                                                         </td>
                                                         <td className="px-4 sm:px-6 py-4 text-right font-bold text-gray-900">
-                                                            {t('{{price, currency}}', { price: totalFinal })}
+                                                            {t('{{price, currency}}', { price: bundleItemPrice })}
                                                         </td>
                                                     </tr>
                                                 );

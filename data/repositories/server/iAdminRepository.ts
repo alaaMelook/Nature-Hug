@@ -13,6 +13,30 @@ import { Governorate } from "@/domain/entities/database/governorate";
 import { AccountReportView, ProductSalesReport, ReportSummary } from "@/domain/entities/views/admin/reportViews";
 import { BundleAdminView, BundleItemView } from "@/domain/entities/views/admin/bundleAdminView";
 
+function decorateAdminOrder(order: any) {
+    if (!order) return order;
+    const noteText = order.note || order.order_notes || '';
+    if (typeof noteText === 'string' && noteText.includes('__bundle_meta__:')) {
+        const bundleMetaMatch = noteText.match(/__bundle_meta__:(.+)$/m);
+        if (bundleMetaMatch && bundleMetaMatch[1]) {
+            try {
+                const parsed = JSON.parse(bundleMetaMatch[1]);
+                order.bundle_metadata = (parsed || []).map((b: any) => ({
+                    ...b,
+                    name: b.name ? b.name.replace(/\s*\([^)]+\)$/, '').trim() : b.name,
+                    total_discount: b.total_discount ? Math.round(b.total_discount * 100) / 100 : 0
+                }));
+            } catch (e) {
+                console.error("[IAdminRepository] Error parsing bundle_metadata:", e);
+            }
+        }
+        const cleanNote = noteText.replace(/\n?__bundle_meta__:.+$/m, '').trim();
+        if ('note' in order) order.note = cleanNote || null;
+        if ('order_notes' in order) order.order_notes = cleanNote || null;
+    }
+    return order;
+}
+
 export class IAdminServerRepository implements AdminRepository {
     async getOrderDetails(): Promise<OrderDetailsView[]> {
         console.log("[IAdminRepository] getOrderDetails called.");
@@ -25,13 +49,12 @@ export class IAdminServerRepository implements AdminRepository {
             console.error("[IAdminRepository] getOrderDetails error:", error);
             throw error;
         }
-        return data || [];
+        const orders = data || [];
+        return orders.map(decorateAdminOrder);
     }
 
     async getOrderById(id: string): Promise<OrderDetailsView | null> {
         console.log(`[IAdminRepository] getOrderById called for id: ${id}`);
-        // Try to filter the view directly if possible, otherwise fetch all and find (fallback)
-        // Assuming we can query the view directly as we are admin
         const { data, error } = await supabaseAdmin.schema('admin')
             .from('order_details')
             .select('*')
@@ -43,8 +66,7 @@ export class IAdminServerRepository implements AdminRepository {
             throw error;
         }
 
-        // Return null if no order found (not an error, just not found)
-        return data;
+        return decorateAdminOrder(data);
     }
 
     async getOrderByAwb(awb: string): Promise<OrderDetailsView | null> {
@@ -60,7 +82,7 @@ export class IAdminServerRepository implements AdminRepository {
             throw error;
         }
 
-        return data;
+        return decorateAdminOrder(data);
     }
 
     async getDashboardMetrics(startDate: string,
