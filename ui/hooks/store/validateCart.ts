@@ -3,7 +3,7 @@
 import { CartItem } from '@/domain/entities/views/shop/productView';
 import { ViewAllProducts } from '@/domain/use-case/store/viewAllProducts'
 
-export async function validateCart(cart: { slug: string, quantity: number }[], lang: LangKey = 'ar'): Promise<{ items: CartItem[], removed: { slug: string, quantity: number, reason: string }[] }> {
+export async function validateCart(cart: CartItem[], lang: LangKey = 'ar'): Promise<{ items: CartItem[], removed: { slug: string, quantity: number, reason: string }[] }> {
     if (cart.length === 0) {
         return { items: [], removed: [] }
     }
@@ -15,36 +15,43 @@ export async function validateCart(cart: { slug: string, quantity: number }[], l
         products.map(p => [p.slug, p])
     )
 
-    const validatedItems = []
-    const removedItems = []
+    const validatedItems: CartItem[] = []
+    const removedItems: { slug: string, quantity: number, reason: string }[] = []
 
     for (const item of cart) {
         const product = productMap.get(item.slug)
 
         // Product no longer exists
         if (!product) {
-            removedItems.push({ ...item, reason: 'NOT_FOUND' })
+            removedItems.push({ slug: item.slug, quantity: item.quantity, reason: 'NOT_FOUND' })
             continue
         }
 
         // Out of stock
         if (product.stock <= 0) {
-            removedItems.push({ ...item, reason: 'OUT_OF_STOCK' })
+            removedItems.push({ slug: item.slug, quantity: item.quantity, reason: 'OUT_OF_STOCK' })
             continue
         }
 
-        // Adjust quantity if needed
-        if (item.quantity > product.stock) {
+        const quantity = item.quantity > product.stock ? product.stock : item.quantity;
+
+        if (item.slug.startsWith('bundle-')) {
             validatedItems.push({
                 ...product,
-                quantity: product.stock,
-            })
-            continue
+                name: item.name || product.name,
+                price: item.price !== undefined ? item.price : product.price,
+                original_price: item.original_price !== undefined ? item.original_price : product.original_price,
+                discount: item.discount !== undefined ? item.discount : product.discount,
+                selected_variants: item.selected_variants,
+                product_type: 'bundle',
+                quantity: quantity,
+            });
+            continue;
         }
 
         validatedItems.push({
             ...product,
-            quantity: item.quantity,
+            quantity: quantity,
         })
     }
 

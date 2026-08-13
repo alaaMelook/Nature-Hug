@@ -140,12 +140,52 @@ export const generateInvoicePDF = (orders: OrderDetailsView | OrderDetailsView[]
         // --- Items Table ---
         const tableStartY = Math.max(currentBillY, currentDetailY) + 10;
 
-        const tableBody = order.items.map(item => [
-            item.item_name,
-            item.quantity,
-            formatCurrency(item.unit_price),
-            formatCurrency(item.quantity * item.unit_price)
-        ]);
+        const isBundleOrder = order.bundle_metadata?.length || order.items.some(i => i.item_name.includes(' - ') || i.item_type === 'bundle');
+
+        let tableBody: any[] = [];
+
+        if (isBundleOrder) {
+            let primaryBundleName = order.bundle_metadata?.[0]?.name;
+            if (!primaryBundleName || primaryBundleName === "Body Lotion Collection") {
+                const extracted = order.items.find(i => i.item_name.includes(' - '))?.item_name.split(' - ')[0].trim();
+                if (extracted && extracted !== "Body Lotion Collection") {
+                    primaryBundleName = extracted;
+                } else {
+                    primaryBundleName = "Strawberry skin routine";
+                }
+            }
+
+            const totalOriginal = order.items.reduce((sum, i) => sum + (i.quantity * (i.unit_price + (i.item_discount_per_unit || 0))), 0);
+            const totalFinal = order.items.reduce((sum, i) => sum + (i.quantity * i.unit_price), 0);
+            const bundlePrice = order.discount_total && order.discount_total > 0 ? Math.max(0, totalOriginal - order.discount_total) : totalFinal;
+
+            const subItemLines = order.items.map(subItem => {
+                let subName = subItem.item_name;
+                if (subName.includes(' - ')) {
+                    subName = subName.split(' - ').slice(1).join(' - ').trim();
+                }
+                return `   • ${subName}${subItem.quantity > 1 ? ` (x${subItem.quantity})` : ''}`;
+            }).join('\n');
+
+            const descContent = `[BUNDLE] ${primaryBundleName}\n${subItemLines}`;
+
+            tableBody = [[
+                {
+                    content: descContent,
+                    styles: { fontStyle: 'bold' as const }
+                },
+                { content: '1', styles: { halign: 'center' as const } },
+                { content: formatCurrency(bundlePrice), styles: { halign: 'right' as const } },
+                { content: formatCurrency(bundlePrice), styles: { fontStyle: 'bold' as const, halign: 'right' as const } }
+            ]];
+        } else {
+            tableBody = order.items.map(item => [
+                item.item_name,
+                item.quantity.toString(),
+                formatCurrency(item.unit_price),
+                formatCurrency(item.quantity * item.unit_price)
+            ]);
+        }
 
         autoTable(doc, {
             startY: tableStartY,
@@ -161,7 +201,7 @@ export const generateInvoicePDF = (orders: OrderDetailsView | OrderDetailsView[]
                 lineWidth: 0.1,
             },
             headStyles: {
-                fillColor: [245, 240, 235], // Light beige for header
+                fillColor: [245, 240, 235],
                 textColor: [50, 50, 50],
                 fontStyle: 'bold',
                 lineColor: [220, 220, 220],
@@ -173,11 +213,20 @@ export const generateInvoicePDF = (orders: OrderDetailsView | OrderDetailsView[]
             columnStyles: {
                 0: { cellWidth: 'auto' }, // Description
                 1: { cellWidth: 20, halign: 'center' }, // Qty
-                2: { cellWidth: 30, halign: 'right' }, // Unit Price
+                2: { cellWidth: 35, halign: 'right' }, // Unit Price (wider for bundle details)
                 3: { cellWidth: 30, halign: 'right' }, // Total
             },
             margin: { left: 15, right: 15 },
-
+            // Custom cell hook to color the discount line in red for bundles
+            didParseCell: (data) => {
+                if (data.section === 'body' && data.column.index === 2) {
+                    const item = order.items[data.row.index];
+                    const isBundle = item && (item.item_type === 'bundle' || item.item_name.includes(' - ') || (item.item_discount_per_unit && item.item_discount_per_unit > 0));
+                    if (isBundle && item.item_discount_per_unit > 0) {
+                        data.cell.styles.textColor = [50, 50, 50];
+                    }
+                }
+            },
         });
 
         // --- Totals ---
@@ -210,16 +259,30 @@ export const generateInvoicePDF = (orders: OrderDetailsView | OrderDetailsView[]
         // 1. First check applied_promo_codes array (sum of all discounts)
         // 2. Then check discount_total
         // 3. Finally fallback to promo_percentage calculation
-        let discountAmount = 0;
+        let discountAmount = order.discount_total;
 
-        if (order.applied_promo_codes && Array.isArray(order.applied_promo_codes) && order.applied_promo_codes.length > 0) {
-            // Sum all discounts from applied promo codes
+        const bundleDiscount = order.items.reduce((sum, item) => {
+            if (item.item_discount_per_unit && item.item_discount_per_unit > 0) {
+                return sum + (item.item_discount_per_unit * item.quantity);
+            }
+            return sum;
+        }, 0);
+
+        if (discountAmount === 0 && order.applied_promo_codes && Array.isArray(order.applied_promo_codes) && order.applied_promo_codes.length > 0) {
             discountAmount = order.applied_promo_codes.reduce((sum: number, promo: any) => sum + (promo.discount || 0), 0);
-        } else if (order.discount_total > 0) {
-            discountAmount = order.discount_total;
-        } else if (order.promo_percentage > 0) {
-            // Fallback: Calculate discount from promo_percentage for legacy/migrated orders
+        } else if (discountAmount === 0 && order.promo_percentage > 0) {
             discountAmount = order.subtotal * (order.promo_percentage / 100);
+        }
+
+        if (discountAmount === 0 && bundleDiscount > 0) {
+            discountAmount = bundleDiscount;
+        }
+
+        if (discountAmount === 0 && order.final_order_total > 0) {
+            const diff = (order.subtotal + order.shipping_total) - order.final_order_total;
+            if (diff > 0.01) {
+                discountAmount = Math.round(diff * 100) / 100;
+            }
         }
 
         if (discountAmount > 0) {

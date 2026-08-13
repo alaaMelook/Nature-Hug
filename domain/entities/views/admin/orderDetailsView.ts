@@ -28,6 +28,8 @@ export interface OrderDetailsView {
     note: string | null;
     // Packing status
     packed?: boolean;
+    // Bundle metadata (parsed from note field)
+    bundle_metadata?: BundleOrderMeta[] | null;
 }
 export interface OrderItemView {
     id?: number; // Order item ID for database updates
@@ -40,4 +42,11 @@ export interface OrderItemView {
     product_base_name: string;
     variant_name: string;
     variant_type: string;
+}
+
+export interface BundleOrderMeta {
+    name: string;
+    slug: string;
+    total_discount: number;
+    item_count: number;
 }

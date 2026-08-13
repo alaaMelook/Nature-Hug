@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
-import { OrderSummaryView } from '@/domain/entities/views/shop/orderSummaryView';
+import { OrderSummaryView, BundleOrderMeta } from '@/domain/entities/views/shop/orderSummaryView';
 import Link from 'next/link';
 import Image from 'next/image';
 import { statusColor } from "@/lib/utils/statusColors";
@@ -20,18 +20,71 @@ export default function OrderDetailScreen({ order, fromCheckout }: {
     const { user, loading } = useSupabase();
     const [formatted, setFormatted] = useState('');
 
-    // Calculate discount from promo_percentage if discount_total is 0 but promo code exists
-    const { calculatedDiscount, effectiveTotal } = useMemo(() => {
-        if (!order) return { calculatedDiscount: 0, effectiveTotal: 0 };
-        const discount = order.discount_total > 0
-            ? order.discount_total
-            : (order.applied_promo_code && order.promo_percentage)
-                ? order.subtotal * (order.promo_percentage / 100)
-                : 0;
-        const total = discount > 0 && order.discount_total === 0
-            ? order.subtotal - discount + order.shipping_total + order.tax_total
-            : order.grand_total;
-        return { calculatedDiscount: discount, effectiveTotal: total };
+    // Calculate displaySubtotal, calculatedDiscount, and effectiveTotal with full fallbacks
+    const { displaySubtotal, calculatedDiscount, bundleDiscount, promoDiscount, effectiveTotal } = useMemo(() => {
+        if (!order) return { displaySubtotal: 0, calculatedDiscount: 0, bundleDiscount: 0, promoDiscount: 0, effectiveTotal: 0 };
+        
+        // Sum of items final price
+        const itemsFinalTotal = (order.order_items || []).reduce((sum, item) => {
+            return sum + (item.price * item.quantity);
+        }, 0);
+
+        // Sum of items original price (if available)
+        const itemsOriginalTotal = (order.order_items || []).reduce((sum, item) => {
+            const discountPerUnit = (item as any).discount_per_unit || (item as any).discount || 0;
+            const origPrice = discountPerUnit > 0 ? item.price + discountPerUnit : (item as any).original_price || item.price;
+            return sum + (origPrice * item.quantity);
+        }, 0);
+
+        let subtotal = order.subtotal || itemsFinalTotal;
+        let totalDiscount = order.discount_total || 0;
+
+        // Bundle item discount check
+        if (itemsOriginalTotal > itemsFinalTotal) {
+            subtotal = Math.max(subtotal, itemsOriginalTotal);
+            if (totalDiscount === 0) {
+                totalDiscount = Math.round((itemsOriginalTotal - itemsFinalTotal) * 100) / 100;
+            }
+        } else if (subtotal > itemsFinalTotal && totalDiscount === 0) {
+            totalDiscount = Math.round((subtotal - itemsFinalTotal) * 100) / 100;
+        }
+
+        // Split discount into bundle vs promo
+        const bundleTotalDiscount = (order.bundle_metadata || []).reduce((s: number, b: BundleOrderMeta) => s + (b.total_discount || 0), 0);
+        const promoTotalDiscount = order.applied_promo_code ? Math.max(0, totalDiscount - bundleTotalDiscount) : 0;
+
+        // Promo code discount check (fallback)
+        if (promoTotalDiscount === 0 && totalDiscount === 0 && order.applied_promo_code && order.promo_percentage) {
+            const promoCalc = subtotal * (order.promo_percentage / 100);
+            return {
+                displaySubtotal: subtotal,
+                calculatedDiscount: Math.round(promoCalc * 100) / 100,
+                bundleDiscount: 0,
+                promoDiscount: Math.round(promoCalc * 100) / 100,
+                effectiveTotal: Math.max(0, subtotal + order.shipping_total + (order.tax_total || 0) - promoCalc)
+            };
+        }
+
+        // Implicit difference check
+        if (totalDiscount === 0 && order.grand_total > 0 && (subtotal + order.shipping_total + (order.tax_total || 0)) > order.grand_total) {
+            const diff = (subtotal + order.shipping_total + (order.tax_total || 0)) - order.grand_total;
+            if (diff > 0.01) {
+                totalDiscount = Math.round(diff * 100) / 100;
+            }
+        }
+
+        const resolvedBundleDiscount = bundleTotalDiscount > 0
+            ? bundleTotalDiscount
+            : (order.bundle_metadata?.length ? totalDiscount - promoTotalDiscount : totalDiscount - promoTotalDiscount > 0 ? totalDiscount - promoTotalDiscount : 0);
+
+        const total = Math.max(0, subtotal + order.shipping_total + (order.tax_total || 0) - totalDiscount);
+        return {
+            displaySubtotal: subtotal,
+            calculatedDiscount: Math.round(totalDiscount * 100) / 100,
+            bundleDiscount: Math.round(resolvedBundleDiscount * 100) / 100,
+            promoDiscount: Math.round(promoTotalDiscount * 100) / 100,
+            effectiveTotal: Math.round(total * 100) / 100
+        };
     }, [order]);
 
     useEffect(() => {
@@ -182,60 +235,205 @@ export default function OrderDetailScreen({ order, fromCheckout }: {
                     <OrderTrackingTimeline status={order.order_status} t={t} />
 
                     <div className="mt-6 flex flex-col sm:grid sm:grid-cols-3 gap-6">
-                        <div className="col-span-1 sm:col-span-2 border rounded-md">
+                        <div className="col-span-1 sm:col-span-2 border rounded-xl bg-white shadow-sm overflow-hidden">
+                            <h3 className="font-bold text-gray-900 my-4 mx-6 text-base">{t("ordersScreen.items")}</h3>
 
-                            <h3 className="font-semibold my-3 mx-10 ">{t("ordersScreen.items")}</h3>
-                            <div className="divide-y divide-gray-100 ">
-                                {(order.order_items || []).map((it) => (
-                                    <div key={it.slug} className="flex flex-row items-start sm:items-center gap-4 p-4">
-                                        {it.image ? <Image
-                                            src={it.image}
-                                            alt={it.slug}
-                                            width={64}
-                                            height={64}
-                                            className="w-16 h-16 bg-gray-100 rounded-md object-cover"
-                                        /> : <Package className="w-16 h-16 bg-gray-100 rounded-md object-cover" />}
-                                        <div className="flex-1">
-                                            <p className="text-sm font-medium"> {i18n.language === 'ar' ? it.name_ar ?? it.name_en : it.name_en} </p>
-                                            <p className="text-xs text-gray-500 mt-1">{t("ordersScreen.qty")} {it.quantity} </p>
+                            {/* Bundle name banner */}
+                            {order.bundle_metadata && order.bundle_metadata.length > 0 && (
+                                <div className="mx-4 mb-3 space-y-2">
+                                    {order.bundle_metadata.map((bm, bi) => (
+                                        <div key={bi} className="flex items-center justify-between px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-lg">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-emerald-700">🎁</span>
+                                                <span className="text-sm font-semibold text-emerald-800">{bm.name}</span>
+                                                <span className="px-1.5 py-0.5 text-[10px] font-bold uppercase bg-emerald-100 text-emerald-700 rounded">Bundle</span>
+                                            </div>
+                                            <span className="text-xs text-red-600 font-medium">
+                                                -{t('{{price, currency}}', { price: bm.total_discount })}
+                                            </span>
                                         </div>
-                                        <div>
-                                            <p className="text-md font-semibold text-gray-700">{it.quantity} x {t('{{price, currency}}', { price: it.price })}</p>
-                                        </div>
-                                    </div>
-                                ))}
+                                    ))}
+                                </div>
+                            )}
+
+                            <div className="divide-y divide-gray-100">
+                                {(() => {
+                                    const items = order.order_items || [];
+                                    const isBundleOrder = order.bundle_metadata?.length || items.some((i: any) => (i.name_en || i.name_ar || '').includes(' - ') || i.slug?.startsWith('bundle-'));
+
+                                    if (isBundleOrder) {
+                                        let primaryBundleName = order.bundle_metadata?.[0]?.name;
+                                        if (!primaryBundleName || primaryBundleName === "Body Lotion Collection") {
+                                            const extracted = items.find((i: any) => (i.name_en || '').includes(' - '))?.name_en.split(' - ')[0].trim();
+                                            if (extracted && extracted !== "Body Lotion Collection") {
+                                                primaryBundleName = extracted;
+                                            } else {
+                                                primaryBundleName = "Strawberry skin routine";
+                                            }
+                                        }
+
+                                        const totalOriginal = items.reduce((sum: number, i: any) => sum + (i.quantity * (i.price + (i.discount_per_unit || 0))), 0);
+                                        const totalFinal = items.reduce((sum: number, i: any) => sum + (i.quantity * i.price), 0);
+                                        const hasDiscount = totalOriginal > totalFinal || (order.discount_total && order.discount_total > 0);
+                                        const displayOriginalPrice = hasDiscount ? (order.discount_total ? totalFinal + order.discount_total : totalOriginal) : totalFinal;
+                                        const firstImage = items[0]?.image;
+
+                                        return (
+                                            <div className="p-4 sm:p-6 flex flex-col gap-3">
+                                                <div className="flex gap-4 items-start">
+                                                    <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0 border border-gray-200">
+                                                        {firstImage ? (
+                                                            <Image
+                                                                src={firstImage}
+                                                                alt={primaryBundleName}
+                                                                fill
+                                                                className="object-cover"
+                                                            />
+                                                        ) : (
+                                                            <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                                                <Package size={24} />
+                                                            </div>
+                                                        )}
+                                                        <span className="absolute bottom-0 right-0 bg-slate-900/90 text-white text-[11px] font-bold px-2 py-0.5 rounded-tl-md">
+                                                            x1
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <h4 className="text-base sm:text-lg font-bold text-gray-900 truncate">
+                                                                🎁 {primaryBundleName}
+                                                            </h4>
+                                                            <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-800 font-bold uppercase tracking-wider">
+                                                                Bundle
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                                            <span className="text-amber-800 font-bold text-base sm:text-lg">
+                                                                {t('{{price, currency}}', { price: totalFinal })}
+                                                            </span>
+                                                            {hasDiscount && (
+                                                                <span className="text-gray-400 line-through text-xs sm:text-sm font-normal">
+                                                                    {t('{{price, currency}}', { price: displayOriginalPrice })}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Bulleted components */}
+                                                <div className="pl-3 border-l-2 border-emerald-400 ml-1 space-y-1">
+                                                    {items.map((subItem: any, sIdx: number) => {
+                                                        let subName = i18n.language === 'ar' ? (subItem.name_ar || subItem.name_en) : (subItem.name_en || subItem.name_ar);
+                                                        if (subName.includes(' - ')) {
+                                                            subName = subName.split(' - ').slice(1).join(' - ').trim();
+                                                        }
+                                                        return (
+                                                            <p key={sIdx} className="text-xs text-gray-600 font-normal">
+                                                                • {subName} {subItem.quantity > 1 ? `(x${subItem.quantity})` : ''}
+                                                            </p>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        );
+                                    }
+
+                                    return items.map((it: any, idx: number) => {
+                                        const itemName = i18n.language === 'ar' ? (it.name_ar || it.name_en) : (it.name_en || it.name_ar);
+                                        const discountPerUnit = it.discount_per_unit || (it as any).discount || 0;
+                                        const originalUnitPrice = discountPerUnit > 0 ? it.price + discountPerUnit : it.price;
+                                        const hasDiscount = originalUnitPrice > it.price;
+
+                                        return (
+                                            <div key={it.slug || idx} className="flex items-center gap-4 p-4 sm:p-6 hover:bg-gray-50/50 transition-colors">
+                                                <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0 border border-gray-200">
+                                                    {it.image ? (
+                                                        <Image
+                                                            src={it.image}
+                                                            alt={itemName}
+                                                            fill
+                                                            className="object-cover"
+                                                        />
+                                                    ) : (
+                                                        <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                                            <Package size={24} />
+                                                        </div>
+                                                    )}
+                                                    <span className="absolute bottom-0 right-0 bg-slate-900/90 text-white text-[11px] font-bold px-2 py-0.5 rounded-tl-md">
+                                                        x{it.quantity}
+                                                    </span>
+                                                </div>
+
+                                                <div className="flex-1 min-w-0">
+                                                    <h4 className="text-base sm:text-lg font-semibold text-gray-900 truncate mb-1">
+                                                        {itemName}
+                                                    </h4>
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <span className="text-amber-800 font-bold text-base sm:text-lg">
+                                                            {t('{{price, currency}}', { price: it.price })}
+                                                        </span>
+                                                        {hasDiscount && (
+                                                            <span className="text-gray-400 line-through text-xs sm:text-sm font-normal">
+                                                                {t('{{price, currency}}', { price: originalUnitPrice })}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    });
+                                })()}
                             </div>
-
                         </div>
 
 
-                        <div className="p-4 border w-full rounded-md bg-white h-max shadow-sm self-center items-center">
-                            <h4 className="font-semibold mb-3">{t("ordersScreen.summary")}</h4>
-                            <dl className="text-sm text-gray-700 space-y-2">
+                        <div className="p-4 sm:p-6 border w-full rounded-xl bg-white h-max shadow-sm self-center">
+                            <h4 className="font-bold text-gray-900 mb-4 text-base">{t("ordersScreen.summary")}</h4>
+                            <dl className="text-sm text-gray-700 space-y-3">
                                 <div className="flex justify-between">
-                                    <dt>{t("ordersScreen.subtotal")}</dt>
-                                    <dd>{t("{{price, currency}}", { price: order.subtotal })}</dd>
+                                    <dt className="text-gray-600">{t("ordersScreen.subtotal")}</dt>
+                                    <dd className="font-medium text-gray-900">{t("{{price, currency}}", { price: displaySubtotal })}</dd>
                                 </div>
-                                {calculatedDiscount > 0 && (
-                                    <div className="flex justify-between text-green-600">
+                                {/* Bundle discount row — always show if there's a bundle saving */}
+                                {bundleDiscount > 0 && (
+                                    <div className="flex justify-between text-emerald-700 font-medium">
+                                        <dt className="flex items-center gap-1">
+                                            🎁 {order.bundle_metadata?.[0]?.name
+                                                ? order.bundle_metadata[0].name
+                                                : t('bundleDiscount') || 'خصم الباقة'}
+                                        </dt>
+                                        <dd>-{t("{{price, currency}}", { price: Math.round(bundleDiscount * 100) / 100 })}</dd>
+                                    </div>
+                                )}
+                                {/* Promo code discount row */}
+                                {promoDiscount > 0 && (
+                                    <div className="flex justify-between text-purple-700 font-medium">
+                                        <dt className="flex items-center gap-1">🏷️ {t("ordersScreen.discount")}</dt>
+                                        <dd>-{t("{{price, currency}}", { price: Math.round(promoDiscount * 100) / 100 })}</dd>
+                                    </div>
+                                )}
+                                {/* Fallback: combined discount with no bundle metadata and no promo */}
+                                {calculatedDiscount > 0 && !bundleDiscount && !promoDiscount && (
+                                    <div className="flex justify-between text-red-600 font-medium">
                                         <dt>{t("ordersScreen.discount")}</dt>
-                                        <dd>-{t("{{price, currency}}", { price: calculatedDiscount })}</dd>
+                                        <dd>-{t("{{price, currency}}", { price: Math.round(calculatedDiscount * 100) / 100 })}</dd>
                                     </div>
                                 )}
                                 <div className="flex justify-between">
-                                    <dt>{t("ordersScreen.shipping")}</dt>
-                                    <dd>{t("{{price, currency}}", { price: order.shipping_total })}</dd>
+                                    <dt className="text-gray-600">{t("ordersScreen.shipping")}</dt>
+                                    <dd className="font-medium text-gray-900">{t("{{price, currency}}", { price: order.shipping_total })}</dd>
                                 </div>
                                 {order.tax_total > 0 && (
                                     <div className="flex justify-between">
-                                        <dt>{t("ordersScreen.tax")}</dt>
-                                        <dd>{t("{{price, currency}}", { price: order.tax_total })}</dd>
+                                        <dt className="text-gray-600">{t("ordersScreen.tax")}</dt>
+                                        <dd className="font-medium text-gray-900">{t("{{price, currency}}", { price: order.tax_total })}</dd>
                                     </div>
                                 )}
 
-                                <div className="flex justify-between font-semibold text-lg">
+                                <div className="flex justify-between font-bold text-lg text-gray-900 pt-3 border-t">
                                     <dt>{t("ordersScreen.total")}</dt>
-                                    <dd>{t("{{price, currency}}", { price: effectiveTotal })}</dd>
+                                    <dd className="text-amber-800">{t("{{price, currency}}", { price: effectiveTotal })}</dd>
                                 </div>
                             </dl>
 

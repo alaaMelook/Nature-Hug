@@ -33,6 +33,11 @@ export async function createOrder(data: Partial<Order>, isAdmin: boolean, items:
     let calculatedSubtotal = 0;
     let bundleDiscountAccumulator = 0;
     const verifiedItems: Partial<OrderItem>[] = [];
+    // Track per-item bundle discount and bundle group info for display in order details
+    interface BundleItemDiscount { verifiedItemIndex: number; discountPerUnit: number; bundleGroupName: string; }
+    const bundleItemDiscounts: BundleItemDiscount[] = [];
+    interface BundleMeta { name: string; slug: string; total_discount: number; item_count: number; }
+    const bundleMetaList: BundleMeta[] = [];
 
     // Map items to Verified Order Items with DB prices
     for (const item of items) {
@@ -64,14 +69,28 @@ export async function createOrder(data: Partial<Order>, isAdmin: boolean, items:
 
                 const bundleFinalUnitPrice = item.price > 0 ? item.price : (dbProduct.discount ? dbProduct.price - dbProduct.discount : dbProduct.price);
                 const bundleDiscountPerUnit = Math.max(0, sumOriginal - bundleFinalUnitPrice);
+                const priceRatio = sumOriginal > 0 ? (bundleFinalUnitPrice / sumOriginal) : 1;
 
-                calculatedSubtotal += sumOriginal * item.quantity;
-                bundleDiscountAccumulator += bundleDiscountPerUnit * item.quantity;
+                // Subtotal is determined directly by the bundle final price
+                calculatedSubtotal += bundleFinalUnitPrice * item.quantity;
+
+                // Track bundle metadata for display in order details
+                const bundleName = item.name || dbProduct.name || item.slug;
+                bundleMetaList.push({
+                    name: bundleName,
+                    slug: item.slug,
+                    total_discount: bundleDiscountPerUnit * item.quantity,
+                    item_count: bundleItems.length * item.quantity
+                });
 
                 for (let idx = 0; idx < bundleItems.length; idx++) {
                     const bi = bundleItems[idx];
                     const rawPrice = bi.variant?.price || bi.product?.price || 100;
                     const itemQty = (bi.quantity || 1) * item.quantity;
+                    
+                    // Proportionally discounted unit price for this component item
+                    const discountedUnitPrice = sumOriginal > 0 ? Math.round(rawPrice * priceRatio * 100) / 100 : rawPrice;
+                    const itemDiscountPerUnit = sumOriginal > 0 ? Math.max(0, Math.round((rawPrice - discountedUnitPrice) * 100) / 100) : 0;
 
                     let chosenVariantId = bi.variant_id || null;
                     if ((item as any).selected_variants) {
@@ -84,12 +103,19 @@ export async function createOrder(data: Partial<Order>, isAdmin: boolean, items:
                         }
                     }
 
+                    // Track the index so we can update discount after DB insert
+                    bundleItemDiscounts.push({
+                        verifiedItemIndex: verifiedItems.length,
+                        discountPerUnit: itemDiscountPerUnit,
+                        bundleGroupName: bundleName
+                    });
+
                     verifiedItems.push({
                         product_id: bi.product_id,
                         variant_id: chosenVariantId,
                         quantity: itemQty,
-                        unit_price: rawPrice,
-                        discount: 0
+                        unit_price: discountedUnitPrice,
+                        discount: itemDiscountPerUnit
                     });
                 }
             } else {
@@ -254,15 +280,22 @@ export async function createOrder(data: Partial<Order>, isAdmin: boolean, items:
 
         // WORKAROUND: Direct update to ensure discount_total and grand_total are saved correctly
         // This is needed because the RPC might not be extracting these values from order_data JSON
+        const supabase = await createSupabaseServerClient();
         if (calculatedDiscount > 0 || calculatedGrandTotal !== calculatedSubtotal) {
-            const supabase = await createSupabaseServerClient();
+            // Build note: preserve original note, append bundle metadata as a parseable suffix
+            let finalNote = data.note || '';
+            if (bundleMetaList.length > 0) {
+                finalNote = (finalNote ? finalNote + '\n' : '') + `__bundle_meta__:${JSON.stringify(bundleMetaList)}`;
+            }
+
             const { error: updateError } = await supabase.schema('store')
                 .from('orders')
                 .update({
                     discount_total: calculatedDiscount,
                     grand_total: calculatedGrandTotal,
                     shipping_total: calculatedShipping,
-                    applied_promo_codes: data.applied_promo_codes || null
+                    applied_promo_codes: data.applied_promo_codes || null,
+                    note: finalNote || null
                 })
                 .eq('id', createdOrder.order_id);
 
@@ -270,6 +303,33 @@ export async function createOrder(data: Partial<Order>, isAdmin: boolean, items:
                 console.error('[createOrder] Failed to update order totals:', updateError);
             } else {
                 console.log(`[createOrder] Successfully updated order ${createdOrder.order_id} with discount=${calculatedDiscount}, total=${calculatedGrandTotal}`);
+            }
+        }
+
+        // Update per-item discount in order_items for bundle items
+        if (bundleItemDiscounts.length > 0) {
+            // Fetch the inserted order_items to get their IDs
+            const { data: insertedItems } = await supabase.schema('store')
+                .from('order_items')
+                .select('id, product_id, variant_id')
+                .eq('order_id', createdOrder.order_id);
+
+            if (insertedItems && insertedItems.length > 0) {
+                // Match by product_id + variant_id to set discount
+                for (const bid of bundleItemDiscounts) {
+                    const vi = verifiedItems[bid.verifiedItemIndex];
+                    if (!vi || bid.discountPerUnit <= 0) continue;
+                    const matchedItem = insertedItems.find(
+                        it => it.product_id === vi.product_id && it.variant_id === vi.variant_id
+                    );
+                    if (matchedItem) {
+                        await supabase.schema('store')
+                            .from('order_items')
+                            .update({ discount: bid.discountPerUnit })
+                            .eq('id', matchedItem.id);
+                    }
+                }
+                console.log(`[createOrder] Updated bundle item discounts for order ${createdOrder.order_id}`);
             }
         }
 
@@ -342,11 +402,38 @@ export async function createOrder(data: Partial<Order>, isAdmin: boolean, items:
 
         customerName = customerName || 'Customer';
         const totalAmount = sentOrder.grand_total || 0;
-        const itemsForNotification = items.map(item => ({
-            name: item.name,
-            quantity: item.quantity,
-            price: item.price - (item.discount || 0)
-        }));
+
+        // Build rich items list for Telegram - bundles get special treatment
+        const itemsForNotification = items.map(item => {
+            const isBundle = item.product_type === 'bundle' || item.slug?.startsWith('bundle-');
+            if (isBundle) {
+                const dbProduct = dbProducts.find(p => p.slug === item.slug);
+                const originalPrice = dbProduct?.price ?? item.price; // price before discount
+                const finalPrice = item.price; // price after discount (from cart)
+
+                // Bundle sub-items: from item.bundleItems if available
+                const subItems: { name: string; quantity: number }[] = [];
+                if ((item as any).bundleItems && Array.isArray((item as any).bundleItems)) {
+                    (item as any).bundleItems.forEach((bi: any) => {
+                        subItems.push({ name: bi.name || bi.product?.name || 'منتج', quantity: bi.quantity || 1 });
+                    });
+                }
+
+                return {
+                    name: item.name,
+                    quantity: item.quantity,
+                    price: finalPrice,
+                    originalPrice: originalPrice !== finalPrice ? originalPrice : undefined,
+                    isBundle: true,
+                    bundleSubItems: subItems.length > 0 ? subItems : undefined,
+                };
+            }
+            return {
+                name: item.name,
+                quantity: item.quantity,
+                price: item.price - (item.discount || 0),
+            };
+        });
 
         sendOrderNotificationTelegram({
             orderId: createdOrder.order_id,

@@ -20,4 +20,5 @@ export interface ProductView {
 
 export interface CartItem extends ProductView {
     quantity: number;
+    selected_variants?: any;
 }

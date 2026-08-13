@@ -445,14 +445,50 @@ export class ICustomerServerRepository implements CustomerRepository {
             throw error;
         }
 
-        if (!data) {
+        let orderData = data;
+        if (!orderData) {
             // Fallback: Query by order_id alone to ensure order confirmation loads cleanly after checkout
             const { data: fallbackData } = await supabase.schema('store').from('order_summary').select('*').eq('order_id', orderId).maybeSingle();
-            return fallbackData;
+            orderData = fallbackData;
         }
 
-        return data;
+        if (!orderData) return null as any;
+
+        // Fetch the note field and per-item discounts from the orders table (not in order_summary view)
+        const [orderRowResult, itemsResult] = await Promise.all([
+            supabase.schema('store').from('orders').select('note').eq('id', orderId).maybeSingle(),
+            supabase.schema('store').from('order_items').select('product_id, variant_id, discount').eq('order_id', orderId)
+        ]);
+
+        // Merge per-item bundle discount into order_items
+        if (itemsResult.data && itemsResult.data.length > 0) {
+            orderData.order_items = (orderData.order_items || []).map((it: any, idx: number) => {
+                // Try to match by position (same insert order), fallback to first with discount
+                const dbItem = itemsResult.data![idx];
+                return {
+                    ...it,
+                    discount_per_unit: dbItem?.discount > 0 ? dbItem.discount : undefined
+                };
+            });
+        }
+
+        // Parse bundle metadata and note
+        const orderRow = orderRowResult.data;
+        if (orderRow?.note) {
+            // Parse bundle metadata if present (stored as __bundle_meta__:JSON suffix)
+            const bundleMetaMatch = orderRow.note.match(/__bundle_meta__:(.+)$/m);
+            if (bundleMetaMatch) {
+                try {
+                    orderData.bundle_metadata = JSON.parse(bundleMetaMatch[1]);
+                } catch { /* ignore parse errors */ }
+            }
+            // Expose the user-visible note (without the __bundle_meta__ suffix)
+            orderData.note = orderRow.note.replace(/\n?__bundle_meta__:.+$/m, '').trim() || null;
+        }
+
+        return orderData;
     }
+
 
     async cancelOrder(orderId: number, customerId: number): Promise<void> {
         console.log(`[ICustomerRepository] cancelOrder called for order ${orderId} by customer ${customerId}`);

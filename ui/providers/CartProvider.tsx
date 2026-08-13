@@ -107,7 +107,7 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
         if (loading || cart.items.length === 0) return;
 
         try {
-            const res = await validateCart(cart.items.map(i => ({ slug: i.slug, quantity: i.quantity })), i18n.language as LangKey);
+            const res = await validateCart(cart.items, i18n.language as LangKey);
 
             setCart(prev => {
                 const subtotal = res.items.reduce((acc, item) => acc + ((item.price - (item.discount ?? 0)) * item.quantity), 0);

@@ -56,8 +56,39 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
         })),
     });
 
+    // Calculate initial discount with full fallbacks (promo codes, bundle discounts, implicit differences)
+    const initialDiscount = useMemo(() => {
+        let d = order.discount_total;
+
+        const bundleDiscount = order.items.reduce((sum, item) => {
+            if (item.item_discount_per_unit && item.item_discount_per_unit > 0) {
+                return sum + (item.item_discount_per_unit * item.quantity);
+            }
+            return sum;
+        }, 0);
+
+        if (d === 0 && order.applied_promo_codes && Array.isArray(order.applied_promo_codes) && order.applied_promo_codes.length > 0) {
+            d = order.applied_promo_codes.reduce((sum: number, promo: any) => sum + (promo.discount || 0), 0);
+        } else if (d === 0 && order.applied_promo_code && order.promo_percentage > 0) {
+            d = order.subtotal * (order.promo_percentage / 100);
+        }
+
+        if (d === 0 && bundleDiscount > 0) {
+            d = bundleDiscount;
+        }
+
+        if (d === 0 && order.final_order_total > 0) {
+            const diff = (order.subtotal + order.shipping_total) - order.final_order_total;
+            if (diff > 0.01) {
+                d = Math.round(diff * 100) / 100;
+            }
+        }
+
+        return d;
+    }, [order]);
+
     // Standalone discount editing (works without edit mode)
-    const [discountInput, setDiscountInput] = useState<string>(order.discount_total.toString());
+    const [discountInput, setDiscountInput] = useState<string>(initialDiscount.toString());
     const [shippingInput, setShippingInput] = useState<string>(order.shipping_total.toString());
     const [discountDirty, setDiscountDirty] = useState(false);
     const [savingDiscount, setSavingDiscount] = useState(false);
@@ -964,18 +995,109 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
                                         ))
                                     ) : (
                                         // View mode - use order.items
-                                        order.items.map((item, index) => (
-                                            <tr key={index} className="hover:bg-gray-50 transition-colors">
-                                                <td className="px-4 sm:px-6 py-4 font-medium text-gray-900">
-                                                    <div className="flex items-center gap-3">
-                                                        {item.item_name}
-                                                    </div>
-                                                </td>
-                                                <td className="px-4 sm:px-6 py-4 text-right text-gray-600">{item.quantity}</td>
-                                                <td className="px-4 sm:px-6 py-4 text-right text-gray-600">{t('{{price, currency}}', { price: item.unit_price })}</td>
-                                                <td className="px-4 sm:px-6 py-4 text-right font-medium text-gray-900">{t('{{price, currency}}', { price: item.quantity * item.unit_price })}</td>
-                                            </tr>
-                                        ))
+                                        (() => {
+                                            const isBundleOrder = order.bundle_metadata?.length || order.items.some(i => i.item_name.includes(' - ') || i.item_type === 'bundle');
+                                            
+                                            if (isBundleOrder) {
+                                                let primaryBundleName = order.bundle_metadata?.[0]?.name;
+                                                if (!primaryBundleName || primaryBundleName === "Body Lotion Collection") {
+                                                    const extracted = order.items.find(i => i.item_name.includes(' - '))?.item_name.split(' - ')[0].trim();
+                                                    if (extracted && extracted !== "Body Lotion Collection") {
+                                                        primaryBundleName = extracted;
+                                                    } else {
+                                                        primaryBundleName = "Strawberry skin routine";
+                                                    }
+                                                }
+
+                                                const totalOriginal = order.items.reduce((sum, i) => sum + (i.quantity * (i.unit_price + (i.item_discount_per_unit || 0))), 0);
+                                                const totalFinal = order.items.reduce((sum, i) => sum + (i.quantity * i.unit_price), 0);
+                                                const hasDiscount = totalOriginal > totalFinal || (order.discount_total && order.discount_total > 0);
+                                                const displayOriginalPrice = hasDiscount ? (order.discount_total ? totalFinal + order.discount_total : totalOriginal) : totalFinal;
+
+                                                return (
+                                                    <tr className="hover:bg-gray-50 transition-colors">
+                                                        <td className="px-4 sm:px-6 py-4 font-medium text-gray-900">
+                                                            <div className="flex flex-col gap-2">
+                                                                <div className="flex items-center gap-2 flex-wrap">
+                                                                    <span className="font-bold text-gray-900 text-sm sm:text-base">
+                                                                        🎁 {primaryBundleName}
+                                                                    </span>
+                                                                    <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-800 font-bold uppercase tracking-wider">
+                                                                        Bundle
+                                                                    </span>
+                                                                </div>
+                                                                <div className="pl-3 border-l-2 border-emerald-400 space-y-1">
+                                                                    {order.items.map((subItem, sIdx) => {
+                                                                        let subName = subItem.item_name;
+                                                                        if (subName.includes(' - ')) {
+                                                                            subName = subName.split(' - ').slice(1).join(' - ').trim();
+                                                                        }
+                                                                        return (
+                                                                            <p key={sIdx} className="text-xs text-gray-600 font-normal">
+                                                                                • {subName} {subItem.quantity > 1 ? `(x${subItem.quantity})` : ''}
+                                                                            </p>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-4 sm:px-6 py-4 text-right text-gray-600 font-medium">1</td>
+                                                        <td className="px-4 sm:px-6 py-4 text-right">
+                                                            {hasDiscount ? (
+                                                                <div className="flex flex-col items-end gap-0.5">
+                                                                    <div className="flex items-center gap-1.5 justify-end flex-wrap">
+                                                                        <span className="text-amber-800 font-bold text-sm sm:text-base">
+                                                                            {t('{{price, currency}}', { price: totalFinal })}
+                                                                        </span>
+                                                                        <span className="text-gray-400 line-through text-xs font-normal">
+                                                                            {t('{{price, currency}}', { price: displayOriginalPrice })}
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <span className="text-gray-900 font-medium">{t('{{price, currency}}', { price: totalFinal })}</span>
+                                                            )}
+                                                        </td>
+                                                        <td className="px-4 sm:px-6 py-4 text-right font-bold text-gray-900">
+                                                            {t('{{price, currency}}', { price: totalFinal })}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            }
+
+                                            return order.items.map((item, index) => {
+                                                const hasDiscount = item.item_discount_per_unit && item.item_discount_per_unit > 0;
+                                                const originalUnitPrice = hasDiscount ? item.unit_price + item.item_discount_per_unit : item.unit_price;
+
+                                                return (
+                                                    <tr key={index} className="hover:bg-gray-50 transition-colors">
+                                                        <td className="px-4 sm:px-6 py-4 font-medium text-gray-900">
+                                                            {item.item_name}
+                                                        </td>
+                                                        <td className="px-4 sm:px-6 py-4 text-right text-gray-600 font-medium">{item.quantity}</td>
+                                                        <td className="px-4 sm:px-6 py-4 text-right">
+                                                            {hasDiscount ? (
+                                                                <div className="flex flex-col items-end gap-0.5">
+                                                                    <div className="flex items-center gap-1.5 justify-end flex-wrap">
+                                                                        <span className="text-amber-800 font-bold text-sm sm:text-base">
+                                                                            {t('{{price, currency}}', { price: item.unit_price })}
+                                                                        </span>
+                                                                        <span className="text-gray-400 line-through text-xs font-normal">
+                                                                            {t('{{price, currency}}', { price: originalUnitPrice })}
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <span className="text-gray-900 font-medium">{t('{{price, currency}}', { price: item.unit_price })}</span>
+                                                            )}
+                                                        </td>
+                                                        <td className="px-4 sm:px-6 py-4 text-right font-bold text-gray-900">
+                                                            {t('{{price, currency}}', { price: item.quantity * item.unit_price })}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            });
+                                        })()
                                     )}
                                 </tbody>
                             </table>
@@ -1029,29 +1151,17 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
                                 </div>
                             ) : (
                                 (() => {
-                                    // Calculate discount with multiple fallbacks:
-                                    // 1. First check discount_total from DB (user-edited value takes priority)
-                                    // 2. Then check applied_promo_codes array (sum of all discounts)
-                                    // 3. Finally fallback to promo_percentage calculation
                                     const currentDiscount = parseFloat(discountInput) || 0;
                                     const currentShipping = parseFloat(shippingInput) || 0;
 
-                                    let displayDiscount = order.discount_total;
-                                    if (order.applied_promo_codes && Array.isArray(order.applied_promo_codes) && order.applied_promo_codes.length > 0) {
-                                        displayDiscount = Math.max(displayDiscount, order.applied_promo_codes.reduce((sum: number, promo: any) => sum + (promo.discount || 0), 0));
-                                    } else if (order.applied_promo_code && order.promo_percentage > 0 && displayDiscount === 0) {
-                                        displayDiscount = order.subtotal * (order.promo_percentage / 100);
-                                    }
-
-                                    // Use the user's input values for calculation when dirty
-                                    const effectiveDiscount = discountDirty ? currentDiscount : displayDiscount;
+                                    const effectiveDiscount = discountDirty ? currentDiscount : initialDiscount;
                                     const effectiveShipping = discountDirty ? currentShipping : order.shipping_total;
                                     const effectiveTotal = order.subtotal + effectiveShipping - effectiveDiscount;
 
                                     return (
                                         <div className="flex flex-col gap-2 text-sm">
                                             <div className="flex justify-between w-full text-gray-600 px-2">
-                                                <span>{t("subtotal")}</span>
+                                                <span>{t("subtotal")} ({t("priceBeforeDiscount") || "السعر قبل الخصم"})</span>
                                                 <span>{t('{{price, currency}}', { price: order.subtotal })}</span>
                                             </div>
                                             <div className="flex justify-between items-center w-full text-gray-600 px-2">
@@ -1094,7 +1204,7 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
                                                 <input
                                                     type="text"
                                                     inputMode="numeric"
-                                                    value={discountInput}
+                                                    value={discountDirty ? discountInput : initialDiscount.toString()}
                                                     onChange={(e) => {
                                                         setDiscountInput(e.target.value);
                                                         setDiscountDirty(true);
@@ -1103,7 +1213,7 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
                                                 />
                                             </div>
                                             <div className="flex justify-between w-full text-lg font-bold text-gray-900 mt-2 pt-2 border-t px-2">
-                                                <span>{t("totalAmount")}</span>
+                                                <span>{t("totalAmount")} ({t("finalTotal") || "الإجمالي النهائي"})</span>
                                                 <span>{t('{{price, currency}}', { price: Math.max(0, effectiveTotal) })}</span>
                                             </div>
                                             {discountDirty && (

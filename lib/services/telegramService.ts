@@ -7,6 +7,15 @@ interface TelegramResponse {
     description?: string;
 }
 
+interface TelegramOrderItem {
+    name: string;
+    quantity: number;
+    price: number;              // final unit price (after discount)
+    originalPrice?: number;    // unit price before discount (for bundles)
+    isBundle?: boolean;
+    bundleSubItems?: { name: string; quantity: number }[];
+}
+
 interface OrderNotificationData {
     orderId: number;
     customerName: string;
@@ -14,7 +23,7 @@ interface OrderNotificationData {
     phone?: string | null;
     governorate?: string | null;
     address?: string | null;
-    items?: { name: string; quantity: number; price: number }[];
+    items?: TelegramOrderItem[];
 }
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
@@ -97,9 +106,34 @@ export async function sendOrderNotificationTelegram(
     // Build items list
     let itemsList = '';
     if (data.items && data.items.length > 0) {
-        itemsList = data.items.map((item, i) =>
-            `   ${i + 1}. ${item.name} × ${item.quantity} = ${(item.price * item.quantity).toFixed(2)} ج.م`
-        ).join('\n');
+        itemsList = data.items.map((item, i) => {
+            if (item.isBundle) {
+                // Bundle: show name, sub-items, price before/after discount
+                const finalTotal = (item.price * item.quantity).toFixed(2);
+                const originalTotal = item.originalPrice ? (item.originalPrice * item.quantity).toFixed(2) : null;
+                const discountAmount = item.originalPrice ? ((item.originalPrice - item.price) * item.quantity).toFixed(2) : null;
+
+                let bundleLine = `   ${i + 1}. 🎁 <b>${item.name}</b> × ${item.quantity}`;
+                if (originalTotal && discountAmount && parseFloat(discountAmount) > 0) {
+                    bundleLine += `\n       💵 قبل الخصم: <s>${originalTotal} ج.م</s>`;
+                    bundleLine += `\n       🏷️ الخصم: -${discountAmount} ج.م`;
+                    bundleLine += `\n       ✅ بعد الخصم: <b>${finalTotal} ج.م</b>`;
+                } else {
+                    bundleLine += ` = ${finalTotal} ج.م`;
+                }
+
+                if (item.bundleSubItems && item.bundleSubItems.length > 0) {
+                    const subList = item.bundleSubItems
+                        .map(sub => `         • ${sub.name} × ${sub.quantity}`)
+                        .join('\n');
+                    bundleLine += `\n       📋 المنتجات:\n${subList}`;
+                }
+
+                return bundleLine;
+            } else {
+                return `   ${i + 1}. ${item.name} × ${item.quantity} = ${(item.price * item.quantity).toFixed(2)} ج.م`;
+            }
+        }).join('\n');
     }
 
     // Build price breakdown
@@ -108,7 +142,7 @@ export async function sendOrderNotificationTelegram(
         priceBreakdown += `\n💵 <b>السعر قبل الخصم:</b> ${data.subtotal.toFixed(2)} ج.م`;
     }
     if (data.discountTotal && data.discountTotal > 0) {
-        priceBreakdown += `\n🏷️ <b>الخصم:</b> -${data.discountTotal.toFixed(2)} ج.م`;
+        priceBreakdown += `\n🏷️ <b>إجمالي الخصم:</b> -${data.discountTotal.toFixed(2)} ج.م`;
     }
     if (data.shippingTotal !== undefined && data.shippingTotal > 0) {
         priceBreakdown += `\n🚚 <b>الشحن:</b> ${data.shippingTotal.toFixed(2)} ج.م`;

@@ -13,6 +13,10 @@ export interface OrderSummaryView {
     item_count: number;
     order_items: OrderSummaryItems[];
     awb: string | null;
+    /** Parsed from orders.note — holds bundle name + discount info */
+    bundle_metadata?: BundleOrderMeta[] | null;
+    /** Raw note field from orders table */
+    note?: string | null;
 }
 
 export interface OrderSummaryItems {
@@ -22,4 +26,13 @@ export interface OrderSummaryItems {
     slug: string;
     image: string | null;
     price: number;
+    /** Per-unit bundle discount for this item (from order_items.discount) */
+    discount_per_unit?: number;
 }
+
+export interface BundleOrderMeta {
+    name: string;
+    slug: string;
+    total_discount: number;
+    item_count: number;
+}
