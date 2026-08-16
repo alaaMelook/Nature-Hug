@@ -25,7 +25,7 @@ export default function AdminHeader({ adminUser }: { adminUser: MemberView }) {
           {/* Left side - mostly for mobile menu trigger spacing if needed, or breadcrumbs */}
           <div className="flex items-center gap-4">
             {/* Mobile menu trigger is in Sidebar component, but we can add a placeholder or breadcrumbs here */}
-            <h2 className="text-lg font-semibold text-gray-800 hidden md:flex items-center gap-2 ">
+            <h2 suppressHydrationWarning className="text-lg font-semibold text-gray-800 hidden md:flex items-center gap-2 ">
 
               {adminUser.role === 'moderator' ?
                 <>

@@ -32,6 +32,7 @@ export interface OrderSummaryItems {
 
 export interface BundleOrderMeta {
     name: string;
+    raw_name?: string;
     slug: string;
     total_discount: number;
     item_count: number;

@@ -23,6 +23,7 @@ function decorateAdminOrder(order: any) {
                 const parsed = JSON.parse(bundleMetaMatch[1]);
                 order.bundle_metadata = (parsed || []).map((b: any) => ({
                     ...b,
+                    raw_name: b.name,
                     name: b.name ? b.name.replace(/\s*\([^)]+\)$/, '').trim() : b.name,
                     total_discount: b.total_discount ? Math.round(b.total_discount * 100) / 100 : 0
                 }));

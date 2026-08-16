@@ -382,7 +382,7 @@ export default function AdminSidebar({
         </div>
 
         <nav className="p-4 space-y-1">
-          <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4 px-3 mt-2">
+          <div suppressHydrationWarning className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4 px-3 mt-2">
             {t("adminPanel")}
           </div>
           {navItems.map((item) => (

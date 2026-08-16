@@ -485,22 +485,29 @@ export function OrdersScreen({ initialOrders, promoCodes = [] }: { initialOrders
                                             </td>
                                             <td className="px-4 py-3 text-gray-600">
                                                 {(() => {
-                                                    // Calculate discount with multiple fallbacks:
-                                                    // 1. First check applied_promo_codes array (sum of all discounts)
-                                                    // 2. Then check discount_total
-                                                    // 3. Finally fallback to promo_percentage calculation
                                                     let calculatedDiscount = order.discount_total || 0;
 
+                                                    const bundleDiscount = (order.bundle_metadata || []).reduce((sum: number, b: any) => sum + (b.total_discount || 0), 0);
+                                                    if (bundleDiscount > 0 && calculatedDiscount === 0) {
+                                                        calculatedDiscount = bundleDiscount;
+                                                    }
+
                                                     if (calculatedDiscount === 0 && order.applied_promo_codes && Array.isArray(order.applied_promo_codes) && order.applied_promo_codes.length > 0) {
-                                                        // Sum all discounts from applied promo codes
-                                                        calculatedDiscount = order.applied_promo_codes.reduce((sum, promo) => sum + (promo.discount || 0), 0);
+                                                        calculatedDiscount = order.applied_promo_codes.reduce((sum: number, promo: any) => sum + (promo.discount || 0), 0);
                                                     } else if (calculatedDiscount === 0 && order.promo_percentage > 0) {
                                                         calculatedDiscount = order.subtotal * (order.promo_percentage / 100);
                                                     }
 
+                                                    if (calculatedDiscount === 0 && order.final_order_total > 0) {
+                                                        const diff = (order.subtotal + order.shipping_total) - order.final_order_total;
+                                                        if (diff > 0.01) {
+                                                            calculatedDiscount = Math.round(diff * 100) / 100;
+                                                        }
+                                                    }
+
                                                     return calculatedDiscount > 0 ? (
                                                         <span className="text-green-600 font-medium">
-                                                            -{t('{{price, currency}}', { price: calculatedDiscount })}
+                                                            -{t('{{price, currency}}', { price: Math.round(calculatedDiscount * 100) / 100 })}
                                                         </span>
                                                     ) : <span className="text-gray-400">&mdash;</span>;
                                                 })()}
@@ -524,7 +531,6 @@ export function OrdersScreen({ initialOrders, promoCodes = [] }: { initialOrders
                                             <td className="px-4 py-3">
                                                 <div className="flex flex-col gap-1">
                                                     <span className="text-sm font-medium text-gray-900">{order.payment_method}</span>
-                                                    {/* Show Paid for completed/delivered orders, or Prepaid for orders marked as paid but not yet delivered */}
                                                     {(['delivered', 'completed'].includes((order.order_status ?? '').toLowerCase())) ? (
                                                         <span className="text-xs px-2.5 py-1 rounded-full font-bold w-fit bg-green-100 text-green-700">
                                                             {t("paid") || "Paid"}
@@ -538,23 +544,23 @@ export function OrdersScreen({ initialOrders, promoCodes = [] }: { initialOrders
                                             </td>
                                             <td className="px-4 py-3 font-medium text-gray-900">
                                                 {(() => {
-                                                    // Calculate discount with multiple fallbacks
-                                                    let calculatedDiscount = 0;
-                                                    if (order.applied_promo_codes && Array.isArray(order.applied_promo_codes) && order.applied_promo_codes.length > 0) {
-                                                        calculatedDiscount = order.applied_promo_codes.reduce((sum, promo) => sum + (promo.discount || 0), 0);
-                                                    } else if (order.discount_total > 0) {
-                                                        calculatedDiscount = order.discount_total;
-                                                    } else if (order.promo_percentage > 0) {
+                                                    let calculatedDiscount = order.discount_total || 0;
+                                                    const bundleDiscount = (order.bundle_metadata || []).reduce((sum: number, b: any) => sum + (b.total_discount || 0), 0);
+                                                    if (bundleDiscount > 0 && calculatedDiscount === 0) {
+                                                        calculatedDiscount = bundleDiscount;
+                                                    }
+                                                    if (calculatedDiscount === 0 && order.applied_promo_codes && Array.isArray(order.applied_promo_codes) && order.applied_promo_codes.length > 0) {
+                                                        calculatedDiscount = order.applied_promo_codes.reduce((sum: number, promo: any) => sum + (promo.discount || 0), 0);
+                                                    } else if (calculatedDiscount === 0 && order.promo_percentage > 0) {
                                                         calculatedDiscount = order.subtotal * (order.promo_percentage / 100);
                                                     }
 
-                                                    // Calculate correct total
-                                                    const correctTotal = order.subtotal + order.shipping_total - calculatedDiscount;
-                                                    const displayTotal = calculatedDiscount > 0 && order.final_order_total > correctTotal
-                                                        ? correctTotal
-                                                        : order.final_order_total;
+                                                    const calculatedTotal = Math.max(0, order.subtotal + order.shipping_total - calculatedDiscount);
+                                                    const displayTotal = calculatedDiscount > 0
+                                                        ? calculatedTotal
+                                                        : (order.final_order_total > 0 ? order.final_order_total : calculatedTotal);
 
-                                                    return t('{{price, currency}}', { price: displayTotal });
+                                                    return t('{{price, currency}}', { price: Math.round(displayTotal * 100) / 100 });
                                                 })()}
                                             </td>
                                             <td className="px-4 py-3 text-gray-600">
@@ -680,24 +686,30 @@ export function OrdersScreen({ initialOrders, promoCodes = [] }: { initialOrders
                                                 </div>
                                             )}
                                             {(() => {
-                                                // Calculate discount with multiple fallbacks:
-                                                // 1. First check applied_promo_codes array (sum of all discounts)
-                                                // 2. Then check discount_total
-                                                // 3. Finally fallback to promo_percentage calculation
                                                 let calculatedDiscount = order.discount_total || 0;
+                                                const bundleDiscount = (order.bundle_metadata || []).reduce((sum: number, b: any) => sum + (b.total_discount || 0), 0);
+                                                if (bundleDiscount > 0 && calculatedDiscount === 0) {
+                                                    calculatedDiscount = bundleDiscount;
+                                                }
 
                                                 if (calculatedDiscount === 0 && order.applied_promo_codes && Array.isArray(order.applied_promo_codes) && order.applied_promo_codes.length > 0) {
-                                                    // Sum all discounts from applied promo codes
                                                     calculatedDiscount = order.applied_promo_codes.reduce((sum, promo) => sum + (promo.discount || 0), 0);
                                                 } else if (calculatedDiscount === 0 && order.promo_percentage > 0) {
                                                     calculatedDiscount = order.subtotal * (order.promo_percentage / 100);
+                                                }
+
+                                                if (calculatedDiscount === 0 && order.final_order_total > 0) {
+                                                    const diff = (order.subtotal + order.shipping_total) - order.final_order_total;
+                                                    if (diff > 0.01) {
+                                                        calculatedDiscount = Math.round(diff * 100) / 100;
+                                                    }
                                                 }
 
                                                 return calculatedDiscount > 0 && (
                                                     <div>
                                                         <span className="font-medium">{t("discount") || "Discount"}:</span>{' '}
                                                         <span className="text-green-600 font-medium">
-                                                            -{t('{{price, currency}}', { price: calculatedDiscount })}
+                                                            -{t('{{price, currency}}', { price: Math.round(calculatedDiscount * 100) / 100 })}
                                                         </span>
                                                     </div>
                                                 );
@@ -726,22 +738,23 @@ export function OrdersScreen({ initialOrders, promoCodes = [] }: { initialOrders
                                             </p>
                                             <p className="text-xl font-bold text-gray-900">
                                                 {(() => {
-                                                    // Calculate discount with multiple fallbacks
-                                                    let calculatedDiscount = 0;
-                                                    if (order.applied_promo_codes && Array.isArray(order.applied_promo_codes) && order.applied_promo_codes.length > 0) {
-                                                        calculatedDiscount = order.applied_promo_codes.reduce((sum, promo) => sum + (promo.discount || 0), 0);
-                                                    } else if (order.discount_total > 0) {
-                                                        calculatedDiscount = order.discount_total;
-                                                    } else if (order.promo_percentage > 0) {
+                                                    let calculatedDiscount = order.discount_total || 0;
+                                                    const bundleDiscount = (order.bundle_metadata || []).reduce((sum: number, b: any) => sum + (b.total_discount || 0), 0);
+                                                    if (bundleDiscount > 0 && calculatedDiscount === 0) {
+                                                        calculatedDiscount = bundleDiscount;
+                                                    }
+                                                    if (calculatedDiscount === 0 && order.applied_promo_codes && Array.isArray(order.applied_promo_codes) && order.applied_promo_codes.length > 0) {
+                                                        calculatedDiscount = order.applied_promo_codes.reduce((sum: number, promo) => sum + (promo.discount || 0), 0);
+                                                    } else if (calculatedDiscount === 0 && order.promo_percentage > 0) {
                                                         calculatedDiscount = order.subtotal * (order.promo_percentage / 100);
                                                     }
 
-                                                    const correctTotal = order.subtotal + order.shipping_total - calculatedDiscount;
-                                                    const displayTotal = calculatedDiscount > 0 && order.final_order_total > correctTotal
-                                                        ? correctTotal
-                                                        : order.final_order_total;
+                                                    const calculatedTotal = Math.max(0, order.subtotal + order.shipping_total - calculatedDiscount);
+                                                    const displayTotal = calculatedDiscount > 0
+                                                        ? calculatedTotal
+                                                        : (order.final_order_total > 0 ? order.final_order_total : calculatedTotal);
 
-                                                    return t('{{price, currency}}', { price: displayTotal });
+                                                    return t('{{price, currency}}', { price: Math.round(displayTotal * 100) / 100 });
                                                 })()}
                                             </p>
                                         </div>

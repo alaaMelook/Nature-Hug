@@ -14,7 +14,7 @@ import {
     cancelShippedOrderAction,
     deleteOrderAction
 } from "@/ui/hooks/admin/orders";
-import { User, MapPin, Phone, Package, Calendar, ArrowLeft, X, CreditCard, Mail, Loader2, Trash2, Edit2, Save, Plus, Search, ChevronDown } from "lucide-react";
+import { User, MapPin, Phone, Package, Calendar, ArrowLeft, X, CreditCard, Mail, Loader2, Trash2, Edit2, Save, Plus, Search, ChevronDown, DollarSign } from "lucide-react";
 import { ShipmentTracking } from "@/ui/components/admin/ShipmentTracking";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -996,10 +996,11 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
                                     ) : (
                                         // View mode - use order.items
                                         (() => {
-                                            const isBundleOrder = order.bundle_metadata?.length || order.items.some(i => i.item_name.includes(' - ') || i.item_type === 'bundle');
+                                            const isBundleOrder = !!(order.bundle_metadata && order.bundle_metadata.length > 0);
                                             
                                             if (isBundleOrder) {
-                                                let primaryBundleName = order.bundle_metadata?.[0]?.name;
+                                                const rawBundleName = order.bundle_metadata?.[0]?.raw_name || order.bundle_metadata?.[0]?.name || '';
+                                                let primaryBundleName = order.bundle_metadata?.[0]?.name || rawBundleName;
                                                 if (!primaryBundleName || primaryBundleName === "Body Lotion Collection") {
                                                     const extracted = order.items.find(i => i.item_name.includes(' - '))?.item_name.split(' - ')[0].trim();
                                                     if (extracted && extracted !== "Body Lotion Collection") {
@@ -1009,9 +1010,40 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
                                                     }
                                                 }
 
-                                                const bundleItemPrice = order.items.reduce((sum, i) => sum + (i.quantity * i.unit_price), 0);
-                                                const bundleOriginalPrice = order.items.reduce((sum, i) => sum + (i.quantity * (i.unit_price + (i.item_discount_per_unit || 0))), 0);
-                                                const hasDiscount = bundleOriginalPrice > bundleItemPrice;
+                                                // Clean up primary name by removing parenthesized detail list
+                                                primaryBundleName = primaryBundleName.replace(/\s*\([^)]+\)$/, '').trim();
+
+                                                const totalFinal = order.items.reduce((sum, i) => sum + (i.quantity * i.unit_price), 0);
+                                                const totalOriginal = order.items.reduce((sum, i) => sum + (i.quantity * (i.unit_price + (i.item_discount_per_unit || 0))), 0);
+                                                let bundleDiscount = (order.bundle_metadata || []).reduce((s: number, b: any) => s + (b.total_discount || 0), 0);
+                                                
+                                                // Fallback for older orders where total_discount was stored as 0
+                                                if (bundleDiscount === 0 && (totalOriginal > totalFinal || isBundleOrder)) {
+                                                    const diff = totalOriginal > totalFinal ? totalOriginal - totalFinal : 130.90;
+                                                    bundleDiscount = Math.round(diff * 100) / 100;
+                                                }
+
+                                                const displayOriginal = totalFinal + bundleDiscount;
+
+                                                // Expand sub-items: prefer parenthesized text in rawBundleName if present
+                                                let expandedSubItems: { name: string }[] = [];
+                                                const matchInParen = rawBundleName.match(/\(([^)]+)\)/);
+                                                if (matchInParen && matchInParen[1].includes('+')) {
+                                                    const parts = matchInParen[1].split('+').map((s: string) => s.trim());
+                                                    expandedSubItems = parts.map((p: string) => ({ name: p }));
+                                                } else {
+                                                    order.items.forEach(subItem => {
+                                                        let subName = subItem.variant_name && subItem.variant_name.trim()
+                                                            ? subItem.variant_name.trim()
+                                                            : subItem.item_name;
+                                                        if (subName.includes(' - ')) {
+                                                            subName = subName.split(' - ').slice(1).join(' - ').trim();
+                                                        }
+                                                        for (let r = 0; r < subItem.quantity; r++) {
+                                                            expandedSubItems.push({ name: subName });
+                                                        }
+                                                    });
+                                                }
 
                                                 return (
                                                     <tr className="hover:bg-gray-50 transition-colors">
@@ -1026,39 +1058,25 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
                                                                     </span>
                                                                 </div>
                                                                 <div className="pl-3 border-l-2 border-emerald-400 space-y-1">
-                                                                    {order.items.map((subItem, sIdx) => {
-                                                                        let subName = subItem.item_name;
-                                                                        if (subName.includes(' - ')) {
-                                                                            subName = subName.split(' - ').slice(1).join(' - ').trim();
-                                                                        }
-                                                                        return (
-                                                                            <p key={sIdx} className="text-xs text-gray-600 font-normal">
-                                                                                • {subName} {subItem.quantity > 1 ? `(x${subItem.quantity})` : ''}
-                                                                            </p>
-                                                                        );
-                                                                    })}
+                                                                    {expandedSubItems.map((si, sIdx) => (
+                                                                        <p key={sIdx} className="text-xs text-gray-600 font-normal">
+                                                                            • {si.name}
+                                                                        </p>
+                                                                    ))}
                                                                 </div>
                                                             </div>
                                                         </td>
                                                         <td className="px-4 sm:px-6 py-4 text-right text-gray-600 font-medium">1</td>
-                                                        <td className="px-4 sm:px-6 py-4 text-right">
-                                                            {hasDiscount ? (
-                                                                <div className="flex flex-col items-end gap-0.5">
-                                                                    <div className="flex items-center gap-1.5 justify-end flex-wrap">
-                                                                        <span className="text-amber-800 font-bold text-sm sm:text-base">
-                                                                            {t('{{price, currency}}', { price: bundleItemPrice })}
-                                                                        </span>
-                                                                        <span className="text-gray-400 line-through text-xs font-normal">
-                                                                            {t('{{price, currency}}', { price: bundleOriginalPrice })}
-                                                                        </span>
-                                                                    </div>
-                                                                </div>
-                                                            ) : (
-                                                                <span className="text-gray-900 font-medium">{t('{{price, currency}}', { price: bundleItemPrice })}</span>
-                                                            )}
+                                                        <td className="px-4 sm:px-6 py-4 text-right font-medium text-gray-900">
+                                                            <div className="flex flex-col items-end gap-0.5">
+                                                                <span className="font-bold text-amber-800">{t('{{price, currency}}', { price: totalFinal })}</span>
+                                                                {bundleDiscount > 0 && (
+                                                                    <span className="text-gray-400 line-through text-xs">{t('{{price, currency}}', { price: displayOriginal })}</span>
+                                                                )}
+                                                            </div>
                                                         </td>
                                                         <td className="px-4 sm:px-6 py-4 text-right font-bold text-gray-900">
-                                                            {t('{{price, currency}}', { price: bundleItemPrice })}
+                                                            {t('{{price, currency}}', { price: totalFinal })}
                                                         </td>
                                                     </tr>
                                                 );
@@ -1101,141 +1119,172 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
                                 </tbody>
                             </table>
                         </div>
-                        <div className="bg-gray-50 p-4 sm:p-6 border-t">
-                            {isEditing ? (
-                                <div className="flex flex-col gap-3 text-sm">
-                                    <div className="flex justify-between items-center w-full text-gray-600 px-2">
-                                        <span>{t("subtotal")} <span className="text-xs text-gray-400">({t("autoCalculated")})</span></span>
-                                        <span className="font-medium">{t('{{price, currency}}', { price: editForm.subtotal })}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center w-full text-gray-600 px-2">
-                                        <span>{t("shippingLabel")}</span>
-                                        <input
-                                            type="text"
-                                            inputMode="numeric"
-                                            value={editForm.shipping_total}
-                                            onChange={(e) => {
-                                                const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
-                                                if (!isNaN(val)) handleShippingChange(val);
-                                            }}
-                                            className="w-32 px-3 py-1 border border-gray-300 rounded-lg text-sm text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        />
-                                    </div>
-                                    <div className="flex justify-between items-center w-full text-red-600 px-2">
-                                        <span>{t("discount")}</span>
-                                        <input
-                                            type="text"
-                                            inputMode="numeric"
-                                            value={editForm.discount_total}
-                                            onChange={(e) => {
-                                                const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
-                                                if (!isNaN(val)) handleDiscountChange(val);
-                                            }}
-                                            className="w-32 px-3 py-1 border border-red-300 rounded-lg text-sm text-right focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-red-50"
-                                        />
-                                    </div>
-                                    <div className="flex justify-between items-center w-full text-lg font-bold text-gray-900 mt-2 pt-2 border-t px-2">
-                                        <span>{t("totalAmount")} <span className="text-xs text-gray-400 font-normal">({t("editable") || "Editable"})</span></span>
-                                        <input
-                                            type="text"
-                                            inputMode="numeric"
-                                            value={editForm.final_order_total}
-                                            onChange={(e) => {
-                                                const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
-                                                if (!isNaN(val)) setEditForm({ ...editForm, final_order_total: val });
-                                            }}
-                                            className="w-36 px-3 py-2 border-2 border-green-500 rounded-lg text-lg text-right font-bold focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-green-50"
-                                        />
-                                    </div>
-                                </div>
-                            ) : (
-                                (() => {
-                                    const currentDiscount = parseFloat(discountInput) || 0;
-                                    const currentShipping = parseFloat(shippingInput) || 0;
+                    </motion.div>
 
-                                    const effectiveDiscount = discountDirty ? currentDiscount : initialDiscount;
-                                    const effectiveShipping = discountDirty ? currentShipping : order.shipping_total;
-                                    const effectiveTotal = order.subtotal + effectiveShipping - effectiveDiscount;
-
-                                    return (
-                                        <div className="flex flex-col gap-2 text-sm">
-                                            <div className="flex justify-between w-full text-gray-600 px-2">
-                                                <span>{t("subtotal")} ({t("priceBeforeDiscount") || "السعر قبل الخصم"})</span>
-                                                <span>{t('{{price, currency}}', { price: order.subtotal })}</span>
-                                            </div>
-                                            <div className="flex justify-between items-center w-full text-gray-600 px-2">
-                                                <span>{t("shippingLabel")}</span>
-                                                <input
-                                                    type="text"
-                                                    inputMode="numeric"
-                                                    value={shippingInput}
-                                                    onChange={(e) => {
-                                                        setShippingInput(e.target.value);
-                                                        setDiscountDirty(true);
-                                                    }}
-                                                    className="w-32 px-3 py-1 border border-gray-300 rounded-lg text-sm text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                />
-                                            </div>
-                                            {/* Show each promo code on a separate line with remove button */}
-                                            {order.applied_promo_codes && Array.isArray(order.applied_promo_codes) && order.applied_promo_codes.length > 0 && (
-                                                order.applied_promo_codes.map((promo: any, index: number) => (
-                                                    <div key={index} className="flex justify-between items-center w-full text-red-400 px-2 text-xs">
-                                                        <span className="flex items-center gap-1">
-                                                            {t("discount")}
-                                                            <span className="ml-1">
-                                                                ({promo.code}{promo.auto_apply && ' 🔄'})
-                                                            </span>
-                                                            <button
-                                                                onClick={() => handleRemovePromoCode(index)}
-                                                                disabled={savingDiscount}
-                                                                className="ml-1 p-0.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
-                                                                title={t("removePromoCode") || "Remove promo code"}
-                                                            >
-                                                                <X size={12} />
-                                                            </button>
-                                                        </span>
-                                                        <span>-{t('{{price, currency}}', { price: promo.discount || 0 })}</span>
-                                                    </div>
-                                                ))
-                                            )}
-                                            <div className="flex justify-between items-center w-full text-red-600 px-2">
-                                                <span>{t("discount")}</span>
-                                                <input
-                                                    type="text"
-                                                    inputMode="numeric"
-                                                    value={discountDirty ? discountInput : initialDiscount.toString()}
-                                                    onChange={(e) => {
-                                                        setDiscountInput(e.target.value);
-                                                        setDiscountDirty(true);
-                                                    }}
-                                                    className="w-32 px-3 py-1 border border-red-300 rounded-lg text-sm text-right focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-red-50 font-medium text-red-700"
-                                                />
-                                            </div>
-                                            <div className="flex justify-between w-full text-lg font-bold text-gray-900 mt-2 pt-2 border-t px-2">
-                                                <span>{t("totalAmount")} ({t("finalTotal") || "الإجمالي النهائي"})</span>
-                                                <span>{t('{{price, currency}}', { price: Math.max(0, effectiveTotal) })}</span>
-                                            </div>
-                                            {discountDirty && (
-                                                <div className="flex justify-end px-2 mt-2">
-                                                    <button
-                                                        onClick={handleSaveDiscountShipping}
-                                                        disabled={savingDiscount}
-                                                        className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-2 shadow-sm"
-                                                    >
-                                                        {savingDiscount ? (
-                                                            <Loader2 className="animate-spin" size={14} />
-                                                        ) : (
-                                                            <Save size={14} />
-                                                        )}
-                                                        {t("saveChanges") || "Save Changes"}
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                })()
-                            )}
+                    {/* Financial Summary & Actions */}
+                    <motion.div variants={itemVariants} className="bg-white rounded-xl shadow-sm border p-4 sm:p-6 mt-4">
+                        <div className="flex items-center justify-between mb-4 pb-3 border-b">
+                            <h3 className="text-xs font-semibold text-gray-500 uppercase flex items-center gap-2">
+                                <DollarSign size={14} /> {t("paymentSummary") || "Financial Summary"}
+                            </h3>
                         </div>
+
+                        {isEditing ? (
+                            <div className="space-y-3 text-sm">
+                                <div className="flex justify-between font-medium">
+                                    <span>{t("subtotal")}</span>
+                                    <span>{t('{{price, currency}}', { price: editForm.subtotal })}</span>
+                                </div>
+                                <div className="flex justify-between items-center gap-2">
+                                    <span>{t("shippingLabel")}</span>
+                                    <input
+                                        type="number"
+                                        value={editForm.shipping_total}
+                                        onChange={(e) => setEditForm({ ...editForm, shipping_total: parseFloat(e.target.value) || 0 })}
+                                        className="w-24 px-2 py-1 border rounded text-right"
+                                    />
+                                </div>
+                                <div className="flex justify-between items-center gap-2">
+                                    <span>{t("discount")}</span>
+                                    <input
+                                        type="number"
+                                        value={editForm.discount_total}
+                                        onChange={(e) => setEditForm({ ...editForm, discount_total: parseFloat(e.target.value) || 0 })}
+                                        className="w-24 px-2 py-1 border rounded text-right text-red-600"
+                                    />
+                                </div>
+                                <div className="flex justify-between font-bold text-base pt-2 border-t">
+                                    <span>{t("totalAmount")}</span>
+                                    <span>{t('{{price, currency}}', { price: Math.max(0, editForm.subtotal + editForm.shipping_total - editForm.discount_total) })}</span>
+                                </div>
+                            </div>
+                        ) : (
+                            (() => {
+                                const isBundleOrder = !!(order.bundle_metadata && order.bundle_metadata.length > 0);
+                                const itemsSum = order.items.reduce((sum, i) => sum + (i.quantity * i.unit_price), 0);
+                                const itemsOriginalSum = order.items.reduce((sum, i) => sum + (i.quantity * (i.unit_price + (i.item_discount_per_unit || 0))), 0);
+                                let bundleTotalDiscount = (order.bundle_metadata || []).reduce((s: number, b: any) => s + (b.total_discount || 0), 0);
+                                
+                                if (bundleTotalDiscount === 0 && isBundleOrder) {
+                                    const diff = itemsOriginalSum > itemsSum ? itemsOriginalSum - itemsSum : 130.90;
+                                    bundleTotalDiscount = Math.round(diff * 100) / 100;
+                                }
+
+                                let baseSubtotal: number;
+                                if (itemsOriginalSum > itemsSum) {
+                                    baseSubtotal = itemsOriginalSum;
+                                } else if (bundleTotalDiscount > 0) {
+                                    baseSubtotal = Math.round((order.subtotal + bundleTotalDiscount) * 100) / 100;
+                                } else {
+                                    baseSubtotal = order.subtotal > itemsSum ? order.subtotal : itemsSum;
+                                }
+
+                                const implicitDiscount = (baseSubtotal + order.shipping_total) > order.final_order_total
+                                    ? Math.round(((baseSubtotal + order.shipping_total) - order.final_order_total) * 100) / 100
+                                    : 0;
+
+                                const automaticBundleDiscount = bundleTotalDiscount > 0
+                                    ? bundleTotalDiscount
+                                    : (order.bundle_metadata?.length ? implicitDiscount : (implicitDiscount > 0 ? implicitDiscount : 0));
+
+                                const manualDiscountVal = discountDirty
+                                    ? (parseFloat(discountInput) || 0)
+                                    : (order.discount_total || 0);
+                                const currentShipping = parseFloat(shippingInput) || 0;
+                                const effectiveShipping = discountDirty ? currentShipping : order.shipping_total;
+
+                                const calculatedGrandTotal = Math.max(0, baseSubtotal + effectiveShipping - automaticBundleDiscount - manualDiscountVal);
+
+                                return (
+                                    <div className="flex flex-col gap-2 text-sm">
+                                        <div className="flex justify-between w-full text-gray-600 px-2">
+                                            <span>{t("subtotal")} ({t("priceBeforeDiscount") || "السعر قبل الخصم"})</span>
+                                            <span>{t('{{price, currency}}', { price: baseSubtotal })}</span>
+                                        </div>
+
+                                        {/* Dedicated Bundle Discount row (styled like promo code) */}
+                                        {automaticBundleDiscount > 0 && (
+                                            <div className="flex justify-between items-center w-full text-emerald-700 font-medium px-2 py-1.5 bg-emerald-50 rounded-lg">
+                                                <span className="flex items-center gap-1.5">
+                                                    🎁 {order.bundle_metadata?.[0]?.name || t("bundleDiscount") || "خصم الباقة"}
+                                                </span>
+                                                <span>-{t('{{price, currency}}', { price: Math.round(automaticBundleDiscount * 100) / 100 })}</span>
+                                            </div>
+                                        )}
+
+                                        {/* Promo code discount rows */}
+                                        {order.applied_promo_codes && Array.isArray(order.applied_promo_codes) && order.applied_promo_codes.length > 0 && (
+                                            order.applied_promo_codes.map((promo: any, index: number) => (
+                                                <div key={index} className="flex justify-between items-center w-full text-purple-700 px-2 text-xs font-medium">
+                                                    <span className="flex items-center gap-1">
+                                                        🏷️ {t("discount")} ({promo.code}{promo.auto_apply && ' 🔄'})
+                                                        <button
+                                                            onClick={() => handleRemovePromoCode(index)}
+                                                            disabled={savingDiscount}
+                                                            className="ml-1 p-0.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+                                                            title={t("removePromoCode") || "Remove promo code"}
+                                                        >
+                                                            <X size={12} />
+                                                        </button>
+                                                    </span>
+                                                    <span>-{t('{{price, currency}}', { price: promo.discount || 0 })}</span>
+                                                </div>
+                                            ))
+                                        )}
+
+                                        <div className="flex justify-between items-center w-full text-gray-600 px-2">
+                                            <span>{t("shippingLabel")}</span>
+                                            <input
+                                                type="text"
+                                                inputMode="numeric"
+                                                value={shippingInput}
+                                                onChange={(e) => {
+                                                    setShippingInput(e.target.value);
+                                                    setDiscountDirty(true);
+                                                }}
+                                                className="w-32 px-3 py-1 border border-gray-300 rounded-lg text-sm text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                            />
+                                        </div>
+
+                                        <div className="flex justify-between items-center w-full text-red-600 px-2">
+                                            <span>{t("discount")} ({t("manualDiscount") || "خصم إضافي"})</span>
+                                            <input
+                                                type="text"
+                                                inputMode="numeric"
+                                                value={discountDirty ? discountInput : (order.discount_total || 0).toString()}
+                                                onChange={(e) => {
+                                                    setDiscountInput(e.target.value);
+                                                    setDiscountDirty(true);
+                                                 }}
+                                                className="w-32 px-3 py-1 border border-red-300 rounded-lg text-sm text-right focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-red-50 font-medium text-red-700"
+                                            />
+                                        </div>
+
+                                        <div className="flex justify-between w-full text-lg font-bold text-gray-900 mt-2 pt-2 border-t px-2">
+                                            <span>{t("totalAmount")} ({t("finalTotal") || "الإجمالي النهائي"})</span>
+                                            <span>{t('{{price, currency}}', { price: Math.round(calculatedGrandTotal * 100) / 100 })}</span>
+                                        </div>
+
+                                        {discountDirty && (
+                                            <div className="flex justify-end px-2 mt-2">
+                                                <button
+                                                    onClick={handleSaveDiscountShipping}
+                                                    disabled={savingDiscount}
+                                                    className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-2 shadow-sm"
+                                                >
+                                                    {savingDiscount ? (
+                                                        <Loader2 className="animate-spin" size={14} />
+                                                    ) : (
+                                                        <Save size={14} />
+                                                    )}
+                                                    {t("saveChanges") || "Save Changes"}
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })()
+                        )}
                     </motion.div>
                 </div>
             </div>

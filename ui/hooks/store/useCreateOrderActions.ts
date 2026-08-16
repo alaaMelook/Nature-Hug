@@ -86,37 +86,91 @@ export async function createOrder(data: Partial<Order>, isAdmin: boolean, items:
                 for (let idx = 0; idx < bundleItems.length; idx++) {
                     const bi = bundleItems[idx];
                     const rawPrice = bi.variant?.price || bi.product?.price || 100;
-                    const itemQty = (bi.quantity || 1) * item.quantity;
+                    const biQty = bi.quantity || 1; // quantity per bundle slot
+                    const totalItemQty = biQty * item.quantity; // total across bundle qty
                     
                     // Proportionally discounted unit price for this component item
                     const discountedUnitPrice = sumOriginal > 0 ? Math.round(rawPrice * priceRatio * 100) / 100 : rawPrice;
                     const itemDiscountPerUnit = sumOriginal > 0 ? Math.max(0, Math.round((rawPrice - discountedUnitPrice) * 100) / 100) : 0;
 
-                    let chosenVariantId = bi.variant_id || null;
-                    if ((item as any).selected_variants) {
-                        const selVars = (item as any).selected_variants;
-                        for (const key of Object.keys(selVars)) {
-                            if (key.startsWith(`${bi.product_id}-`) && selVars[key]?.id) {
-                                chosenVariantId = selVars[key].id;
-                                break;
+                    const selVars = (item as any).selected_variants;
+
+                    // Check if slots have different variants selected (e.g. KeraCalm qty=2 with slot-0=50gm, slot-1=115g)
+                    if (biQty > 1 && selVars) {
+                        // Collect all slot variant IDs for this product
+                        const slotVariants: { variantId: number | null; price: number }[] = [];
+                        for (let s = 0; s < biQty; s++) {
+                            const slotKey = `${bi.product_id}-${s}`;
+                            const slotVar = selVars[slotKey];
+                            slotVariants.push({
+                                variantId: slotVar?.id ?? bi.variant_id ?? null,
+                                price: slotVar?.price ?? rawPrice
+                            });
+                        }
+
+                        // Check if all slots share the same variant
+                        const allSame = slotVariants.every(sv => sv.variantId === slotVariants[0].variantId);
+
+                        if (allSame) {
+                            // All same variant → single item with totalItemQty
+                            bundleItemDiscounts.push({
+                                verifiedItemIndex: verifiedItems.length,
+                                discountPerUnit: itemDiscountPerUnit,
+                                bundleGroupName: bundleName
+                            });
+                            verifiedItems.push({
+                                product_id: bi.product_id,
+                                variant_id: slotVariants[0].variantId,
+                                quantity: totalItemQty,
+                                unit_price: discountedUnitPrice,
+                                discount: itemDiscountPerUnit
+                            });
+                        } else {
+                            // Different variants per slot → one order item per slot (× item.quantity each)
+                            for (let s = 0; s < biQty; s++) {
+                                const sv = slotVariants[s];
+                                const slotRawPrice = sv.price || rawPrice;
+                                const slotDiscountedPrice = sumOriginal > 0 ? Math.round(slotRawPrice * priceRatio * 100) / 100 : slotRawPrice;
+                                const slotDiscountPerUnit = Math.max(0, Math.round((slotRawPrice - slotDiscountedPrice) * 100) / 100);
+                                bundleItemDiscounts.push({
+                                    verifiedItemIndex: verifiedItems.length,
+                                    discountPerUnit: slotDiscountPerUnit,
+                                    bundleGroupName: bundleName
+                                });
+                                verifiedItems.push({
+                                    product_id: bi.product_id,
+                                    variant_id: sv.variantId,
+                                    quantity: item.quantity, // 1 slot per bundle qty
+                                    unit_price: slotDiscountedPrice,
+                                    discount: slotDiscountPerUnit
+                                });
                             }
                         }
+                    } else {
+                        // Single slot or no variants → pick the first matching slot
+                        let chosenVariantId = bi.variant_id || null;
+                        if (selVars) {
+                            for (const key of Object.keys(selVars)) {
+                                if (key.startsWith(`${bi.product_id}-`) && selVars[key]?.id) {
+                                    chosenVariantId = selVars[key].id;
+                                    break;
+                                }
+                            }
+                        }
+
+                        bundleItemDiscounts.push({
+                            verifiedItemIndex: verifiedItems.length,
+                            discountPerUnit: itemDiscountPerUnit,
+                            bundleGroupName: bundleName
+                        });
+                        verifiedItems.push({
+                            product_id: bi.product_id,
+                            variant_id: chosenVariantId,
+                            quantity: totalItemQty,
+                            unit_price: discountedUnitPrice,
+                            discount: itemDiscountPerUnit
+                        });
                     }
-
-                    // Track the index so we can update discount after DB insert
-                    bundleItemDiscounts.push({
-                        verifiedItemIndex: verifiedItems.length,
-                        discountPerUnit: itemDiscountPerUnit,
-                        bundleGroupName: bundleName
-                    });
-
-                    verifiedItems.push({
-                        product_id: bi.product_id,
-                        variant_id: chosenVariantId,
-                        quantity: itemQty,
-                        unit_price: discountedUnitPrice,
-                        discount: itemDiscountPerUnit
-                    });
                 }
             } else {
                 const supabase = await createSupabaseServerClient();
@@ -213,7 +267,9 @@ export async function createOrder(data: Partial<Order>, isAdmin: boolean, items:
     }
 
     // Add bundle discounts to overall calculated discount
-    calculatedDiscount += bundleDiscountAccumulator;
+    // bundleMetaList contains the actual per-bundle discounts computed from item prices
+    const bundleTotalDiscount = bundleMetaList.reduce((sum, b) => sum + (b.total_discount || 0), 0);
+    calculatedDiscount += bundleDiscountAccumulator + bundleTotalDiscount;
 
     // 3. Calculate Shipping
     // First, check if any of the applied_promo_codes has free_shipping
