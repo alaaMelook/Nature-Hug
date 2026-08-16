@@ -997,56 +997,110 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
                                         // View mode - use order.items
                                         (() => {
                                             const isBundleOrder = !!(order.bundle_metadata && order.bundle_metadata.length > 0);
-                                            
-                                            if (isBundleOrder) {
-                                                const rawBundleName = order.bundle_metadata?.[0]?.raw_name || order.bundle_metadata?.[0]?.name || '';
-                                                let primaryBundleName = order.bundle_metadata?.[0]?.name || rawBundleName;
-                                                if (!primaryBundleName || primaryBundleName === "Body Lotion Collection") {
-                                                    const extracted = order.items.find(i => i.item_name.includes(' - '))?.item_name.split(' - ')[0].trim();
-                                                    if (extracted && extracted !== "Body Lotion Collection") {
-                                                        primaryBundleName = extracted;
-                                                    } else {
-                                                        primaryBundleName = "Strawberry skin routine";
-                                                    }
-                                                }
 
-                                                // Clean up primary name by removing parenthesized detail list
-                                                primaryBundleName = primaryBundleName.replace(/\s*\([^)]+\)$/, '').trim();
+                                            if (!isBundleOrder) {
+                                                return order.items.map((item, index) => {
+                                                    const hasDiscount = item.item_discount_per_unit && item.item_discount_per_unit > 0;
+                                                    const originalUnitPrice = hasDiscount ? item.unit_price + item.item_discount_per_unit : item.unit_price;
 
-                                                const totalFinal = order.items.reduce((sum, i) => sum + (i.quantity * i.unit_price), 0);
-                                                const totalOriginal = order.items.reduce((sum, i) => sum + (i.quantity * (i.unit_price + (i.item_discount_per_unit || 0))), 0);
-                                                let bundleDiscount = (order.bundle_metadata || []).reduce((s: number, b: any) => s + (b.total_discount || 0), 0);
-                                                
-                                                // Fallback for older orders where total_discount was stored as 0
-                                                if (bundleDiscount === 0 && (totalOriginal > totalFinal || isBundleOrder)) {
-                                                    const diff = totalOriginal > totalFinal ? totalOriginal - totalFinal : 130.90;
-                                                    bundleDiscount = Math.round(diff * 100) / 100;
-                                                }
+                                                    return (
+                                                        <tr key={index} className="hover:bg-gray-50 transition-colors">
+                                                            <td className="px-4 sm:px-6 py-4 font-medium text-gray-900">
+                                                                {item.item_name}
+                                                            </td>
+                                                            <td className="px-4 sm:px-6 py-4 text-right text-gray-600 font-medium">{item.quantity}</td>
+                                                            <td className="px-4 sm:px-6 py-4 text-right">
+                                                                {hasDiscount ? (
+                                                                    <div className="flex flex-col items-end gap-0.5">
+                                                                        <div className="flex items-center gap-1.5 justify-end flex-wrap">
+                                                                            <span className="text-amber-800 font-bold text-sm sm:text-base">
+                                                                                {t('{{price, currency}}', { price: item.unit_price })}
+                                                                            </span>
+                                                                            <span className="text-gray-400 line-through text-xs font-normal">
+                                                                                {t('{{price, currency}}', { price: originalUnitPrice })}
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+                                                                ) : (
+                                                                    <span className="text-gray-900 font-medium">{t('{{price, currency}}', { price: item.unit_price })}</span>
+                                                                )}
+                                                            </td>
+                                                            <td className="px-4 sm:px-6 py-4 text-right font-bold text-gray-900">
+                                                                {t('{{price, currency}}', { price: item.quantity * item.unit_price })}
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                });
+                                            }
 
-                                                const displayOriginal = totalFinal + bundleDiscount;
+                                            // Partition order.items into bundle items vs regular items
+                                            const bundleItems: typeof order.items = [];
+                                            const regularItems: typeof order.items = [];
 
-                                                // Expand sub-items: prefer parenthesized text in rawBundleName if present
-                                                let expandedSubItems: { name: string }[] = [];
-                                                const matchInParen = rawBundleName.match(/\(([^)]+)\)/);
-                                                if (matchInParen && matchInParen[1].includes('+')) {
-                                                    const parts = matchInParen[1].split('+').map((s: string) => s.trim());
-                                                    expandedSubItems = parts.map((p: string) => ({ name: p }));
+                                            order.items.forEach(subItem => {
+                                                const isOutside = subItem.item_type !== 'bundle' &&
+                                                    (!subItem.item_discount_per_unit || subItem.item_discount_per_unit === 0) &&
+                                                    !subItem.item_name.includes(' - ') &&
+                                                    order.bundle_metadata && order.bundle_metadata.length > 0 &&
+                                                    !order.bundle_metadata.some(b => b.name && subItem.item_name.includes(b.name));
+
+                                                if (isOutside) {
+                                                    regularItems.push(subItem);
                                                 } else {
-                                                    order.items.forEach(subItem => {
-                                                        let subName = subItem.variant_name && subItem.variant_name.trim()
-                                                            ? subItem.variant_name.trim()
-                                                            : subItem.item_name;
-                                                        if (subName.includes(' - ')) {
-                                                            subName = subName.split(' - ').slice(1).join(' - ').trim();
-                                                        }
-                                                        for (let r = 0; r < subItem.quantity; r++) {
-                                                            expandedSubItems.push({ name: subName });
-                                                        }
-                                                    });
+                                                    bundleItems.push(subItem);
                                                 }
+                                            });
 
-                                                return (
-                                                    <tr className="hover:bg-gray-50 transition-colors">
+                                            const finalBundleItems = bundleItems.length > 0 ? bundleItems : order.items;
+                                            const finalRegularItems = bundleItems.length > 0 ? regularItems : [];
+
+                                            const rawBundleName = order.bundle_metadata?.[0]?.raw_name || order.bundle_metadata?.[0]?.name || '';
+                                            let primaryBundleName = order.bundle_metadata?.[0]?.name || rawBundleName;
+                                            if (!primaryBundleName || primaryBundleName === "Body Lotion Collection") {
+                                                const extracted = finalBundleItems.find(i => i.item_name.includes(' - '))?.item_name.split(' - ')[0].trim();
+                                                if (extracted && extracted !== "Body Lotion Collection") {
+                                                    primaryBundleName = extracted;
+                                                } else {
+                                                    primaryBundleName = "Strawberry skin routine";
+                                                }
+                                            }
+
+                                            primaryBundleName = primaryBundleName.replace(/\s*\([^)]+\)$/, '').trim();
+
+                                            const totalFinal = finalBundleItems.reduce((sum, i) => sum + (i.quantity * i.unit_price), 0);
+                                            const totalOriginal = finalBundleItems.reduce((sum, i) => sum + (i.quantity * (i.unit_price + (i.item_discount_per_unit || 0))), 0);
+                                            let bundleDiscount = (order.bundle_metadata || []).reduce((s: number, b: any) => s + (b.total_discount || 0), 0);
+                                            
+                                            if (bundleDiscount === 0 && totalOriginal > totalFinal) {
+                                                const diff = totalOriginal - totalFinal;
+                                                bundleDiscount = Math.round(diff * 100) / 100;
+                                            }
+
+                                            const displayOriginal = totalFinal + bundleDiscount;
+
+                                            let expandedSubItems: { name: string }[] = [];
+                                            const matchInParen = rawBundleName.match(/\(([^)]+)\)/);
+                                            if (matchInParen && matchInParen[1].includes('+')) {
+                                                const parts = matchInParen[1].split('+').map((s: string) => s.trim());
+                                                expandedSubItems = parts.map((p: string) => ({ name: p }));
+                                            } else {
+                                                finalBundleItems.forEach(subItem => {
+                                                    let subName = subItem.variant_name && subItem.variant_name.trim()
+                                                        ? subItem.variant_name.trim()
+                                                        : subItem.item_name;
+                                                    if (subName.includes(' - ')) {
+                                                        subName = subName.split(' - ').slice(1).join(' - ').trim();
+                                                    }
+                                                    for (let r = 0; r < subItem.quantity; r++) {
+                                                        expandedSubItems.push({ name: subName });
+                                                    }
+                                                });
+                                            }
+
+                                            return (
+                                                <>
+                                                    {/* Bundle Row */}
+                                                    <tr className="hover:bg-gray-50 transition-colors bg-emerald-50/20">
                                                         <td className="px-4 sm:px-6 py-4 font-medium text-gray-900">
                                                             <div className="flex flex-col gap-2">
                                                                 <div className="flex items-center gap-2 flex-wrap">
@@ -1079,41 +1133,44 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
                                                             {t('{{price, currency}}', { price: totalFinal })}
                                                         </td>
                                                     </tr>
-                                                );
-                                            }
 
-                                            return order.items.map((item, index) => {
-                                                const hasDiscount = item.item_discount_per_unit && item.item_discount_per_unit > 0;
-                                                const originalUnitPrice = hasDiscount ? item.unit_price + item.item_discount_per_unit : item.unit_price;
+                                                    {/* Standalone regular products outside bundle */}
+                                                    {finalRegularItems.map((item, index) => {
+                                                        const hasDiscount = item.item_discount_per_unit && item.item_discount_per_unit > 0;
+                                                        const originalUnitPrice = hasDiscount ? item.unit_price + item.item_discount_per_unit : item.unit_price;
 
-                                                return (
-                                                    <tr key={index} className="hover:bg-gray-50 transition-colors">
-                                                        <td className="px-4 sm:px-6 py-4 font-medium text-gray-900">
-                                                            {item.item_name}
-                                                        </td>
-                                                        <td className="px-4 sm:px-6 py-4 text-right text-gray-600 font-medium">{item.quantity}</td>
-                                                        <td className="px-4 sm:px-6 py-4 text-right">
-                                                            {hasDiscount ? (
-                                                                <div className="flex flex-col items-end gap-0.5">
-                                                                    <div className="flex items-center gap-1.5 justify-end flex-wrap">
-                                                                        <span className="text-amber-800 font-bold text-sm sm:text-base">
+                                                        return (
+                                                            <tr key={`reg-${index}`} className="hover:bg-gray-50 transition-colors">
+                                                                <td className="px-4 sm:px-6 py-4 font-medium text-gray-900">
+                                                                    {item.item_name}
+                                                                </td>
+                                                                <td className="px-4 sm:px-6 py-4 text-right text-gray-600 font-medium">{item.quantity}</td>
+                                                                <td className="px-4 sm:px-6 py-4 text-right">
+                                                                    {hasDiscount ? (
+                                                                        <div className="flex flex-col items-end gap-0.5">
+                                                                            <div className="flex items-center gap-1.5 justify-end flex-wrap">
+                                                                                <span className="text-amber-800 font-bold text-sm sm:text-base">
+                                                                                    {t('{{price, currency}}', { price: item.unit_price })}
+                                                                                </span>
+                                                                                <span className="text-gray-400 line-through text-xs font-normal">
+                                                                                    {t('{{price, currency}}', { price: originalUnitPrice })}
+                                                                                </span>
+                                                                            </div>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <span className="font-semibold text-gray-900">
                                                                             {t('{{price, currency}}', { price: item.unit_price })}
                                                                         </span>
-                                                                        <span className="text-gray-400 line-through text-xs font-normal">
-                                                                            {t('{{price, currency}}', { price: originalUnitPrice })}
-                                                                        </span>
-                                                                    </div>
-                                                                </div>
-                                                            ) : (
-                                                                <span className="text-gray-900 font-medium">{t('{{price, currency}}', { price: item.unit_price })}</span>
-                                                            )}
-                                                        </td>
-                                                        <td className="px-4 sm:px-6 py-4 text-right font-bold text-gray-900">
-                                                            {t('{{price, currency}}', { price: item.quantity * item.unit_price })}
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            });
+                                                                    )}
+                                                                </td>
+                                                                <td className="px-4 sm:px-6 py-4 text-right font-bold text-gray-900">
+                                                                    {t('{{price, currency}}', { price: item.quantity * item.unit_price })}
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </>
+                                            );
                                         })()
                                     )}
                                 </tbody>

@@ -238,53 +238,126 @@ export default function OrderDetailScreen({ order, fromCheckout }: {
                                     const items = order.order_items || [];
                                     const isBundleOrder = !!(order.bundle_metadata && order.bundle_metadata.length > 0);
 
-                                    if (isBundleOrder) {
-                                        const rawBundleName = order.bundle_metadata?.[0]?.name || '';
-                                        let primaryBundleName = rawBundleName;
-                                        if (!primaryBundleName || primaryBundleName === "Body Lotion Collection") {
-                                            const extracted = items.find((i: any) => (i.name_en || '').includes(' - '))?.name_en.split(' - ')[0].trim();
-                                            if (extracted && extracted !== "Body Lotion Collection") {
-                                                primaryBundleName = extracted;
-                                            } else {
-                                                primaryBundleName = "Strawberry skin routine";
-                                            }
-                                        }
+                                    if (!isBundleOrder) {
+                                        return items.map((it: any, idx: number) => {
+                                            const itemName = i18n.language === 'ar' ? (it.name_ar || it.name_en) : (it.name_en || it.name_ar);
+                                            const discountPerUnit = it.discount_per_unit || (it as any).discount || 0;
+                                            const originalUnitPrice = discountPerUnit > 0 ? it.price + discountPerUnit : it.price;
+                                            const hasDiscount = originalUnitPrice > it.price;
 
-                                        // Clean title by stripping parenthesized component details
-                                        primaryBundleName = primaryBundleName.replace(/\s*\([^)]+\)$/, '').trim();
+                                            return (
+                                                <div key={it.slug || idx} className="flex items-center gap-4 p-4 sm:p-6 hover:bg-gray-50/50 transition-colors">
+                                                    <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0 border border-gray-200">
+                                                        {it.image ? (
+                                                            <Image
+                                                                src={it.image}
+                                                                alt={itemName}
+                                                                fill
+                                                                className="object-cover"
+                                                            />
+                                                        ) : (
+                                                            <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                                                <Package size={24} />
+                                                            </div>
+                                                        )}
+                                                        <span className="absolute bottom-0 right-0 bg-slate-900/90 text-white text-[11px] font-bold px-2 py-0.5 rounded-tl-md">
+                                                            x{it.quantity}
+                                                        </span>
+                                                    </div>
 
-                                        const totalFinal = items.reduce((sum: number, i: any) => sum + (i.quantity * i.price), 0);
-                                        const totalOriginal = items.reduce((sum: number, i: any) => sum + (i.quantity * (i.price + (i.discount_per_unit || 0))), 0);
-                                        let bundleMetaDiscount = (order.bundle_metadata || []).reduce((s: number, b: any) => s + (b.total_discount || 0), 0);
-                                        
-                                        if (bundleMetaDiscount === 0 && isBundleOrder) {
-                                            const diff = totalOriginal > totalFinal ? totalOriginal - totalFinal : 130.90;
-                                            bundleMetaDiscount = Math.round(diff * 100) / 100;
-                                        }
+                                                    <div className="flex-1 min-w-0">
+                                                        <h4 className="text-base sm:text-lg font-semibold text-gray-900 truncate mb-1">
+                                                            {itemName}
+                                                        </h4>
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <span className="text-amber-800 font-bold text-base sm:text-lg">
+                                                                {t('{{price, currency}}', { price: it.price })}
+                                                            </span>
+                                                            {hasDiscount && (
+                                                                <span className="text-gray-400 line-through text-xs sm:text-sm font-normal">
+                                                                    {t('{{price, currency}}', { price: originalUnitPrice })}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        });
+                                    }
 
-                                        const hasDiscount = bundleMetaDiscount > 0 || totalOriginal > totalFinal || (order.discount_total && order.discount_total > 0);
-                                        const displayOriginalPrice = totalFinal + bundleMetaDiscount;
-                                        const firstImage = items[0]?.image;
+                                    // Partition items into bundle sub-items vs standalone regular items
+                                    const bundleItems: any[] = [];
+                                    const regularItems: any[] = [];
 
-                                        // Expand sub-items: prefer parenthesized text in rawBundleName if available
-                                        let expandedSubItems: { name: string }[] = [];
-                                        const matchInParen = rawBundleName.match(/\(([^)]+)\)/);
-                                        if (matchInParen && matchInParen[1].includes('+')) {
-                                            const parts = matchInParen[1].split('+').map(s => s.trim());
-                                            expandedSubItems = parts.map(p => ({ name: p }));
+                                    items.forEach((it: any) => {
+                                        const nameEn = it.name_en || it.name || '';
+                                        const nameAr = it.name_ar || it.name || '';
+                                        const disc = it.discount_per_unit || (it as any).discount || 0;
+                                        const isBundle = it.item_type === 'bundle' ||
+                                            disc > 0 ||
+                                            nameEn.includes(' - ') ||
+                                            nameAr.includes(' - ') ||
+                                            (order.bundle_metadata && order.bundle_metadata.some((b: any) => b.name && (nameEn.includes(b.name) || nameAr.includes(b.name))));
+
+                                        if (isBundle) {
+                                            bundleItems.push(it);
                                         } else {
-                                            items.forEach((subItem: any) => {
-                                                let subName = i18n.language === 'ar' ? (subItem.name_ar || subItem.name_en) : (subItem.name_en || subItem.name_ar);
-                                                if (subName.includes(' - ')) {
-                                                    subName = subName.split(' - ').slice(1).join(' - ').trim();
-                                                }
-                                                for (let r = 0; r < subItem.quantity; r++) {
-                                                    expandedSubItems.push({ name: subName });
-                                                }
-                                            });
+                                            regularItems.push(it);
                                         }
+                                    });
 
-                                        return (
+                                    // Fallback if partition put all in regular
+                                    const finalBundleItems = bundleItems.length > 0 ? bundleItems : items;
+                                    const finalRegularItems = bundleItems.length > 0 ? regularItems : [];
+
+                                    const rawBundleName = order.bundle_metadata?.[0]?.name || '';
+                                    let primaryBundleName = rawBundleName;
+                                    if (!primaryBundleName || primaryBundleName === "Body Lotion Collection") {
+                                        const extracted = finalBundleItems.find((i: any) => (i.name_en || '').includes(' - '))?.name_en.split(' - ')[0].trim();
+                                        if (extracted && extracted !== "Body Lotion Collection") {
+                                            primaryBundleName = extracted;
+                                        } else {
+                                            primaryBundleName = "Strawberry skin routine";
+                                        }
+                                    }
+
+                                    // Clean title by stripping parenthesized component details
+                                    primaryBundleName = primaryBundleName.replace(/\s*\([^)]+\)$/, '').trim();
+
+                                    const bundleFinal = finalBundleItems.reduce((sum: number, i: any) => sum + (i.quantity * i.price), 0);
+                                    const bundleOriginal = finalBundleItems.reduce((sum: number, i: any) => sum + (i.quantity * (i.price + (i.discount_per_unit || 0))), 0);
+                                    let bundleMetaDiscount = (order.bundle_metadata || []).reduce((s: number, b: any) => s + (b.total_discount || 0), 0);
+
+                                    if (bundleMetaDiscount === 0) {
+                                        const diff = bundleOriginal > bundleFinal ? bundleOriginal - bundleFinal : 130.90;
+                                        bundleMetaDiscount = Math.round(diff * 100) / 100;
+                                    }
+
+                                    const hasDiscount = bundleMetaDiscount > 0 || bundleOriginal > bundleFinal;
+                                    const displayOriginalPrice = bundleFinal + bundleMetaDiscount;
+                                    const firstImage = finalBundleItems[0]?.image;
+
+                                    // Expand sub-items: prefer parenthesized text in rawBundleName if available
+                                    let expandedSubItems: { name: string }[] = [];
+                                    const matchInParen = rawBundleName.match(/\(([^)]+)\)/);
+                                    if (matchInParen && matchInParen[1].includes('+')) {
+                                        const parts = matchInParen[1].split('+').map(s => s.trim());
+                                        expandedSubItems = parts.map(p => ({ name: p }));
+                                    } else {
+                                        finalBundleItems.forEach((subItem: any) => {
+                                            let subName = i18n.language === 'ar' ? (subItem.name_ar || subItem.name_en) : (subItem.name_en || subItem.name_ar);
+                                            if (subName.includes(' - ')) {
+                                                subName = subName.split(' - ').slice(1).join(' - ').trim();
+                                            }
+                                            for (let r = 0; r < subItem.quantity; r++) {
+                                                expandedSubItems.push({ name: subName });
+                                            }
+                                        });
+                                    }
+
+                                    return (
+                                        <>
+                                            {/* Bundle Card */}
                                             <div className="p-4 sm:p-6 flex flex-col gap-3">
                                                 <div className="flex gap-4 items-start">
                                                     <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0 border border-gray-200">
@@ -316,7 +389,7 @@ export default function OrderDetailScreen({ order, fromCheckout }: {
                                                         </div>
                                                         <div className="flex items-center gap-2 mt-1 flex-wrap">
                                                             <span className="text-amber-800 font-bold text-base sm:text-lg">
-                                                                {t('{{price, currency}}', { price: totalFinal })}
+                                                                {t('{{price, currency}}', { price: bundleFinal })}
                                                             </span>
                                                             {hasDiscount && (
                                                                 <span className="text-gray-400 line-through text-xs sm:text-sm font-normal">
@@ -336,53 +409,54 @@ export default function OrderDetailScreen({ order, fromCheckout }: {
                                                     ))}
                                                 </div>
                                             </div>
-                                        );
-                                    }
 
-                                    return items.map((it: any, idx: number) => {
-                                        const itemName = i18n.language === 'ar' ? (it.name_ar || it.name_en) : (it.name_en || it.name_ar);
-                                        const discountPerUnit = it.discount_per_unit || (it as any).discount || 0;
-                                        const originalUnitPrice = discountPerUnit > 0 ? it.price + discountPerUnit : it.price;
-                                        const hasDiscount = originalUnitPrice > it.price;
+                                            {/* Standalone Regular Products outside the Bundle */}
+                                            {finalRegularItems.map((it: any, idx: number) => {
+                                                const itemName = i18n.language === 'ar' ? (it.name_ar || it.name_en) : (it.name_en || it.name_ar);
+                                                const discountPerUnit = it.discount_per_unit || (it as any).discount || 0;
+                                                const originalUnitPrice = discountPerUnit > 0 ? it.price + discountPerUnit : it.price;
+                                                const itemHasDiscount = originalUnitPrice > it.price;
 
-                                        return (
-                                            <div key={it.slug || idx} className="flex items-center gap-4 p-4 sm:p-6 hover:bg-gray-50/50 transition-colors">
-                                                <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0 border border-gray-200">
-                                                    {it.image ? (
-                                                        <Image
-                                                            src={it.image}
-                                                            alt={itemName}
-                                                            fill
-                                                            className="object-cover"
-                                                        />
-                                                    ) : (
-                                                        <div className="w-full h-full flex items-center justify-center text-gray-400">
-                                                            <Package size={24} />
-                                                        </div>
-                                                    )}
-                                                    <span className="absolute bottom-0 right-0 bg-slate-900/90 text-white text-[11px] font-bold px-2 py-0.5 rounded-tl-md">
-                                                        x{it.quantity}
-                                                    </span>
-                                                </div>
-
-                                                <div className="flex-1 min-w-0">
-                                                    <h4 className="text-base sm:text-lg font-semibold text-gray-900 truncate mb-1">
-                                                        {itemName}
-                                                    </h4>
-                                                    <div className="flex items-center gap-2 flex-wrap">
-                                                        <span className="text-amber-800 font-bold text-base sm:text-lg">
-                                                            {t('{{price, currency}}', { price: it.price })}
-                                                        </span>
-                                                        {hasDiscount && (
-                                                            <span className="text-gray-400 line-through text-xs sm:text-sm font-normal">
-                                                                {t('{{price, currency}}', { price: originalUnitPrice })}
+                                                return (
+                                                    <div key={it.slug || idx} className="flex items-center gap-4 p-4 sm:p-6 hover:bg-gray-50/50 transition-colors border-t border-gray-100">
+                                                        <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0 border border-gray-200">
+                                                            {it.image ? (
+                                                                <Image
+                                                                    src={it.image}
+                                                                    alt={itemName}
+                                                                    fill
+                                                                    className="object-cover"
+                                                                />
+                                                            ) : (
+                                                                <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                                                    <Package size={24} />
+                                                                </div>
+                                                            )}
+                                                            <span className="absolute bottom-0 right-0 bg-slate-900/90 text-white text-[11px] font-bold px-2 py-0.5 rounded-tl-md">
+                                                                x{it.quantity}
                                                             </span>
-                                                        )}
+                                                        </div>
+
+                                                        <div className="flex-1 min-w-0">
+                                                            <h4 className="text-base sm:text-lg font-semibold text-gray-900 truncate mb-1">
+                                                                {itemName}
+                                                            </h4>
+                                                            <div className="flex items-center gap-2 flex-wrap">
+                                                                <span className="text-amber-800 font-bold text-base sm:text-lg">
+                                                                    {t('{{price, currency}}', { price: it.price })}
+                                                                </span>
+                                                                {itemHasDiscount && (
+                                                                    <span className="text-gray-400 line-through text-xs sm:text-sm font-normal">
+                                                                        {t('{{price, currency}}', { price: originalUnitPrice })}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    });
+                                                );
+                                            })}
+                                        </>
+                                    );
                                 })()}
                             </div>
                         </div>

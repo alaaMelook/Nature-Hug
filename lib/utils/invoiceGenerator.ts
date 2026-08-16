@@ -143,6 +143,7 @@ export const generateInvoicePDF = (orders: OrderDetailsView | OrderDetailsView[]
         const isBundleOrder = order.bundle_metadata?.length || order.items.some(i => i.item_name.includes(' - ') || i.item_type === 'bundle');
 
         let tableBody: any[] = [];
+        const bundleRowIndices = new Set<number>();
 
         if (isBundleOrder) {
             const rawBundleName = order.bundle_metadata?.[0]?.raw_name || order.bundle_metadata?.[0]?.name || '';
@@ -157,30 +158,32 @@ export const generateInvoicePDF = (orders: OrderDetailsView | OrderDetailsView[]
             }
             primaryBundleName = primaryBundleName.replace(/\s*\([^)]+\)$/, '').trim();
 
-            // Build sub-item rows: each item with its standalone price (before bundle discount)
             const subItemRows: any[][] = [];
+            const regularItemRows: any[][] = [];
 
-            const matchInParen = rawBundleName.match(/\(([^)]+)\)/);
-            if (matchInParen && matchInParen[1].includes('+')) {
-                // Parse sub-items from name string (no individual prices available)
-                const parts = matchInParen[1].split('+').map((s: string) => s.trim());
-                parts.forEach((name: string) => {
-                    subItemRows.push([
-                        { content: `   • ${name}`, styles: { fontSize: 9, textColor: [80, 80, 80] } },
-                        { content: '', styles: { halign: 'center' as const } },
-                        { content: '', styles: { halign: 'right' as const } },
-                        { content: '', styles: { halign: 'right' as const } },
+            order.items.forEach(subItem => {
+                let subName = subItem.variant_name && subItem.variant_name.trim()
+                    ? subItem.variant_name.trim()
+                    : subItem.item_name;
+                if (subName.includes(' - ')) {
+                    subName = subName.split(' - ').slice(1).join(' - ').trim();
+                }
+
+                // Check if this item is a standalone item outside the bundle
+                const isOutsideBundle = subItem.item_type !== 'bundle' &&
+                    (!subItem.item_discount_per_unit || subItem.item_discount_per_unit === 0) &&
+                    !subItem.item_name.includes(' - ') &&
+                    order.bundle_metadata && order.bundle_metadata.length > 0 &&
+                    !order.bundle_metadata.some(b => b.name && subItem.item_name.includes(b.name));
+
+                if (isOutsideBundle) {
+                    regularItemRows.push([
+                        { content: subName, styles: { fontSize: 10, textColor: [50, 50, 50] } },
+                        { content: subItem.quantity.toString(), styles: { halign: 'center' as const } },
+                        { content: formatCurrency(subItem.unit_price), styles: { halign: 'right' as const } },
+                        { content: formatCurrency(subItem.quantity * subItem.unit_price), styles: { halign: 'right' as const } }
                     ]);
-                });
-            } else {
-                // Use actual order items with their original prices (unit_price + discount_per_unit)
-                order.items.forEach(subItem => {
-                    let subName = subItem.variant_name && subItem.variant_name.trim()
-                        ? subItem.variant_name.trim()
-                        : subItem.item_name;
-                    if (subName.includes(' - ')) {
-                        subName = subName.split(' - ').slice(1).join(' - ').trim();
-                    }
+                } else {
                     const originalUnitPrice = subItem.unit_price + (subItem.item_discount_per_unit || 0);
                     subItemRows.push([
                         { content: `   • ${subName}`, styles: { fontSize: 9, textColor: [80, 80, 80] } },
@@ -188,23 +191,40 @@ export const generateInvoicePDF = (orders: OrderDetailsView | OrderDetailsView[]
                         { content: formatCurrency(originalUnitPrice), styles: { halign: 'right' as const, fontSize: 9, textColor: [100, 100, 100] } },
                         { content: formatCurrency(originalUnitPrice * subItem.quantity), styles: { halign: 'right' as const, fontSize: 9, textColor: [100, 100, 100] } },
                     ]);
-                });
-            }
+                }
+            });
 
-            // Bundle header row
-            const totalOriginalForHeader = order.items.reduce((sum, i) => sum + (i.quantity * (i.unit_price + (i.item_discount_per_unit || 0))), 0);
+            // Calculate bundle header total using bundle items only (excluding regular standalone items)
+            const bundleItemsOnly = order.items.filter(subItem => {
+                const isOutsideBundle = subItem.item_type !== 'bundle' &&
+                    (!subItem.item_discount_per_unit || subItem.item_discount_per_unit === 0) &&
+                    !subItem.item_name.includes(' - ') &&
+                    order.bundle_metadata && order.bundle_metadata.length > 0 &&
+                    !order.bundle_metadata.some(b => b.name && subItem.item_name.includes(b.name));
+                return !isOutsideBundle;
+            });
+            const totalOriginalForHeader = (bundleItemsOnly.length > 0 ? bundleItemsOnly : order.items)
+                .reduce((sum, i) => sum + (i.quantity * (i.unit_price + (i.item_discount_per_unit || 0))), 0);
+
+            // Bundle header
+            const bundleHeaderRow = [
+                { content: `[Bundle] ${primaryBundleName}`, styles: { fontStyle: 'bold' as const, textColor: [20, 120, 80] } },
+                { content: '1', styles: { halign: 'center' as const, fontStyle: 'bold' as const } },
+                { content: '', styles: { halign: 'right' as const } },
+                { content: formatCurrency(totalOriginalForHeader), styles: { fontStyle: 'bold' as const, halign: 'right' as const } },
+            ];
 
             tableBody = [
-                // Bundle header
-                [
-                    { content: `[Bundle] ${primaryBundleName}`, styles: { fontStyle: 'bold' as const, textColor: [20, 120, 80] } },
-                    { content: '1', styles: { halign: 'center' as const, fontStyle: 'bold' as const } },
-                    { content: '', styles: { halign: 'right' as const } },
-                    { content: formatCurrency(totalOriginalForHeader), styles: { fontStyle: 'bold' as const, halign: 'right' as const } },
-                ],
-                // Sub-item rows
+                bundleHeaderRow,
                 ...subItemRows,
+                ...regularItemRows
             ];
+
+            // Mark bundle row indices (header + subItemRows)
+            const bundleCount = 1 + subItemRows.length;
+            for (let r = 0; r < bundleCount; r++) {
+                bundleRowIndices.add(r);
+            }
         } else {
             tableBody = order.items.map(item => [
                 item.item_name,
@@ -223,7 +243,7 @@ export const generateInvoicePDF = (orders: OrderDetailsView | OrderDetailsView[]
                 fillColor: [255, 255, 255],
                 textColor: [80, 80, 80],
                 fontSize: 10,
-                cellPadding: 3,
+                cellPadding: 3.5,
                 lineColor: [220, 220, 220],
                 lineWidth: 0.1,
             },
@@ -234,9 +254,7 @@ export const generateInvoicePDF = (orders: OrderDetailsView | OrderDetailsView[]
                 lineColor: [220, 220, 220],
                 lineWidth: 0.1
             },
-            alternateRowStyles: {
-                fillColor: [252, 252, 252]
-            },
+            alternateRowStyles: {},
             columnStyles: {
                 0: { cellWidth: 'auto' },
                 1: { cellWidth: 20, halign: 'center' },
@@ -244,6 +262,30 @@ export const generateInvoicePDF = (orders: OrderDetailsView | OrderDetailsView[]
                 3: { cellWidth: 30, halign: 'right' },
             },
             margin: { left: 15, right: 15 },
+            didParseCell: (data) => {
+                if (data.section !== 'body') return;
+                if (bundleRowIndices.has(data.row.index)) {
+                    // Bundle rows: distinct light green tint background + clear grid lines
+                    data.cell.styles.fillColor = [245, 252, 248];
+                    data.cell.styles.lineColor = [215, 230, 222];
+                    data.cell.styles.lineWidth = 0.1;
+                } else {
+                    // Regular standalone products outside bundle: white background + standard grid lines
+                    data.cell.styles.fillColor = [255, 255, 255];
+                    data.cell.styles.lineColor = [220, 220, 220];
+                    data.cell.styles.lineWidth = 0.1;
+                }
+            },
+            didDrawCell: (data) => {
+                if (data.section === 'body' && bundleRowIndices.has(data.row.index)) {
+                    // Draw a strong green accent border on the left edge of bundle rows to clearly frame the bundle block
+                    if (data.column.index === 0) {
+                        doc.setDrawColor(20, 120, 80);
+                        doc.setLineWidth(1.2);
+                        doc.line(data.cell.x, data.cell.y, data.cell.x, data.cell.y + data.cell.height);
+                    }
+                }
+            }
         });
 
         // --- Totals ---
