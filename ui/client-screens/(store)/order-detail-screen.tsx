@@ -62,10 +62,17 @@ export default function OrderDetailScreen({ order, fromCheckout }: {
             }
         }
 
-        const promoTotalDiscount = order.applied_promo_code ? Math.max(0, totalDiscount - rawBundleDiscount) : 0;
+        // Promo discount: calculate on price AFTER bundle discount (subtotal - bundleDiscount)
+        const afterBundleSubtotal = Math.max(0, subtotal - rawBundleDiscount);
+        const promoTotalDiscount = (order.applied_promo_code && order.promo_percentage && order.promo_percentage > 0)
+            ? Math.round(afterBundleSubtotal * (order.promo_percentage / 100) * 100) / 100
+            : 0;
+
         const resolvedBundleDiscount = rawBundleDiscount;
 
-        const total = Math.max(0, subtotal + order.shipping_total + (order.tax_total || 0) - totalDiscount);
+        // Total = subtotal - bundle discount - promo discount + shipping + tax
+        const totalAllDiscounts = resolvedBundleDiscount + promoTotalDiscount;
+        const total = Math.max(0, subtotal + order.shipping_total + (order.tax_total || 0) - totalAllDiscounts);
         return {
             displaySubtotal: Math.round(subtotal * 100) / 100,
             calculatedDiscount: Math.round(totalDiscount * 100) / 100,
@@ -402,7 +409,10 @@ export default function OrderDetailScreen({ order, fromCheckout }: {
                                 {/* Promo code discount row */}
                                 {promoDiscount > 0 && (
                                     <div className="flex justify-between text-purple-700 font-medium">
-                                        <dt className="flex items-center gap-1">🏷️ {t("ordersScreen.discount")}</dt>
+                                        <dt className="flex items-center gap-1">
+                                            🏷️ Promo <b className="uppercase">{order.applied_promo_code}</b>
+                                            {order.promo_percentage ? ` (${order.promo_percentage}% off)` : ''}
+                                        </dt>
                                         <dd>-{t("{{price, currency}}", { price: Math.round(promoDiscount * 100) / 100 })}</dd>
                                     </div>
                                 )}

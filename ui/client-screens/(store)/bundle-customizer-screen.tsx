@@ -62,13 +62,15 @@ export function BundleCustomizerScreen({ bundle, lang }: { bundle: BundleDetailV
         for (const item of bundle.items) {
             if (item.has_variants && item.variants.length > 0) {
                 const firstVar = item.variants[0];
+                const fallbackPrice = item.product?.price || 0;
+                const finalVarPrice = (firstVar.price && firstVar.price > 0) ? firstVar.price : fallbackPrice;
                 for (let s = 0; s < item.quantity; s++) {
                     const key = `${item.product_id}-${s}`;
                     initialSelections[key] = firstVar.id;
                     initialDetails[key] = {
                         id: firstVar.id,
-                        name: isAr ? firstVar.name_ar : firstVar.name_en,
-                        price: firstVar.price,
+                        name: isAr ? (firstVar.name_ar || firstVar.name_en) : (firstVar.name_en || firstVar.name_ar),
+                        price: finalVarPrice,
                         image: firstVar.image ?? null,
                     };
                 }
@@ -85,7 +87,7 @@ export function BundleCustomizerScreen({ bundle, lang }: { bundle: BundleDetailV
             for (let s = 0; s < item.quantity; s++) {
                 const key = `${item.product_id}-${s}`;
                 const sel = selectionDetails[key];
-                total += sel ? sel.price : item.product.price || 0;
+                total += sel ? sel.price : (item.product?.price || 0);
             }
         }
         return total;
@@ -111,13 +113,17 @@ export function BundleCustomizerScreen({ bundle, lang }: { bundle: BundleDetailV
 
     const handleSelectVariant = (productId: number, slotIndex: number, variant: any) => {
         const key = `${productId}-${slotIndex}`;
+        const parentItem = bundle.items.find((i: any) => i.product_id === productId);
+        const fallbackPrice = parentItem?.product?.price || 0;
+        const finalVarPrice = (variant.price && variant.price > 0) ? variant.price : fallbackPrice;
+
         setSelections((prev) => ({ ...prev, [key]: variant.id }));
         setSelectionDetails((prev) => ({
             ...prev,
             [key]: {
                 id: variant.id,
-                name: isAr ? variant.name_ar : variant.name_en,
-                price: variant.price,
+                name: isAr ? (variant.name_ar || variant.name_en) : (variant.name_en || variant.name_ar),
+                price: finalVarPrice,
                 image: variant.image ?? null,
             },
         }));
@@ -139,11 +145,18 @@ export function BundleCustomizerScreen({ bundle, lang }: { bundle: BundleDetailV
             setMixSelected(newSet);
             if (item.has_variants && item.variants.length > 0) {
                 const firstVar = item.variants[0];
+                const fallbackPrice = item.product?.price || 0;
+                const finalVarPrice = (firstVar.price && firstVar.price > 0) ? firstVar.price : fallbackPrice;
                 setSelections((prev) => { const n = { ...prev }; for (let s = 0; s < item.quantity; s++) n[`${pid}-${s}`] = firstVar.id; return n; });
                 setSelectionDetails((prev) => {
                     const n = { ...prev };
                     for (let s = 0; s < item.quantity; s++) {
-                        n[`${pid}-${s}`] = { id: firstVar.id, name: isAr ? firstVar.name_ar : firstVar.name_en, price: firstVar.price, image: firstVar.image ?? null };
+                        n[`${pid}-${s}`] = {
+                            id: firstVar.id,
+                            name: isAr ? (firstVar.name_ar || firstVar.name_en) : (firstVar.name_en || firstVar.name_ar),
+                            price: finalVarPrice,
+                            image: firstVar.image ?? null
+                        };
                     }
                     return n;
                 });
@@ -169,7 +182,39 @@ export function BundleCustomizerScreen({ bundle, lang }: { bundle: BundleDetailV
                 }
             }
         }
-        const detailsList = Object.values(selectionDetails).map((d) => d.name).join(" + ");
+
+        const finalSelectionDetails: Record<string, any> = {};
+
+        bundle.items.forEach((item: any, idx: number) => {
+            if (isMixAndMatch && !mixSelected.has(item.product_id)) return;
+
+            const prodName = isAr
+                ? (item.product?.name_ar || item.product?.name)
+                : (item.product?.name_en || item.product?.name);
+            const basePrice = item.product?.price || 0;
+
+            for (let s = 0; s < item.quantity; s++) {
+                const key = `${item.product_id}-${s}`;
+                const sel = selectionDetails[key];
+                if (sel) {
+                    finalSelectionDetails[key] = {
+                        id: sel.id,
+                        name: sel.name,
+                        price: (sel.price && sel.price > 0) ? sel.price : basePrice,
+                        image: sel.image || item.product?.image || null
+                    };
+                } else if (prodName) {
+                    finalSelectionDetails[`fixed-${idx}-${s}`] = {
+                        id: item.product_id || idx,
+                        name: prodName,
+                        price: basePrice,
+                        image: item.product?.image || null
+                    };
+                }
+            }
+        });
+
+        const detailsList = Object.values(finalSelectionDetails).map((d) => d.name).join(" + ");
         const configuredBundle: any = {
             id: bundle.id,
             variant_id: 0,
@@ -183,7 +228,6 @@ export function BundleCustomizerScreen({ bundle, lang }: { bundle: BundleDetailV
             category_name: bundle.category_name,
             slug: `bundle-${bundle.slug}`,
             product_type: "bundle",
-            selected_variants: selectionDetails,
         };
         try {
             await addToCart(configuredBundle, 1);

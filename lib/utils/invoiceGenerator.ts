@@ -157,43 +157,54 @@ export const generateInvoicePDF = (orders: OrderDetailsView | OrderDetailsView[]
             }
             primaryBundleName = primaryBundleName.replace(/\s*\([^)]+\)$/, '').trim();
 
-            const totalOriginal = order.items.reduce((sum, i) => sum + (i.quantity * (i.unit_price + (i.item_discount_per_unit || 0))), 0);
-            const totalFinal = order.items.reduce((sum, i) => sum + (i.quantity * i.unit_price), 0);
-            let bundleDiscount = (order.bundle_metadata || []).reduce((s: number, b: any) => s + (b.total_discount || 0), 0);
-            if (bundleDiscount === 0 && (totalOriginal > totalFinal || isBundleOrder)) {
-                const diff = totalOriginal > totalFinal ? totalOriginal - totalFinal : 130.90;
-                bundleDiscount = Math.round(diff * 100) / 100;
-            }
-            const displaySubtotal = totalOriginal > totalFinal ? totalOriginal : Math.round((order.subtotal + bundleDiscount) * 100) / 100;
+            // Build sub-item rows: each item with its standalone price (before bundle discount)
+            const subItemRows: any[][] = [];
 
-            let expandedSubItems: string[] = [];
             const matchInParen = rawBundleName.match(/\(([^)]+)\)/);
             if (matchInParen && matchInParen[1].includes('+')) {
-                expandedSubItems = matchInParen[1].split('+').map(s => s.trim());
+                // Parse sub-items from name string (no individual prices available)
+                const parts = matchInParen[1].split('+').map((s: string) => s.trim());
+                parts.forEach((name: string) => {
+                    subItemRows.push([
+                        { content: `   • ${name}`, styles: { fontSize: 9, textColor: [80, 80, 80] } },
+                        { content: '', styles: { halign: 'center' as const } },
+                        { content: '', styles: { halign: 'right' as const } },
+                        { content: '', styles: { halign: 'right' as const } },
+                    ]);
+                });
             } else {
-                expandedSubItems = order.items.map(subItem => {
+                // Use actual order items with their original prices (unit_price + discount_per_unit)
+                order.items.forEach(subItem => {
                     let subName = subItem.variant_name && subItem.variant_name.trim()
                         ? subItem.variant_name.trim()
                         : subItem.item_name;
                     if (subName.includes(' - ')) {
                         subName = subName.split(' - ').slice(1).join(' - ').trim();
                     }
-                    return subName;
+                    const originalUnitPrice = subItem.unit_price + (subItem.item_discount_per_unit || 0);
+                    subItemRows.push([
+                        { content: `   • ${subName}`, styles: { fontSize: 9, textColor: [80, 80, 80] } },
+                        { content: `x${subItem.quantity}`, styles: { halign: 'center' as const, fontSize: 9, textColor: [80, 80, 80] } },
+                        { content: formatCurrency(originalUnitPrice), styles: { halign: 'right' as const, fontSize: 9, textColor: [100, 100, 100] } },
+                        { content: formatCurrency(originalUnitPrice * subItem.quantity), styles: { halign: 'right' as const, fontSize: 9, textColor: [100, 100, 100] } },
+                    ]);
                 });
             }
 
-            const subItemLines = expandedSubItems.map(name => `   • ${name}`).join('\n');
-            const descContent = `${primaryBundleName}\n${subItemLines}`;
+            // Bundle header row
+            const totalOriginalForHeader = order.items.reduce((sum, i) => sum + (i.quantity * (i.unit_price + (i.item_discount_per_unit || 0))), 0);
 
-            tableBody = [[
-                {
-                    content: descContent,
-                    styles: { fontStyle: 'bold' as const }
-                },
-                { content: '1', styles: { halign: 'center' as const } },
-                { content: formatCurrency(displaySubtotal), styles: { halign: 'right' as const } },
-                { content: formatCurrency(displaySubtotal), styles: { fontStyle: 'bold' as const, halign: 'right' as const } }
-            ]];
+            tableBody = [
+                // Bundle header
+                [
+                    { content: `[Bundle] ${primaryBundleName}`, styles: { fontStyle: 'bold' as const, textColor: [20, 120, 80] } },
+                    { content: '1', styles: { halign: 'center' as const, fontStyle: 'bold' as const } },
+                    { content: '', styles: { halign: 'right' as const } },
+                    { content: formatCurrency(totalOriginalForHeader), styles: { fontStyle: 'bold' as const, halign: 'right' as const } },
+                ],
+                // Sub-item rows
+                ...subItemRows,
+            ];
         } else {
             tableBody = order.items.map(item => [
                 item.item_name,
@@ -227,41 +238,30 @@ export const generateInvoicePDF = (orders: OrderDetailsView | OrderDetailsView[]
                 fillColor: [252, 252, 252]
             },
             columnStyles: {
-                0: { cellWidth: 'auto' }, // Description
-                1: { cellWidth: 20, halign: 'center' }, // Qty
-                2: { cellWidth: 35, halign: 'right' }, // Unit Price (wider for bundle details)
-                3: { cellWidth: 30, halign: 'right' }, // Total
+                0: { cellWidth: 'auto' },
+                1: { cellWidth: 20, halign: 'center' },
+                2: { cellWidth: 35, halign: 'right' },
+                3: { cellWidth: 30, halign: 'right' },
             },
             margin: { left: 15, right: 15 },
-            // Custom cell hook to color the discount line in red for bundles
-            didParseCell: (data) => {
-                if (data.section === 'body' && data.column.index === 2) {
-                    const item = order.items[data.row.index];
-                    const isBundle = item && (item.item_type === 'bundle' || item.item_name.includes(' - ') || (item.item_discount_per_unit && item.item_discount_per_unit > 0));
-                    if (isBundle && item.item_discount_per_unit > 0) {
-                        data.cell.styles.textColor = [50, 50, 50];
-                    }
-                }
-            },
         });
 
         // --- Totals ---
         const finalY = doc.lastAutoTable.finalY + 10;
-        const totalXLabel = pageWidth - 105; // Sufficient space to avoid overlap
+        const totalXLabel = pageWidth - 105;
         const totalXValue = pageWidth - 15;
 
-        // Helper for totals with right-alignment
         const addTotalRow = (label: string, value: string, y: number, bold = false, size = 10, color = [0, 0, 0]) => {
             doc.setFont("helvetica", bold ? "bold" : "normal");
             doc.setFontSize(size);
             doc.setTextColor(color[0], color[1], color[2]);
-            doc.text(label, totalXLabel, y, { align: "left" }); // Align label left from its starting point
-            doc.text(value, totalXValue, y, { align: "right" }); // Align value right to the edge
+            doc.text(label, totalXLabel, y, { align: "left" });
+            doc.text(value, totalXValue, y, { align: "right" });
         };
 
         let currentTotalY = finalY;
 
-        // Calculate original base subtotal (before discounts)
+        // Calculate base subtotal (all items at original price before any discount)
         const totalFinal = order.items.reduce((sum, i) => sum + (i.quantity * i.unit_price), 0);
         const totalOriginal = order.items.reduce((sum, i) => sum + (i.quantity * (i.unit_price + (i.item_discount_per_unit || 0))), 0);
         let bundleDiscount = (order.bundle_metadata || []).reduce((s: number, b: any) => s + (b.total_discount || 0), 0);
@@ -273,23 +273,28 @@ export const generateInvoicePDF = (orders: OrderDetailsView | OrderDetailsView[]
 
         const baseSubtotal = totalOriginal > totalFinal ? totalOriginal : Math.round((order.subtotal + bundleDiscount) * 100) / 100;
 
-        // 1. Subtotal (Price Before Discount)
+        // Promo discount: calculated from promo_percentage applied to subtotal AFTER bundle discount
+        const afterBundleSubtotal = Math.max(0, baseSubtotal - bundleDiscount);
+        const promoDiscount = (order.applied_promo_code && order.promo_percentage && order.promo_percentage > 0)
+            ? Math.round(afterBundleSubtotal * (order.promo_percentage / 100) * 100) / 100
+            : 0;
+
+        // 1. Subtotal
         addTotalRow("Subtotal:", formatCurrency(baseSubtotal), currentTotalY);
         currentTotalY += 6;
 
-        // 2. Bundle Discount (if any)
+        // 2. Bundle Discount
         if (bundleDiscount > 0) {
             addTotalRow("Bundle Discount:", `-${formatCurrency(bundleDiscount)}`, currentTotalY, false, 10, [220, 50, 50]);
             currentTotalY += 6;
         }
 
-        // 3. Additional / Promo Discount (if any)
-        let additionalDiscount = order.discount_total || 0;
-        if (additionalDiscount === 0 && order.applied_promo_codes && Array.isArray(order.applied_promo_codes) && order.applied_promo_codes.length > 0) {
-            additionalDiscount = order.applied_promo_codes.reduce((sum: number, promo: any) => sum + (promo.discount || 0), 0);
-        }
-        if (additionalDiscount > 0) {
-            addTotalRow("Additional Discount:", `-${formatCurrency(additionalDiscount)}`, currentTotalY, false, 10, [220, 50, 50]);
+        // 3. Promo Code Discount
+        if (promoDiscount > 0) {
+            const promoLabel = order.applied_promo_code
+                ? `Promo ${order.applied_promo_code}${order.promo_percentage ? ` (${order.promo_percentage}% off):` : ':'}`
+                : "Promo Discount:";
+            addTotalRow(promoLabel, `-${formatCurrency(promoDiscount)}`, currentTotalY, false, 10, [120, 50, 180]);
             currentTotalY += 6;
         }
 
@@ -297,15 +302,13 @@ export const generateInvoicePDF = (orders: OrderDetailsView | OrderDetailsView[]
         addTotalRow("Shipping:", order.shipping_total > 0 ? formatCurrency(order.shipping_total) : "Free", currentTotalY);
         currentTotalY += 6;
 
-        // 5. Grand Total Line
+        // 5. Grand Total line
         doc.setDrawColor(200, 200, 200);
         doc.line(totalXLabel, currentTotalY, totalXValue, currentTotalY);
         currentTotalY += 6;
 
-        const grandTotal = Math.max(0, baseSubtotal - bundleDiscount - additionalDiscount + order.shipping_total);
-
-        // Grand Total
-        addTotalRow("TOTAL:", formatCurrency(grandTotal), currentTotalY, true, 12, [100, 80, 60]); // Brownish tone for Grand Total
+        const grandTotal = Math.max(0, baseSubtotal - bundleDiscount - promoDiscount + order.shipping_total);
+        addTotalRow("TOTAL:", formatCurrency(grandTotal), currentTotalY, true, 12, [100, 80, 60]);
 
 
         // --- Footer (Thank You Message) ---

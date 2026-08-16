@@ -87,10 +87,18 @@ export function CheckoutCart({ selectedGovernorate, onPurchase, customerId }: {
                                 : item.name;
 
                             // Get selected variants as sub-items list
-                            const selectedVariants: { id: number; name: string; price: number; image?: string | null }[] =
-                                isBundle && item.selected_variants
+                            let selectedVariants: { id?: number; name: string; price?: number; image?: string | null }[] =
+                                isBundle && item.selected_variants && Object.keys(item.selected_variants).length > 0
                                     ? Object.values(item.selected_variants as Record<string, any>)
                                     : [];
+
+                            if (isBundle && selectedVariants.length === 0 && item.name && item.name.includes('(')) {
+                                const matchInParen = item.name.match(/\(([^)]+)\)/);
+                                if (matchInParen && matchInParen[1].includes('+')) {
+                                    const parts = matchInParen[1].split('+').map(s => s.trim());
+                                    selectedVariants = parts.map(p => ({ name: p }));
+                                }
+                            }
 
                             const hasDiscount = !!(item.original_price && item.original_price > item.price);
 
@@ -137,11 +145,16 @@ export function CheckoutCart({ selectedGovernorate, onPurchase, customerId }: {
 
                                             {/* Sub-items: selected variants */}
                                             {selectedVariants.length > 0 && (
-                                                <div className="pl-2 border-l-2 border-emerald-300 ml-1 space-y-0.5">
+                                                <div className="pl-2 border-l-2 border-emerald-300 ml-1 space-y-1 mt-1">
                                                     {selectedVariants.map((sv, si) => (
-                                                        <p key={si} className="text-xs text-gray-600 leading-relaxed">
-                                                            • {sv.name}
-                                                        </p>
+                                                        <div key={si} className="flex justify-between items-center text-xs text-gray-700">
+                                                            <span className="font-medium">• {sv.name}</span>
+                                                            {sv.price && sv.price > 0 && (
+                                                                <span className="text-gray-500 font-mono text-[11px] font-semibold">
+                                                                    {t("{{price, currency}}", { price: sv.price })}
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     ))}
                                                 </div>
                                             )}

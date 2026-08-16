@@ -771,7 +771,7 @@ export class IProductServerRepository implements ProductRepository {
                     id: v.id,
                     name_en: v.name_en || '',
                     name_ar: v.name_ar || '',
-                    price: v.price || 0,
+                    price: (v.price && v.price > 0) ? v.price : (prod.price || 0),
                     discount: v.discount || null,
                     stock: v.stock || 0,
                     image: v.image || null,

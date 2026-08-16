@@ -156,16 +156,38 @@ function CartItemRow({ item, updateQuantity, removeFromCart, t }: { item: any, u
                                     )}
                                 </div>
 
-                                {item.selected_variants && (
-                                    <div className="text-xs text-primary-800 bg-emerald-50/50 border border-emerald-100 p-2.5 rounded-xl mb-3 inline-block font-medium">
-                                        {Object.values(item.selected_variants).map((details: any, idx) => (
-                                            <div key={idx} className="flex items-center gap-1.5 leading-relaxed">
-                                                <span className="text-emerald-600 font-bold">•</span>
-                                                <span>{details.name}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
+                                {(() => {
+                                    let variantsList: { name: string; price?: number }[] = [];
+                                    if (item.selected_variants && Object.keys(item.selected_variants).length > 0) {
+                                        variantsList = Object.values(item.selected_variants);
+                                    } else if (item.name && item.name.includes('(')) {
+                                        const matchInParen = item.name.match(/\(([^)]+)\)/);
+                                        if (matchInParen && matchInParen[1].includes('+')) {
+                                            const parts = matchInParen[1].split('+').map((s: string) => s.trim());
+                                            variantsList = parts.map((p: string) => ({ name: p }));
+                                        }
+                                    }
+
+                                    if (variantsList.length === 0) return null;
+
+                                    return (
+                                        <div className="text-xs text-primary-800 bg-emerald-50/50 border border-emerald-100 p-2.5 rounded-xl mb-3 block font-medium w-full max-w-md">
+                                            {variantsList.map((details: any, idx: number) => (
+                                                <div key={idx} className="flex items-center justify-between gap-4 leading-relaxed py-0.5">
+                                                    <div className="flex items-center gap-1.5 min-w-0">
+                                                        <span className="text-emerald-600 font-bold flex-shrink-0">•</span>
+                                                        <span className="truncate">{details.name}</span>
+                                                    </div>
+                                                    {details.price && details.price > 0 && (
+                                                        <span className="text-gray-500 font-semibold font-mono flex-shrink-0">
+                                                            {t("{{price, currency}}", { price: details.price })}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    );
+                                })()}
                             </>
                         );
                     })()}
