@@ -140,79 +140,75 @@ export const generateInvoicePDF = (orders: OrderDetailsView | OrderDetailsView[]
         // --- Items Table ---
         const tableStartY = Math.max(currentBillY, currentDetailY) + 10;
 
-        const isBundleOrder = order.bundle_metadata?.length || order.items.some(i => i.item_name.includes(' - ') || i.item_type === 'bundle');
+        const bundleMeta = order.bundle_metadata?.[0];
+        const bundleCount = bundleMeta?.item_count || 0;
+        const isBundleOrder = !!(bundleMeta && bundleCount > 0);
 
         let tableBody: any[] = [];
         const bundleRowIndices = new Set<number>();
 
-        if (isBundleOrder) {
-            const rawBundleName = order.bundle_metadata?.[0]?.raw_name || order.bundle_metadata?.[0]?.name || '';
-            let primaryBundleName = order.bundle_metadata?.[0]?.name || rawBundleName;
+        if (isBundleOrder && bundleCount <= order.items.length) {
+            const bundleItems = order.items.slice(0, bundleCount);
+            const regularItems = order.items.slice(bundleCount);
+
+            const rawBundleName = bundleMeta?.raw_name || bundleMeta?.name || '';
+            let primaryBundleName = bundleMeta?.name || rawBundleName;
             if (!primaryBundleName || primaryBundleName === "Body Lotion Collection") {
-                const extracted = order.items.find(i => i.item_name.includes(' - '))?.item_name.split(' - ')[0].trim();
+                const extracted = bundleItems.find(i => i.item_name.includes(' - '))?.item_name.split(' - ')[0].trim();
                 if (extracted && extracted !== "Body Lotion Collection") {
                     primaryBundleName = extracted;
                 } else {
-                    primaryBundleName = "Strawberry skin routine";
+                    primaryBundleName = "Summer Bundle";
                 }
             }
             primaryBundleName = primaryBundleName.replace(/\s*\([^)]+\)$/, '').trim();
 
-            const subItemRows: any[][] = [];
-            const regularItemRows: any[][] = [];
+            const totalFinal = bundleItems.reduce((sum, i) => sum + (i.quantity * i.unit_price), 0);
 
-            order.items.forEach(subItem => {
-                let subName = subItem.variant_name && subItem.variant_name.trim()
-                    ? subItem.variant_name.trim()
-                    : subItem.item_name;
-                if (subName.includes(' - ')) {
-                    subName = subName.split(' - ').slice(1).join(' - ').trim();
-                }
+            // Sub-items for bundle
+            let expandedSubItems: string[] = [];
+            const matchInParen = rawBundleName.match(/\(([^)]+)\)/);
+            if (matchInParen && matchInParen[1].includes('+')) {
+                expandedSubItems = matchInParen[1].split('+').map(s => s.trim());
+            } else {
+                bundleItems.forEach(subItem => {
+                    let subName = subItem.variant_name && subItem.variant_name.trim()
+                        ? subItem.variant_name.trim()
+                        : subItem.item_name;
+                    if (subName.includes(' - ')) subName = subName.split(' - ').slice(1).join(' - ').trim();
+                    for (let r = 0; r < subItem.quantity; r++) expandedSubItems.push(subName);
+                });
+            }
 
-                // Check if this item is a standalone item outside the bundle
-                const isOutsideBundle = subItem.item_type !== 'bundle' &&
-                    (!subItem.item_discount_per_unit || subItem.item_discount_per_unit === 0) &&
-                    !subItem.item_name.includes(' - ') &&
-                    order.bundle_metadata && order.bundle_metadata.length > 0 &&
-                    !order.bundle_metadata.some(b => b.name && subItem.item_name.includes(b.name));
-
-                if (isOutsideBundle) {
-                    regularItemRows.push([
-                        { content: subName, styles: { fontSize: 10, textColor: [50, 50, 50] } },
-                        { content: subItem.quantity.toString(), styles: { halign: 'center' as const } },
-                        { content: formatCurrency(subItem.unit_price), styles: { halign: 'right' as const } },
-                        { content: formatCurrency(subItem.quantity * subItem.unit_price), styles: { halign: 'right' as const } }
-                    ]);
-                } else {
-                    const originalUnitPrice = subItem.unit_price + (subItem.item_discount_per_unit || 0);
-                    subItemRows.push([
-                        { content: `   • ${subName}`, styles: { fontSize: 9, textColor: [80, 80, 80] } },
-                        { content: `x${subItem.quantity}`, styles: { halign: 'center' as const, fontSize: 9, textColor: [80, 80, 80] } },
-                        { content: formatCurrency(originalUnitPrice), styles: { halign: 'right' as const, fontSize: 9, textColor: [100, 100, 100] } },
-                        { content: formatCurrency(originalUnitPrice * subItem.quantity), styles: { halign: 'right' as const, fontSize: 9, textColor: [100, 100, 100] } },
-                    ]);
-                }
-            });
-
-            // Calculate bundle header total using bundle items only (excluding regular standalone items)
-            const bundleItemsOnly = order.items.filter(subItem => {
-                const isOutsideBundle = subItem.item_type !== 'bundle' &&
-                    (!subItem.item_discount_per_unit || subItem.item_discount_per_unit === 0) &&
-                    !subItem.item_name.includes(' - ') &&
-                    order.bundle_metadata && order.bundle_metadata.length > 0 &&
-                    !order.bundle_metadata.some(b => b.name && subItem.item_name.includes(b.name));
-                return !isOutsideBundle;
-            });
-            const totalOriginalForHeader = (bundleItemsOnly.length > 0 ? bundleItemsOnly : order.items)
-                .reduce((sum, i) => sum + (i.quantity * (i.unit_price + (i.item_discount_per_unit || 0))), 0);
-
-            // Bundle header
+            // 1. Bundle Header Row
             const bundleHeaderRow = [
                 { content: `[Bundle] ${primaryBundleName}`, styles: { fontStyle: 'bold' as const, textColor: [20, 120, 80] } },
                 { content: '1', styles: { halign: 'center' as const, fontStyle: 'bold' as const } },
-                { content: '', styles: { halign: 'right' as const } },
-                { content: formatCurrency(totalOriginalForHeader), styles: { fontStyle: 'bold' as const, halign: 'right' as const } },
+                { content: formatCurrency(totalFinal), styles: { fontStyle: 'bold' as const, halign: 'right' as const } },
+                { content: formatCurrency(totalFinal), styles: { fontStyle: 'bold' as const, halign: 'right' as const } },
             ];
+
+            // 2. Bundle Sub-item Rows
+            const subItemRows = expandedSubItems.map(subName => [
+                { content: `   • ${subName}`, styles: { fontSize: 9, textColor: [80, 80, 80] } },
+                { content: '', styles: { halign: 'center' as const } },
+                { content: '', styles: { halign: 'right' as const } },
+                { content: '', styles: { halign: 'right' as const } }
+            ]);
+
+            // 3. Regular Standalone Product Rows
+            const regularItemRows = regularItems.map(subItem => {
+                const displayName = subItem.variant_name && subItem.variant_name.trim()
+                    ? subItem.variant_name.trim()
+                    : (subItem.item_name.includes(' - ') ? subItem.item_name.split(' - ').slice(1).join(' - ').trim() : subItem.item_name);
+
+                return [
+                    { content: displayName, styles: { fontSize: 10, textColor: [50, 50, 50] } },
+                    { content: subItem.quantity.toString(), styles: { halign: 'center' as const } },
+                    { content: formatCurrency(subItem.unit_price), styles: { halign: 'right' as const } },
+                    { content: formatCurrency(subItem.quantity * subItem.unit_price), styles: { halign: 'right' as const } }
+                ];
+            });
 
             tableBody = [
                 bundleHeaderRow,
@@ -220,18 +216,23 @@ export const generateInvoicePDF = (orders: OrderDetailsView | OrderDetailsView[]
                 ...regularItemRows
             ];
 
-            // Mark bundle row indices (header + subItemRows)
-            const bundleCount = 1 + subItemRows.length;
-            for (let r = 0; r < bundleCount; r++) {
+            // Highlight bundle header and sub-items
+            const totalBundleRows = 1 + subItemRows.length;
+            for (let r = 0; r < totalBundleRows; r++) {
                 bundleRowIndices.add(r);
             }
         } else {
-            tableBody = order.items.map(item => [
-                item.item_name,
-                item.quantity.toString(),
-                formatCurrency(item.unit_price),
-                formatCurrency(item.quantity * item.unit_price)
-            ]);
+            tableBody = order.items.map(item => {
+                const displayName = item.variant_name && item.variant_name.trim()
+                    ? item.variant_name.trim()
+                    : (item.item_name.includes(' - ') ? item.item_name.split(' - ').slice(1).join(' - ').trim() : item.item_name);
+                return [
+                    displayName,
+                    item.quantity.toString(),
+                    formatCurrency(item.unit_price),
+                    formatCurrency(item.quantity * item.unit_price)
+                ];
+            });
         }
 
         autoTable(doc, {
@@ -242,8 +243,8 @@ export const generateInvoicePDF = (orders: OrderDetailsView | OrderDetailsView[]
             styles: {
                 fillColor: [255, 255, 255],
                 textColor: [80, 80, 80],
-                fontSize: 10,
-                cellPadding: 3.5,
+                fontSize: 9,
+                cellPadding: 2.2,
                 lineColor: [220, 220, 220],
                 lineWidth: 0.1,
             },
@@ -289,7 +290,7 @@ export const generateInvoicePDF = (orders: OrderDetailsView | OrderDetailsView[]
         });
 
         // --- Totals ---
-        const finalY = doc.lastAutoTable.finalY + 10;
+        const finalY = doc.lastAutoTable.finalY + 8;
         const totalXLabel = pageWidth - 105;
         const totalXValue = pageWidth - 15;
 
@@ -303,71 +304,54 @@ export const generateInvoicePDF = (orders: OrderDetailsView | OrderDetailsView[]
 
         let currentTotalY = finalY;
 
-        // Calculate base subtotal (all items at original price before any discount)
-        const totalFinal = order.items.reduce((sum, i) => sum + (i.quantity * i.unit_price), 0);
-        const totalOriginal = order.items.reduce((sum, i) => sum + (i.quantity * (i.unit_price + (i.item_discount_per_unit || 0))), 0);
-        let bundleDiscount = (order.bundle_metadata || []).reduce((s: number, b: any) => s + (b.total_discount || 0), 0);
+        // Base subtotal (sum of all items net prices)
+        const itemsSum = order.items.reduce((sum, i) => sum + (i.quantity * i.unit_price), 0);
+        const baseSubtotal = (order.subtotal && order.subtotal > 0) ? order.subtotal : itemsSum;
 
-        if (bundleDiscount === 0 && (order.bundle_metadata?.length || totalOriginal > totalFinal)) {
-            const diff = totalOriginal > totalFinal ? totalOriginal - totalFinal : 130.90;
-            bundleDiscount = Math.round(diff * 100) / 100;
-        }
-
-        const baseSubtotal = totalOriginal > totalFinal ? totalOriginal : Math.round((order.subtotal + bundleDiscount) * 100) / 100;
-
-        // Promo discount: calculated from promo_percentage applied to subtotal AFTER bundle discount
-        const afterBundleSubtotal = Math.max(0, baseSubtotal - bundleDiscount);
-        const promoDiscount = (order.applied_promo_code && order.promo_percentage && order.promo_percentage > 0)
-            ? Math.round(afterBundleSubtotal * (order.promo_percentage / 100) * 100) / 100
-            : 0;
+        // Promo / manual discount
+        const promoDiscount = (order.applied_promo_codes && Array.isArray(order.applied_promo_codes))
+            ? order.applied_promo_codes.reduce((sum: number, p: any) => sum + (p.discount || 0), 0)
+            : (order.discount_total || 0);
 
         // 1. Subtotal
         addTotalRow("Subtotal:", formatCurrency(baseSubtotal), currentTotalY);
-        currentTotalY += 6;
+        currentTotalY += 5;
 
-        // 2. Bundle Discount
-        if (bundleDiscount > 0) {
-            addTotalRow("Bundle Discount:", `-${formatCurrency(bundleDiscount)}`, currentTotalY, false, 10, [220, 50, 50]);
-            currentTotalY += 6;
-        }
-
-        // 3. Promo Code Discount
+        // 2. Discount (if promo or manual discount)
         if (promoDiscount > 0) {
-            const promoLabel = order.applied_promo_code
-                ? `Promo ${order.applied_promo_code}${order.promo_percentage ? ` (${order.promo_percentage}% off):` : ':'}`
-                : "Promo Discount:";
-            addTotalRow(promoLabel, `-${formatCurrency(promoDiscount)}`, currentTotalY, false, 10, [120, 50, 180]);
-            currentTotalY += 6;
+            addTotalRow("Discount:", `-${formatCurrency(promoDiscount)}`, currentTotalY, false, 10, [220, 50, 50]);
+            currentTotalY += 5;
         }
 
-        // 4. Shipping
+        // 3. Shipping
         addTotalRow("Shipping:", order.shipping_total > 0 ? formatCurrency(order.shipping_total) : "Free", currentTotalY);
-        currentTotalY += 6;
+        currentTotalY += 5;
 
-        // 5. Grand Total line
+        // 4. Grand Total line
         doc.setDrawColor(200, 200, 200);
         doc.line(totalXLabel, currentTotalY, totalXValue, currentTotalY);
-        currentTotalY += 6;
+        currentTotalY += 5;
 
-        const grandTotal = Math.max(0, baseSubtotal - bundleDiscount - promoDiscount + order.shipping_total);
-        addTotalRow("TOTAL:", formatCurrency(grandTotal), currentTotalY, true, 12, [100, 80, 60]);
-
+        const grandTotal = Math.max(0, baseSubtotal - promoDiscount + order.shipping_total);
+        addTotalRow("TOTAL:", formatCurrency(grandTotal), currentTotalY, true, 11, [100, 80, 60]);
+        currentTotalY += 5;
 
         // --- Footer (Thank You Message) ---
-        const footerY = pageHeight - 40;
+        // Dynamically position footer well below totals to prevent overlap
+        const footerY = Math.max(currentTotalY + 15, pageHeight - 25);
+
         doc.setFont("helvetica", "normal");
-        doc.setFontSize(10);
+        doc.setFontSize(9);
         doc.setTextColor(120, 120, 120);
 
         doc.text("Thank you for choosing Nature Hug! We hope our products bring you pure glow.", pageWidth / 2, footerY, { align: "center" });
-        // doc.text("Your support means world our small, sustainable brand.", pageWidth / 2, footerY + 5, { align: "center" });
-        doc.text("Follow us on instagram @Nature.Hug_NM for tips & new arrivals!", pageWidth / 2, footerY + 5, { align: "center" });
+        doc.text("Follow us on instagram @Nature.Hug_NM for tips & new arrivals!", pageWidth / 2, footerY + 4, { align: "center" });
 
-        doc.setDrawColor(200, 200, 200);
-        doc.line(pageWidth / 2 - 50, footerY + 9, pageWidth / 2 + 50, footerY + 9);
+        doc.setDrawColor(220, 220, 220);
+        doc.line(pageWidth / 2 - 40, footerY + 7, pageWidth / 2 + 40, footerY + 7);
 
-        doc.setFontSize(9);
-        doc.text("For help and customer service call 01090998664", pageWidth / 2, footerY + 14, { align: "center" });
+        doc.setFontSize(8);
+        doc.text("For help and customer service call 01090998664", pageWidth / 2, footerY + 11, { align: "center" });
 
         // Outer border removed for cleaner look
     });
