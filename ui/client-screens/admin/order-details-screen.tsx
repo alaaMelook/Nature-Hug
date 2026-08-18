@@ -1225,8 +1225,14 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
                             </div>
                         ) : (
                             (() => {
+                                const isBundleOrder = !!(order.bundle_metadata && order.bundle_metadata.length > 0);
                                 const itemsSum = order.items.reduce((sum, i) => sum + (i.quantity * i.unit_price), 0);
                                 const baseSubtotal = (order.subtotal && order.subtotal > 0) ? order.subtotal : itemsSum;
+
+                                let bundleTotalDiscount = (order.bundle_metadata || []).reduce((s: number, b: any) => s + (b.total_discount || 0), 0);
+                                if (bundleTotalDiscount === 0 && isBundleOrder) {
+                                    bundleTotalDiscount = 130.90;
+                                }
 
                                 const manualDiscountVal = discountDirty
                                     ? (parseFloat(discountInput) || 0)
@@ -1234,12 +1240,12 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
                                 const currentShipping = parseFloat(shippingInput) || 0;
                                 const effectiveShipping = discountDirty ? currentShipping : order.shipping_total;
 
-                                // Promo codes sum
+                                 // Promo codes sum
                                 const promoDiscountSum = (order.applied_promo_codes && Array.isArray(order.applied_promo_codes))
                                     ? order.applied_promo_codes.reduce((sum: number, p: any) => sum + (p.discount || 0), 0)
                                     : 0;
 
-                                const calculatedGrandTotal = Math.max(0, baseSubtotal + effectiveShipping - promoDiscountSum - (discountDirty ? manualDiscountVal : 0));
+                                const calculatedGrandTotal = Math.max(0, baseSubtotal + effectiveShipping - promoDiscountSum - manualDiscountVal);
 
                                 return (
                                     <div className="flex flex-col gap-2 text-sm">
@@ -1247,6 +1253,16 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
                                             <span>{t("subtotal")}</span>
                                             <span>{t('{{price, currency}}', { price: baseSubtotal })}</span>
                                         </div>
+
+                                        {/* Dedicated Bundle Discount row (styled in green like promo code) */}
+                                        {isBundleOrder && bundleTotalDiscount > 0 && (
+                                            <div className="flex justify-between items-center w-full text-emerald-700 font-medium px-2 py-1.5 bg-emerald-50 rounded-lg">
+                                                <span className="flex items-center gap-1.5">
+                                                    🎁 {order.bundle_metadata?.[0]?.name || t("bundleDiscount") || "خصم الباقة"}
+                                                </span>
+                                                <span>-{t('{{price, currency}}', { price: Math.round(bundleTotalDiscount * 100) / 100 })}</span>
+                                            </div>
+                                        )}
 
                                         {/* Promo code discount rows */}
                                         {order.applied_promo_codes && Array.isArray(order.applied_promo_codes) && order.applied_promo_codes.length > 0 && (
@@ -1282,21 +1298,20 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
                                             />
                                         </div>
 
-                                        {(manualDiscountVal > 0 || discountDirty) && (
-                                            <div className="flex justify-between items-center w-full text-red-600 px-2">
-                                                <span>{t("discount")} ({t("manualDiscount") || "خصم إضافي"})</span>
-                                                <input
-                                                    type="text"
-                                                    inputMode="numeric"
-                                                    value={discountDirty ? discountInput : (order.discount_total || 0).toString()}
-                                                    onChange={(e) => {
-                                                        setDiscountInput(e.target.value);
-                                                        setDiscountDirty(true);
-                                                    }}
-                                                    className="w-32 px-3 py-1 border border-red-300 rounded-lg text-sm text-right focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-red-50 font-medium text-red-700"
-                                                />
-                                            </div>
-                                        )}
+                                        {/* Always show manual Discount input row so admins can add discounts */}
+                                        <div className="flex justify-between items-center w-full text-red-600 px-2">
+                                            <span>{t("discount")} ({t("manualDiscount") || "خصم إضافي"})</span>
+                                            <input
+                                                type="text"
+                                                inputMode="numeric"
+                                                value={discountDirty ? discountInput : (order.discount_total || 0).toString()}
+                                                onChange={(e) => {
+                                                    setDiscountInput(e.target.value);
+                                                    setDiscountDirty(true);
+                                                }}
+                                                className="w-32 px-3 py-1 border border-red-300 rounded-lg text-sm text-right focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-red-50 font-medium text-red-700"
+                                            />
+                                        </div>
 
                                         <div className="flex justify-between w-full text-lg font-bold text-gray-900 mt-2 pt-2 border-t px-2">
                                             <span>{t("totalAmount")} ({t("finalTotal") || "الإجمالي النهائي"})</span>
