@@ -20,7 +20,8 @@ import {
   Palette,
   UsersRound,
   Store,
-  Megaphone
+  Megaphone,
+  Settings
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
@@ -141,6 +142,7 @@ export default function AdminSidebar({
     { name: t("wishlists") || "Wishlists", href: "/admin/wishlists", icon: Heart, badge: wishlistCount },
     { name: t("gallery"), href: "/admin/gallery", icon: Image },
     { name: t("siteThemes") || "Themes", href: "/admin/themes", icon: Palette },
+    { name: t("settings") || (i18n.language === 'ar' ? 'الإعدادات' : 'Settings'), href: "/admin/settings", icon: Settings },
   ];
 
   // Filter navigation for staff role based on permissions

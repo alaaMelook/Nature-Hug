@@ -8,9 +8,20 @@ import { useFeatures } from "@/ui/hooks/store/useFeatures";
 import { motion } from "framer-motion";
 import { Category } from "@/domain/entities/database/category";
 import { useEffect, useMemo, useState } from "react";
+import { Instagram, Facebook } from "lucide-react";
+import { TikTokIcon } from "@/ui/components/icons/TikTokIcon";
+import { StoreSettings } from "@/domain/entities/database/settings";
 
 
-export function HomeScreen({ initialProducts: products, categories }: { initialProducts: ProductView[], categories: Category[] }) {
+export function HomeScreen({ 
+    initialProducts: products, 
+    categories,
+    settings 
+}: { 
+    initialProducts: ProductView[]; 
+    categories: Category[]; 
+    settings?: StoreSettings;
+}) {
     const { t, i18n } = useTranslation();
     const features = useFeatures();
     const visibleCategories = categories.filter(c => c.image_url);
@@ -181,6 +192,50 @@ export function HomeScreen({ initialProducts: products, categories }: { initialP
                                 {t("learnMore")}
                             </Link>
                         </motion.div>
+
+                        {/* Social Media Buttons (Configurable via Admin) */}
+                        {settings?.show_social_media !== false && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 15 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.5, ease: "easeOut", delay: 0.65 }}
+                                className="flex flex-col sm:flex-row justify-center items-center gap-3 mt-6 sm:mt-8"
+                            >
+                                {settings?.instagram_url && (
+                                    <a
+                                        href={settings.instagram_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="bg-gradient-to-r from-[#833ab4] via-[#fd1d1d] to-[#fcb045] text-white font-semibold text-sm px-6 py-3 rounded-full shadow-md hover:shadow-xl hover:-translate-y-1 active:scale-95 transition-all duration-300 flex items-center justify-center gap-2.5 min-w-[150px]"
+                                    >
+                                        <Instagram className="w-4 h-4" />
+                                        <span>Instagram</span>
+                                    </a>
+                                )}
+                                {settings?.facebook_url && (
+                                    <a
+                                        href={settings.facebook_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="bg-[#1877F2] hover:bg-[#166fe5] text-white font-semibold text-sm px-6 py-3 rounded-full shadow-md hover:shadow-xl hover:-translate-y-1 active:scale-95 transition-all duration-300 flex items-center justify-center gap-2.5 min-w-[150px]"
+                                    >
+                                        <Facebook className="w-4 h-4" />
+                                        <span>Facebook</span>
+                                    </a>
+                                )}
+                                {settings?.tiktok_url && (
+                                    <a
+                                        href={settings.tiktok_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="bg-black hover:bg-neutral-900 text-white font-semibold text-sm px-6 py-3 rounded-full shadow-md hover:shadow-xl hover:-translate-y-1 active:scale-95 transition-all duration-300 border border-white/10 flex items-center justify-center gap-2.5 min-w-[150px]"
+                                    >
+                                        <TikTokIcon className="w-4 h-4 fill-current" />
+                                        <span>TikTok</span>
+                                    </a>
+                                )}
+                            </motion.div>
+                        )}
                     </motion.div>
                 </section>
                 <section className={`py-16  mt-6 mb-2  z-2`}>

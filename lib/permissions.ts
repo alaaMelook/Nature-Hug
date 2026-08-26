@@ -78,6 +78,7 @@ export const STAFF_PERMISSIONS: StaffPermission[] = [
     { key: 'wishlists', label: 'Wishlists', labelAr: 'قوائم الأمنيات', routes: ['/admin/wishlists'] },
     { key: 'gallery', label: 'Gallery', labelAr: 'المعرض', routes: ['/admin/gallery'] },
     { key: 'themes', label: 'Themes', labelAr: 'الثيمات', routes: ['/admin/themes'] },
+    { key: 'settings', label: 'Settings', labelAr: 'الإعدادات', routes: ['/admin/settings'] },
 ] as const;
 
 export type StaffPermissionKey = string;
