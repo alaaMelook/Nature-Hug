@@ -106,7 +106,7 @@ export function SettingsScreen({ initialSettings, isAdmin = true }: SettingsScre
                             <div>
                                 <div className="flex items-center gap-2.5">
                                     <h2 className="text-lg font-bold text-gray-900">
-                                        {t("media") || "Media"} - {t("socialMedia") || "Social Media"}
+                                        {t("socialMediaNav") || "Media"} - {t("socialMedia") || "Social Media"}
                                     </h2>
                                     <span
                                         className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
