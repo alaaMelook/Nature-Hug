@@ -56,32 +56,14 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
         })),
     });
 
-    // Calculate initial discount with full fallbacks (promo codes, bundle discounts, implicit differences)
+    // Calculate initial manual / promo discount (excluding bundle discounts already in item prices)
     const initialDiscount = useMemo(() => {
         let d = order.discount_total;
-
-        const bundleDiscount = order.items.reduce((sum, item) => {
-            if (item.item_discount_per_unit && item.item_discount_per_unit > 0) {
-                return sum + (item.item_discount_per_unit * item.quantity);
-            }
-            return sum;
-        }, 0);
 
         if (d === 0 && order.applied_promo_codes && Array.isArray(order.applied_promo_codes) && order.applied_promo_codes.length > 0) {
             d = order.applied_promo_codes.reduce((sum: number, promo: any) => sum + (promo.discount || 0), 0);
         } else if (d === 0 && order.applied_promo_code && order.promo_percentage > 0) {
             d = order.subtotal * (order.promo_percentage / 100);
-        }
-
-        if (d === 0 && bundleDiscount > 0) {
-            d = bundleDiscount;
-        }
-
-        if (d === 0 && order.final_order_total > 0) {
-            const diff = (order.subtotal + order.shipping_total) - order.final_order_total;
-            if (diff > 0.01) {
-                d = Math.round(diff * 100) / 100;
-            }
         }
 
         return d;
@@ -1034,39 +1016,55 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
                                         );
                                     }
 
-                                    /* ── Bundle order: partition items using bundle_metadata item_count ── */
+                                    /* ── Bundle order: partition items into bundle components vs regular items ── */
                                     const bundleMeta = order.bundle_metadata?.[0];
-                                    const bundleCount = bundleMeta?.item_count || 0;
+                                    const bundleProductIds: number[] = (bundleMeta as any)?.product_ids || [];
+                                    const rawBundleNameForPartition = bundleMeta?.raw_name || bundleMeta?.name || '';
+                                    const parenMatch = rawBundleNameForPartition.match(/\(([^)]+)\)/);
+                                    const bundleProductNames: string[] = parenMatch
+                                        ? parenMatch[1].split('+').map((s: string) => s.trim().toLowerCase()).filter(Boolean)
+                                        : [];
 
                                     let finalBundleItems: typeof order.items = [];
                                     let finalRegularItems: typeof order.items = [];
 
-                                    if (bundleCount > 0 && bundleCount <= order.items.length) {
+                                    // Identify bundle items:
+                                    // 1. By explicit product_ids stored in bundle metadata (most reliable)
+                                    // 2. By matching component name against item_name, base_name, variant_name, or Arabic product name
+                                    // NEVER classify an item as a bundle item purely because discount > 0, since standalone items can also have product discounts!
+                                    order.items.forEach(subItem => {
+                                        const itemNameLower = (subItem.item_name || '').toLowerCase();
+                                        const prodBaseLower = (subItem.product_base_name || '').toLowerCase();
+                                        const varNameLower = (subItem.variant_name || '').toLowerCase();
+                                        const prodMatch = products?.find(p => p.id === subItem.product_id || (p as any).product_id === subItem.product_id);
+                                        const prodNameArLower = (prodMatch?.name || '').toLowerCase();
+
+                                        const isExplicitBundleItem = bundleProductIds.length > 0 && bundleProductIds.includes(subItem.product_id);
+                                        const isNameMatched = bundleProductNames.length > 0 && bundleProductNames.some(bp =>
+                                            bp.includes(itemNameLower) || itemNameLower.includes(bp) ||
+                                            (prodBaseLower && (bp.includes(prodBaseLower) || prodBaseLower.includes(bp))) ||
+                                            (varNameLower && (bp.includes(varNameLower) || varNameLower.includes(bp))) ||
+                                            (prodNameArLower && (bp.includes(prodNameArLower) || prodNameArLower.includes(bp)))
+                                        );
+
+                                        const isBundleItem = isExplicitBundleItem || isNameMatched;
+                                        const bundleCount = bundleMeta?.item_count || 0;
+
+                                        if (isBundleItem && (!bundleCount || finalBundleItems.length < bundleCount)) {
+                                            finalBundleItems.push(subItem);
+                                        } else {
+                                            finalRegularItems.push(subItem);
+                                        }
+                                    });
+
+                                    // Fallback: if no items matched by id or name, but bundleCount exists
+                                    const bundleCount = bundleMeta?.item_count || 0;
+                                    if (finalBundleItems.length === 0 && bundleCount > 0 && bundleCount <= order.items.length) {
                                         finalBundleItems = order.items.slice(0, bundleCount);
                                         finalRegularItems = order.items.slice(bundleCount);
-                                    } else {
-                                        /* Fallback if item_count is missing */
-                                        const rawBundleNameForPartition = bundleMeta?.raw_name || bundleMeta?.name || '';
-                                        const parenMatch = rawBundleNameForPartition.match(/\(([^)]+)\)/);
-                                        const bundleProductNames: string[] = parenMatch
-                                            ? parenMatch[1].split('+').map((s: string) => s.trim().toLowerCase()).filter(Boolean)
-                                            : [];
-
-                                        order.items.forEach(subItem => {
-                                            const itemNameLower = subItem.item_name.toLowerCase();
-                                            const isBundleItem =
-                                                (subItem.item_discount_per_unit && subItem.item_discount_per_unit > 0) ||
-                                                (bundleProductNames.length > 0 && bundleProductNames.some(bp =>
-                                                    bp.includes(itemNameLower) || itemNameLower.includes(bp)
-                                                ));
-                                            if (isBundleItem) finalBundleItems.push(subItem);
-                                            else finalRegularItems.push(subItem);
-                                        });
-
-                                        if (finalBundleItems.length === 0) {
-                                            finalBundleItems = order.items;
-                                            finalRegularItems = [];
-                                        }
+                                    } else if (finalBundleItems.length === 0) {
+                                        finalBundleItems = order.items;
+                                        finalRegularItems = [];
                                     }
 
                                     const rawBundleName = bundleMeta?.raw_name || bundleMeta?.name || '';
@@ -1091,17 +1089,20 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
 
                                     /* Sub-items for bundle card */
                                     let expandedSubItems: { name: string }[] = [];
-                                    const matchInParen2 = rawBundleName.match(/\(([^)]+)\)/);
-                                    if (matchInParen2 && matchInParen2[1].includes('+')) {
-                                        expandedSubItems = matchInParen2[1].split('+').map((s: string) => ({ name: s.trim() }));
-                                    } else {
+                                    if (finalBundleItems.length > 0) {
                                         finalBundleItems.forEach(subItem => {
-                                            let subName = subItem.variant_name && subItem.variant_name.trim()
-                                                ? subItem.variant_name.trim()
-                                                : subItem.item_name;
-                                            if (subName.includes(' - ')) subName = subName.split(' - ').slice(1).join(' - ').trim();
+                                            const subName = subItem.item_name || (
+                                                subItem.variant_name && subItem.variant_name.trim()
+                                                    ? `${subItem.product_base_name || ''} - ${subItem.variant_name.trim()}`.trim()
+                                                    : subItem.product_base_name || 'Item'
+                                            );
                                             for (let r = 0; r < subItem.quantity; r++) expandedSubItems.push({ name: subName });
                                         });
+                                    } else {
+                                        const matchInParen2 = rawBundleName.match(/\(([^)]+)\)/);
+                                        if (matchInParen2 && matchInParen2[1].includes('+')) {
+                                            expandedSubItems = matchInParen2[1].split('+').map((s: string) => ({ name: s.trim() }));
+                                        }
                                     }
 
                                     return (
@@ -1152,9 +1153,11 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
                                             {finalRegularItems.map((item, index) => {
                                                 const hasDiscount = item.item_discount_per_unit && item.item_discount_per_unit > 0;
                                                 const originalUnitPrice = hasDiscount ? item.unit_price + item.item_discount_per_unit : item.unit_price;
-                                                const displayName = item.variant_name && item.variant_name.trim()
-                                                    ? item.variant_name.trim()
-                                                    : (item.item_name.includes(' - ') ? item.item_name.split(' - ').slice(1).join(' - ').trim() : item.item_name);
+                                                const displayName = item.item_name || (
+                                                    item.variant_name && item.variant_name.trim()
+                                                        ? `${item.product_base_name || ''} - ${item.variant_name.trim()}`.trim()
+                                                        : item.product_base_name || 'Item'
+                                                );
 
                                                 return (
                                                     <div key={`reg-${index}`} className="flex gap-4 px-4 sm:px-6 py-4 hover:bg-gray-50 transition-colors">
@@ -1226,13 +1229,16 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
                         ) : (
                             (() => {
                                 const isBundleOrder = !!(order.bundle_metadata && order.bundle_metadata.length > 0);
-                                const itemsSum = order.items.reduce((sum, i) => sum + (i.quantity * i.unit_price), 0);
-                                const baseSubtotal = (order.subtotal && order.subtotal > 0) ? order.subtotal : itemsSum;
+                                // Original subtotal (sum of original items prices before ALL discounts)
+                                // item_discount_per_unit = bundle discount per unit (from DB view)
+                                // We also need to add back any product-level discounts stored in order_items.discount
+                                // which appear as a gap between unit_price and (unit_price - discount) when item_discount_per_unit == 0
+                                const originalSubtotal = order.items.reduce((sum, i) => sum + (i.quantity * (i.unit_price + (i.item_discount_per_unit || 0))), 0);
+                                const baseSubtotal = originalSubtotal > 0 ? originalSubtotal : ((order.subtotal && order.subtotal > 0) ? order.subtotal : order.items.reduce((sum, i) => sum + (i.quantity * i.unit_price), 0));
 
-                                let bundleTotalDiscount = (order.bundle_metadata || []).reduce((s: number, b: any) => s + (b.total_discount || 0), 0);
-                                if (bundleTotalDiscount === 0 && isBundleOrder) {
-                                    bundleTotalDiscount = 130.90;
-                                }
+                                // Total Bundle Discount (from bundle metadata or per-item bundle discounts)
+                                const bundleTotalDiscount = (order.bundle_metadata || []).reduce((s: number, b: any) => s + (b.total_discount || 0), 0)
+                                    || order.items.reduce((sum, i) => sum + (i.quantity * (i.item_discount_per_unit || 0)), 0);
 
                                 const manualDiscountVal = discountDirty
                                     ? (parseFloat(discountInput) || 0)
@@ -1240,48 +1246,42 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
                                 const currentShipping = parseFloat(shippingInput) || 0;
                                 const effectiveShipping = discountDirty ? currentShipping : order.shipping_total;
 
-                                 // Promo codes sum
+                                // Promo codes sum
                                 const promoDiscountSum = (order.applied_promo_codes && Array.isArray(order.applied_promo_codes))
                                     ? order.applied_promo_codes.reduce((sum: number, p: any) => sum + (p.discount || 0), 0)
                                     : 0;
 
-                                const calculatedGrandTotal = Math.max(0, baseSubtotal + effectiveShipping - promoDiscountSum - manualDiscountVal);
+                                // Combined total discount (bundle + promo codes + manual discount)
+                                // Grand total from DB is the single source of truth - compute combined discount from it
+                                const storedGrandTotal = (order as any).grand_total || order.final_order_total || 0;
+                                const combinedDiscountFromDB = storedGrandTotal > 0
+                                    ? Math.max(0, baseSubtotal + (discountDirty ? currentShipping : order.shipping_total) - storedGrandTotal)
+                                    : bundleTotalDiscount + promoDiscountSum + manualDiscountVal;
+                                const combinedDiscount = discountDirty
+                                    ? bundleTotalDiscount + promoDiscountSum + manualDiscountVal
+                                    : combinedDiscountFromDB;
+                                const calculatedGrandTotal = Math.max(0, baseSubtotal + effectiveShipping - combinedDiscount);
 
                                 return (
                                     <div className="flex flex-col gap-2 text-sm">
                                         <div className="flex justify-between w-full text-gray-600 px-2 font-medium">
-                                            <span>{t("subtotal")}</span>
+                                            <span>{t("subtotal")} ({t("originalSubtotal") || "المجموع الأصلي"})</span>
                                             <span>{t('{{price, currency}}', { price: baseSubtotal })}</span>
                                         </div>
 
-                                        {/* Dedicated Bundle Discount row (styled in green like promo code) */}
-                                        {isBundleOrder && bundleTotalDiscount > 0 && (
+                                        {/* Single combined discount row */}
+                                        {combinedDiscount > 0 && (
                                             <div className="flex justify-between items-center w-full text-emerald-700 font-medium px-2 py-1.5 bg-emerald-50 rounded-lg">
                                                 <span className="flex items-center gap-1.5">
-                                                    🎁 {order.bundle_metadata?.[0]?.name || t("bundleDiscount") || "خصم الباقة"}
+                                                    🏷️ {t("totalDiscount") || "إجمالي الخصم"}
+                                                    {promoDiscountSum > 0 && order.applied_promo_codes?.[0]?.code && (
+                                                        <span className="text-xs text-purple-700 font-normal">
+                                                            ({order.applied_promo_codes.map((p: any) => p.code).join(', ')})
+                                                        </span>
+                                                    )}
                                                 </span>
-                                                <span>-{t('{{price, currency}}', { price: Math.round(bundleTotalDiscount * 100) / 100 })}</span>
+                                                <span>-{t('{{price, currency}}', { price: Math.round(combinedDiscount * 100) / 100 })}</span>
                                             </div>
-                                        )}
-
-                                        {/* Promo code discount rows */}
-                                        {order.applied_promo_codes && Array.isArray(order.applied_promo_codes) && order.applied_promo_codes.length > 0 && (
-                                            order.applied_promo_codes.map((promo: any, index: number) => (
-                                                <div key={index} className="flex justify-between items-center w-full text-purple-700 px-2 text-xs font-medium">
-                                                    <span className="flex items-center gap-1">
-                                                        🏷️ {t("discount")} ({promo.code}{promo.auto_apply && ' 🔄'})
-                                                        <button
-                                                            onClick={() => handleRemovePromoCode(index)}
-                                                            disabled={savingDiscount}
-                                                            className="ml-1 p-0.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
-                                                            title={t("removePromoCode") || "Remove promo code"}
-                                                        >
-                                                            <X size={12} />
-                                                        </button>
-                                                    </span>
-                                                    <span>-{t('{{price, currency}}', { price: promo.discount || 0 })}</span>
-                                                </div>
-                                            ))
                                         )}
 
                                         <div className="flex justify-between items-center w-full text-gray-600 px-2">

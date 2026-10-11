@@ -14,6 +14,7 @@ interface TelegramOrderItem {
     originalPrice?: number;    // unit price before discount (for bundles)
     isBundle?: boolean;
     bundleSubItems?: { name: string; quantity: number }[];
+    variantName?: string;      // selected variant name for regular products (legacy, name may already include it)
 }
 
 interface OrderNotificationData {
@@ -101,6 +102,7 @@ export async function sendOrderNotificationTelegram(
         subtotal?: number;
         discountTotal?: number;
         shippingTotal?: number;
+        bundleDiscountTotal?: number;  // bundle discount shown separately for transparency
     }
 ): Promise<{ success: boolean; error?: string; sent?: number; failed?: number }> {
     // Build items list
@@ -136,13 +138,18 @@ export async function sendOrderNotificationTelegram(
         }).join('\n');
     }
 
-    // Build price breakdown
+    // Build price breakdown — single combined discount line
+    // subtotal passed in = items at their final (post-bundle) prices
+    // bundleDiscountTotal = the bundle saving; discountTotal = promo code saving
+    const totalDiscount = (data.bundleDiscountTotal || 0) + (data.discountTotal || 0);
+    const originalSubtotal = (data.subtotal || 0) + (data.bundleDiscountTotal || 0);
+
     let priceBreakdown = '';
-    if (data.subtotal !== undefined && data.subtotal !== data.totalAmount) {
-        priceBreakdown += `\n💵 <b>السعر قبل الخصم:</b> ${data.subtotal.toFixed(2)} ج.م`;
+    if (originalSubtotal > 0) {
+        priceBreakdown += `\n💵 <b>المجموع قبل الخصم:</b> ${originalSubtotal.toFixed(2)} ج.م`;
     }
-    if (data.discountTotal && data.discountTotal > 0) {
-        priceBreakdown += `\n🏷️ <b>إجمالي الخصم:</b> -${data.discountTotal.toFixed(2)} ج.م`;
+    if (totalDiscount > 0) {
+        priceBreakdown += `\n🏷️ <b>إجمالي الخصم:</b> -${totalDiscount.toFixed(2)} ج.م`;
     }
     if (data.shippingTotal !== undefined && data.shippingTotal > 0) {
         priceBreakdown += `\n🚚 <b>الشحن:</b> ${data.shippingTotal.toFixed(2)} ج.م`;

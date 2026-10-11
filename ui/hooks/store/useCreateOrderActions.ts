@@ -80,7 +80,8 @@ export async function createOrder(data: Partial<Order>, isAdmin: boolean, items:
                     name: bundleName,
                     slug: item.slug,
                     total_discount: bundleDiscountPerUnit * item.quantity,
-                    item_count: bundleItems.length * item.quantity
+                    item_count: bundleItems.length * item.quantity,
+                    product_ids: bundleItems.map((bi: any) => bi.product_id)
                 });
 
                 for (let idx = 0; idx < bundleItems.length; idx++) {
@@ -182,30 +183,35 @@ export async function createOrder(data: Partial<Order>, isAdmin: boolean, items:
                     .single();
 
                 const fallbackPrice = item.price || dbProduct.price || 0;
+                const fallbackDiscount = dbProduct.discount || 0;
+                const fallbackEffectivePrice = Math.max(0, fallbackPrice - fallbackDiscount);
                 const fallbackProductId = fallbackProd?.id || dbProduct.id || dbProduct.product_id;
 
-                calculatedSubtotal += fallbackPrice * item.quantity;
+                calculatedSubtotal += fallbackEffectivePrice * item.quantity;
 
                 verifiedItems.push({
                     product_id: fallbackProductId,
                     variant_id: null,
                     quantity: item.quantity,
-                    unit_price: fallbackPrice,
-                    discount: 0
+                    unit_price: fallbackEffectivePrice,  // Store effective price
+                    discount: fallbackDiscount
                 });
             }
         } else {
-            // Use price from DB. 
+            // Use price from DB. Apply product-level discount if present.
+            // Convention (matching bundle items): unit_price = effective (post-discount) price,
+            // discount = per-unit discount. DB view computes original = unit_price + discount.
             const unitPrice = dbProduct.price;
-            const lineTotal = unitPrice * item.quantity;
-            calculatedSubtotal += lineTotal;
+            const productDiscount = dbProduct.discount || 0;
+            const effectivePrice = Math.max(0, unitPrice - productDiscount);
+            calculatedSubtotal += effectivePrice * item.quantity;
 
             verifiedItems.push({
                 product_id: dbProduct.id || dbProduct.product_id,
                 variant_id: item.variant_id || null,
                 quantity: item.quantity,
-                unit_price: unitPrice,
-                discount: 0
+                unit_price: effectivePrice,  // Store effective (discounted) price
+                discount: productDiscount     // Store discount separately
             });
         }
     }
@@ -266,10 +272,12 @@ export async function createOrder(data: Partial<Order>, isAdmin: boolean, items:
         }
     }
 
-    // Add bundle discounts to overall calculated discount
-    // bundleMetaList contains the actual per-bundle discounts computed from item prices
-    const bundleTotalDiscount = bundleMetaList.reduce((sum, b) => sum + (b.total_discount || 0), 0);
-    calculatedDiscount += bundleDiscountAccumulator + bundleTotalDiscount;
+    // NOTE: Do NOT add bundle discounts to calculatedDiscount.
+    // The calculatedSubtotal for bundle items is already set to the final (discounted) bundle price.
+    // Adding the bundle discount here would cause it to be subtracted a SECOND time in the
+    // grand total formula: grandTotal = subtotal + shipping - calculatedDiscount.
+    // bundleDiscountAccumulator is unused but kept for clarity; bundleMetaList is only for display.
+    // calculatedDiscount only reflects promo code discounts here.
 
     // 3. Calculate Shipping
     // First, check if any of the applied_promo_codes has free_shipping
@@ -467,9 +475,16 @@ export async function createOrder(data: Partial<Order>, isAdmin: boolean, items:
                 const originalPrice = dbProduct?.price ?? item.price; // price before discount
                 const finalPrice = item.price; // price after discount (from cart)
 
-                // Bundle sub-items: from item.bundleItems if available
+                // Bundle sub-items: from selected_variants (with chosen variants) or item.bundleItems
                 const subItems: { name: string; quantity: number }[] = [];
-                if ((item as any).bundleItems && Array.isArray((item as any).bundleItems)) {
+                const selVars = (item as any).selected_variants;
+                if (selVars && typeof selVars === 'object' && Object.keys(selVars).length > 0) {
+                    Object.values(selVars).forEach((sv: any) => {
+                        if (sv && sv.name) {
+                            subItems.push({ name: sv.name, quantity: 1 });
+                        }
+                    });
+                } else if ((item as any).bundleItems && Array.isArray((item as any).bundleItems)) {
                     (item as any).bundleItems.forEach((bi: any) => {
                         subItems.push({ name: bi.name || bi.product?.name || 'منتج', quantity: bi.quantity || 1 });
                     });
@@ -484,12 +499,19 @@ export async function createOrder(data: Partial<Order>, isAdmin: boolean, items:
                     bundleSubItems: subItems.length > 0 ? subItems : undefined,
                 };
             }
+            // For regular products: include variant name if it was stored in the product name
+            // The product name in the cart for variant products may already include the variant
+            // (e.g. set during product-detail selection). We pass it as-is.
             return {
                 name: item.name,
                 quantity: item.quantity,
                 price: item.price - (item.discount || 0),
+                variantName: item.variant_id ? (item.name || undefined) : undefined,
             };
         });
+
+        // Compute bundle discount total for Telegram transparency display
+        const telegramBundleDiscount = bundleMetaList.reduce((sum, b) => sum + (b.total_discount || 0), 0);
 
         sendOrderNotificationTelegram({
             orderId: createdOrder.order_id,
@@ -502,6 +524,7 @@ export async function createOrder(data: Partial<Order>, isAdmin: boolean, items:
             subtotal: calculatedSubtotal,
             discountTotal: calculatedDiscount > 0 ? calculatedDiscount : undefined,
             shippingTotal: calculatedShipping > 0 ? calculatedShipping : undefined,
+            bundleDiscountTotal: telegramBundleDiscount > 0 ? telegramBundleDiscount : undefined,
         }).catch(err => console.error("[Telegram] Failed to send notification:", err));
 
         revalidatePath('/', 'layout');

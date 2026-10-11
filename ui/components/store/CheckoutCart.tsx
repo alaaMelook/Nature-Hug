@@ -318,7 +318,7 @@ export function CheckoutCart({ selectedGovernorate, onPurchase, customerId }: {
 
                 {/* Totals */}
                 {(() => {
-                    // Original subtotal (sum of original prices before bundle discounts)
+                    // Original subtotal (sum of original prices before ALL discounts)
                     const originalSubtotal = cart.items.reduce((sum, item) => {
                         const origPrice = item.original_price && item.original_price > item.price ? item.original_price : item.price;
                         return sum + (origPrice * item.quantity);
@@ -352,12 +352,15 @@ export function CheckoutCart({ selectedGovernorate, onPurchase, customerId }: {
                         });
                     }
 
+                    // Combined discount = bundle + promo
+                    const combinedDiscount = totalBundleDiscount + promoDiscountTotal;
+
                     const shippingFees = cart.free_shipping || cart.isAdmin ? 0 : (selectedGovernorate?.fees ?? 0);
                     const finalTotal = cart.isAdmin ? 0 : Math.max(0, itemsSubtotal - promoDiscountTotal + shippingFees);
 
                     return (
                         <div className="space-y-3 mt-6 pt-6 border-t border-gray-100">
-                            {/* Subtotal */}
+                            {/* Subtotal — original price before all discounts */}
                             <div className="flex justify-between text-sm">
                                 <span className="text-gray-500">{t('checkout.subtotal')}</span>
                                 <span className="font-medium text-gray-900">
@@ -365,26 +368,14 @@ export function CheckoutCart({ selectedGovernorate, onPurchase, customerId }: {
                                 </span>
                             </div>
 
-                            {/* Bundle Discount Row */}
-                            {totalBundleDiscount > 0 && !cart.isAdmin && (
+                            {/* Single combined discount row */}
+                            {combinedDiscount > 0 && !cart.isAdmin && (
                                 <div className="flex justify-between text-sm">
                                     <span className="text-emerald-700 font-medium flex items-center gap-1.5">
-                                        🎁 {t('bundleDiscount') || 'خصم الباقة'}
+                                        🏷️ {t('checkout.discount') || 'إجمالي الخصم'}
                                     </span>
                                     <span className="font-semibold text-emerald-700">
-                                        -{t("{{price, currency}}", { price: totalBundleDiscount })}
-                                    </span>
-                                </div>
-                            )}
-
-                            {/* Promo Code Discount Row */}
-                            {promoDiscountTotal > 0 && !cart.isAdmin && (
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-purple-700 font-medium flex items-center gap-1.5">
-                                        🏷️ {t('checkout.discount')}
-                                    </span>
-                                    <span className="font-semibold text-purple-700">
-                                        -{t("{{price, currency}}", { price: promoDiscountTotal })}
+                                        -{t("{{price, currency}}", { price: combinedDiscount })}
                                     </span>
                                 </div>
                             )}

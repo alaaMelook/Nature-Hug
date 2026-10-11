@@ -228,6 +228,17 @@ export function BundleCustomizerScreen({ bundle, lang }: { bundle: BundleDetailV
             category_name: bundle.category_name,
             slug: `bundle-${bundle.slug}`,
             product_type: "bundle",
+            // Preserve selected variant details keyed by "productId-slotIndex" so the server
+            // action can identify which variant was chosen for each bundle slot.
+            selected_variants: finalSelectionDetails,
+            // Store component items for Telegram notification sub-item listing
+            bundleItems: bundle.items
+                .filter((item: any) => !isMixAndMatch || mixSelected.has(item.product_id))
+                .map((item: any) => ({
+                    product_id: item.product_id,
+                    name: isAr ? (item.product?.name_ar || item.product?.name_en) : (item.product?.name_en || item.product?.name_ar) || '',
+                    quantity: item.quantity,
+                })),
         };
         try {
             await addToCart(configuredBundle, 1);

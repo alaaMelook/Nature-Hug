@@ -141,17 +141,50 @@ export const generateInvoicePDF = (orders: OrderDetailsView | OrderDetailsView[]
         const tableStartY = Math.max(currentBillY, currentDetailY) + 10;
 
         const bundleMeta = order.bundle_metadata?.[0];
+        const bundleProductIds: number[] = (bundleMeta as any)?.product_ids || [];
+        const rawBundleName = bundleMeta?.raw_name || bundleMeta?.name || '';
+        const parenMatch = rawBundleName.match(/\(([^)]+)\)/);
+        const bundleProductNames: string[] = parenMatch
+            ? parenMatch[1].split('+').map((s: string) => s.trim().toLowerCase()).filter(Boolean)
+            : [];
+
+        let bundleItems: typeof order.items = [];
+        let regularItems: typeof order.items = [];
+
+        order.items.forEach(subItem => {
+            const itemNameLower = (subItem.item_name || '').toLowerCase();
+            const prodBaseLower = (subItem.product_base_name || '').toLowerCase();
+            const varNameLower = (subItem.variant_name || '').toLowerCase();
+
+            const isExplicitBundleItem = bundleProductIds.length > 0 && bundleProductIds.includes(subItem.product_id);
+            const isNameMatched = bundleProductNames.length > 0 && bundleProductNames.some(bp =>
+                bp.includes(itemNameLower) || itemNameLower.includes(bp) ||
+                (prodBaseLower && (bp.includes(prodBaseLower) || prodBaseLower.includes(bp))) ||
+                (varNameLower && (bp.includes(varNameLower) || varNameLower.includes(bp)))
+            );
+
+            const isBundleItem = isExplicitBundleItem || isNameMatched;
+            const bundleCount = bundleMeta?.item_count || 0;
+
+            if (isBundleItem && (!bundleCount || bundleItems.length < bundleCount)) {
+                bundleItems.push(subItem);
+            } else {
+                regularItems.push(subItem);
+            }
+        });
+
         const bundleCount = bundleMeta?.item_count || 0;
-        const isBundleOrder = !!(bundleMeta && bundleCount > 0);
+        if (bundleItems.length === 0 && bundleCount > 0 && bundleCount <= order.items.length) {
+            bundleItems = order.items.slice(0, bundleCount);
+            regularItems = order.items.slice(bundleCount);
+        }
+
+        const isBundleOrder = !!(bundleMeta && bundleItems.length > 0);
 
         let tableBody: any[] = [];
         const bundleRowIndices = new Set<number>();
 
-        if (isBundleOrder && bundleCount <= order.items.length) {
-            const bundleItems = order.items.slice(0, bundleCount);
-            const regularItems = order.items.slice(bundleCount);
-
-            const rawBundleName = bundleMeta?.raw_name || bundleMeta?.name || '';
+        if (isBundleOrder) {
             let primaryBundleName = bundleMeta?.name || rawBundleName;
             if (!primaryBundleName || primaryBundleName === "Body Lotion Collection") {
                 const extracted = bundleItems.find(i => i.item_name.includes(' - '))?.item_name.split(' - ')[0].trim();
@@ -169,23 +202,23 @@ export const generateInvoicePDF = (orders: OrderDetailsView | OrderDetailsView[]
             if (bundleDiscount === 0 && totalOriginal > totalFinal) {
                 bundleDiscount = Math.round((totalOriginal - totalFinal) * 100) / 100;
             }
-            if (bundleDiscount === 0) {
-                bundleDiscount = 130.90;
-            }
 
-            // Sub-items for bundle
+            // Sub-items for bundle: prioritize actual bundle items with explicit variants
             let expandedSubItems: string[] = [];
-            const matchInParen = rawBundleName.match(/\(([^)]+)\)/);
-            if (matchInParen && matchInParen[1].includes('+')) {
-                expandedSubItems = matchInParen[1].split('+').map(s => s.trim());
-            } else {
+            if (bundleItems.length > 0) {
                 bundleItems.forEach(subItem => {
-                    let subName = subItem.variant_name && subItem.variant_name.trim()
-                        ? subItem.variant_name.trim()
-                        : subItem.item_name;
-                    if (subName.includes(' - ')) subName = subName.split(' - ').slice(1).join(' - ').trim();
+                    const subName = subItem.item_name || (
+                        subItem.variant_name && subItem.variant_name.trim()
+                            ? `${subItem.product_base_name || ''} - ${subItem.variant_name.trim()}`.trim()
+                            : subItem.product_base_name || 'Item'
+                    );
                     for (let r = 0; r < subItem.quantity; r++) expandedSubItems.push(subName);
                 });
+            } else {
+                const matchInParen = rawBundleName.match(/\(([^)]+)\)/);
+                if (matchInParen && matchInParen[1].includes('+')) {
+                    expandedSubItems = matchInParen[1].split('+').map(s => s.trim());
+                }
             }
 
             // 1. Bundle Header Row (with bundle discount label if present)
@@ -194,7 +227,14 @@ export const generateInvoicePDF = (orders: OrderDetailsView | OrderDetailsView[]
                 : `[Bundle] ${primaryBundleName}`;
 
             const bundleHeaderRow = [
-                { content: bundleLabel, styles: { fontStyle: 'bold' as const, textColor: [20, 120, 80] } },
+                {
+                    content: bundleLabel,
+                    styles: {
+                        fontStyle: 'bold' as const,
+                        textColor: [20, 120, 80],
+                        font: containsArabic(bundleLabel) ? 'NotoSansArabic-Regular' : 'helvetica'
+                    }
+                },
                 { content: '1', styles: { halign: 'center' as const, fontStyle: 'bold' as const } },
                 { content: formatCurrency(totalFinal), styles: { fontStyle: 'bold' as const, halign: 'right' as const } },
                 { content: formatCurrency(totalFinal), styles: { fontStyle: 'bold' as const, halign: 'right' as const } },
@@ -202,7 +242,14 @@ export const generateInvoicePDF = (orders: OrderDetailsView | OrderDetailsView[]
 
             // 2. Bundle Sub-item Rows
             const subItemRows = expandedSubItems.map(subName => [
-                { content: `   • ${subName}`, styles: { fontSize: 9, textColor: [80, 80, 80] } },
+                {
+                    content: `   • ${subName}`,
+                    styles: {
+                        fontSize: 9,
+                        textColor: [80, 80, 80],
+                        font: containsArabic(subName) ? 'NotoSansArabic-Regular' : 'helvetica'
+                    }
+                },
                 { content: '', styles: { halign: 'center' as const } },
                 { content: '', styles: { halign: 'right' as const } },
                 { content: '', styles: { halign: 'right' as const } }
@@ -210,12 +257,21 @@ export const generateInvoicePDF = (orders: OrderDetailsView | OrderDetailsView[]
 
             // 3. Regular Standalone Product Rows
             const regularItemRows = regularItems.map(subItem => {
-                const displayName = subItem.variant_name && subItem.variant_name.trim()
-                    ? subItem.variant_name.trim()
-                    : (subItem.item_name.includes(' - ') ? subItem.item_name.split(' - ').slice(1).join(' - ').trim() : subItem.item_name);
+                const displayName = subItem.item_name || (
+                    subItem.variant_name && subItem.variant_name.trim()
+                        ? `${subItem.product_base_name || ''} - ${subItem.variant_name.trim()}`.trim()
+                        : subItem.product_base_name || 'Item'
+                );
 
                 return [
-                    { content: displayName, styles: { fontSize: 10, textColor: [50, 50, 50] } },
+                    {
+                        content: displayName,
+                        styles: {
+                            fontSize: 10,
+                            textColor: [50, 50, 50],
+                            font: containsArabic(displayName) ? 'NotoSansArabic-Regular' : 'helvetica'
+                        }
+                    },
                     { content: subItem.quantity.toString(), styles: { halign: 'center' as const } },
                     { content: formatCurrency(subItem.unit_price), styles: { halign: 'right' as const } },
                     { content: formatCurrency(subItem.quantity * subItem.unit_price), styles: { halign: 'right' as const } }
@@ -235,9 +291,11 @@ export const generateInvoicePDF = (orders: OrderDetailsView | OrderDetailsView[]
             }
         } else {
             tableBody = order.items.map(item => {
-                const displayName = item.variant_name && item.variant_name.trim()
-                    ? item.variant_name.trim()
-                    : (item.item_name.includes(' - ') ? item.item_name.split(' - ').slice(1).join(' - ').trim() : item.item_name);
+                const displayName = item.item_name || (
+                    item.variant_name && item.variant_name.trim()
+                        ? `${item.product_base_name || ''} - ${item.variant_name.trim()}`.trim()
+                        : item.product_base_name || 'Item'
+                );
                 return [
                     displayName,
                     item.quantity.toString(),
@@ -277,6 +335,10 @@ export const generateInvoicePDF = (orders: OrderDetailsView | OrderDetailsView[]
             margin: { left: 15, right: 15 },
             didParseCell: (data) => {
                 if (data.section !== 'body') return;
+                const cellText = String(data.cell.raw?.content ?? (Array.isArray(data.cell.text) ? data.cell.text.join(' ') : data.cell.text) ?? '');
+                if (containsArabic(cellText)) {
+                    data.cell.styles.font = 'NotoSansArabic-Regular';
+                }
                 if (bundleRowIndices.has(data.row.index)) {
                     // Bundle rows: distinct light green tint background + clear grid lines
                     data.cell.styles.fillColor = [245, 252, 248];
@@ -316,43 +378,38 @@ export const generateInvoicePDF = (orders: OrderDetailsView | OrderDetailsView[]
 
         let currentTotalY = finalY;
 
-        // Base subtotal (sum of all items net prices)
-        const itemsSum = order.items.reduce((sum, i) => sum + (i.quantity * i.unit_price), 0);
-        const baseSubtotal = (order.subtotal && order.subtotal > 0) ? order.subtotal : itemsSum;
-
-        // Bundle discount calculation
+        // Original subtotal before ALL discounts (unit_price is the pre-discount price)
         const totalFinalForCalc = order.items.reduce((sum, i) => sum + (i.quantity * i.unit_price), 0);
         const totalOriginalForCalc = order.items.reduce((sum, i) => sum + (i.quantity * (i.unit_price + (i.item_discount_per_unit || 0))), 0);
-        let calcBundleDiscount = (order.bundle_metadata || []).reduce((s: number, b: any) => s + (b.total_discount || 0), 0);
-        if (calcBundleDiscount === 0 && totalOriginalForCalc > totalFinalForCalc) {
-            calcBundleDiscount = Math.round((totalOriginalForCalc - totalFinalForCalc) * 100) / 100;
-        }
-        if (calcBundleDiscount === 0 && isBundleOrder) {
-            calcBundleDiscount = 130.90;
-        }
+        const baseSubtotal = totalOriginalForCalc > 0 ? totalOriginalForCalc : ((order.subtotal && order.subtotal > 0) ? order.subtotal : totalFinalForCalc);
+
+        // Bundle discount (from metadata or per-item discounts in DB view)
+        const calcBundleDiscount = (order.bundle_metadata || []).reduce((s: number, b: any) => s + (b.total_discount || 0), 0)
+            || order.items.reduce((sum, i) => sum + (i.quantity * (i.item_discount_per_unit || 0)), 0);
 
         // Promo / manual discount
         const promoDiscount = (order.applied_promo_codes && Array.isArray(order.applied_promo_codes))
             ? order.applied_promo_codes.reduce((sum: number, p: any) => sum + (p.discount || 0), 0)
             : (order.discount_total || 0);
 
-        // 1. Subtotal
+        // Use grand_total from DB as the authoritative number so we capture ALL discounts
+        // (bundle + promo + product-level). Derive the combined discount from it.
+        const storedGrandTotal = (order as any).grand_total || order.final_order_total || 0;
+        const combinedDiscount = storedGrandTotal > 0
+            ? Math.max(0, baseSubtotal + order.shipping_total - storedGrandTotal)
+            : calcBundleDiscount + promoDiscount;
+
+        // 1. Subtotal (Original before discounts)
         addTotalRow("Subtotal:", formatCurrency(baseSubtotal), currentTotalY);
         currentTotalY += 5;
 
-        // 2. Bundle Discount (if present, show as highlighted savings row)
-        if (calcBundleDiscount > 0) {
-            addTotalRow("Bundle Savings:", `-${formatCurrency(calcBundleDiscount)}`, currentTotalY, false, 9, [20, 120, 80]);
+        // 2. Combined Total Discount row
+        if (combinedDiscount > 0) {
+            addTotalRow("Total Discount:", `-${formatCurrency(combinedDiscount)}`, currentTotalY, false, 9, [20, 120, 80]);
             currentTotalY += 5;
         }
 
-        // 3. Promo / Manual Discount
-        if (promoDiscount > 0) {
-            addTotalRow("Discount:", `-${formatCurrency(promoDiscount)}`, currentTotalY, false, 9, [220, 50, 50]);
-            currentTotalY += 5;
-        }
-
-        // 4. Shipping
+        // 3. Shipping
         addTotalRow("Shipping:", order.shipping_total > 0 ? formatCurrency(order.shipping_total) : "Free", currentTotalY);
         currentTotalY += 5;
 
@@ -361,7 +418,7 @@ export const generateInvoicePDF = (orders: OrderDetailsView | OrderDetailsView[]
         doc.line(totalXLabel, currentTotalY, totalXValue, currentTotalY);
         currentTotalY += 5;
 
-        const grandTotal = Math.max(0, baseSubtotal - promoDiscount + order.shipping_total);
+        const grandTotal = storedGrandTotal > 0 ? storedGrandTotal : Math.max(0, baseSubtotal - combinedDiscount + order.shipping_total);
         addTotalRow("TOTAL:", formatCurrency(grandTotal), currentTotalY, true, 11, [100, 80, 60]);
         currentTotalY += 5;
 

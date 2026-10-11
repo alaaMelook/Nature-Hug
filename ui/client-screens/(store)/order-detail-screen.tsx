@@ -20,67 +20,38 @@ export default function OrderDetailScreen({ order, fromCheckout }: {
     const { user, loading } = useSupabase();
     const [formatted, setFormatted] = useState('');
 
-    // Calculate displaySubtotal, calculatedDiscount, and effectiveTotal with full fallbacks
-    const { displaySubtotal, calculatedDiscount, bundleDiscount, promoDiscount, effectiveTotal } = useMemo(() => {
-        if (!order) return { displaySubtotal: 0, calculatedDiscount: 0, bundleDiscount: 0, promoDiscount: 0, effectiveTotal: 0 };
-        
-        const isBundleOrder = !!(order.bundle_metadata && order.bundle_metadata.length > 0);
+    // Calculate displaySubtotal, totalDiscount, and effectiveTotal
+    const { displaySubtotal, totalDiscount, effectiveTotal } = useMemo(() => {
+        if (!order) return { displaySubtotal: 0, totalDiscount: 0, effectiveTotal: 0 };
 
-        // Sum of items final price
-        const itemsFinalTotal = (order.order_items || []).reduce((sum, item) => {
-            return sum + (item.price * item.quantity);
-        }, 0);
+        // Use stored DB values as the primary source of truth
+        const storedSubtotal    = order.subtotal      || 0;
+        const storedGrandTotal  = order.grand_total   || 0;
+        const storedDiscount    = order.discount_total || 0;
+        const storedShipping    = order.shipping_total || 0;
 
-        // Sum of items original price (if available)
-        const itemsOriginalTotal = (order.order_items || []).reduce((sum, item) => {
-            const discountPerUnit = (item as any).discount_per_unit || (item as any).discount || 0;
-            const origPrice = discountPerUnit > 0 ? item.price + discountPerUnit : (item as any).original_price || item.price;
-            return sum + (origPrice * item.quantity);
-        }, 0);
+        // Grand total from DB is the authoritative number.
+        // Total discount = original_subtotal + shipping - grand_total.
+        // Original subtotal = storedSubtotal + storedDiscount (since subtotal is stored as effective price sum).
+        // This captures ALL discounts: bundle + product-level + promo codes.
+        const displaySubtotalValue = storedSubtotal + storedDiscount;
 
-        let subtotal = order.subtotal || itemsFinalTotal;
-        let totalDiscount = order.discount_total || 0;
+        // Combined discount = the full storedDiscount (already includes bundle + product-level + promo)
+        const combinedDiscount = storedDiscount;
 
-        let rawBundleDiscount = (order.bundle_metadata || []).reduce((s: number, b: BundleOrderMeta) => s + (b.total_discount || 0), 0);
-        
-        // Recover bundle discount for older orders where total_discount in metadata was stored as 0
-        if (rawBundleDiscount === 0 && isBundleOrder) {
-            if (itemsOriginalTotal > itemsFinalTotal) {
-                rawBundleDiscount = Math.round((itemsOriginalTotal - itemsFinalTotal) * 100) / 100;
-            } else {
-                rawBundleDiscount = 130.90;
-            }
-        }
+        // Grand total from DB is the single source of truth
+        const effectiveTotalValue = storedGrandTotal > 0
+            ? storedGrandTotal
+            : Math.max(0, storedSubtotal + storedShipping);
 
-        if (rawBundleDiscount > 0) {
-            subtotal = itemsFinalTotal + rawBundleDiscount;
-            totalDiscount = rawBundleDiscount;
-        } else if (itemsOriginalTotal > itemsFinalTotal) {
-            subtotal = Math.max(subtotal, itemsOriginalTotal);
-            if (totalDiscount === 0) {
-                totalDiscount = Math.round((itemsOriginalTotal - itemsFinalTotal) * 100) / 100;
-            }
-        }
-
-        // Promo discount: calculate on price AFTER bundle discount (subtotal - bundleDiscount)
-        const afterBundleSubtotal = Math.max(0, subtotal - rawBundleDiscount);
-        const promoTotalDiscount = (order.applied_promo_code && order.promo_percentage && order.promo_percentage > 0)
-            ? Math.round(afterBundleSubtotal * (order.promo_percentage / 100) * 100) / 100
-            : 0;
-
-        const resolvedBundleDiscount = rawBundleDiscount;
-
-        // Total = subtotal - bundle discount - promo discount + shipping + tax
-        const totalAllDiscounts = resolvedBundleDiscount + promoTotalDiscount;
-        const total = Math.max(0, subtotal + order.shipping_total + (order.tax_total || 0) - totalAllDiscounts);
         return {
-            displaySubtotal: Math.round(subtotal * 100) / 100,
-            calculatedDiscount: Math.round(totalDiscount * 100) / 100,
-            bundleDiscount: Math.round(resolvedBundleDiscount * 100) / 100,
-            promoDiscount: Math.round(promoTotalDiscount * 100) / 100,
-            effectiveTotal: Math.round(total * 100) / 100
+            displaySubtotal: Math.round(displaySubtotalValue * 100) / 100,
+            totalDiscount:   Math.round(combinedDiscount    * 100) / 100,
+            effectiveTotal:  Math.round(effectiveTotalValue * 100) / 100,
         };
     }, [order]);
+
+
 
     useEffect(() => {
         if (order && order.created_at) {
@@ -288,37 +259,48 @@ export default function OrderDetailScreen({ order, fromCheckout }: {
                                     // Partition items into bundle sub-items vs standalone regular items
                                     const bundleItems: any[] = [];
                                     const regularItems: any[] = [];
+                                    const bundleMeta = order.bundle_metadata?.[0];
+                                    const bundleProductIds: number[] = (bundleMeta as any)?.product_ids || [];
+                                    const rawBundleNameForPartition = bundleMeta?.name || '';
+                                    const parenMatchCust = rawBundleNameForPartition.match(/\(([^)]+)\)/);
+                                    const bundleProductNames: string[] = parenMatchCust
+                                        ? parenMatchCust[1].split('+').map((s: string) => s.trim().toLowerCase()).filter(Boolean)
+                                        : [];
 
                                     items.forEach((it: any) => {
-                                        const nameEn = it.name_en || it.name || '';
-                                        const nameAr = it.name_ar || it.name || '';
-                                        const disc = it.discount_per_unit || (it as any).discount || 0;
-                                        const isBundle = it.item_type === 'bundle' ||
-                                            disc > 0 ||
-                                            nameEn.includes(' - ') ||
-                                            nameAr.includes(' - ') ||
-                                            (order.bundle_metadata && order.bundle_metadata.some((b: any) => b.name && (nameEn.includes(b.name) || nameAr.includes(b.name))));
+                                        const nameEn = (it.name_en || it.name || '').toLowerCase();
+                                        const nameAr = (it.name_ar || it.name || '').toLowerCase();
 
-                                        if (isBundle) {
+                                        const isExplicitBundle = bundleProductIds.length > 0 && bundleProductIds.includes(it.product_id);
+                                        const isNameMatched = bundleProductNames.length > 0 && bundleProductNames.some((bp: string) =>
+                                            bp.includes(nameEn) || nameEn.includes(bp) ||
+                                            bp.includes(nameAr) || nameAr.includes(bp)
+                                        );
+
+                                        const isBundle = isExplicitBundle || isNameMatched;
+                                        const bCount = bundleMeta?.item_count || 0;
+
+                                        if (isBundle && (!bCount || bundleItems.length < bCount)) {
                                             bundleItems.push(it);
                                         } else {
                                             regularItems.push(it);
                                         }
                                     });
 
-                                    // Fallback if partition put all in regular
+                                    // Fallback if partition put all in regular but bundleCount exists
+                                    const bundleCount = bundleMeta?.item_count || 0;
+                                    if (bundleItems.length === 0 && bundleCount > 0 && bundleCount <= items.length) {
+                                        bundleItems.push(...items.slice(0, bundleCount));
+                                        regularItems.push(...items.slice(bundleCount));
+                                    }
                                     const finalBundleItems = bundleItems.length > 0 ? bundleItems : items;
                                     const finalRegularItems = bundleItems.length > 0 ? regularItems : [];
 
                                     const rawBundleName = order.bundle_metadata?.[0]?.name || '';
                                     let primaryBundleName = rawBundleName;
-                                    if (!primaryBundleName || primaryBundleName === "Body Lotion Collection") {
+                                    if (!primaryBundleName) {
                                         const extracted = finalBundleItems.find((i: any) => (i.name_en || '').includes(' - '))?.name_en.split(' - ')[0].trim();
-                                        if (extracted && extracted !== "Body Lotion Collection") {
-                                            primaryBundleName = extracted;
-                                        } else {
-                                            primaryBundleName = "Strawberry skin routine";
-                                        }
+                                        primaryBundleName = extracted || (i18n.language === 'ar' ? 'باقة' : 'Bundle');
                                     }
 
                                     // Clean title by stripping parenthesized component details
@@ -328,9 +310,9 @@ export default function OrderDetailScreen({ order, fromCheckout }: {
                                     const bundleOriginal = finalBundleItems.reduce((sum: number, i: any) => sum + (i.quantity * (i.price + (i.discount_per_unit || 0))), 0);
                                     let bundleMetaDiscount = (order.bundle_metadata || []).reduce((s: number, b: any) => s + (b.total_discount || 0), 0);
 
-                                    if (bundleMetaDiscount === 0) {
-                                        const diff = bundleOriginal > bundleFinal ? bundleOriginal - bundleFinal : 130.90;
-                                        bundleMetaDiscount = Math.round(diff * 100) / 100;
+                                    // Fallback: infer bundle discount from per-item discounts if metadata has none
+                                    if (bundleMetaDiscount === 0 && bundleOriginal > bundleFinal) {
+                                        bundleMetaDiscount = Math.round((bundleOriginal - bundleFinal) * 100) / 100;
                                     }
 
                                     const hasDiscount = bundleMetaDiscount > 0 || bundleOriginal > bundleFinal;
@@ -465,38 +447,20 @@ export default function OrderDetailScreen({ order, fromCheckout }: {
                         <div className="p-4 sm:p-6 border w-full rounded-xl bg-white h-max shadow-sm self-center">
                             <h4 className="font-bold text-gray-900 mb-4 text-base">{t("ordersScreen.summary")}</h4>
                             <dl className="text-sm text-gray-700 space-y-3">
+                                {/* Original price before all discounts */}
                                 <div className="flex justify-between">
                                     <dt className="text-gray-600">{t("ordersScreen.subtotal")}</dt>
                                     <dd className="font-medium text-gray-900">{t("{{price, currency}}", { price: displaySubtotal })}</dd>
                                 </div>
-                                {/* Bundle discount row — always show if there's a bundle saving */}
-                                {bundleDiscount > 0 && (
+
+                                {/* Single combined discount row */}
+                                {totalDiscount > 0 && (
                                     <div className="flex justify-between text-emerald-700 font-medium">
-                                        <dt className="flex items-center gap-1">
-                                            🎁 {order.bundle_metadata?.[0]?.name
-                                                ? order.bundle_metadata[0].name.replace(/\s*\([^)]+\)$/, '').trim()
-                                                : t('bundleDiscount') || 'خصم الباقة'}
-                                        </dt>
-                                        <dd>-{t("{{price, currency}}", { price: Math.round(bundleDiscount * 100) / 100 })}</dd>
+                                        <dt className="flex items-center gap-1">🏷️ {t('ordersScreen.discount') || 'إجمالي الخصم'}</dt>
+                                        <dd>-{t("{{price, currency}}", { price: totalDiscount })}</dd>
                                     </div>
                                 )}
-                                {/* Promo code discount row */}
-                                {promoDiscount > 0 && (
-                                    <div className="flex justify-between text-purple-700 font-medium">
-                                        <dt className="flex items-center gap-1">
-                                            🏷️ Promo <b className="uppercase">{order.applied_promo_code}</b>
-                                            {order.promo_percentage ? ` (${order.promo_percentage}% off)` : ''}
-                                        </dt>
-                                        <dd>-{t("{{price, currency}}", { price: Math.round(promoDiscount * 100) / 100 })}</dd>
-                                    </div>
-                                )}
-                                {/* Fallback: combined discount with no bundle metadata and no promo */}
-                                {calculatedDiscount > 0 && !bundleDiscount && !promoDiscount && (
-                                    <div className="flex justify-between text-red-600 font-medium">
-                                        <dt>{t("ordersScreen.discount")}</dt>
-                                        <dd>-{t("{{price, currency}}", { price: Math.round(calculatedDiscount * 100) / 100 })}</dd>
-                                    </div>
-                                )}
+
                                 <div className="flex justify-between">
                                     <dt className="text-gray-600">{t("ordersScreen.shipping")}</dt>
                                     <dd className="font-medium text-gray-900">{t("{{price, currency}}", { price: order.shipping_total })}</dd>
