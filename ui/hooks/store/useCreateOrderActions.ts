@@ -36,7 +36,7 @@ export async function createOrder(data: Partial<Order>, isAdmin: boolean, items:
     // Track per-item bundle discount and bundle group info for display in order details
     interface BundleItemDiscount { verifiedItemIndex: number; discountPerUnit: number; bundleGroupName: string; }
     const bundleItemDiscounts: BundleItemDiscount[] = [];
-    interface BundleMeta { name: string; slug: string; total_discount: number; item_count: number; }
+    interface BundleMeta { name: string; slug: string; total_discount: number; item_count: number; product_ids?: number[]; }
     const bundleMetaList: BundleMeta[] = [];
 
     // Map items to Verified Order Items with DB prices

@@ -33,6 +33,8 @@ export interface OrderDetailsView {
 }
 export interface OrderItemView {
     id?: number; // Order item ID for database updates
+    product_id?: number;
+    variant_id?: number | null;
     quantity: number;
     unit_price: number;
     item_discount_per_unit: number;
@@ -50,4 +52,5 @@ export interface BundleOrderMeta {
     slug: string;
     total_discount: number;
     item_count: number;
+    product_ids?: number[];
 }

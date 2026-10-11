@@ -156,7 +156,7 @@ export const generateInvoicePDF = (orders: OrderDetailsView | OrderDetailsView[]
             const prodBaseLower = (subItem.product_base_name || '').toLowerCase();
             const varNameLower = (subItem.variant_name || '').toLowerCase();
 
-            const isExplicitBundleItem = bundleProductIds.length > 0 && bundleProductIds.includes(subItem.product_id);
+            const isExplicitBundleItem = bundleProductIds.length > 0 && !!subItem.product_id && bundleProductIds.includes(subItem.product_id);
             const isNameMatched = bundleProductNames.length > 0 && bundleProductNames.some(bp =>
                 bp.includes(itemNameLower) || itemNameLower.includes(bp) ||
                 (prodBaseLower && (bp.includes(prodBaseLower) || prodBaseLower.includes(bp))) ||
@@ -335,7 +335,7 @@ export const generateInvoicePDF = (orders: OrderDetailsView | OrderDetailsView[]
             margin: { left: 15, right: 15 },
             didParseCell: (data) => {
                 if (data.section !== 'body') return;
-                const cellText = String(data.cell.raw?.content ?? (Array.isArray(data.cell.text) ? data.cell.text.join(' ') : data.cell.text) ?? '');
+                const cellText = Array.isArray(data.cell.text) ? data.cell.text.join(' ') : String(data.cell.text || '');
                 if (containsArabic(cellText)) {
                     data.cell.styles.font = 'NotoSansArabic-Regular';
                 }

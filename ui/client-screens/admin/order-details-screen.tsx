@@ -1039,7 +1039,7 @@ export function OrderDetailsScreen({ order, governorate, products }: { order: Or
                                         const prodMatch = products?.find(p => p.id === subItem.product_id || (p as any).product_id === subItem.product_id);
                                         const prodNameArLower = (prodMatch?.name || '').toLowerCase();
 
-                                        const isExplicitBundleItem = bundleProductIds.length > 0 && bundleProductIds.includes(subItem.product_id);
+                                        const isExplicitBundleItem = bundleProductIds.length > 0 && !!subItem.product_id && bundleProductIds.includes(subItem.product_id);
                                         const isNameMatched = bundleProductNames.length > 0 && bundleProductNames.some(bp =>
                                             bp.includes(itemNameLower) || itemNameLower.includes(bp) ||
                                             (prodBaseLower && (bp.includes(prodBaseLower) || prodBaseLower.includes(bp))) ||
