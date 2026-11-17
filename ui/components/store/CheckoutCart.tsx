@@ -255,7 +255,7 @@ export function CheckoutCart({ selectedGovernorate, onPurchase, customerId }: {
                     {/* Potential Discounts Banner */}
                     {potentialPromos.length > 0 && (
                         <div className="space-y-2">
-                            {potentialPromos.slice(0, 2).map((promo) => {
+                            {[...potentialPromos].sort((a, b) => a.min_order_amount - b.min_order_amount).map((promo) => {
                                 const remaining = promo.min_order_amount - cart.netTotal;
                                 const discountText = promo.amount_off
                                     ? t("{{price, currency}}", { price: promo.amount_off })
