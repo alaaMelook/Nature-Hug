@@ -75,30 +75,113 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
     }, [cart, loading, isClient]);
 
     // --- Promo Code Re-validation ---
+    // Re-validate ALL applied promo codes when cart items change
+    // This ensures auto-applied promos with min_order_amount get removed when cart total drops below threshold
     useEffect(() => {
         const revalidate = async () => {
-            if (cart.promoCode && cart.items.length > 0) {
-                const result = await validatePromoCodeAction(cart.promoCode, cart.items);
-                if (result.isValid && 'discount' in result) {
-                    // Update both discount and free_shipping from the promo details
-                    const hasFreeShipping = result.details?.free_shipping ?? false;
+            if (cart.promoCodes.length > 0 && cart.items.length > 0) {
+                // Re-validate each promo code against current cart
+                const validatedPromos: AppliedPromoCode[] = [];
+                let anyRemoved = false;
+
+                for (const promo of cart.promoCodes) {
+                    const result = await validatePromoCodeAction(promo.code, cart.items);
+                    if (result.isValid && 'discount' in result) {
+                        validatedPromos.push(promo);
+                    } else {
+                        // This promo is no longer valid (e.g., cart total dropped below min_order_amount)
+                        anyRemoved = true;
+                        console.log('[CART] Promo no longer valid, removing:', promo.code, 'Reason:', result.error);
+                    }
+                }
+
+                if (anyRemoved) {
+                    // Recalculate discounts with only the still-valid promos
+                    const subtotal = cart.items.reduce((sum, item) => sum + ((item.price - (item.discount || 0)) * item.quantity), 0);
+                    let remainingAmount = subtotal;
+
+                    // First pass: fixed amount discounts
+                    const recalculatedPromos = validatedPromos.map(p => {
+                        if (p.amount_off && p.amount_off > 0) {
+                            const discountValue = Math.min(p.amount_off, remainingAmount);
+                            remainingAmount -= discountValue;
+                            return { ...p, discount: discountValue };
+                        }
+                        return { ...p, discount: 0 };
+                    });
+
+                    // Second pass: percentage discounts
+                    const finalPromos = recalculatedPromos.map(p => {
+                        if (p.percentage_off && p.percentage_off > 0 && !p.amount_off) {
+                            const discountValue = remainingAmount * (p.percentage_off / 100);
+                            remainingAmount -= discountValue;
+                            return { ...p, discount: discountValue };
+                        }
+                        return p;
+                    });
+
+                    const totalDiscount = finalPromos.reduce((sum, p) => sum + p.discount, 0);
+                    const hasFreeShipping = finalPromos.some(p => p.free_shipping);
+
                     setCart(prev => ({
                         ...prev,
-                        discount: result.discount,
-                        promoCodeId: result.details?.id ?? null,
-                        free_shipping: hasFreeShipping
+                        promoCodes: finalPromos,
+                        promoCode: finalPromos.length > 0 ? finalPromos[0].code : null,
+                        promoCodeId: finalPromos.length > 0 ? finalPromos[0].id : null,
+                        discount: totalDiscount,
+                        free_shipping: hasFreeShipping,
+                        isAdmin: finalPromos.length === 0 ? false : prev.isAdmin
                     }));
                 } else {
-                    setCart(prev => ({ ...prev, discount: 0, promoCodeId: null, free_shipping: false }));
+                    // All promos still valid — just update discount amounts (cart quantities may have changed)
+                    const subtotal = cart.items.reduce((sum, item) => sum + ((item.price - (item.discount || 0)) * item.quantity), 0);
+                    let remainingAmount = subtotal;
+
+                    const recalculatedPromos = validatedPromos.map(p => {
+                        if (p.amount_off && p.amount_off > 0) {
+                            const discountValue = Math.min(p.amount_off, remainingAmount);
+                            remainingAmount -= discountValue;
+                            return { ...p, discount: discountValue };
+                        }
+                        return { ...p, discount: 0 };
+                    });
+
+                    const finalPromos = recalculatedPromos.map(p => {
+                        if (p.percentage_off && p.percentage_off > 0 && !p.amount_off) {
+                            const discountValue = remainingAmount * (p.percentage_off / 100);
+                            remainingAmount -= discountValue;
+                            return { ...p, discount: discountValue };
+                        }
+                        return p;
+                    });
+
+                    const totalDiscount = finalPromos.reduce((sum, p) => sum + p.discount, 0);
+                    const hasFreeShipping = finalPromos.some(p => p.free_shipping);
+
+                    setCart(prev => ({
+                        ...prev,
+                        promoCodes: finalPromos,
+                        discount: totalDiscount,
+                        free_shipping: hasFreeShipping
+                    }));
                 }
-            } else if (cart.items.length === 0 && cart.discount > 0) {
-                setCart(prev => ({ ...prev, discount: 0, promoCodeId: null, free_shipping: false }));
+            } else if (cart.items.length === 0 && (cart.discount > 0 || cart.promoCodes.length > 0)) {
+                // Cart is empty — clear all promos
+                setCart(prev => ({
+                    ...prev,
+                    discount: 0,
+                    promoCode: null,
+                    promoCodeId: null,
+                    promoCodes: [],
+                    free_shipping: false,
+                    isAdmin: false
+                }));
             }
         };
 
         const timeout = setTimeout(revalidate, 500);
         return () => clearTimeout(timeout);
-    }, [cart.items, cart.promoCode]);
+    }, [itemsKey]);
 
     // --- Cart Actions (Simplified Logic) ---
     // --- Cart Synchronization ---
@@ -377,24 +460,60 @@ export function CartProvider({ children }: Readonly<{ children: ReactNode }>) {
             const { promoCodes: autoApplyPromos } = await response.json();
             console.log('[CART] Auto-apply promos from API:', autoApplyPromos?.length, autoApplyPromos?.map((p: any) => ({ id: p.id, code: p.code, min_order_amount: p.min_order_amount })));
 
-            // First, remove any auto-applied promos that are no longer active
+            // First, remove any auto-applied promos that are no longer active OR no longer valid
+            // (e.g., cart total dropped below min_order_amount)
             const activePromoIds = (autoApplyPromos || []).map((p: any) => p.id);
+            const subtotal = cart.items.reduce((sum, item) => sum + ((item.price - (item.discount || 0)) * item.quantity), 0);
+
+            // Build a set of auto-apply promo IDs that the cart no longer qualifies for
+            const disqualifiedPromoIds = new Set<number>();
+            for (const promo of (autoApplyPromos || [])) {
+                if (promo.min_order_amount && promo.min_order_amount > 0 && subtotal < promo.min_order_amount) {
+                    disqualifiedPromoIds.add(promo.id);
+                }
+            }
 
             setCart(prevCart => {
                 const existingAutoApplied = prevCart.promoCodes.filter(p => p.auto_apply);
                 const hasInactive = existingAutoApplied.some(p => !activePromoIds.includes(p.id));
-                if (!hasInactive) return prevCart; // No changes needed
+                const hasDisqualified = existingAutoApplied.some(p => disqualifiedPromoIds.has(p.id));
+                if (!hasInactive && !hasDisqualified) return prevCart; // No changes needed
 
-                console.log('[CART] Removing inactive auto-applied promos');
+                console.log('[CART] Removing inactive or disqualified auto-applied promos');
                 const newPromoCodes = prevCart.promoCodes.filter(p =>
-                    !p.auto_apply || activePromoIds.includes(p.id)
+                    !p.auto_apply || (activePromoIds.includes(p.id) && !disqualifiedPromoIds.has(p.id))
                 );
-                const totalDiscount = newPromoCodes.reduce((sum, p) => sum + p.discount, 0);
-                const hasFreeShipping = newPromoCodes.some(p => p.free_shipping);
+
+                // Recalculate discounts
+                const currentSubtotal = prevCart.items.reduce((sum, item) => sum + ((item.price - (item.discount || 0)) * item.quantity), 0);
+                let remainingAmount = currentSubtotal;
+
+                const recalculated = newPromoCodes.map(p => {
+                    if (p.amount_off && p.amount_off > 0) {
+                        const discountValue = Math.min(p.amount_off, remainingAmount);
+                        remainingAmount -= discountValue;
+                        return { ...p, discount: discountValue };
+                    }
+                    return { ...p, discount: 0 };
+                });
+
+                const finalPromos = recalculated.map(p => {
+                    if (p.percentage_off && p.percentage_off > 0 && !p.amount_off) {
+                        const discountValue = remainingAmount * (p.percentage_off / 100);
+                        remainingAmount -= discountValue;
+                        return { ...p, discount: discountValue };
+                    }
+                    return p;
+                });
+
+                const totalDiscount = finalPromos.reduce((sum, p) => sum + p.discount, 0);
+                const hasFreeShipping = finalPromos.some(p => p.free_shipping);
 
                 return {
                     ...prevCart,
-                    promoCodes: newPromoCodes,
+                    promoCodes: finalPromos,
+                    promoCode: finalPromos.length > 0 ? finalPromos[0].code : null,
+                    promoCodeId: finalPromos.length > 0 ? finalPromos[0].id : null,
                     discount: totalDiscount,
                     free_shipping: hasFreeShipping,
                 };
